@@ -29,6 +29,8 @@ pub const press = struct {
     pub const import = @import("press/import.zig");
     /// Flattening a token rule tree down to the one regex the lexer compiles.
     pub const lexeme = @import("press/lexeme.zig");
+    /// LALR(1) lookaheads and the action table they decide.
+    pub const lalr = @import("press/lalr.zig");
     /// The LR(0) canonical collection — the automaton's shape, no lookahead.
     pub const lr0 = @import("press/lr0.zig");
     /// Equal-width bit sets in one buffer, the currency of set fixpoints.
@@ -40,6 +42,7 @@ test {
     _ = @import("press/grammar.zig");
     _ = @import("press/import.zig");
     _ = @import("press/lexeme.zig");
+    _ = @import("press/lalr.zig");
     _ = @import("press/lr0.zig");
     _ = @import("press/sets.zig");
 }

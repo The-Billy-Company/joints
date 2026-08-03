@@ -27,7 +27,17 @@ pub const Item = packed struct(u64) {
     }
 };
 
-pub const Edge = struct { symbol: g.Symbol, target: u32 };
+pub const Edge = struct {
+    symbol: g.Symbol,
+    target: u32,
+    /// The strongest precedence among the productions whose dot advances over
+    /// this symbol here. A shift has no precedence of its own — it inherits it
+    /// from whichever item wants to keep going — and this is the only layer
+    /// where those items still exist, so it is computed here and carried
+    /// rather than reconstructed by re-closing the state later.
+    prec: i32,
+    assoc: g.Assoc,
+};
 
 pub const State = struct {
     /// Sorted, deduplicated. Two states are the same state exactly when these
@@ -165,7 +175,14 @@ pub fn build(gpa: std.mem.Allocator, gr: *const g.Grammar) !Collection {
 
             var target: std.ArrayList(Item) = .empty;
             defer target.deinit(gpa);
+            var prec: i32 = 0;
+            var assoc: g.Assoc = .none;
             for (steps.items[run..end]) |s| {
+                const p = gr.productions[s.item.prod];
+                if (@abs(p.prec) > @abs(prec)) {
+                    prec = p.prec;
+                    assoc = p.assoc;
+                }
                 // Sorted, so a duplicate can only be adjacent.
                 const last = target.getLastOrNull();
                 if (last == null or !std.meta.eql(last.?, s.item)) try target.append(gpa, s.item);
@@ -173,6 +190,8 @@ pub fn build(gpa: std.mem.Allocator, gr: *const g.Grammar) !Collection {
             try edges.append(gpa, .{
                 .symbol = symbol,
                 .target = try intern(gpa, a, &index, &kernels, &states, target.items),
+                .prec = prec,
+                .assoc = assoc,
             });
             run = end;
         }

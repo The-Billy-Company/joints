@@ -142,6 +142,33 @@ fn describe(
         c.states.len, kernel_items, widest, edge_count,
     });
     try w.print("  built in       {d} us\n", .{lr_us});
+
+    const la_started = std.Io.Clock.awake.now(io);
+    var t = try outliner.press.lalr.build(gpa, &gr, &c);
+    defer t.deinit();
+    const la_us: i64 = @intCast(@divTrunc(
+        la_started.durationTo(std.Io.Clock.awake.now(io)).nanoseconds,
+        std.time.ns_per_us,
+    ));
+    var shifts: usize = 0;
+    var reduces: usize = 0;
+    for (t.action) |act| switch (act.kind) {
+        .shift => shifts += 1,
+        .reduce, .accept => reduces += 1,
+        .err => {},
+    };
+    var sr: usize = 0;
+    for (t.conflicts) |k| {
+        if (k.kind == .shift_reduce) sr += 1;
+    }
+    const cells = t.action.len;
+    try w.print("  lalr table     {d} cells, {d} shift, {d} reduce ({d}% dense)\n", .{
+        cells, shifts, reduces, (shifts + reduces) * 100 / cells,
+    });
+    try w.print("  conflicts      {d} unresolved ({d} shift/reduce, {d} reduce/reduce)\n", .{
+        t.conflicts.len, sr, t.conflicts.len - sr,
+    });
+    try w.print("  built in       {d} us\n", .{la_us});
     if (barren > 0) {
         try w.print("  BARREN         {d} nonterminals derive nothing\n", .{barren});
         for (gr.terminal_count..gr.symbolCount()) |s| {
