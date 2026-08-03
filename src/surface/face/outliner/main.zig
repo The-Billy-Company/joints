@@ -122,6 +122,26 @@ fn describe(
     try w.print("  extras         {d}\n", .{gr.extras.len});
     try w.print("  conflicts      {d} declared\n", .{gr.declared_conflicts.len});
     try w.print("  imported in    {d} us\n", .{elapsed_us});
+
+    const lr_started = std.Io.Clock.awake.now(io);
+    var c = try outliner.press.lr0.build(gpa, &gr);
+    defer c.deinit();
+    const lr_us: i64 = @intCast(@divTrunc(
+        lr_started.durationTo(std.Io.Clock.awake.now(io)).nanoseconds,
+        std.time.ns_per_us,
+    ));
+    var kernel_items: usize = 0;
+    var edge_count: usize = 0;
+    var widest: usize = 0;
+    for (c.states) |st| {
+        kernel_items += st.kernel.len;
+        edge_count += st.edges.len;
+        widest = @max(widest, st.kernel.len);
+    }
+    try w.print("  lr(0) states   {d}  ({d} kernel items, widest {d}, {d} edges)\n", .{
+        c.states.len, kernel_items, widest, edge_count,
+    });
+    try w.print("  built in       {d} us\n", .{lr_us});
     if (barren > 0) {
         try w.print("  BARREN         {d} nonterminals derive nothing\n", .{barren});
         for (gr.terminal_count..gr.symbolCount()) |s| {

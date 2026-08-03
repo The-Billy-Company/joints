@@ -80,9 +80,13 @@ pub fn build(b: *std.Build) void {
     });
     test_face.addOptions("build_options", version);
     const bg = brigade.init(b, .{});
-    const tests = b.addTest(.{ .root_module = test_face, .test_runner = bg.runner() });
     const test_step = b.step("test", "Run unit tests");
-    bg.shard(test_step, tests, .{});
+    // A test build only collects the tests in its own root module's files, so
+    // the library needs its own compilation. Naming it from the face's test
+    // block silently collects nothing, which reads exactly like a green run.
+    for ([_]*std.Build.Module{ test_lib, test_face }) |m| {
+        bg.shard(test_step, b.addTest(.{ .root_module = m, .test_runner = bg.runner() }), .{});
+    }
 
     b.step("check", "Compile the outliner binary without installing").dependOn(&exe.step);
 }

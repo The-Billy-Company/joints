@@ -97,7 +97,10 @@ pub fn render(
         const content = obj.get("content") orelse return false;
         try out.appendSlice(gpa, "(?:");
         if (!try render(out, gpa, content, r, depth + 1)) return false;
-        try out.appendSlice(gpa, if (kind.len == 6) ")*" else ")+");
+        // Closed on the group rather than inside it: `(?:X)*` cannot have its
+        // quantifier captured by whatever the content ended with, where
+        // `(?:X*)` depends on X's last token to bind the way it reads.
+        try out.appendSlice(gpa, if (std.mem.eql(u8, kind, "REPEAT")) ")*" else ")+");
         return true;
     }
 
@@ -157,7 +160,10 @@ test "a line comment flattens into one pattern" {
     ;
     const got = (try renderSource(testing.allocator, src)).?;
     defer testing.allocator.free(got);
-    try testing.expectEqualStrings("//(?:(?:[^\n])*)", got);
+    // The literal, then the repeat's own group wrapping the pattern's group:
+    // `//` · `(?:` · `(?:[^\n])` · `)*`. The star closes the outer group, so
+    // the repetition is over the whole content and not over its last atom.
+    try testing.expectEqualStrings("//(?:(?:[^\n]))*", got);
 }
 
 test "literal metacharacters are escaped, not interpreted" {

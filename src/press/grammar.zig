@@ -181,9 +181,13 @@ pub const Builder = struct {
     }
 
     /// Resolve the two-space symbol numbering into one contiguous space and
-    /// hand back an owning grammar. `start_production` must be index 0's
-    /// intended lhs -> rhs pair; the caller adds it before finishing so that
-    /// accept is always `productions[0]`.
+    /// hand back an owning grammar. The caller adds the augmented production
+    /// before finishing, so that accept is always `productions[0]`.
+    ///
+    /// The builder is left empty rather than invalid, so the `defer b.deinit()`
+    /// a caller needs for the error path stays correct after a success. An
+    /// interface that leaks unless you notice which of two cleanup keywords
+    /// applies is an interface that will leak.
     pub fn finish(
         b: *Builder,
         name: []const u8,
@@ -245,8 +249,13 @@ pub const Builder = struct {
             if (p) |pat| if (pat == .external) try externals.append(a, @intCast(i));
         }
 
-        const g: Grammar = .{
-            .arena = b.arena,
+        // The arena is moved *after* every allocation above, not as a field of
+        // the same literal. A struct literal evaluates in source order, so an
+        // arena captured first holds the buffer list as it was then — and every
+        // buffer the later fields append is invisible to it, which frees
+        // nothing and reads as a leak with no bad pointer anywhere.
+        var g: Grammar = .{
+            .arena = undefined,
             .name = try a.dupe(u8, name),
             .names = names,
             .patterns = patterns,
@@ -258,9 +267,12 @@ pub const Builder = struct {
             .declared_conflicts = resolved_conflicts,
             .externals = try externals.toOwnedSlice(a),
         };
-        // The arena moved into the grammar; leave the builder holding a fresh
-        // empty one so its `deinit` stays valid and frees nothing twice.
+        g.arena = b.arena;
         b.arena = std.heap.ArenaAllocator.init(b.gpa);
+        b.terminals.clearAndFree(b.gpa);
+        b.nonterminals.clearAndFree(b.gpa);
+        b.productions.clearAndFree(b.gpa);
+        b.interned.clearAndFree();
         return g;
     }
 };

@@ -58,8 +58,10 @@ pub fn treeSitter(gpa: std.mem.Allocator, source: []const u8) Error!g.Grammar {
     if (rules.count() == 0) return error.MalformedGrammar;
     const name = str(root.get("name")) orelse "grammar";
 
+    // Unconditional, not `errdefer`: `finish` moves only the arena out, so the
+    // builder's own bookkeeping still has to be released on the way past.
     var builder = g.Builder.init(gpa);
-    errdefer builder.deinit();
+    defer builder.deinit();
 
     var imp: Import = .{
         .gpa = gpa,
