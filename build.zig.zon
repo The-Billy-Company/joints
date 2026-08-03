@@ -1,0 +1,28 @@
+.{
+    .name = .outliner,
+    .version = "0.0.0", // x-release-please-version
+    .fingerprint = 0xbc2e9638f690b0ae,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        // The shard-aware test runner (build-time only, no artifact, no ABI).
+        // Pinned rather than path-dep'd: it is a published package whose
+        // version this repository should choose deliberately.
+        .brigade = .{
+            .url = "https://github.com/The-Billy-Company/brigade/archive/505a57a9febf21757268bd8ac651c53d27896c79.tar.gz",
+            .hash = "brigade-0.1.0-1n1fSewLAQBenqvI3An0VUw24_TsuaT3mt1_4TfqWZwG",
+        },
+        // Deliberately absent for now: `irregex`. outliner will stand on it for
+        // the terminal lexer, the minterm alphabet, and the shared math floor,
+        // and it is a sibling path dep when it arrives. A dependency lands in
+        // the commit that first imports it, so that a build cost is always
+        // traceable to the code that asked for it.
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "README.md",
+        "LICENSE",
+        "NOTICE",
+    },
+}
