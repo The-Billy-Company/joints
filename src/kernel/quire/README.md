@@ -90,3 +90,39 @@ name the byte or token that ended the parse, and the tree is still handed back a
 a forest of everything that had completed - a partial tree plus the reason beats
 an error with no prefix. Ten of the eleven corpus grammars stop early today for
 lexer reasons that are another lane's work; nothing here is tuned to hide that.
+
+A parse that mends carries the count in `Quire.mends`, and a reader that treats
+`stop` as an end has to look at it: `stop` names where the trouble began, not
+where the forest ends. That distinction is not decoration - a measuring script
+that missed it filed twenty of twenty-five recovered files as having stopped at
+their first wall while the forest plainly ran past it.
+
+### Crown when the grammar says so, wrap when the caller says so
+
+Tree-sitter hands back one root spanning the file however broken it is. We hand
+back the forest. The tempting repair is a synthetic root over the whole text,
+and it is worth writing down why there isn't one, because the argument is not
+the obvious one.
+
+A crown only pays as *compatibility* if it is called `program` - and a node
+named `program` over a file that is not one is a stronger claim than any
+`MISSING`: it asserts the whole file derives from the start symbol. Call it
+`forest` instead and the consumer has to learn a new name, which is the same
+work as handling a forest, so the compatibility win evaporates. What is left is
+the real question a consumer asks - *what node is at this offset* - and over a
+sorted disjoint forest that is a binary search, the same complexity a single
+root would have given.
+
+So: **crown when the grammar says so, wrap when the caller says so, never
+confuse the two.** A root here is a derivation that happened. A container over
+several of them is a view, and a view belongs to whoever is doing the viewing.
+
+### A hole is the absorbing element, never the identity
+
+The same rule decides what the spine does with the bytes a mend stepped across.
+They are laid as a leaf carrying `Effect.hole`, which `compose` refuses on
+either side of, so every spine node spanning a break carries the zero and every
+node to one side of one carries its real product. The identity would have been
+the wrong choice for exactly the reason a crown named `program` is: it composes
+away, which claims the two runs were adjacent - the one thing a mend exists to
+deny. See `src/kernel/weave/README.md` for what that buys.

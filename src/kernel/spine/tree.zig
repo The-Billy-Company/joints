@@ -132,6 +132,32 @@ pub fn Tree(comptime M: type) type {
             return b;
         }
 
+        /// The product of the leaves `from .. to`, read without disturbing
+        /// anything.
+        ///
+        /// The whole-file product is one field read; any other range is this,
+        /// and it is the reason a re-mint policy can afford to ask an algebraic
+        /// question per candidate split. Folding a suffix costs one composition
+        /// per leaf, which is the linear cost the spine exists to avoid; the
+        /// descent pays `log n` and stops at every node the range already
+        /// covers whole. Null when some pairing inside the range was refused,
+        /// exactly as `product` is.
+        pub fn between(s: *const Self, x: Ctx, from: u32, to: u32) !?Element {
+            std.debug.assert(from <= to and to <= s.len());
+            if (from == to) return M.identity;
+            return s.gather(x, s.root, 0, s.wood.leavesOf(s.root), from, to);
+        }
+
+        fn gather(s: *const Self, x: Ctx, id: Id, lo: u32, hi: u32, from: u32, to: u32) !?Element {
+            if (id == .none or to <= lo or hi <= from) return M.identity;
+            const n = s.wood.get(id);
+            if (from <= lo and hi <= to) return n.value;
+            const wide = s.wood.leavesOf(n.left);
+            const a = try s.gather(x, n.left, lo, lo + wide, from, to) orelse return null;
+            const b = try s.gather(x, n.right, lo + wide, hi, from, to) orelse return null;
+            return try M.compose(x, a, b);
+        }
+
         /// Which leaves a cut disturbed, and the bytes the replacements must
         /// cover.
         ///

@@ -31,6 +31,12 @@ const g = @import("../../press/grammar.zig");
 /// Building one: a parse loop that keeps what `walk/drive.zig` throws away.
 pub const gather = @import("gather.zig");
 pub const Gather = gather.Gather;
+pub const Mend = gather.Mend;
+
+/// Keeping a stretch of one's stack, so the next parse of nearly the same
+/// bytes can start in the middle of the file.
+pub const bough = @import("bough.zig");
+pub const Bough = bough.Bough;
 
 /// An index into `Quire.nodes`.
 pub const Ref = u32;
@@ -45,7 +51,10 @@ pub const none: u32 = std.math.maxInt(u32);
 /// than an error with no prefix.
 pub const Stop = union(enum) {
     accepted,
-    /// No terminal this state would accept begins at this offset.
+    /// No terminal *in this grammar* lexes at this offset, under any state. A
+    /// byte a reading merely cannot shift is `unexpected` instead, and the
+    /// difference is load-bearing: one is a lexer's wall and the other is a
+    /// table's, and only the second can be moved by changing the parse.
     stray: u32,
     /// A token that lexed and that no sequence of folds makes legal here. The
     /// state comes with it, since "state 803 has no `=`" is a diagnosis where
@@ -55,19 +64,33 @@ pub const Stop = union(enum) {
     truncated,
 };
 
-/// What a node is called, and where the name came from.
+/// What a node is called, where the name came from, and whether a production
+/// asked for it at all.
 ///
-/// Two sources and not one, because a rename is a use-site fact: the same
+/// Two name sources and not one, because a rename is a use-site fact: the same
 /// symbol is `identifier` at one site and `type_identifier` at another, so a
-/// node has to remember which answer applied to it. Packed into a word because
-/// this rides every node of every file.
+/// node has to remember which answer applied to it. `extra` rides here rather
+/// than in its own byte for the same reason the rest is packed: this word is on
+/// every node of every file, and 31 bits was already more index than any
+/// grammar will ever spend.
 pub const Kind = packed struct(u32) {
     /// Whether `index` is an entry in `Grammar.aliases` rather than a symbol.
     renamed: bool,
-    index: u31,
+    /// Whether the grammar's `extras` put this node here rather than a
+    /// production asking for it. tree-sitter exposes the same bit, and a
+    /// consumer needs it: an extra is skipped by the field map and by a
+    /// query's structural child index, so a node that is one is not the
+    /// second child of anything.
+    extra: bool = false,
+    index: u30,
 
     pub fn of(symbol: g.Symbol) Kind {
         return .{ .renamed = false, .index = @intCast(symbol) };
+    }
+
+    /// A terminal the parse stepped over on its way to the next token.
+    pub fn aside(symbol: g.Symbol) Kind {
+        return .{ .renamed = false, .extra = true, .index = @intCast(symbol) };
     }
 
     pub fn alias(index: u32) Kind {
@@ -113,6 +136,13 @@ pub const Quire = struct {
     /// that had been completed, for a parse that stopped early.
     roots: []const Ref,
     stop: Stop,
+    /// How many times the parse resynchronised. Zero is a parse that reached
+    /// `stop` and ended there; anything else is a parse that reached it, put
+    /// the stack down, and kept reading - so `stop` names where the trouble
+    /// began and not where the forest ends. A reader that treats a stop as an
+    /// end has to see this, or a recovered parse reads as a parse that gave up
+    /// at the first wall.
+    mends: u32 = 0,
 
     pub fn deinit(q: *Quire) void {
         q.gpa.free(q.nodes);
@@ -145,6 +175,14 @@ pub const Quire = struct {
     pub fn isNamed(q: *const Quire, ref: Ref) bool {
         const k = q.nodes[ref].kind;
         return if (k.renamed) q.gr.aliases[k.index].named else q.gr.shapeOf(k.index) == .named;
+    }
+
+    /// Whether the grammar's `extras` put this node here. A comment is a child
+    /// like any other to a walk and to a query's `(comment)` pattern, and is
+    /// skipped by everything that counts children structurally - which is why
+    /// the answer has to be askable rather than inferable from the name.
+    pub fn isExtra(q: *const Quire, ref: Ref) bool {
+        return q.nodes[ref].kind.extra;
     }
 
     pub fn field(q: *const Quire, ref: Ref) ?[]const u8 {

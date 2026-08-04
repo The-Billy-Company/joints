@@ -110,6 +110,25 @@ pub const Effect = struct {
     /// Doing nothing. The identity on both sides.
     pub const identity: Effect = .{};
 
+    /// The bytes a parse read and then declined to hold a stack over: the span
+    /// a mend stepped across. Not a stack transformation, and deliberately not
+    /// spelled as one - it is the absorbing element, and `compose` refuses on
+    /// either side of it, so anything spanning it is refused too.
+    ///
+    /// The zero was already here; it was only unrepresentable. `compose`
+    /// already returns null for a pairing that never happened and
+    /// `arbor.mul` already reads null as absorbing, so a spine node over a
+    /// break already carries the right answer and the nodes either side of it
+    /// already carry theirs. All this constant does is let a *leaf* be the
+    /// thing the algebra could already say.
+    ///
+    /// It must not be the identity. An identity composes away, which would
+    /// claim the two sides were adjacent - the one thing a mend exists to
+    /// deny - and would hand back a product for a file whose stack the parser
+    /// threw away.
+    pub const broken: u32 = std.math.maxInt(u32) - 1;
+    pub const hole: Effect = .{ .entry = broken };
+
     pub fn eql(a: Effect, b: Effect) bool {
         return a.entry == b.entry and a.guard == b.guard and a.push == b.push;
     }
@@ -181,6 +200,9 @@ pub const Effect = struct {
 /// for, and it is strictly the better one: `a` is the run that actually pushed
 /// them, so it is not guessing.
 pub fn compose(x: Arena, a: Effect, b: Effect) !?Effect {
+    // Before the identity checks, because absorbing beats neutral: a hole
+    // beside the identity is still a hole.
+    if (a.entry == Effect.broken or b.entry == Effect.broken) return null;
     if (a.entry == Effect.nowhere) return b;
     if (b.entry == Effect.nowhere) return a;
     const p = x.stacks;

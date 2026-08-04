@@ -133,6 +133,18 @@ const js = struct {
 /// leaf is the grammar's answer for that literal: a quoted word is a `string`
 /// holding one `string_content`, a bare integer is a `number`, and `true` and
 /// `null` are terminals named after their own single-atom rules.
+///
+/// Last reconciled against the corpus at:
+///   outliner 4d64f888c built 2026-08-04T14:59:37Z from . d839aa01b
+///   repo 35f3da5f0+75
+///
+/// That line is here so the next person can tell staleness from breakage
+/// without re-deriving it. If this test is red, first check whether the corpus
+/// file moved since that commit; a transcription goes stale when the *file*
+/// changes, which is not the same failure as the parser changing. Reconcile it
+/// by reading the new construct out of the corpus and writing down what the
+/// grammar says about it - never by pasting the `found:` output, which would
+/// turn a spec into a snapshot of whatever we currently do.
 const ledger_tree = blk: {
     const num = "(number)";
     // `{ "tag": …, "value": …, "note": … }`, with and without a note.
@@ -152,8 +164,16 @@ const ledger_tree = blk: {
         js.pair(js.string),
         js.pair(js.node("object", &.{ js.pair(js.string), js.pair(num) })),
     });
+    // `"ledger receipt\n--------------\n"`. `_string_content` is
+    // `repeat1(choice(string_content, escape_sequence))`, so the two `\n`
+    // splice in as their own nodes between the runs of text - and the second
+    // one ends the string, so no `string_content` follows it. The rule itself
+    // is pinned independently on `"a\nb"` further down this file, which is why
+    // this stays a transcription rather than becoming a snapshot.
+    const banner = "(string (string_content) (escape_sequence) (string_content) (escape_sequence))";
     const ledger = js.node("object", &.{
         js.pair(js.string),
+        js.pair(banner),
         js.pair("(true)"),
         js.pair(num),
         js.pair(js.node("array", &.{ row, noted, row, noted })),
@@ -428,6 +448,142 @@ test "quire: a child's parent is the node that claimed it" {
     const array = q.children(doc)[0];
     try t.expectEqual(doc, q.nodes[array].parent);
     for (q.children(array)) |c| try t.expectEqual(array, q.nodes[c].parent);
+}
+
+// ── extras, and the parent each one lands on ──
+
+/// Extras with something visible in them. `comment` is
+/// `token(seq('#', /[^\n]*/))`, and the rule itself is spelled once because
+/// every grammar below needs it.
+const asides =
+    \\ "comment":{"type":"TOKEN","content":{"type":"SEQ","members":[
+    \\  {"type":"STRING","value":"#"},{"type":"PATTERN","value":"[^\\n]*"}]}}}
+++
+    \\,"extras":[{"type":"PATTERN","value":"\\s"},{"type":"SYMBOL","name":"comment"}]}
+;
+
+test "quire: an extra between two symbols is theirs, and one after the last is not" {
+    // The whole placement rule in one file. `# one` sits between the two items
+    // of a pair, so the reduction that pops both takes it. `# two` sits after
+    // the pair's last token, so that same reduction leaves it behind and the
+    // list above claims it - which is why it comes out a sibling of the pairs
+    // rather than the last child of the first one.
+    const src =
+        \\{"name":"t","rules":{
+        \\ "doc":{"type":"REPEAT1","content":{"type":"SYMBOL","name":"pair"}},
+        \\ "pair":{"type":"SEQ","members":[{"type":"SYMBOL","name":"item"},{"type":"SYMBOL","name":"item"}]},
+        \\ "item":{"type":"PATTERN","value":"[a-z]+"},
+    ++ asides;
+    var f = try Fixture.init(t.allocator, src);
+    defer f.deinit();
+
+    const pair = "(pair (item) (comment) (item))";
+    try expectTree(f, "a # one\nb # two\nc # three\nd", .named,
+        "(doc " ++ pair ++ " (comment) " ++ pair ++ ")");
+}
+
+test "quire: an extra sinks no deeper than the reduction that popped it" {
+    // Nesting, and the two directions it can go wrong in. `# c` is inside the
+    // braces because `}` still follows it; `# d` is outside them because
+    // nothing of `inner` does. A rule that placed an extra by span alone would
+    // put `# d` inside `inner` on the strength of `outer` being wider.
+    const src =
+        \\{"name":"t","rules":{
+        \\ "doc":{"type":"REPEAT1","content":{"type":"SYMBOL","name":"outer"}},
+        \\ "outer":{"type":"SEQ","members":[{"type":"STRING","value":"["},
+        \\  {"type":"SYMBOL","name":"inner"},{"type":"SYMBOL","name":"item"},{"type":"STRING","value":"]"}]},
+        \\ "inner":{"type":"SEQ","members":[{"type":"STRING","value":"{"},
+        \\  {"type":"SYMBOL","name":"item"},{"type":"STRING","value":"}"}]},
+        \\ "item":{"type":"PATTERN","value":"[a-z]+"},
+    ++ asides;
+    var f = try Fixture.init(t.allocator, src);
+    defer f.deinit();
+
+    const inner = "(inner (comment) (item) (comment))";
+    try expectTree(f, "[ # a\n{ # b\nx # c\n} # d\ny # e\n] # f\n", .named,
+        "(doc (outer (comment) " ++ inner ++ " (comment) (item) (comment)) (comment))");
+}
+
+test "quire: an extra spliced in from a field-bearing step does not carry the field" {
+    // A field is indexed by structural child, and an extra is not one. So the
+    // rule that files every child a hidden step spliced in has to stop at the
+    // comment that rode along with them.
+    const src =
+        \\{"name":"t","rules":{
+        \\ "doc":{"type":"SEQ","members":[
+        \\  {"type":"FIELD","name":"part","content":{"type":"SYMBOL","name":"_pair"}},
+        \\  {"type":"STRING","value":"."}]},
+        \\ "_pair":{"type":"SEQ","members":[{"type":"SYMBOL","name":"item"},{"type":"SYMBOL","name":"item"}]},
+        \\ "item":{"type":"PATTERN","value":"[a-z]+"},
+    ++ asides;
+    var f = try Fixture.init(t.allocator, src);
+    defer f.deinit();
+
+    try expectTree(f, "a # x\nb .", .named, "(doc part: (item) (comment) part: (item))");
+}
+
+test "quire: the extras nothing reduced over are the root's outermost children" {
+    // Neither of these can reach a production. A leading extra sits under
+    // every frame on the stack and a trailing one sits above the last, so no
+    // reduction ever pops either - acceptance is what collects them.
+    const src =
+        \\{"name":"t","rules":{
+        \\ "doc":{"type":"REPEAT1","content":{"type":"SYMBOL","name":"group"}},
+        \\ "group":{"type":"SEQ","members":[{"type":"STRING","value":"("},
+        \\  {"type":"REPEAT","content":{"type":"SYMBOL","name":"item"}},{"type":"STRING","value":")"}]},
+        \\ "item":{"type":"PATTERN","value":"[a-z]+"},
+    ++ asides;
+    var f = try Fixture.init(t.allocator, src);
+    defer f.deinit();
+
+    try expectTree(f, "# lead\n(a # in\nb # last\n) # between\n(c) # trail\n", .named,
+        "(doc (comment) (group (item) (comment) (item) (comment))" ++
+            " (comment) (group (item)) (comment))");
+}
+
+test "quire: the root reaches end of input, and every other node stops at its tokens" {
+    var f = try Fixture.init(t.allocator, json_src);
+    defer f.deinit();
+
+    // The trailing newline is nobody's token and no extra either, and the root
+    // covers it anyway. This is the one extent that is a fact about the file.
+    var q = try f.parse("{\"a\":1}\n");
+    defer q.deinit();
+    try t.expectEqual(@as(u32, 0), q.nodes[q.root().?].start);
+    try t.expectEqual(@as(u32, 8), q.nodes[q.root().?].end());
+    // Its object still ends where its `}` does.
+    try t.expectEqual(@as(u32, 7), q.nodes[q.children(q.root().?)[0]].end());
+
+    // Leading whitespace is not a node, so it does not drag the root back -
+    // but the trailing whitespace is still inside it.
+    var pad = try f.parse("  42  \n");
+    defer pad.deinit();
+    try t.expectEqual(@as(u32, 2), pad.nodes[pad.root().?].start);
+    try t.expectEqual(@as(u32, 7), pad.nodes[pad.root().?].end());
+
+    // A file with nothing in it has an empty root at the end rather than at
+    // the start: there was never any content for the padding to come before.
+    var blank = try f.parse("   \n");
+    defer blank.deinit();
+    try t.expectEqual(@as(u32, 4), blank.nodes[blank.root().?].start);
+    try t.expectEqual(@as(u32, 0), blank.nodes[blank.root().?].len);
+}
+
+test "quire: json's own comments are nodes, and say they are extras" {
+    var f = try Fixture.init(t.allocator, json_src);
+    defer f.deinit();
+
+    // json declares `comment` in its `extras`, so the same placement rule
+    // applies on a grammar nobody wrote for this test.
+    try expectTree(f, "/* a */ [1 /* b */] // c\n", .named,
+        "(document (comment) (array (number) (comment)) (comment))");
+
+    var q = try f.parse("/* a */ 1");
+    defer q.deinit();
+    const kids = q.children(q.root().?);
+    try t.expect(q.isExtra(kids[0]));
+    try t.expectEqualStrings("comment", q.name(kids[0]));
+    try t.expect(!q.isExtra(kids[1]));
 }
 
 // ── the differential against the oracle ──
