@@ -1,0 +1,20 @@
+{
+  "ledger": {
+    "name": "corpus",
+    "cached": true,
+    "total": 10,
+    "rows": [
+      { "tag": "seed0", "value": 1, "note": null },
+      { "tag": "seed1", "value": 2, "note": "carried" },
+      { "tag": "seed2", "value": 3, "note": null },
+      { "tag": "late", "value": 4, "note": "pushed after the total was read" }
+    ],
+    "tags": { "seed0": 0, "seed1": 1, "seed2": 2, "late": 3 },
+    "history": [
+      { "at": "1970-01-01T00:00:00Z", "op": "new", "seed": [1, 2, 3] },
+      { "at": "1970-01-01T00:00:01Z", "op": "total", "read": 6 },
+      { "at": "1970-01-01T00:00:02Z", "op": "push", "row": { "tag": "late", "value": 4 } },
+      { "at": "1970-01-01T00:00:03Z", "op": "total", "read": 10 }
+    ]
+  }
+}

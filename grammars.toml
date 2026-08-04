@@ -1,0 +1,148 @@
+# The grammars every measurement in this repo runs over, pinned.
+#
+# `upstream/` is gitignored and stays that way. What lives there are clones kept
+# for study - tree-sitter, lezer, antlr, gpeg - not sources this package
+# vendors, and vendoring a megabyte of somebody else's generated JSON to make a
+# dossier reproducible is the wrong trade. But `research/joinery/TESTING.md`
+# quotes a number per grammar, and a number whose input exists on one laptop is
+# not a result. So the reproducible thing is this file: a repository, a commit,
+# a path inside it, and the sha256 of the exact bytes. `tool/grammars.py fetch`
+# turns a pin back into a file; `verify` says whether the file on disk is still
+# the pinned one, offline.
+#
+# One exception, and it is the reason `fixture` exists below. `build.zig` embeds
+# a grammar into the test module, and a build graph that reads a gitignored path
+# cannot be resolved from a clean checkout at all - it fails while checking its
+# cache, before compiling a line. So that one grammar is committed at
+# `test/grammar/json.json` and the pin it was copied from says so. `verify`
+# hashes the committed copy against the pin, which is the only thing keeping the
+# two honest. Everything else stays a fetch, and `zig build test` needs none of
+# it: the fetch is a prerequisite for the eleven-grammar sweep and nothing else.
+#
+# Every commit here was checked rather than assumed: the raw file at that
+# commit was fetched over the network and its sha256 compared against the bytes
+# on disk, and separately its git blob hash was compared inside a real clone.
+# All eleven matched their repository's default-branch HEAD on 2026-08-03. A
+# grammar whose bytes no upstream commit reproduces would carry
+# `commit = "unverified"` and a `note` saying what was found, and `fetch` would
+# refuse it rather than guess at a URL - there are none of those today.
+#
+# Schema: one [[grammar]] table per language, every field required but `note`.
+#
+#   name    the file `fetch` writes - `<name>.json` under upstream/grammars/
+#   repo    GitHub `owner/repo`
+#   commit  the 40-hex commit those bytes come from, or the string "unverified"
+#   path    where grammar.json sits inside that repository at that commit
+#   sha256  sha256 of the exact bytes; this is the authority
+#   size    their length, so `list` reads as a table instead of a wall of hashes
+#   date    that commit's date, for orientation only
+#   note    why a pin is odd, when it is
+#   fixture a committed copy of these exact bytes, repo-root-relative. `verify`
+#           hashes it against `sha256` and fails naming both paths on a drift.
+#           Only for a grammar something in the build graph has to reach without
+#           a fetch - one, today.
+#
+# Adding a grammar means adding a file to research/joinery/corpus/ too, and
+# that folder's README explains why it has to be the same program again.
+
+[[grammar]]
+name = "bash"
+repo = "tree-sitter/tree-sitter-bash"
+commit = "a06c2e4415e9bc0346c6b86d401879ffb44058f7"
+path = "src/grammar.json"
+sha256 = "6c14f325170826cbc6c523ff5c2aeaa46f24bbff3a6e5eadb4533d9838fe3d81"
+size = 179629
+date = "2025-12-02"
+
+[[grammar]]
+name = "c"
+repo = "tree-sitter/tree-sitter-c"
+commit = "b780e47fc780ddc8da13afa35a3f4ed5c157823d"
+path = "src/grammar.json"
+sha256 = "d0bc53bfd8e9eff4d5e0c3ca2c8049bec2caa8a15f119807de68fd527f172368"
+size = 237474
+date = "2026-04-22"
+
+[[grammar]]
+name = "cpp"
+repo = "tree-sitter/tree-sitter-cpp"
+commit = "8b5b49eb196bec7040441bee33b2c9a4838d6967"
+path = "src/grammar.json"
+sha256 = "3aa14b0b6ef87951ef9933d126f6d9774bc7d7dba11e7be1861820e381d36455"
+size = 458800
+date = "2026-02-24"
+
+[[grammar]]
+name = "go"
+repo = "tree-sitter/tree-sitter-go"
+commit = "2346a3ab1bb3857b48b29d779a1ef9799a248cd7"
+path = "src/grammar.json"
+sha256 = "0dcc665aa521a1b73a200be13b4e376780cca037d764a165f12864babfe28000"
+size = 198042
+date = "2025-09-15"
+
+[[grammar]]
+name = "java"
+repo = "tree-sitter/tree-sitter-java"
+commit = "e10607b45ff745f5f876bfa3e94fbcc6b44bdc11"
+path = "src/grammar.json"
+sha256 = "47ca521cd7a888d671d9f26301e8697fa686e04912032e959d242b5f25877eb6"
+size = 186491
+date = "2025-09-14"
+
+[[grammar]]
+name = "javascript"
+repo = "tree-sitter/tree-sitter-javascript"
+commit = "58404d8cf191d69f2674a8fd507bd5776f46cb11"
+path = "src/grammar.json"
+sha256 = "7d9364b824be9250ba023065784550475d277b9dc9a7d20f9bebe9e471c908c3"
+size = 174998
+date = "2025-09-14"
+
+[[grammar]]
+name = "json"
+repo = "tree-sitter/tree-sitter-json"
+commit = "001c28d7a29832b06b0e831ec77845553c89b56d"
+path = "src/grammar.json"
+sha256 = "6a823bbabc1bbf85f4d7bedfff359e1751011294ac670bd51788c9aff0d68637"
+size = 12913
+date = "2025-09-14"
+note = "the one build.zig embeds into the test module, so it is committed rather than fetched"
+fixture = "test/grammar/json.json"
+
+[[grammar]]
+name = "python"
+repo = "tree-sitter/tree-sitter-python"
+commit = "26855eabccb19c6abf499fbc5b8dc7cc9ab8bc64"
+path = "src/grammar.json"
+sha256 = "d933cfea6197e57354c9ec86888adbb95971b4372efef514b82e601b5067580d"
+size = 145707
+date = "2025-09-15"
+
+[[grammar]]
+name = "ruby"
+repo = "tree-sitter/tree-sitter-ruby"
+commit = "ad907a69da0c8a4f7a943a7fe012712208da6dee"
+path = "src/grammar.json"
+sha256 = "ff0a0ab48788daea51cb418d9cfc14086dfcad50ac10e4981776be8b4d9296ab"
+size = 192934
+date = "2026-03-10"
+
+[[grammar]]
+name = "rust"
+repo = "tree-sitter/tree-sitter-rust"
+commit = "77a3747266f4d621d0757825e6b11edcbf991ca5"
+path = "src/grammar.json"
+sha256 = "b0f58f41f5461fa141bb98d81fe8abece3056cff979c4068a2e6cddee5aa0663"
+size = 224430
+date = "2026-03-27"
+
+[[grammar]]
+name = "typescript"
+repo = "tree-sitter/tree-sitter-typescript"
+commit = "75b3874edb2dc714fb1fd77a32013d0f8699989f"
+path = "typescript/src/grammar.json"
+sha256 = "99dc4b95424dff47c89acb50d5d3f25b081b07eaff43994b7881dccd4186b214"
+size = 281518
+date = "2025-01-30"
+note = "one repo holds typescript and tsx; this is the typescript dialect"

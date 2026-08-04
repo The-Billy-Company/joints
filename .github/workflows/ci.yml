@@ -1,0 +1,131 @@
+# What has to be true before a change lands.
+#
+# Two jobs, because they are two different pieces of news. `grammars` asks
+# whether the pins in `grammars.toml` still resolve to the bytes they claim -
+# that is a fact about upstream repositories, it needs no compiler, and it can
+# go red on a day nobody touched this repo. `press` asks whether the code still
+# builds and still holds rung 1's claims.
+#
+# The order inside `press` is load-bearing rather than tidy, and it is: build,
+# test, then fetch, then sweep. `zig build test` needs no network and no
+# grammars - the one grammar the test module embeds is committed at
+# `test/grammar/json.json`, precisely so a clone can test with nothing. The only
+# thing the fetch is a prerequisite for is the eleven-grammar sweep. Putting it
+# last means a genuine press regression is never downstream of somebody else's
+# repository being reachable, so a red run reads in the order of blame instead
+# of hiding a compile error behind a network step.
+#
+# `verify` also proves the committed fixture still hashes to the `json` pin, and
+# that assertion is load-bearing rather than decorative - wrong bytes in that
+# file would compile and pass. The `grammars` job below is where it earns its
+# keep: bare checkout, no toolchain, so it lands that news in parallel and
+# early rather than after a build.
+#
+# `build.zig.zon` resolves irregex as a sibling path dependency (`../irregex`),
+# so this package cannot build from its own clone. `actions/checkout` refuses a
+# `path:` outside the workspace, so both repositories are checked out into
+# subdirectories of the workspace, which makes them siblings of each other and
+# makes that relative path resolve as written. Nothing is patched for CI: what
+# builds here is the layout a contributor actually clones. The sibling is taken
+# at its default branch, because a path dependency has no pin to honor.
+#
+# No credentials, no GPU, no tree-sitter. outliner never links tree-sitter and
+# never shells its runtime, so nothing here installs it.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A force-push mid-run should cancel the run it obsoleted, not race it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Matches `minimum_zig_version` in build.zig.zon and the sibling's own pin -
+  # the two packages compile into one artifact, so they cannot disagree about
+  # the compiler.
+  ZIG_VERSION: 0.16.0
+
+jobs:
+  grammars:
+    name: grammars (the pins still resolve)
+    runs-on: ubuntu-latest
+    # Deliberately a bare checkout with no toolchain and no sibling: this gate
+    # reads a manifest and hashes bytes, so making it wait on a build would only
+    # give it more ways to be red for reasons that are not its own.
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: what is pinned
+        run: python3 tool/grammars.py list
+      # A fresh checkout has no `upstream/`, so this is the only step here that
+      # touches the network, and it refuses any byte that does not hash to its
+      # pin rather than writing it.
+      - name: fetch every grammar from its pinned commit
+        run: python3 tool/grammars.py fetch
+      # Offline by construction, and run separately anyway: `fetch` skipping a
+      # file it already had and `verify` agreeing about that file are two
+      # different assertions, and only the second one holds on a warm tree. This
+      # is also the step that proves `test/grammar/json.json` still holds the
+      # bytes the `json` pin claims, which nothing downstream would notice.
+      - name: verify the bytes on disk, and the committed fixture against its pin
+        run: python3 tool/grammars.py verify
+
+  press:
+    name: press (${{ matrix.os }})
+    # Both host families, because the build branches on them - the macOS
+    # deployment floor in build.zig is one place they differ - and because
+    # nothing about a parse should.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: outliner
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: outliner
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: The-Billy-Company/irregex
+          path: irregex
+          token: ${{ secrets.ECOSYSTEM_TOKEN || github.token }}
+          persist-credentials: false
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      # Compile-only first: when this fails, the test log is noise and the
+      # failure is one line rather than a suite's worth of scrollback. Nothing
+      # above this step touched the network beyond the checkouts, which is the
+      # point - a clone tests with what it cloned.
+      - run: zig build check
+      - run: zig build test
+      # ReleaseFast, because the sweep below runs the installed binary and rung
+      # 1 is 13 seconds of real work in release and minutes in debug.
+      - run: zig build
+      # Only now, and only for the sweep. The eleven grammars the dossier
+      # measures over are pinned rather than committed, since `upstream/` holds
+      # clones kept for study rather than sources this package vendors.
+      - name: fetch the pinned grammars
+        run: python3 tool/grammars.py fetch
+      - name: verify the bytes on disk against the manifest
+        run: python3 tool/grammars.py verify
+      # The gate, not a demo. It holds the run to the three claims
+      # research/joinery/TESTING.md actually rests on - zero residual conflicts
+      # on every grammar, nothing disagreeing anywhere, and a residue that never
+      # gets past two - and reports the refusals without gating them, since
+      # those are the lexer and the fork rather than the monoid.
+      - name: rung 1, over all eleven grammars
+        run: python3 tool/rung1.py
