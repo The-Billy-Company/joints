@@ -30,13 +30,6 @@ pub const Item = packed struct(u64) {
 pub const Edge = struct {
     symbol: g.Symbol,
     target: u32,
-    /// The strongest precedence among the productions whose dot advances over
-    /// this symbol here. A shift has no precedence of its own — it inherits it
-    /// from whichever item wants to keep going — and this is the only layer
-    /// where those items still exist, so it is computed here and carried
-    /// rather than reconstructed by re-closing the state later.
-    prec: i32,
-    assoc: g.Assoc,
 };
 
 pub const State = struct {
@@ -80,9 +73,35 @@ pub const Collection = struct {
     }
 };
 
-/// The interner that makes the collection finite: a kernel seen twice is one
-/// state. Keys are the kernel slices themselves, hashed by their bytes.
-const Index = std.HashMap([]const Item, u32, struct {
+/// A kernel, plus what distinguishes two states that have it.
+///
+/// `mark` is zero for the usual case, where a kernel *is* the state and seeing
+/// it twice means arriving somewhere already known. For a kernel named in
+/// `Options.split` it is a hash of the kernel arrived *from*, which makes each
+/// way in a separate state — see `Options.split` for why anyone would want that.
+///
+/// The mark names the source by its kernel rather than by its state id, and the
+/// difference is the difference between terminating and not. An id is minted by
+/// splitting: split a state that lies on a cycle through itself and each copy is
+/// a new id, which is a new mark, which is another copy — a 1300-state automaton
+/// walks past a quarter of a million states and never closes. A kernel is what
+/// the state *is*, so it is the same before and after any split, and the copies
+/// of a marked kernel are at most the distinct kernels that reach it.
+const Key = struct { kernel: []const Item, mark: u64 };
+
+/// The interner that makes the collection finite: a key seen twice is one
+/// state. Kernels are hashed by their bytes.
+const Index = std.HashMap(Key, u32, struct {
+    pub fn hash(_: @This(), k: Key) u64 {
+        return std.hash.Wyhash.hash(k.mark, std.mem.sliceAsBytes(k.kernel));
+    }
+    pub fn eql(_: @This(), a: Key, b: Key) bool {
+        return a.mark == b.mark and std.mem.eql(Item, a.kernel, b.kernel);
+    }
+}, std.hash_map.default_max_load_percentage);
+
+/// A set of kernels, for asking whether a state is one of the ones being split.
+const Marked = std.HashMap([]const Item, void, struct {
     pub fn hash(_: @This(), k: []const Item) u64 {
         return std.hash.Wyhash.hash(0, std.mem.sliceAsBytes(k));
     }
@@ -90,6 +109,81 @@ const Index = std.HashMap([]const Item, u32, struct {
         return std.mem.eql(Item, a, b);
     }
 }, std.hash_map.default_max_load_percentage);
+
+pub const Options = struct {
+    /// Kernels to unfold by predecessor: one state per way in, rather than one
+    /// state per kernel.
+    ///
+    /// Merging states that share a kernel is what makes this an LR(0)
+    /// collection rather than a tree, and it is almost always right — it is
+    /// the reason the automaton is finite. But the merge also unions what can
+    /// follow each arrival, and a reduction decided from that union is decided
+    /// from lookaheads that belong to a context the parser is not in. That is
+    /// the whole of the LALR-versus-canonical gap, and it shows up only as
+    /// reduce/reduce conflicts: two folds contend on a terminal that is
+    /// genuinely possible after one way in and impossible after the other.
+    ///
+    /// Naming a kernel here separates its arrivals, so each copy's lookaheads
+    /// are its own. Doing it everywhere is canonical LR(1) and costs an order
+    /// of magnitude; doing it where a conflict proved the merge too coarse
+    /// costs the states that conflict actually needs. `press.tables` finds
+    /// them by measurement rather than guess.
+    split: []const []const Item = &.{},
+    /// A ceiling on states. Splitting by source kernel terminates, but it can
+    /// still cost more automaton than the conflict it buys is worth. Reaching
+    /// it returns `error.Unsplittable` rather than a collection nobody asked
+    /// for.
+    ceiling: u32 = 1 << 19,
+};
+
+/// The closure of a kernel, and the scratch it needs to compute one.
+///
+/// Exposed because the closure is the only place the *items* of a state still
+/// exist. The collection keeps kernels and reductions, which is all a table
+/// needs; anything that has to say which items disagree — a conflict report, an
+/// LR(1) lookahead — has to re-derive them, and should re-derive them the same
+/// way the automaton did.
+pub const Closure = struct {
+    items: std.ArrayList(Item) = .empty,
+    /// Per nonterminal, whether its productions are already in `items`. A set
+    /// rather than a scan: without it the walk is quadratic in the closure.
+    expanded: []bool,
+
+    pub fn init(gpa: std.mem.Allocator, gr: *const g.Grammar) !Closure {
+        return .{ .expanded = try gpa.alloc(bool, gr.nonterminalCount()) };
+    }
+
+    pub fn deinit(c: *Closure, gpa: std.mem.Allocator) void {
+        c.items.deinit(gpa);
+        gpa.free(c.expanded);
+        c.* = undefined;
+    }
+
+    /// The closure of `kernel`, valid until the next call.
+    pub fn of(
+        c: *Closure,
+        gpa: std.mem.Allocator,
+        gr: *const g.Grammar,
+        kernel: []const Item,
+    ) ![]const Item {
+        c.items.clearRetainingCapacity();
+        try c.items.appendSlice(gpa, kernel);
+        @memset(c.expanded, false);
+        var i: usize = 0;
+        while (i < c.items.items.len) : (i += 1) {
+            const item = c.items.items[i];
+            const rhs = gr.productions[item.prod].rhs;
+            if (item.dot == rhs.len) continue;
+            const s = rhs[item.dot];
+            if (gr.isTerminal(s)) continue;
+            const n = s - gr.terminal_count;
+            if (c.expanded[n]) continue;
+            c.expanded[n] = true;
+            for (gr.productionsOf(s)) |p| try c.items.append(gpa, .{ .prod = p, .dot = 0 });
+        }
+        return c.items.items;
+    }
+};
 
 /// One closure item paired with the symbol its dot sits before, so the whole
 /// successor set can be sorted once and read off in runs.
@@ -102,13 +196,16 @@ const Step = struct {
     }
 };
 
-pub fn build(gpa: std.mem.Allocator, gr: *const g.Grammar) !Collection {
+pub fn build(gpa: std.mem.Allocator, gr: *const g.Grammar, opts: Options) !Collection {
     var arena = std.heap.ArenaAllocator.init(gpa);
     errdefer arena.deinit();
     const a = arena.allocator();
 
     var index = Index.init(gpa);
     defer index.deinit();
+    var marked = Marked.init(gpa);
+    defer marked.deinit();
+    for (opts.split) |k| try marked.put(k, {});
     var kernels: std.ArrayList([]const Item) = .empty;
     defer kernels.deinit(gpa);
     var states: std.ArrayList(State) = .empty;
@@ -116,9 +213,7 @@ pub fn build(gpa: std.mem.Allocator, gr: *const g.Grammar) !Collection {
 
     // Scratch reused across every state, so the walk allocates once and then
     // stops allocating.
-    var expanded = try gpa.alloc(bool, gr.nonterminalCount());
-    defer gpa.free(expanded);
-    var closure: std.ArrayList(Item) = .empty;
+    var closure = try Closure.init(gpa, gr);
     defer closure.deinit(gpa);
     var steps: std.ArrayList(Step) = .empty;
     defer steps.deinit(gpa);
@@ -128,32 +223,22 @@ pub fn build(gpa: std.mem.Allocator, gr: *const g.Grammar) !Collection {
     defer edges.deinit(gpa);
 
     // Production 0 is the augmented `$start -> S`, so the initial kernel is
-    // that production with the dot at its front.
-    _ = try intern(gpa, a, &index, &kernels, &states, &.{.{ .prod = 0, .dot = 0 }});
+    // that production with the dot at its front. The start state is entered
+    // from nowhere, so it is never split.
+    _ = try intern(gpa, a, &index, &kernels, &states, .{
+        .kernel = &.{.{ .prod = 0, .dot = 0 }},
+        .mark = 0,
+    });
 
     var at: usize = 0;
     while (at < kernels.items.len) : (at += 1) {
         const kernel = kernels.items[at];
 
-        closure.clearRetainingCapacity();
-        try closure.appendSlice(gpa, kernel);
-        @memset(expanded, false);
-        var i: usize = 0;
-        while (i < closure.items.len) : (i += 1) {
-            const item = closure.items[i];
-            const rhs = gr.productions[item.prod].rhs;
-            if (item.dot == rhs.len) continue;
-            const s = rhs[item.dot];
-            if (gr.isTerminal(s)) continue;
-            const n = s - gr.terminal_count;
-            if (expanded[n]) continue;
-            expanded[n] = true;
-            for (gr.productionsOf(s)) |p| try closure.append(gpa, .{ .prod = p, .dot = 0 });
-        }
+        const items = try closure.of(gpa, gr, kernel);
 
         steps.clearRetainingCapacity();
         complete.clearRetainingCapacity();
-        for (closure.items) |item| {
+        for (items) |item| {
             const rhs = gr.productions[item.prod].rhs;
             if (item.dot == rhs.len) {
                 try complete.append(gpa, item.prod);
@@ -175,24 +260,19 @@ pub fn build(gpa: std.mem.Allocator, gr: *const g.Grammar) !Collection {
 
             var target: std.ArrayList(Item) = .empty;
             defer target.deinit(gpa);
-            var prec: i32 = 0;
-            var assoc: g.Assoc = .none;
             for (steps.items[run..end]) |s| {
-                const p = gr.productions[s.item.prod];
-                if (@abs(p.prec) > @abs(prec)) {
-                    prec = p.prec;
-                    assoc = p.assoc;
-                }
                 // Sorted, so a duplicate can only be adjacent.
                 const last = target.getLastOrNull();
                 if (last == null or !std.meta.eql(last.?, s.item)) try target.append(gpa, s.item);
             }
             try edges.append(gpa, .{
                 .symbol = symbol,
-                .target = try intern(gpa, a, &index, &kernels, &states, target.items),
-                .prec = prec,
-                .assoc = assoc,
+                .target = try intern(gpa, a, &index, &kernels, &states, .{
+                    .kernel = target.items,
+                    .mark = if (marked.contains(target.items)) sourced(kernel) else 0,
+                }),
             });
+            if (states.items.len > opts.ceiling) return error.Unsplittable;
             run = end;
         }
 
@@ -210,18 +290,24 @@ pub fn build(gpa: std.mem.Allocator, gr: *const g.Grammar) !Collection {
     return .{ .arena = arena, .states = owned };
 }
 
+/// The name a source kernel goes by in a mark. Nonzero, so that "arrived from
+/// here" is never confused with "not split".
+fn sourced(kernel: []const Item) u64 {
+    return std.hash.Wyhash.hash(1, std.mem.sliceAsBytes(kernel)) | 1;
+}
+
 fn intern(
     gpa: std.mem.Allocator,
     a: std.mem.Allocator,
     index: *Index,
     kernels: *std.ArrayList([]const Item),
     states: *std.ArrayList(State),
-    kernel: []const Item,
+    key: Key,
 ) !u32 {
-    const slot = try index.getOrPut(kernel);
+    const slot = try index.getOrPut(key);
     if (slot.found_existing) return slot.value_ptr.*;
-    const owned = try a.dupe(Item, kernel);
-    slot.key_ptr.* = owned;
+    const owned = try a.dupe(Item, key.kernel);
+    slot.key_ptr.* = .{ .kernel = owned, .mark = key.mark };
     slot.value_ptr.* = @intCast(kernels.items.len);
     try kernels.append(gpa, owned);
     // Filled in when the walk reaches it; the id has to exist first so an edge
@@ -242,16 +328,16 @@ fn parens(gpa: std.mem.Allocator) !g.Grammar {
     const x = try b.intern("x", "x", .{ .literal = "x" });
     const start = try b.intern("$start", "$start", null);
     const s = try b.intern("S", "S", null);
-    try b.addProduction(start, &.{s}, 0, .none);
-    try b.addProduction(s, &.{ lp, s, rp }, 0, .none);
-    try b.addProduction(s, &.{x}, 0, .none);
+    try b.addProduction(start, &.{s}, &.{});
+    try b.addProduction(s, &.{ lp, s, rp }, &.{});
+    try b.addProduction(s, &.{x}, &.{});
     return b.finish("parens", start, &.{}, &.{});
 }
 
 test "the collection is finite and every edge lands in it" {
     var gr = try parens(testing.allocator);
     defer gr.deinit();
-    var c = try build(testing.allocator, &gr);
+    var c = try build(testing.allocator, &gr, .{});
     defer c.deinit();
 
     // Six kernels: {$start -> . S}, {$start -> S .}, {S -> ( . S )},
@@ -272,7 +358,7 @@ test "the collection is finite and every edge lands in it" {
 test "a completed item is reported exactly in the state that completes it" {
     var gr = try parens(testing.allocator);
     defer gr.deinit();
-    var c = try build(testing.allocator, &gr);
+    var c = try build(testing.allocator, &gr, .{});
     defer c.deinit();
 
     var accepting: usize = 0;
@@ -290,7 +376,7 @@ test "a completed item is reported exactly in the state that completes it" {
 test "walking a right-hand side from the start state lands where goto does" {
     var gr = try parens(testing.allocator);
     defer gr.deinit();
-    var c = try build(testing.allocator, &gr);
+    var c = try build(testing.allocator, &gr, .{});
     defer c.deinit();
 
     const rhs = gr.productions[1].rhs; // ( S )

@@ -9,8 +9,12 @@
 //!
 //! The output dialect is deliberately plain: literals, classes, alternation,
 //! and the three quantifiers. tree-sitter's own patterns are already regexes
-//! and pass through untouched inside a non-capturing group, so whatever
-//! dialect they were written in is the dialect the engine must accept.
+//! and go inside a non-capturing group nearly untouched — nearly, because they
+//! are *JavaScript* regexes, and JavaScript is the one dialect in the family
+//! that spells a codepoint escape `\uXXXX` where RE2, Rust's regex, and irregex
+//! all spell it `\x{XXXX}`. Translating that is the front end's job: an engine
+//! that grew a `\u` to read tree-sitter grammars would be carrying a JavaScript
+//! wart forever on behalf of one consumer.
 
 const std = @import("std");
 const json = std.json;
@@ -62,7 +66,7 @@ pub fn render(
             try out.appendSlice(gpa, flags);
             try out.append(gpa, ':');
         }
-        try out.appendSlice(gpa, v.string);
+        try transcribe(out, gpa, v.string);
         try out.append(gpa, ')');
         return true;
     }
@@ -118,10 +122,66 @@ pub fn render(
 /// `IMMEDIATE_TOKEN`), and conflict resolution (`PREC*`).
 pub fn isWrapper(kind: []const u8) bool {
     for ([_][]const u8{
-        "TOKEN",       "IMMEDIATE_TOKEN", "ALIAS",         "FIELD",
-        "PREC",        "PREC_LEFT",       "PREC_RIGHT",    "PREC_DYNAMIC",
+        "TOKEN", "IMMEDIATE_TOKEN", "ALIAS",      "FIELD",
+        "PREC",  "PREC_LEFT",       "PREC_RIGHT", "PREC_DYNAMIC",
     }) |w| if (std.mem.eql(u8, kind, w)) return true;
     return false;
+}
+
+/// Copy a JavaScript regex body into the engine's dialect.
+///
+/// One difference, and it is load-bearing rather than cosmetic: JavaScript
+/// writes a codepoint escape `\uXXXX` (or `\u{X…}`), where this engine — like
+/// RE2 and Rust's regex — writes `\x{XXXX}`. tree-sitter-java's `identifier` is
+/// `[\p{XID_Start}_$][\p{XID_Continue}\u00A2_$]*`, so without this the most
+/// common terminal in the language does not compile.
+///
+/// Backslashes are consumed in pairs, so `\\uABCD` — an escaped backslash, then
+/// a literal `u` — is left exactly as it was. Anything else, including a `\u`
+/// that is not followed by a codepoint, passes through untranslated: this
+/// function's job is to remove one known dialect difference, not to become a
+/// second, quieter regex parser that can disagree with the real one.
+fn transcribe(out: *std.ArrayList(u8), gpa: std.mem.Allocator, s: []const u8) !void {
+    var i: usize = 0;
+    while (i < s.len) {
+        if (s[i] != '\\' or i + 1 == s.len) {
+            try out.append(gpa, s[i]);
+            i += 1;
+            continue;
+        }
+        if (s[i + 1] != 'u') {
+            try out.appendSlice(gpa, s[i .. i + 2]);
+            i += 2;
+            continue;
+        }
+        const body = codepoint(s[i + 2 ..]) orelse {
+            try out.appendSlice(gpa, s[i .. i + 2]);
+            i += 2;
+            continue;
+        };
+        try out.appendSlice(gpa, "\\x{");
+        try out.appendSlice(gpa, body.hex);
+        try out.append(gpa, '}');
+        i += 2 + body.taken;
+    }
+}
+
+/// The codepoint body just past a `\u`: four bare hex digits, or `{`-delimited
+/// hex. Null when neither, which leaves the escape untouched.
+fn codepoint(rest: []const u8) ?struct { hex: []const u8, taken: usize } {
+    if (rest.len != 0 and rest[0] == '{') {
+        const close = std.mem.indexOfScalar(u8, rest, '}') orelse return null;
+        const hex = rest[1..close];
+        if (hex.len == 0 or !isHex(hex)) return null;
+        return .{ .hex = hex, .taken = close + 1 };
+    }
+    if (rest.len < 4 or !isHex(rest[0..4])) return null;
+    return .{ .hex = rest[0..4], .taken = 4 };
+}
+
+fn isHex(s: []const u8) bool {
+    for (s) |c| if (!std.ascii.isHex(c)) return false;
+    return true;
 }
 
 /// Write `s` so a regex engine reads it as those exact bytes.
@@ -170,6 +230,37 @@ test "literal metacharacters are escaped, not interpreted" {
     const got = (try renderSource(testing.allocator, "{\"type\":\"STRING\",\"value\":\"a.b*\"}")).?;
     defer testing.allocator.free(got);
     try testing.expectEqualStrings("a\\.b\\*", got);
+}
+
+test "a JavaScript codepoint escape becomes the engine's spelling of it" {
+    const cases = [_][2][]const u8{
+        // tree-sitter-java's `identifier`, which is why this exists.
+        // The digits are copied verbatim rather than reparsed and reprinted:
+        // `\x{00A2}` is the same codepoint as `\x{A2}`, and a translation that
+        // normalizes is a translation that can be wrong about a number.
+        .{ "[\\\\p{XID_Continue}\\\\u00A2_$]*", "(?:[\\p{XID_Continue}\\x{00A2}_$]*)" },
+        .{ "\\\\u{1F600}", "(?:\\x{1F600})" },
+        // An escaped backslash then a literal `u` is not an escape at all.
+        .{ "\\\\\\\\u0041", "(?:\\\\u0041)" },
+        // Too few digits, no digits, and an unterminated brace all pass through
+        // rather than being guessed at.
+        .{ "\\\\u12", "(?:\\u12)" },
+        .{ "\\\\uZZZZ", "(?:\\uZZZZ)" },
+        .{ "\\\\u{12", "(?:\\u{12)" },
+        // Other escapes are untouched; the front end translates one difference.
+        .{ "\\\\d\\\\w\\\\x41", "(?:\\d\\w\\x41)" },
+    };
+    for (cases) |c| {
+        const src = try std.fmt.allocPrint(
+            testing.allocator,
+            "{{\"type\":\"PATTERN\",\"value\":\"{s}\"}}",
+            .{c[0]},
+        );
+        defer testing.allocator.free(src);
+        const got = (try renderSource(testing.allocator, src)).?;
+        defer testing.allocator.free(got);
+        try testing.expectEqualStrings(c[1], got);
+    }
 }
 
 test "a token reaching an unresolvable symbol renders nothing at all" {

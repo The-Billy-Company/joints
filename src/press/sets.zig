@@ -64,6 +64,18 @@ pub const Matrix = struct {
         for (m.row(dst), other.row(src)) |*a, b| a.* |= b;
     }
 
+    /// `dst &= src`, across matrices. The companion to `unionFrom`: where a
+    /// union answers "what could follow here from anywhere", the meet answers
+    /// "what follows here from *every* context", and the difference between the
+    /// two is precisely what state merging invented.
+    pub fn meetFrom(m: Matrix, dst: usize, other: Matrix, src: usize) void {
+        for (m.row(dst), other.row(src)) |*a, b| a.* &= b;
+    }
+
+    pub fn copyFrom(m: Matrix, dst: usize, other: Matrix, src: usize) void {
+        @memcpy(m.row(dst), other.row(src));
+    }
+
     pub fn copyRow(m: Matrix, dst: usize, src: usize) void {
         if (dst == src) return;
         @memcpy(m.row(dst), m.row(src));

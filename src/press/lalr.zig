@@ -1,6 +1,13 @@
 //! LALR(1) lookaheads by the DeRemer-Pennello relations, and the action table
 //! they decide.
 //!
+//! *Which* reductions are legal in a state is this file's question. *Which one
+//! a parser should take when several are* is a different question with a
+//! different answer — the author's precedence and associativity, walked in a
+//! specific order — and it lives in `settle.zig`. The split is not tidiness:
+//! written together, the second question comes out as a default buried in a
+//! table-filling loop, and defaults are what this layer is being measured on.
+//!
 //! The naive way to get lookaheads is to build LR(1) items and then merge, or
 //! to propagate spontaneous lookaheads around the automaton until nothing
 //! changes. Both work and both are wasteful: the first builds a machine an
@@ -17,39 +24,18 @@
 //! The layer above cares about none of that. It gets one table.
 
 const std = @import("std");
+const first = @import("first.zig");
 const g = @import("grammar.zig");
 const lr0 = @import("lr0.zig");
 const sets = @import("sets.zig");
+const imports = @import("import.zig");
+const settle = @import("settle.zig");
 
-pub const Action = packed struct(u32) {
-    kind: Kind,
-    /// Target state for a shift, production index for a reduce.
-    value: u30,
-
-    pub const Kind = enum(u2) { err, shift, reduce, accept };
-    pub const err: Action = .{ .kind = .err, .value = 0 };
-
-    fn shift(target: u32) Action {
-        return .{ .kind = .shift, .value = @intCast(target) };
-    }
-    fn reduce(prod: u32) Action {
-        return .{ .kind = .reduce, .value = @intCast(prod) };
-    }
-};
-
-/// A cell the grammar did not determine. Recorded rather than resolved away,
-/// because the count of these is the honest measure of how much GLR a grammar
-/// actually costs, and a generator that silently picks one is a generator you
-/// cannot ask that question of.
-pub const Conflict = struct {
-    state: u32,
-    terminal: u32,
-    kind: Kind,
-    chosen: Action,
-    other: Action,
-
-    pub const Kind = enum { shift_reduce, reduce_reduce };
-};
+/// What a state does on a terminal. Named here because the table is what hands
+/// them out, and decided in `settle.zig`, which is where the question is.
+pub const Action = settle.Action;
+pub const Conflict = settle.Conflict;
+pub const Tally = settle.Tally;
 
 pub const Tables = struct {
     arena: std.heap.ArenaAllocator,
@@ -61,6 +47,7 @@ pub const Tables = struct {
     /// one indexed load, against a sparse row that answers in a search.
     action: []const Action,
     conflicts: []const Conflict,
+    frayed: []const settle.Frayed,
 
     pub fn deinit(t: *Tables) void {
         t.arena.deinit();
@@ -69,6 +56,19 @@ pub const Tables = struct {
 
     pub fn at(t: Tables, state: u32, terminal: u32) Action {
         return t.action[state * t.width + terminal];
+    }
+
+    pub fn tally(t: Tables) Tally {
+        var out: Tally = .{};
+        for (t.conflicts) |k| switch (k.class) {
+            .repetition => out.repetition += 1,
+            .declared => out.declared += 1,
+            .residual => switch (k.kind) {
+                .shift_reduce => out.residual.shift_reduce += 1,
+                .reduce_reduce => out.residual.reduce_reduce += 1,
+            },
+        };
+        return out;
     }
 };
 
@@ -79,15 +79,22 @@ pub fn build(gpa: std.mem.Allocator, gr: *const g.Grammar, c: *const lr0.Collect
     var b: Build = .{ .gpa = gpa, .gr = gr, .c = c, .width = gr.terminal_count + 1 };
     defer b.deinit();
 
-    // No FIRST sets: the relations below read terminals straight off the
-    // automaton's own shift edges, which is what makes them a graph problem
-    // rather than a second fixpoint. Nullability is the only symbol-level fact
-    // they need.
-    try b.deriveNullable();
+    // The relations below read terminals straight off the automaton's own shift
+    // edges, which is what makes them a graph problem rather than a second
+    // fixpoint; nullability is the only symbol-level fact they need. FIRST
+    // arrives in the same pass and is what attributing a conflict costs — the
+    // shift side of one is every item that could begin with the contested
+    // terminal, which is a FIRST question and nothing else.
+    b.first = try first.build(gpa, gr);
+    b.have_first = true;
     try b.mapTransitions();
     try b.deriveFollow();
     try b.deriveLookahead();
     return b.tabulate(arena);
+}
+
+fn order(key: g.Symbol, item: g.Symbol) std.math.Order {
+    return std.math.order(key, item);
 }
 
 /// A nonterminal transition: state `from`, over `symbol`, into `to`. Lookahead
@@ -101,7 +108,7 @@ const Build = struct {
     c: *const lr0.Collection,
     width: u32,
 
-    nullable: []bool = &.{},
+    first: first.First = undefined,
     transitions: []Transition = &.{},
     /// Transition id of each state's first nonterminal edge. Edges are sorted
     /// by symbol and every nonterminal outranks every terminal, so a state's
@@ -112,44 +119,28 @@ const Build = struct {
     follow: sets.Matrix = undefined,
     /// One row per (state, complete production) pair.
     la: sets.Matrix = undefined,
+    /// The same rows, intersected rather than unioned over the contexts that
+    /// reach the reduction. `la` says a fold is legal on a terminal somewhere;
+    /// `meet` says it is legal on that terminal *everywhere* this state stands
+    /// for. Where they differ, one LR(0) state is doing duty for contexts that
+    /// disagree, and the disagreement is the merge's, not the grammar's.
+    meet: sets.Matrix = undefined,
     reduction_base: []u32 = &.{},
+    have_first: bool = false,
     have_follow: bool = false,
     have_la: bool = false,
 
     fn deinit(b: *Build) void {
-        b.gpa.free(b.nullable);
+        if (b.have_first) b.first.deinit(b.gpa);
         b.gpa.free(b.transitions);
         b.gpa.free(b.nt_base);
         b.gpa.free(b.nt_start);
         if (b.have_follow) b.follow.deinit(b.gpa);
-        if (b.have_la) b.la.deinit(b.gpa);
+        if (b.have_la) {
+            b.la.deinit(b.gpa);
+            b.meet.deinit(b.gpa);
+        }
         b.gpa.free(b.reduction_base);
-    }
-
-    fn index(b: Build, s: g.Symbol) usize {
-        return s - b.gr.terminal_count;
-    }
-
-    fn nullableSuffix(b: Build, rhs: []const g.Symbol) bool {
-        for (rhs) |s| {
-            if (b.gr.isTerminal(s) or !b.nullable[b.index(s)]) return false;
-        }
-        return true;
-    }
-
-    fn deriveNullable(b: *Build) !void {
-        b.nullable = try b.gpa.alloc(bool, b.gr.nonterminalCount());
-        @memset(b.nullable, false);
-        var changed = true;
-        while (changed) {
-            changed = false;
-            for (b.gr.productions) |p| {
-                const n = b.index(p.lhs);
-                if (b.nullable[n] or !b.nullableSuffix(p.rhs)) continue;
-                b.nullable[n] = true;
-                changed = true;
-            }
-        }
     }
 
     fn mapTransitions(b: *Build) !void {
@@ -218,7 +209,7 @@ const Build = struct {
                     // Directly reads: a terminal that can be shifted right
                     // after this goto is taken.
                     b.follow.set(i, e.symbol);
-                } else if (b.nullable[b.index(e.symbol)]) {
+                } else if (b.first.nullable(e.symbol)) {
                     // Reads: a nullable nonterminal can vanish, exposing
                     // whatever the transition past it could see.
                     try edges.add(@intCast(i), b.transitionOf(t.to, e.symbol).?);
@@ -239,7 +230,7 @@ const Build = struct {
             for (b.gr.productionsOf(t.symbol)) |p| {
                 var at = t.from;
                 for (b.gr.productions[p].rhs, 0..) |s, j| {
-                    if (!b.gr.isTerminal(s) and b.nullableSuffix(b.gr.productions[p].rhs[j + 1 ..])) {
+                    if (!b.gr.isTerminal(s) and b.first.nullableAll(b.gr.productions[p].rhs[j + 1 ..])) {
                         try edges.add(b.transitionOf(at, s).?, @intCast(i));
                     }
                     at = b.c.goto(at, s).?;
@@ -260,19 +251,33 @@ const Build = struct {
             total += @intCast(st.complete.len);
         }
         b.la = try sets.Matrix.init(b.gpa, total, b.width);
+        b.meet = try sets.Matrix.init(b.gpa, total, b.width);
         b.have_la = true;
+
+        const reached = try b.gpa.alloc(bool, total);
+        defer b.gpa.free(reached);
+        @memset(reached, false);
 
         for (b.transitions, 0..) |t, i| {
             for (b.gr.productionsOf(t.symbol)) |p| {
                 const landed = b.c.walk(t.from, b.gr.productions[p].rhs).?;
-                if (b.reductionOf(landed, p)) |r| b.la.unionFrom(r, b.follow, i);
+                if (b.reductionOf(landed, p)) |r| {
+                    b.la.unionFrom(r, b.follow, i);
+                    if (reached[r]) b.meet.meetFrom(r, b.follow, i) else {
+                        b.meet.copyFrom(r, b.follow, i);
+                        reached[r] = true;
+                    }
+                }
             }
         }
         // The augmented production is not reachable through any transition, so
         // its lookahead is stated rather than derived: accept at end of input.
         for (b.c.states, 0..) |st, q| {
             for (st.complete, 0..) |p, k| {
-                if (p == 0) b.la.set(b.reduction_base[q] + k, b.gr.terminal_count);
+                if (p == 0) {
+                    b.la.set(b.reduction_base[q] + k, b.gr.terminal_count);
+                    b.meet.set(b.reduction_base[q] + k, b.gr.terminal_count);
+                }
             }
         }
     }
@@ -286,98 +291,24 @@ const Build = struct {
 
     fn tabulate(b: *Build, arena: std.heap.ArenaAllocator) !Tables {
         var owned = arena;
-        const a = owned.allocator();
-        const action = try a.alloc(Action, b.c.states.len * b.width);
-        @memset(action, Action.err);
-
-        var conflicts: std.ArrayList(Conflict) = .empty;
-        defer conflicts.deinit(b.gpa);
-
-        for (b.c.states, 0..) |st, q| {
-            const row = action[q * b.width ..][0..b.width];
-            for (st.edges) |e| {
-                if (b.gr.isTerminal(e.symbol)) row[e.symbol] = Action.shift(e.target);
-            }
-            for (st.complete, 0..) |p, k| {
-                var it = b.la.iterate(b.reduction_base[q] + k);
-                while (it.next()) |t| {
-                    const proposed = if (p == 0) Action{ .kind = .accept, .value = 0 } else Action.reduce(p);
-                    row[t] = try b.settle(&conflicts, @intCast(q), @intCast(t), row[t], proposed);
-                }
-            }
-        }
+        const verdict = try settle.all(.{
+            .gr = b.gr,
+            .c = b.c,
+            .first = &b.first,
+            .la = b.la,
+            .meet = b.meet,
+            .reduction_base = b.reduction_base,
+            .width = b.width,
+        }, b.gpa, owned.allocator());
 
         return .{
             .arena = owned,
             .end = b.gr.terminal_count,
             .width = b.width,
-            .action = action,
-            .conflicts = try a.dupe(Conflict, conflicts.items),
+            .action = verdict.action,
+            .conflicts = verdict.conflicts,
+            .frayed = verdict.frayed,
         };
-    }
-
-    /// Decide one contested cell. Precedence is the grammar author's own answer
-    /// and is honored silently; anything precedence does not cover is recorded
-    /// as a conflict even though a choice still has to be made, because the
-    /// count of those is what says how much of this grammar is really LALR.
-    fn settle(
-        b: *Build,
-        conflicts: *std.ArrayList(Conflict),
-        state: u32,
-        terminal: u32,
-        existing: Action,
-        proposed: Action,
-    ) !Action {
-        if (existing.kind == .err) return proposed;
-        // Accept outranks everything: it can only be contested at end of input,
-        // where no shift exists and no other reduction is meaningful.
-        if (proposed.kind == .accept) return proposed;
-        if (existing.kind == .accept) return existing;
-
-        if (existing.kind == .shift) {
-            const shift_prec = b.shiftPrec(state, terminal);
-            const p = b.gr.productions[proposed.value];
-            if (p.prec != 0 and shift_prec.prec != 0 and p.prec != shift_prec.prec) {
-                return if (p.prec > shift_prec.prec) proposed else existing;
-            }
-            if (p.prec != 0 and p.prec == shift_prec.prec) {
-                switch (p.assoc) {
-                    .left => return proposed,
-                    .right => return existing,
-                    .none => {},
-                }
-            }
-            // Unresolved: shift, which is yacc's default and the one that keeps
-            // the longer production alive.
-            try conflicts.append(b.gpa, .{
-                .state = state,
-                .terminal = terminal,
-                .kind = .shift_reduce,
-                .chosen = existing,
-                .other = proposed,
-            });
-            return existing;
-        }
-
-        // Two reductions. Precedence cannot separate them - it orders a
-        // reduction against a shift, not against another reduction - so the
-        // earlier production wins, which is the order the grammar declared.
-        const keep = if (proposed.value < existing.value) proposed else existing;
-        try conflicts.append(b.gpa, .{
-            .state = state,
-            .terminal = terminal,
-            .kind = .reduce_reduce,
-            .chosen = keep,
-            .other = if (keep.value == existing.value) proposed else existing,
-        });
-        return keep;
-    }
-
-    fn shiftPrec(b: Build, state: u32, terminal: u32) struct { prec: i32, assoc: g.Assoc } {
-        for (b.c.states[state].edges) |e| {
-            if (e.symbol == terminal) return .{ .prec = e.prec, .assoc = e.assoc };
-        }
-        return .{ .prec = 0, .assoc = .none };
     }
 };
 
@@ -488,6 +419,12 @@ const testing = std.testing;
 /// Written ambiguously on purpose. An unambiguous `E -> E + T` version has no
 /// conflicts to settle, so it would test the tables without testing the part
 /// that decides them.
+///
+/// Both operator precedences are parameters, and neither may be quietly fixed:
+/// zero is a *rank*, not an absence, so a fixture that pins one operator at 1
+/// and calls the result "no precedence" is a fixture that ranks them. It read
+/// as ambiguous for exactly as long as the resolver was unable to compare
+/// anything against zero.
 const Expr = struct {
     gr: g.Grammar,
     plus: g.Symbol,
@@ -497,7 +434,7 @@ const Expr = struct {
     id: g.Symbol,
     e: g.Symbol,
 
-    fn init(gpa: std.mem.Allocator, star_prec: i32, assoc: g.Assoc) !Expr {
+    fn init(gpa: std.mem.Allocator, plus_prec: i32, star_prec: i32, assoc: g.Assoc) !Expr {
         var b = g.Builder.init(gpa);
         defer b.deinit();
         const plus = try b.intern("+", "+", .{ .literal = "+" });
@@ -507,11 +444,19 @@ const Expr = struct {
         const id = try b.intern("id", "id", .{ .regex = "[a-z]+" });
         const start = try b.intern("$start", "$start", null);
         const e = try b.intern("E", "E", null);
-        try b.addProduction(start, &.{e}, 0, .none);
-        try b.addProduction(e, &.{ e, plus, e }, 1, assoc);
-        try b.addProduction(e, &.{ e, star, e }, star_prec, assoc);
-        try b.addProduction(e, &.{ lp, e, rp }, 0, .none);
-        try b.addProduction(e, &.{id}, 0, .none);
+        try b.addProduction(start, &.{e}, &.{});
+        const rank = struct {
+            fn at(level: i32, side: g.Assoc) [3]g.Step {
+                // Uniform across the body, which is what `prec.left(n, seq(…))`
+                // produces: the wrapper is the whole production, so every step
+                // is inside it and the final one carries the fold's rank.
+                return @splat(.{ .prec = .{ .level = level }, .assoc = side });
+            }
+        }.at;
+        try b.addProduction(e, &.{ e, plus, e }, &rank(plus_prec, assoc));
+        try b.addProduction(e, &.{ e, star, e }, &rank(star_prec, assoc));
+        try b.addProduction(e, &.{ lp, e, rp }, &.{});
+        try b.addProduction(e, &.{id}, &.{});
         const gr = try b.finish("expr", start, &.{}, &.{});
         return .{
             .gr = gr,
@@ -530,9 +475,9 @@ const Expr = struct {
 };
 
 test "lookahead is exactly what can follow the nonterminal, not every terminal" {
-    var x = try Expr.init(testing.allocator, 2, .left);
+    var x = try Expr.init(testing.allocator, 1, 2, .left);
     defer x.deinit();
-    var c = try lr0.build(testing.allocator, &x.gr);
+    var c = try lr0.build(testing.allocator, &x.gr, .{});
     defer c.deinit();
     var t = try build(testing.allocator, &x.gr, &c);
     defer t.deinit();
@@ -551,9 +496,9 @@ test "lookahead is exactly what can follow the nonterminal, not every terminal" 
 }
 
 test "precedence settles a shift-reduce silently and leaves no conflict behind" {
-    var x = try Expr.init(testing.allocator, 2, .left);
+    var x = try Expr.init(testing.allocator, 1, 2, .left);
     defer x.deinit();
-    var c = try lr0.build(testing.allocator, &x.gr);
+    var c = try lr0.build(testing.allocator, &x.gr, .{});
     defer c.deinit();
     var t = try build(testing.allocator, &x.gr, &c);
     defer t.deinit();
@@ -571,9 +516,9 @@ test "precedence settles a shift-reduce silently and leaves no conflict behind" 
 }
 
 test "without precedence the same grammar reports its ambiguity instead of hiding it" {
-    var x = try Expr.init(testing.allocator, 0, .none);
+    var x = try Expr.init(testing.allocator, 0, 0, .none);
     defer x.deinit();
-    var c = try lr0.build(testing.allocator, &x.gr);
+    var c = try lr0.build(testing.allocator, &x.gr, .{});
     defer c.deinit();
     var t = try build(testing.allocator, &x.gr, &c);
     defer t.deinit();
@@ -585,13 +530,38 @@ test "without precedence the same grammar reports its ambiguity instead of hidin
     for (t.conflicts) |k| {
         try testing.expectEqual(Conflict.Kind.shift_reduce, k.kind);
         try testing.expectEqual(Action.Kind.shift, k.chosen.kind);
+        try testing.expectEqual(Conflict.Class.residual, k.class);
     }
 }
 
-test "accept happens at end of input and only there" {
-    var x = try Expr.init(testing.allocator, 2, .left);
+test "ranking one operator above the default settles the pair it outranks" {
+    // `+` ranked, `*` left at the default. Nothing here declares associativity,
+    // so associativity cannot settle anything and every cell that resolves does
+    // so by comparing a rank against the default — which is a comparison, not a
+    // refusal to compare. Half the cells of the unranked grammar go away.
+    var x = try Expr.init(testing.allocator, 1, 0, .none);
     defer x.deinit();
-    var c = try lr0.build(testing.allocator, &x.gr);
+    var c = try lr0.build(testing.allocator, &x.gr, .{});
+    defer c.deinit();
+    var t = try build(testing.allocator, &x.gr, &c);
+    defer t.deinit();
+
+    try testing.expectEqual(@as(usize, 2), t.conflicts.len);
+    // `E + E . * ` folds: `*` binds looser, so the `+` closes first.
+    const plus_state = c.walk(0, &.{ x.e, x.plus, x.e }).?;
+    try testing.expectEqual(Action.Kind.reduce, t.at(plus_state, x.star).kind);
+    // `E * E . + ` reads on: `+` outranks the fold it is contesting.
+    const star_state = c.walk(0, &.{ x.e, x.star, x.e }).?;
+    try testing.expectEqual(Action.Kind.shift, t.at(star_state, x.plus).kind);
+    // The two cells left are each operator against itself, where the ranks tie
+    // and no side was declared.
+    for (t.conflicts) |k| try testing.expect(k.terminal == x.plus or k.terminal == x.star);
+}
+
+test "accept happens at end of input and only there" {
+    var x = try Expr.init(testing.allocator, 1, 2, .left);
+    defer x.deinit();
+    var c = try lr0.build(testing.allocator, &x.gr, .{});
     defer c.deinit();
     var t = try build(testing.allocator, &x.gr, &c);
     defer t.deinit();
@@ -599,4 +569,168 @@ test "accept happens at end of input and only there" {
     const done = c.goto(0, x.e).?;
     try testing.expectEqual(Action.Kind.accept, t.at(done, t.end).kind);
     try testing.expectEqual(Action.Kind.shift, t.at(done, x.plus).kind);
+}
+
+/// A whole grammar, imported and tabulated. Attribution cannot be tested any
+/// smaller: which rule a synthesized list belongs to is a fact about the front
+/// end's sharing, the automaton's shape, and the author's declarations at once,
+/// and a hand-built grammar has none of the three.
+const Table = struct {
+    gr: g.Grammar,
+    c: lr0.Collection,
+    t: Tables,
+
+    fn of(gpa: std.mem.Allocator, src: []const u8) !Table {
+        var gr = try imports.treeSitter(gpa, src);
+        errdefer gr.deinit();
+        var c = try lr0.build(gpa, &gr, .{});
+        errdefer c.deinit();
+        const t = try build(gpa, &gr, &c);
+        return .{ .gr = gr, .c = c, .t = t };
+    }
+
+    fn deinit(x: *Table) void {
+        x.t.deinit();
+        x.c.deinit();
+        x.gr.deinit();
+    }
+
+    /// The party of the first conflict, as rule names, for comparing against
+    /// what a reader would expect the report to say.
+    fn party(x: Table, gpa: std.mem.Allocator) ![]const u8 {
+        var out: std.ArrayList(u8) = .empty;
+        errdefer out.deinit(gpa);
+        for (x.t.conflicts[0].party, 0..) |s, i| {
+            if (i > 0) try out.append(gpa, '+');
+            try out.appendSlice(gpa, x.gr.nameOf(s));
+        }
+        return out.toOwnedSlice(gpa);
+    }
+};
+
+/// `stmt -> L stmt | ';'` with `L` a shared list. A statement's list can be
+/// followed by another statement, which can begin with a list of its own, so the
+/// state that folds one element cannot say whether the list is over — C's
+/// `attributed_statement`, which is why C declares that single rule ambiguous.
+/// `decl` is written first, so it is `decl` that *names* the shared list.
+const shared_list =
+    \\{"name":"t","rules":{
+    \\ "unit":{"type":"CHOICE","members":[
+    \\   {"type":"SYMBOL","name":"decl"},{"type":"SYMBOL","name":"stmt"}]},
+    \\ "decl":{"type":"SEQ","members":[{"type":"STRING","value":"n"},
+    \\   {"type":"REPEAT1","content":{"type":"STRING","value":"a"}}]},
+    \\ "stmt":{"type":"CHOICE","members":[
+    \\   {"type":"SEQ","members":[{"type":"REPEAT1","content":{"type":"STRING","value":"a"}},
+    \\     {"type":"SYMBOL","name":"stmt"}]},
+    \\   {"type":"STRING","value":";"}]}},
+    \\ "conflicts":[CONFLICTS]}
+;
+
+fn withConflicts(gpa: std.mem.Allocator, template: []const u8, groups: []const u8) ![]u8 {
+    const at = std.mem.indexOf(u8, template, "CONFLICTS").?;
+    return std.mem.concat(gpa, u8, &.{ template[0..at], groups, template[at + 9 ..] });
+}
+
+test "a shared list is attributed to the rule expecting it here, not the one that named it" {
+    const src = try withConflicts(testing.allocator, shared_list, "");
+    defer testing.allocator.free(src);
+    var x = try Table.of(testing.allocator, src);
+    defer x.deinit();
+
+    // One list, shared by both hosts, and `decl` gave it its name.
+    var lists: usize = 0;
+    for (x.gr.terminal_count..x.gr.symbolCount()) |i| {
+        const s: g.Symbol = @intCast(i);
+        if (!x.gr.isSynthetic(s)) continue;
+        lists += 1;
+        try testing.expect(std.mem.startsWith(u8, x.gr.nameOf(s), "decl_repeat"));
+    }
+    try testing.expectEqual(@as(usize, 1), lists);
+
+    const seen = try x.party(testing.allocator);
+    defer testing.allocator.free(seen);
+    // Not `decl`, which named the list and expects it elsewhere. Not
+    // `decl+stmt`, which is what a union over every state expecting the list
+    // would say. And not the list itself, which is left-recursive and so sits
+    // in the very state that expects it.
+    try testing.expectEqualStrings("stmt", seen);
+}
+
+test "declaring the rule the list actually belongs to settles it" {
+    const src = try withConflicts(testing.allocator, shared_list, "[\"stmt\"]");
+    defer testing.allocator.free(src);
+    var x = try Table.of(testing.allocator, src);
+    defer x.deinit();
+
+    const cells = x.t.tally();
+    try testing.expectEqual(@as(u32, 0), cells.residual.total());
+    try testing.expect(cells.declared > 0);
+}
+
+test "declaring the rule that named the list does not settle it" {
+    const src = try withConflicts(testing.allocator, shared_list, "[\"decl\"]");
+    defer testing.allocator.free(src);
+    var x = try Table.of(testing.allocator, src);
+    defer x.deinit();
+
+    // The point of tracing the list back: a declaration about `decl` is not a
+    // licence for an ambiguity in `stmt`, even though both write the same list.
+    try testing.expect(x.t.tally().residual.total() > 0);
+}
+
+/// Two lists over different bodies — `a+` and `(a|b)+` — each with a
+/// top-level host and a bracketed one. Folding a single `a` cannot say which
+/// list it belongs to, and the state where that happens is arrived at two ways:
+/// from the start, and from inside a `(`. Java's shape, where one annotation
+/// list argues with the modifier list that also admits annotations.
+const two_lists =
+    \\{"name":"t","rules":{
+    \\ "u":{"type":"CHOICE","members":[
+    \\   {"type":"SYMBOL","name":"p"},{"type":"SYMBOL","name":"q"},
+    \\   {"type":"SYMBOL","name":"r"},{"type":"SYMBOL","name":"s"}]},
+    \\ "p":{"type":"SEQ","members":[
+    \\   {"type":"REPEAT1","content":{"type":"STRING","value":"a"}},{"type":"STRING","value":"x"}]},
+    \\ "q":{"type":"SEQ","members":[
+    \\   {"type":"REPEAT1","content":{"type":"CHOICE","members":[
+    \\     {"type":"STRING","value":"a"},{"type":"STRING","value":"b"}]}},{"type":"STRING","value":"x"}]},
+    \\ "r":{"type":"SEQ","members":[{"type":"STRING","value":"("},
+    \\   {"type":"REPEAT1","content":{"type":"STRING","value":"a"}},{"type":"STRING","value":"x"}]},
+    \\ "s":{"type":"SEQ","members":[{"type":"STRING","value":"("},
+    \\   {"type":"REPEAT1","content":{"type":"CHOICE","members":[
+    \\     {"type":"STRING","value":"a"},{"type":"STRING","value":"b"}]}},{"type":"STRING","value":"x"}]}},
+    \\ "conflicts":[CONFLICTS]}
+;
+
+test "each stack that could expose the fold is its own candidate party" {
+    // The two lists merge into one state after a single `a`, so the same cell is
+    // reachable from the start and from inside a `(`. Either declaration
+    // settles it, because either is a stack on which those two rules really are
+    // confused with each other.
+    for ([_][]const u8{ "[\"p\",\"q\"]", "[\"r\",\"s\"]" }) |groups| {
+        const src = try withConflicts(testing.allocator, two_lists, groups);
+        defer testing.allocator.free(src);
+        var x = try Table.of(testing.allocator, src);
+        defer x.deinit();
+        const cells = x.t.tally();
+        try testing.expect(cells.declared > 0);
+        try testing.expectEqual(@as(u32, 0), cells.residual.total());
+    }
+}
+
+test "the union of every stack is not a party any parse holds" {
+    // Declaring all four says the four rules are mutually confused, which no
+    // stack ever claims: `r` and `s` are unreachable without the `(` that `p`
+    // and `q` cannot have seen. Accepting it would sanction a group on evidence
+    // from two different parses.
+    const src = try withConflicts(testing.allocator, two_lists, "[\"p\",\"q\",\"r\",\"s\"]");
+    defer testing.allocator.free(src);
+    var x = try Table.of(testing.allocator, src);
+    defer x.deinit();
+    try testing.expect(x.t.tally().residual.total() > 0);
+
+    // And the report says the union, because with nothing declared there is
+    // nothing to choose between the candidates.
+    const seen = try x.party(testing.allocator);
+    defer testing.allocator.free(seen);
+    try testing.expectEqualStrings("p+q+r+s", seen);
 }
