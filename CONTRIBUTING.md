@@ -90,6 +90,16 @@ monoid.
   in [`research/joinery/corpus/README.md`](research/joinery/corpus/README.md):
   the same little ledger program again, in one more language, and nothing else.
 
+## Releasing
+
+Not yet - this package has no `release.yml`, no release-please, and no
+registry it publishes to, deliberately: most of the design (the tree,
+repair, the quotient, `libotl`) doesn't exist yet, and wiring release
+automation onto a `0.0.0` package would document a promise the code doesn't
+keep. When it does ship something worth versioning, it graduates onto the
+shared model every other Billy-Company OSS package follows - see
+[RELEASING.md](https://github.com/The-Billy-Company/.github/blob/main/RELEASING.md).
+
 ## What CI will run
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml), on Linux and macOS, in
