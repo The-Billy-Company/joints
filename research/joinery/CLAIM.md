@@ -1,8 +1,11 @@
 # Joinery - what is ours
 
-**Status: unproved.** Nothing in this document has been implemented or
-measured. It states precisely what outliner claims is new, so that the claim
-can be attacked before it is built.
+**Status: M2 measured, the rest unproved.** The stack-effect monoid below is
+built and instrumented, and [`TESTING.md`](TESTING.md) rung 1 records what it
+did on real grammars and real files - including the part where the kill
+condition as originally written was not met, and why the number turned out to be
+the wrong one to have chosen. Everything else here states precisely what
+outliner claims is new, so that the claim can be attacked before it is built.
 
 ---
 
@@ -130,3 +133,12 @@ Convergence is measurable **before any parser is written**: instrument an
 existing LR automaton, run it over a real corpus, and histogram the rank and
 domain size of the induced effects. That is [`TESTING.md`](TESTING.md) rung 1,
 and if it fails the honest outcome is a `CLOSED.md` in this directory.
+
+It has now been run, and the answer amends this section rather than settling it.
+Joints do **not** converge toward rank one; a segment routinely holds several
+unrefuted effects because it cannot see the stack under it. What does converge
+is the *product*: the running set of pairings the guards have not yet refuted
+stays bounded no matter how finely the file is cut, and multiplies back to the
+whole-file effect every time. Rank was a proxy for the cost of a join and a poor
+one. The falsifier that replaces it is residue growth, and the read on it is in
+rung 1's verdict.

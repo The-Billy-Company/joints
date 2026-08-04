@@ -10,11 +10,31 @@
 
 ## Status
 
-**Nothing is built.** This repo currently holds a landscape and one research
-dossier, and that is on purpose. The central claim has a falsifier that can be
-measured before a parser exists, so the measurement comes first. Read
-[`research/LANDSCAPE.md`](research/LANDSCAPE.md) for the argument and
-[`research/joinery/`](research/joinery) for the part that has to be earned.
+**The falsifier has been run, and it did not kill the design.** There is no
+parser yet - what exists is the press (a tree-sitter `grammar.json` importer, an
+LR(0) collection, LALR lookaheads, and conflict resolution that reaches zero
+residual conflicts on eleven real grammars), the stack-effect monoid M2 with the
+cursor that composes it, a terminal scanner, a single-stack reference walk to
+check the algebra against, and the CLI that measures all of it.
+
+That order is on purpose: the central claim has a falsifier measurable *before* a
+parser exists, so the measurement came first. It says the product of segment
+effects reproduces the whole-file effect no matter how finely the file is cut,
+across eleven grammars, with nothing disagreeing. Read
+[`research/LANDSCAPE.md`](research/LANDSCAPE.md) for the argument,
+[`research/joinery/`](research/joinery) for the part that had to be earned, and
+[rung 1's verdict](research/joinery/TESTING.md) for what the numbers were - including
+the part where the kill condition as originally written was not met, and why that
+number turned out to be the wrong one to have chosen.
+
+Every number there is reproducible from a clone. `zig build test` needs nothing;
+the eleven-grammar sweep needs the grammars, so fetch them first:
+`python3 tool/grammars.py fetch`, then `zig build && python3 tool/rung1.py`.
+[CONTRIBUTING.md](CONTRIBUTING.md) has the rest.
+
+What is *not* built is most of the product: the balanced tree the joints hang
+from (M3), the tree it yields, repair (M4), the quotient (M5), the folio
+artifact, and `libotl`. The table below marks each monoid's real state.
 
 Every number quoted about tree-sitter below was read out of its source, its
 issue tracker, or a measurement taken on 2026-08-02. Every number about outliner
@@ -41,8 +61,8 @@ inside another language's FFI, with no per-surface build story.
 
 ## Why this over tree-sitter?
 
-Honestly: today, nothing, because today there is no code. When there is, the
-pitch is four things, and speed is not one of them.
+Honestly: today, nothing, because today it does not yet return a tree. When it
+does, the pitch is four things, and speed is not one of them.
 
 **Size.** Tree-sitter's dense parse table is 64% of `parser.c` at 24.3% density.
 Predicate minterms plus action-bisimulation plus a DAFSA should land materially
@@ -81,13 +101,13 @@ changes. A function need not.
 
 outliner runs five monoids over one balanced tree:
 
-| | The monoid | What it buys |
-|---|---|---|
-| **M1** | lexical transition functions | data-parallel lexing; an edit does not invalidate downstream lexing |
-| **M2** | LR stack effects, the **joints** | position-independent reparse; parallel parse; GLR paid only where the element is multi-valued |
-| **M3** | balanced parentheses | the tree itself, at 2n+o(n) bits, navigated by range min-max |
-| **M4** | a semiring parameter | least-cost repair, ranking, ambiguity counting - one walk, different `⊕` |
-| **M5** | Myhill-Nerode quotients | the size win: coarser alphabets, minimized tables |
+| | The monoid | What it buys | State |
+|---|---|---|---|
+| **M1** | lexical transition functions | data-parallel lexing; an edit does not invalidate downstream lexing | a scanner that tokenizes real files, still missing the externally-scanned terminals |
+| **M2** | LR stack effects, the **joints** | position-independent reparse; parallel parse; GLR paid only where the element is multi-valued | built and measured - rung 1 |
+| **M3** | balanced parentheses | the tree itself, at 2n+o(n) bits, navigated by range min-max | not built |
+| **M4** | a semiring parameter | least-cost repair, ranking, ambiguity counting - one walk, different `⊕` | not built |
+| **M5** | Myhill-Nerode quotients | the size win: coarser alphabets, minimized tables | not built |
 
 Four features, one splice implementation, one set of tests. That economy is the
 actual argument; the individual monoids are mostly known.
@@ -122,19 +142,32 @@ The C ABI is `libotl`, symbols prefixed `otl_`, matching irregex's `libirgx` /
 
 ## Layout
 
+What exists:
+
 ```
 research/          the argument, and the claim that has to be earned
   LANDSCAPE.md     the map: incumbent measured, five monoids, order of proof
   joinery/         CLAIM · PRIOR_ART · TESTING for the one new thing
+  joinery/corpus/  one ledger program in eleven languages - every per-language number
+grammars.toml      the eleven tree-sitter grammars every number is measured over, pinned
+tool/              fetch and check those grammars; run rung 1 as a gate
+test/grammar/      the one grammar committed, so the test build needs no network
+src/press/         the compiler: grammar.json in, LR(0) → LALR → resolved tables out
+src/kernel/lex/    the terminal scanner (M1)
+src/kernel/joint/  the stack-effect monoid (M2) and the cursor that composes it
+src/kernel/walk/   a single-stack reference LR walk, to check the algebra against
+src/surface/       the CLI: grammar · lex · state · joints
 ```
 
-Planned, once rung 1 clears:
+Still to come:
 
 ```
-src/kernel/        grain · lex · joint · mend · quire · gloss
+src/kernel/spine/  the monoid-annotated balanced tree everything binds to (M3)
+src/kernel/quire/  the live editable tree, and vellum, its settled encoding
+src/kernel/grain/  the SIMD first pass
+src/kernel/mend/   least-cost repair (M4)
+src/kernel/gloss/  the query engine
 src/folio/         the artifact: pack, read, verify, slice
-src/press/         the compiler, plus the grammar.json importer
-src/surface/       the CLI, and libotl
 contract/          the prose contract and the ward import topology
 ```
 
