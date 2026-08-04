@@ -1,8 +1,21 @@
-//! `outliner parse` — a file in, a tree out.
+//! `outliner parse` - a file in, a tree out.
 //!
 //! The verb the whole package is for. Prints the tree as an s-expression in
 //! tree-sitter's own shape, because the fastest way to know whether two parsers
 //! agree is to read both answers side by side.
+//!
+//! **The grammar argument is either a `grammar.json` or a folio, and which one
+//! it is decides what the first parse costs.** A folio is mapped and bound in
+//! single-digit milliseconds; a grammar.json is imported and pressed, which on
+//! Rust is two hundred times that. Same tables either way - `mint` checks them
+//! cell by cell - so the only reason to hand this a grammar.json is that you
+//! have not minted one yet.
+//!
+//! Which of the two it is gets answered by the file's first eight bytes rather
+//! than by its name. Anything else that goes wrong in a folio - a version this
+//! binary does not write, a broken seal - is that folio failing and is reported
+//! as such, because retrying it as JSON would turn "minted by an older
+//! outliner" into "malformed grammar" and bury the one fact worth having.
 //!
 //! Thin on purpose. The parse belongs to `kernel/quire`, and the tree comes
 //! back from one call; what is here is presentation and a verdict. Three flags,
@@ -17,6 +30,14 @@
 //!              of them stopped early.
 //!   --quiet    the verdict without the tree, for a run that only wants the
 //!              exit code.
+//!   --mend=P   what to do about a token the parse cannot read. `fell`, the
+//!              default, closes the standing stack into roots and begins again
+//!              in state zero past the break; `none` stops there, which is
+//!              what every parse did before recovery existed; `keep` drops the
+//!              token and reads on with the stack standing; `relent` keeps once
+//!              then fells. The verdict names the first break whichever is
+//!              chosen - what changes is how much of the file is under a root
+//!              after it.
 //!
 //! **The tree goes to stdout and the verdict goes to stderr**, because they are
 //! answers to different questions and a caller that pipes the tree into a diff
@@ -25,6 +46,7 @@
 //!
 //!   outliner: <path>: accepted, 1 root
 //!   outliner: <path>: stray byte at 41, 4 roots
+//!   outliner: <path>: stray byte at 41, 9 roots, mended 3
 //!   outliner: <path>: unexpected number at 3 in state 12, 2 roots
 //!   outliner: <path>: truncated, 4 roots
 //!
@@ -34,10 +56,56 @@
 const std = @import("std");
 const outliner = @import("outliner");
 
+const folio = outliner.folio;
 const import = outliner.press.import;
 const press = outliner.press;
+const g = outliner.press.grammar;
+const lalr = outliner.press.lalr;
+const lr0 = outliner.press.lr0;
 const scanner = outliner.kernel.lex.scanner;
 const quire = outliner.kernel.quire;
+
+/// Where the tables came from. Both arms hand over the same three things; only
+/// what they cost to obtain differs, and that difference is the whole reason
+/// the folio exists.
+pub const Parser = union(enum) {
+    minted: struct { mapped: folio.Mapped, bound: folio.Bound },
+    pressed: struct { grammar: g.Grammar, built: press.Result },
+
+    pub fn deinit(p: *Parser) void {
+        switch (p.*) {
+            .minted => |*m| {
+                m.bound.deinit();
+                m.mapped.close();
+            },
+            .pressed => |*x| {
+                x.built.deinit();
+                x.grammar.deinit();
+            },
+        }
+    }
+
+    pub fn grammar(p: *const Parser) *const g.Grammar {
+        return switch (p.*) {
+            .minted => |*m| &m.bound.grammar,
+            .pressed => |*x| &x.grammar,
+        };
+    }
+
+    pub fn collection(p: *const Parser) *const lr0.Collection {
+        return switch (p.*) {
+            .minted => |*m| &m.bound.collection,
+            .pressed => |*x| &x.built.collection,
+        };
+    }
+
+    pub fn tables(p: *const Parser) *const lalr.Tables {
+        return switch (p.*) {
+            .minted => |*m| &m.bound.tables,
+            .pressed => |*x| &x.built.tables,
+        };
+    }
+};
 
 pub fn run(
     gpa: std.mem.Allocator,
@@ -49,13 +117,21 @@ pub fn run(
     var show: quire.Show = .named;
     var ranges = false;
     var quiet = false;
+    var mend: quire.Mend = .fell;
     var paths: std.ArrayList([]const u8) = .empty;
     defer paths.deinit(gpa);
     for (files) |a| {
         if (std.mem.eql(u8, a, "--all")) show = .all //
         else if (std.mem.eql(u8, a, "--ranges")) ranges = true //
         else if (std.mem.eql(u8, a, "--quiet")) quiet = true //
-        else try paths.append(gpa, a);
+        else if (std.mem.startsWith(u8, a, "--mend=")) {
+            mend = std.meta.stringToEnum(quire.Mend, a["--mend=".len..]) orelse {
+                try w.print("outliner: --mend wants none, keep, fell or relent, not '{s}'\n", .{
+                    a["--mend=".len..],
+                });
+                return 2;
+            };
+        } else try paths.append(gpa, a);
     }
     if (paths.items.len == 0) {
         try w.writeAll("outliner: parse needs at least one source file\n");
@@ -67,18 +143,11 @@ pub fn run(
     const e = &stderr.interface;
     defer e.flush() catch {};
 
-    const source = slurp(gpa, io, e, grammar_path) orelse return 2;
-    defer gpa.free(source);
-    var gr = import.treeSitter(gpa, source) catch |err| {
-        try e.print("outliner: cannot import {s}: {s}\n", .{ grammar_path, @errorName(err) });
-        return 2;
-    };
-    defer gr.deinit();
+    var parser = (try load(gpa, io, e, grammar_path)) orelse return 2;
+    defer parser.deinit();
+    const gr = parser.grammar();
 
-    var built = try press.tables(gpa, &gr);
-    defer built.deinit();
-
-    var sc = (try scanner.Scanner.compile(gpa, &gr)) orelse {
+    var sc = (try scanner.Scanner.compile(gpa, gr)) orelse {
         try e.print("outliner: {s} has no lexable terminal at all\n", .{gr.name});
         return 2;
     };
@@ -92,10 +161,11 @@ pub fn run(
         });
     }
 
-    // One press, one scanner, one gather, however many files. `Gather.run`
+    // One grammar, one scanner, one gather, however many files. `Gather.run`
     // clears its own state, so a file costs a parse rather than a setup.
-    var gather = try quire.Gather.init(gpa, &gr, &built.collection, &built.tables, &sc);
+    var gather = try quire.Gather.init(gpa, gr, parser.collection(), parser.tables(), &sc);
     defer gather.deinit();
+    gather.mend = mend;
 
     var worst: u8 = 0;
     for (paths.items) |path| {
@@ -118,17 +188,43 @@ pub fn run(
         // Flushed before the verdict so the two streams read in the order the
         // work happened when both land on one terminal.
         try w.flush();
-        try verdict(e, &gr, path, &q);
+        try verdict(e, gr, path, &q);
         if (q.stop != .accepted and worst == 0) worst = 1;
     }
     return worst;
+}
+
+/// The grammar argument, whichever of the two things it is. Null means it was
+/// neither and the reason is already on stderr.
+pub fn load(gpa: std.mem.Allocator, io: std.Io, e: *std.Io.Writer, path: []const u8) !?Parser {
+    if (folio.map(io, std.Io.Dir.cwd(), path)) |opened| {
+        var mapped = opened;
+        errdefer mapped.close();
+        return .{ .minted = .{ .mapped = mapped, .bound = try folio.bind(gpa, &mapped.folio) } };
+    } else |err| switch (err) {
+        // Not a folio, so it is a grammar.json until proven otherwise.
+        error.FolioBadMagic, error.FolioTooSmall => {},
+        else => {
+            try e.print("outliner: {s} does not load: {s}\n", .{ path, @errorName(err) });
+            return null;
+        },
+    }
+
+    const source = slurp(gpa, io, e, path) orelse return null;
+    defer gpa.free(source);
+    var gr = import.treeSitter(gpa, source) catch |err| {
+        try e.print("outliner: cannot import {s}: {s}\n", .{ path, @errorName(err) });
+        return null;
+    };
+    errdefer gr.deinit();
+    return .{ .pressed = .{ .grammar = gr, .built = try press.tables(gpa, &gr) } };
 }
 
 /// One node per line: `field: name [start, end)`, indented two spaces a level.
 ///
 /// The same tree the s-expression prints, spread out so each node carries the
 /// bytes it covers. Anonymous children are skipped whole under `.named` rather
-/// than descended through, which is what `ts_node_named_child` does — only an
+/// than descended through, which is what `ts_node_named_child` does - only an
 /// *invisible* symbol lifts its children, and an anonymous node is visible.
 fn outline(
     q: *const quire.Quire,
@@ -162,7 +258,7 @@ fn quoted(w: *std.Io.Writer, name: []const u8) !void {
 /// How the parse ended, in the terms of the file it ended in. The root count
 /// rides along because it is the shape of the answer: one root is a whole
 /// tree, several are the forest a stop left standing.
-fn verdict(
+pub fn verdict(
     e: *std.Io.Writer,
     gr: *const outliner.press.grammar.Grammar,
     path: []const u8,
@@ -177,10 +273,16 @@ fn verdict(
         }),
         .truncated => try e.writeAll("truncated"),
     }
-    try e.print(", {d} root{s}\n", .{ q.roots.len, if (q.roots.len == 1) "" else "s" });
+    try e.print(", {d} root{s}", .{ q.roots.len, if (q.roots.len == 1) "" else "s" });
+    // The stop above says where reading got hard, and on a mended parse that
+    // is not where reading stopped. Saying so is the whole of how a gap is
+    // represented: no node stands for it, so the count is the only place a
+    // reader can learn the forest continues past the byte just named.
+    if (q.mends > 0) try e.print(", mended {d}", .{q.mends});
+    try e.writeAll("\n");
 }
 
-fn slurp(gpa: std.mem.Allocator, io: std.Io, e: *std.Io.Writer, path: []const u8) ?[]u8 {
+pub fn slurp(gpa: std.mem.Allocator, io: std.Io, e: *std.Io.Writer, path: []const u8) ?[]u8 {
     return std.Io.Dir.cwd().readFileAlloc(io, path, gpa, .limited(64 << 20)) catch |err| {
         e.print("outliner: cannot read {s}: {s}\n", .{ path, @errorName(err) }) catch {};
         return null;

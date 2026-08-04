@@ -1,4 +1,4 @@
-//! `outliner mint` — press a grammar into a folio, and read one back.
+//! `outliner mint` - press a grammar into a folio, and read one back.
 //!
 //! Minting is the act the vocabulary already had a word for, and it keeps the
 //! verb from colliding with the noun: `mint` is what you do, a folio is what you
@@ -61,7 +61,12 @@ pub fn run(
     if (folio.map(io, std.Io.Dir.cwd(), path.?)) |opened| {
         var mapped = opened;
         defer mapped.close();
-        try report(w, &mapped.folio, .{
+        // Bound, not merely mapped. What an editor pays to open a language is
+        // map plus verify plus the table laid back out, and timing the first
+        // two would be quoting a number nothing can parse from.
+        var bound = try folio.bind(gpa, &mapped.folio);
+        defer bound.deinit();
+        try report(w, &mapped.folio, &bound, .{
             .source = null,
             .folio = mapped.bytes.len,
             .memory = null,
@@ -126,9 +131,11 @@ fn write(
         return 1;
     };
     defer mapped.close();
+    var bound = try folio.bind(gpa, &mapped.folio);
+    defer bound.deinit();
     const load_us = since(io, loaded_at);
 
-    try report(w, &mapped.folio, .{
+    try report(w, &mapped.folio, &bound, .{
         .source = source.len,
         .folio = bytes.len,
         .memory = footprint(&gr, &built),
@@ -138,7 +145,7 @@ fn write(
         .load_us = load_us,
     });
 
-    if (disagrees(&mapped.folio, &gr, &built)) |what| {
+    if (disagrees(&mapped.folio, &bound, &gr, &built)) |what| {
         try w.print("\n  MISMATCH: {s}\n", .{what});
         return 1;
     }
@@ -157,7 +164,7 @@ const Sizes = struct {
     load_us: i64,
 };
 
-fn report(w: *std.Io.Writer, f: *const folio.Folio, s: Sizes) !void {
+fn report(w: *std.Io.Writer, f: *const folio.Folio, b: *const folio.Bound, s: Sizes) !void {
     const h = f.head;
     try w.print("{s}\n", .{f.title()});
     if (s.source) |n| try w.print("  grammar.json   {d: >12} bytes\n", .{n});
@@ -180,12 +187,20 @@ fn report(w: *std.Io.Writer, f: *const folio.Folio, s: Sizes) !void {
     try w.print("  states         {d}\n", .{h.state_count});
 
     var live: usize = 0;
-    for (f.actions()) |a| {
-        if (a.verb != .err) live += 1;
+    for (b.tables.action) |a| {
+        if (a.kind != .err) live += 1;
     }
-    const cells = f.actions().len;
+    const cells = b.tables.action.len;
     try w.print("  table          {d} x {d} = {d} cells, {d}% dense\n", .{
         h.state_count, h.width, cells, live * 100 / @max(cells, 1),
+    });
+    // The three interning layers, and what the grid above would have cost
+    // written out. This is the size argument, so it gets the numbers.
+    try w.print("  interned       {d} rows, {d} groups, {d} column sets, {d} strays\n", .{
+        f.rowCount(),
+        f.dir[@intFromEnum(leaf.Kind.group)].count,
+        f.dir[@intFromEnum(leaf.Kind.set_span)].count - 1,
+        f.odds().len,
     });
     if (h.unfolded > 0) {
         try w.print("  unfolded       {d} round(s) to separate merged lookaheads\n", .{h.unfolded});
@@ -257,7 +272,18 @@ fn footprint(gr: *const g.Grammar, built: anytype) Footprint {
 
 /// The first thing the reloaded folio gets wrong, if anything. Names first,
 /// because a name that shifted is the failure that would still parse.
-fn disagrees(f: *const folio.Folio, gr: *const g.Grammar, built: anytype) ?[]const u8 {
+///
+/// The table and the automaton are checked through `bind` rather than off the
+/// file, and deliberately: what is on disk is interned three layers deep and
+/// the transitions are half derived from it, so comparing the sections to the
+/// press would only prove the writer agrees with itself. What has to match is
+/// what a parse would actually read.
+fn disagrees(
+    f: *const folio.Folio,
+    b: *const folio.Bound,
+    gr: *const g.Grammar,
+    built: anytype,
+) ?[]const u8 {
     if (f.symbolCount() != gr.symbolCount()) return "symbol count";
     for (0..gr.symbolCount()) |i| {
         const s: u32 = @intCast(i);
@@ -270,18 +296,26 @@ fn disagrees(f: *const folio.Folio, gr: *const g.Grammar, built: anytype) ?[]con
         if (!std.mem.eql(g.Symbol, p.rhs, f.rhsOf(@intCast(i)))) return "a production body";
     }
     if (f.head.state_count != built.collection.states.len) return "state count";
-    for (built.collection.states, 0..) |st, i| {
-        const edges = f.edgesOf(@intCast(i));
-        if (edges.len != st.edges.len) return "an edge list";
-        for (st.edges, edges) |want, back| {
-            if (want.symbol != back.symbol or want.target != back.target) return "an edge";
+    for (built.collection.states, b.collection.states) |st, back| {
+        if (st.edges.len != back.edges.len) return "an edge list";
+        for (st.edges, back.edges) |want, got| {
+            if (want.symbol != got.symbol or want.target != got.target) return "an edge";
+        }
+        if (st.complete.len != back.complete.len) return "a completion list";
+        for (st.complete, back.complete) |want, got| {
+            if (want != got) return "a completion";
         }
     }
-    if (f.actions().len != built.tables.action.len) return "table size";
-    for (built.tables.action, f.actions()) |want, back| {
-        if (@intFromEnum(want.kind) != @intFromEnum(back.verb) or want.value != back.value) {
-            return "an action cell";
-        }
+    if (b.tables.action.len != built.tables.action.len) return "table size";
+    for (built.tables.action, b.tables.action) |want, back| {
+        if (want.kind != back.kind or want.value != back.value) return "an action cell";
+    }
+    if (b.tables.conflicts.len != built.tables.conflicts.len) return "conflict count";
+    for (built.tables.conflicts, b.tables.conflicts) |want, back| {
+        if (want.state != back.state or want.terminal != back.terminal) return "a conflict cell";
+        if (want.kind != back.kind or want.class != back.class) return "a conflict's kind";
+        if (want.chosen.value != back.chosen.value) return "a conflict's verdict";
+        if (want.party.len != back.party.len) return "a conflict's party";
     }
     return null;
 }

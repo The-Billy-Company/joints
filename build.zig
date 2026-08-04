@@ -110,4 +110,30 @@ pub fn build(b: *std.Build) void {
     }
 
     b.step("check", "Compile the outliner binary without installing").dependOn(&exe.step);
+
+    // The wall census. Not part of `test`: it answers "who owns each stop" over
+    // whatever verdict list `.local/orchestrate/census.txt` holds, which is a
+    // question about a corpus rather than an invariant of the code - and with no
+    // request file it returns immediately, so wiring it into the suite would only
+    // buy a no-op. ReleaseFast because the work is thirty presses and scala's is
+    // eleven thousand states; the answer is identical either way.
+    const survey = b.createModule(.{
+        .root_source_file = b.path("src/root.zig"),
+        .target = target,
+        .optimize = .ReleaseFast,
+        .imports = &.{.{ .name = "irregex", .module = irregex_mod }},
+    });
+    survey.addAnonymousImport("json_grammar", .{
+        .root_source_file = b.path("test/grammar/json.json"),
+    });
+    const census = b.addRunArtifact(b.addTest(.{
+        .root_module = survey,
+        .filters = &.{"census:"},
+        .test_runner = bg.runner(),
+    }));
+    census.setCwd(b.path("."));
+    b.step(
+        "census",
+        "Who owns each wall: classify a verdict list through press/inquest",
+    ).dependOn(&census.step);
 }

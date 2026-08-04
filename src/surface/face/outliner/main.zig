@@ -1,11 +1,12 @@
 //! The outliner CLI.
 //!
-//! Six verbs, in two groups. Four look at the machinery: `grammar` imports a
+//! Seven verbs, in two groups. Four look at the machinery: `grammar` imports a
 //! tree-sitter `grammar.json` and reports what the press made of it, `state`
 //! prints one LR state, `lex` runs the terminal scanner over a real file, and
 //! `joints` is rung 1 of `research/joinery/TESTING.md` — the measurement that
 //! decided whether the whole package was a good idea. Two are the product:
-//! `parse` returns a tree and `mint` turns a grammar into a folio. Both are
+//! `parse` returns a tree, `amend` returns the tree again after an edit without
+//! re-reading the file, and `mint` turns a grammar into a folio. All three are
 //! real now; the machinery verbs are why they could be written at all.
 //!
 //! Exit codes follow the family: 0 ran, 1 a clean negative answer, 2 an error.
@@ -18,6 +19,7 @@ const scanner = outliner.kernel.lex.scanner;
 const joints = @import("joints.zig");
 const parse = @import("parse.zig");
 const mint = @import("mint.zig");
+const amend = @import("amend.zig");
 
 const usage =
     \\outliner - parsing as algebra
@@ -28,8 +30,13 @@ const usage =
     \\  outliner joints <grammar.json> <file>... measure segment effects (rung 1)
     \\  outliner state <grammar.json> <n>        print one LR state: its items and its row
     \\  outliner parse <grammar.json> <file>...  parse a file, print the tree
+    \\  outliner amend <grammar.json> <file> FROM..TO=TEXT...  re-parse across edits
     \\  outliner mint <grammar.json|folio> [-o P]  press a grammar into a folio, or read one back
     \\  outliner --version
+    \\
+    \\amend flags:
+    \\  --cold      re-read the whole file per edit, for the comparison
+    \\  --policy=P  how far the re-mint window widens: prove, snap, whole
     \\
     \\joints flags:
     \\  --exact     fuse two limbs only on identical claims, never by depth
@@ -114,6 +121,13 @@ pub fn main(init: std.process.Init) !u8 {
             return 2;
         }
         return parse.run(gpa, init.io, w, args[2], args[3..]);
+    }
+    if (std.mem.eql(u8, verb, "amend")) {
+        if (args.len < 4) {
+            try w.writeAll("outliner: amend needs a grammar.json, a source file and an edit\n");
+            return 2;
+        }
+        return amend.run(gpa, init.io, w, args[2], args[3..]);
     }
     if (std.mem.eql(u8, verb, "mint")) {
         if (args.len < 3) {

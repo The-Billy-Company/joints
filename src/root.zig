@@ -97,6 +97,9 @@ pub const kernel = struct {
     /// The live editable tree a parse yields, and eventually vellum, its
     /// settled succinct encoding.
     pub const quire = @import("kernel/quire/quire.zig");
+    /// A file held open: the spine and the quire maintained together across an
+    /// edit, which is the only place the two halves of the claim meet.
+    pub const weave = @import("kernel/weave/weave.zig");
 };
 
 /// The artifact: a pressed grammar as bytes, mmap-able, versioned, checked.
@@ -115,6 +118,7 @@ test {
     _ = @import("kernel/walk/drive.zig");
     _ = @import("kernel/spine/spine.zig");
     _ = @import("kernel/quire/quire.zig");
+    _ = @import("kernel/weave/weave.zig");
     _ = @import("folio/folio.zig");
     _ = @import("press/press.zig");
     _ = @import("press/grammar.zig");
