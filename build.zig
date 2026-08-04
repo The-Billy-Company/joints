@@ -40,6 +40,13 @@ pub fn build(b: *std.Build) void {
     version.addOption([:0]const u8, "version", zon.version);
     version.addOption([:0]const u8, "package", @tagName(zon.name));
 
+    // The engine outliner's lexer stands on. Named here rather than inside the
+    // module list twice, because the test build needs the identical dependency
+    // and a second `b.dependency` call for a different optimize mode would
+    // build irregex twice.
+    const irregex = b.dependency("irregex", .{ .target = target, .optimize = optimize });
+    const irregex_mod = irregex.module("irregex");
+
     // The library module and the face are separate modules on purpose: the face
     // is one consumer of the package, not its root, so nothing a CLI needs can
     // quietly become something an embedder must link.
@@ -47,6 +54,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{.{ .name = "irregex", .module = irregex_mod }},
     });
 
     const root = b.path("src/surface/face/outliner/main.zig");
@@ -71,6 +79,19 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = .Debug,
+        .imports = &.{.{ .name = "irregex", .module = irregex_mod }},
+    });
+    // A real grammar, for the tests that would otherwise be checking a fiction:
+    // a hand-built symbol table cannot tell you whether the importer and the
+    // scanner agree about what tree-sitter actually writes. On the test module
+    // only, and read from the committed fixture rather than the gitignored
+    // `upstream/` corpus: Zig resolves this path while it builds the graph, so
+    // naming a fetched file fails a fresh clone with `failed to check cache:
+    // … file_hash FileNotFound` before it compiles a line. `test/grammar/`
+    // says where the 13 KB came from; `tool/grammars.py verify` proves it still
+    // hashes to the `json` pin.
+    test_lib.addAnonymousImport("json_grammar", .{
+        .root_source_file = b.path("test/grammar/json.json"),
     });
     const test_face = b.createModule(.{
         .root_source_file = root,

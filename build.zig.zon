@@ -11,16 +11,20 @@
             .url = "https://github.com/The-Billy-Company/brigade/archive/505a57a9febf21757268bd8ac651c53d27896c79.tar.gz",
             .hash = "brigade-0.1.0-1n1fSewLAQBenqvI3An0VUw24_TsuaT3mt1_4TfqWZwG",
         },
-        // Deliberately absent for now: `irregex`. outliner will stand on it for
-        // the terminal lexer, the minterm alphabet, and the shared math floor,
-        // and it is a sibling path dep when it arrives. A dependency lands in
-        // the commit that first imports it, so that a build cost is always
-        // traceable to the code that asked for it.
+        // The regex engine and the shared search-math floor. A path dep on the
+        // sibling checkout while both move together: outliner is the first
+        // consumer to ask irregex for an anchored longest-match slate, and the
+        // two halves of that conversation should be editable in one sitting.
+        // It becomes a pinned URL the moment either side stops changing.
+        .irregex = .{ .path = "../irregex" },
     },
     .paths = .{
         "build.zig",
         "build.zig.zon",
         "src",
+        // The committed grammar fixture the test module embeds. Without it the
+        // published tarball ships tests that cannot build.
+        "test",
         "README.md",
         "LICENSE",
         "NOTICE",
