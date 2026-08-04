@@ -1,10 +1,12 @@
 # What has to be true before a change lands.
 #
-# Two jobs, because they are two different pieces of news. `grammars` asks
+# Three jobs, because they are three different pieces of news. `grammars` asks
 # whether the pins in `grammars.toml` still resolve to the bytes they claim -
 # that is a fact about upstream repositories, it needs no compiler, and it can
 # go red on a day nobody touched this repo. `press` asks whether the code still
-# builds and still holds rung 1's claims.
+# builds and still holds rung 1's claims. `topology` asks whether the import
+# graph still matches `contract/outliner.zone`, which needs neither the network
+# nor a compiler and so lands its answer first.
 #
 # The order inside `press` is load-bearing rather than tidy, and it is: build,
 # test, then fetch, then sweep. `zig build test` needs no network and no
@@ -142,3 +144,28 @@ jobs:
       # those are the lexer and the fork rather than the monoid.
       - name: rung 1, over all eleven grammars
         run: python3 tool/rung1.py
+
+  # `contract/outliner.zone` declares this package's import topology - the zone
+  # stack, the reach ceiling, the cycle ban, and which outside modules each zone
+  # may name. Zig has no visibility rules between files inside a package, and its
+  # analysis is lazy enough that a genuine import cycle still compiles, so every
+  # boundary the READMEs describe was convention with nothing standing behind it.
+  # A declaration nobody enforces is a comment.
+  #
+  # No Zig, no sibling checkout, no grammars: zoning reads the tree rather than a
+  # build graph, which makes this the cheapest job here and the one whose red is
+  # never somebody else's repository being unreachable.
+  topology:
+    name: topology
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      # The fix is in the code, or in a `variance ... because "..."` that says
+      # what would retire it - never in widening the contract to match whatever
+      # the imports happen to do today. `--complete` adds the claim no law can
+      # make: every package here carries a contract, including the next one.
+      - name: Import topology
+        run: uv run --no-project --with zoning==1.0.0 zoning verify --complete

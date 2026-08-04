@@ -1,0 +1,72 @@
+// outliner — import topology, drafted by `zoning draft` from the real
+// @import graph. Every line below is TRUE of the tree as it stands: this is
+// a description, not a wish. Read it once, then start tightening it —
+// merging two zones or sealing a directory is where the value is.
+
+package outliner {
+    root     src
+    language zig
+    facade   root.zig
+}
+
+// Zones, low to high: an import may not point up the page. The order is a
+// topological sort of what imports what today, so nothing points up yet.
+zones {
+    // these 5 directories import each other, so no order separates them:
+    // one zone until somebody untangles them, and then it splits.
+    tangle         folio/** kernel/lex/** kernel/quire/** kernel/walk/** press/**
+    joint          kernel/joint/**
+    spine          kernel/spine/**
+    weave          kernel/weave/**
+    face_outliner  surface/face/outliner/**
+}
+
+// Outside modules, and who carries them.
+use build_options by face_outliner
+use irregex by tangle
+use outliner by face_outliner
+
+// Structural laws. The reach ceiling is what the tree needs today — lower it
+// when a file moves nearer what it depends on; never raise it to go green.
+limit  reach to 2 hops
+forbid cycles across directories
+
+// Ratified exceptions. Each carries the fix that would retire it; an exception
+// that stops matching is a hard failure, so paying the debt means deleting the
+// entry rather than leaving it behind as folklore.
+
+variance cycle {
+    folio/folio.zig
+    folio/folio_test.zig
+    folio/forme.zig
+    folio/impose.zig
+    kernel/quire/bough.zig
+    kernel/quire/gather.zig
+    kernel/quire/gather_test.zig
+    kernel/quire/graft.zig
+    kernel/quire/quire.zig
+    kernel/walk/drive.zig
+    press/carry_test.zig
+    press/census_test.zig
+    press/press.zig
+    press/wall_test.zig
+} because
+        \\Not a tangle in the program — a tangle in how Zig finds tests. The
+        \\production arrow is already one-way and stays that way: folio,
+        \\kernel/quire, and kernel/walk all read `press` for the grammar, the
+        \\LALR tables, and the LR(0) core, and no file under `press/` reads any
+        \\of them back. What closes the loop is the test build. `zig build test`
+        \\only collects tests reachable from its root module's own files, as
+        \\build.zig says where it explains why the library gets a second
+        \\compilation — so each module root imports its own `*_test.zig` to make
+        \\them reachable at all. Those tests then legitimately reach downstream:
+        \\`press/carry_test.zig` drives a real grammar through `folio`, and
+        \\`census_test.zig` through `quire` and `walk`, because a parser
+        \\generator is only worth testing against the thing it generates for.
+        \\folio -> press.zig -> press/carry_test.zig -> folio is that path, and
+        \\every file listed here is on it. Retire by giving the test build its own
+        \\root — one file importing every `*_test.zig`, named as `test_lib`'s
+        \\root_source_file — so production module roots stop importing tests and
+        \\the integration tests can keep reaching wherever they need to.
+
+// `zoning status` lists the directories that could be sealed next.
