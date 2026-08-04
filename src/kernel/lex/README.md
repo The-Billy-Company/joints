@@ -1,4 +1,4 @@
-# kernel/lex — M1, bytes to tokens
+# kernel/lex - M1, bytes to tokens
 
 The claim: **a lexer is not a program to generate, it is one anchored
 longest-match question asked once per token.** Every terminal a grammar
@@ -7,10 +7,14 @@ that question, and so this folder contains no automaton of its own.
 
 | File | Role |
 |---|---|
-| `scanner.zig` | The grammar's terminals as one irregex slate, the tie-break, the extras skip, and the list of terminals nothing here can recognize. |
+| `scanner.zig` | The grammar's terminals as one irregex slate, the tie-break, the guarded pre-pass, the extras skip, and the list of terminals nothing here can recognize. |
 | `admit.zig` | What the walk is allowed to consider: the precedence tiers, the immediacy cut, and the per-state permission set shaped like them. |
-| `outside.zig` | What an external scanner would have produced, declared as data: a spelling plus its lexical standing, keyed by the terminal's own name. |
-| `scanner_test.zig` | Longest-wins, keyword-beats-pattern, extras, strays, blindness — and the measured trap that a real grammar sets for an unconditional slate. |
+| `outside.zig` | What an external scanner would have produced. Front half: a roll of spellings keyed by the terminal's own name. Back half: the hands, for the externals that need a memory. |
+| `offside.zig` | The offside rule. A stack of columns, and reading one line's indentation, blankness, comment column and continuation. |
+| `fence.zig` | Delimited spans. A stack of open marks, a per-dialect opener, and one shared hunt for the close. |
+| `marrow.zig` | A run whose end is computed from where it starts. Carries nothing: at a content offset the captured close is still in the bytes behind it. |
+| `caesura.zig` | A break the line demands and the file never spells - JavaScript's automatic semicolon. Carries nothing either, and decides on the parser's expected set rather than on state. |
+| `scanner_test.zig` | Longest-wins, keyword-beats-pattern, extras, strays, blindness, the offside walk, the fence, the guards - and the measured trap that a real grammar sets for an unconditional slate. |
 
 ## What is here and what is deliberately elsewhere
 
@@ -24,8 +28,8 @@ This folder owns what is a property of *this grammar*:
 - **Which terminals form the slate**, and the map back from a pattern ordinal
   to the symbol that owns it.
 - **The tie-break.** `if` and `[a-z]+` both reach two bytes, and which one the
-  language means is a fact about the language. tree-sitter's rule — a string
-  beats a pattern of equal length, earlier declaration otherwise — is the rule
+  language means is a fact about the language. tree-sitter's rule - a string
+  beats a pattern of equal length, earlier declaration otherwise - is the rule
   here, and it is expressible exactly because the IR kept `.literal` and
   `.regex` apart. Two floors sit under it: a stand-in for an external scanner
   loses to the grammar's own spelling of the same bytes, and an extra loses to
@@ -42,36 +46,64 @@ This folder owns what is a property of *this grammar*:
 - **What the skip threw away.** An extra is stepped over, but a comment is a
   node on the tree and after the skip nobody can tell where it was.
   `nextKeeping` is `next`'s walk with the extras handed back instead of
-  dropped — only the ones that emit a node, so whitespace stays invisible and
+  dropped - only the ones that emit a node, so whitespace stays invisible and
   a caller never has to re-decide what the tree keeps.
 
 ## Externals, without a language name in the code
 
 Ten of the eleven grammars in `upstream/` hand terminals to a C function we do
 not link and never will. Read those scanners, though, and most of what they do
-is **recognize a spelling the DSL could not host** — bash's `variable_name` is
+is **recognize a spelling the DSL could not host** - bash's `variable_name` is
 `[a-zA-Z_]\w*`, ruby's `simple_symbol` is a colon and a method name. The C was
 written not because the bytes are exotic but because the terminal is legal only
 *somewhere*, and a tree-sitter grammar has no way to say where. We do: the parse
 state's permission set is exactly the context those scanners were reaching for.
 
-So `outside.zig` is a roll of rows keyed by the terminal's **own** name — never
-by a language's — and a row is a pattern plus the `immediate`/`prec` standing
+So `outside.zig` is a roll of rows keyed by the terminal's **own** name - never
+by a language's - and a row is a pattern plus the `immediate`/`prec` standing
 the IR has no wrapper to carry for an external. One row serves every grammar
 that shares the convention, which is why `string_content` appears once rather
 than three times. A grammar that means something different by a name in that
 table is a bug report, not a special case to add.
 
-Two kinds are deliberately absent. A terminal that must remember something
-about the bytes before it — a heredoc's tag, which fence opened a Python
-string, the column stack behind `_indent` — is run state rather than a slate
-pattern, and the table would be lying if it claimed them. A zero-width terminal
-is out for a harder reason: the scan advances by the match, so a terminal that
-accepts the empty string pins it at one offset forever.
+A row may also state its **trailing context**, `after` and `never`, and that is
+not a spelling. bash's `variable_name` stands in for a scanner that refuses
+unless an `=` follows, and a bare pattern for it loses to `word` on `rows=()` by
+pure length rather than by any tie. tree-sitter never runs that comparison
+because its scanner answers first, so a guarded row is asked first here too:
+`Scanner.refusing` is a pre-pass over just the guarded terminals, ahead of the
+slate, and it reads neither precedence nor immediacy because no guarded row
+carries either.
+
+## The hands, for what a row cannot hold
+
+A row is a function of the bytes at one offset. The rest of what an external
+scanner does is a function of the bytes **and a memory every previous token
+built** - a column stack behind `_indent`, a heredoc's tag, which fence opened a
+Python string. That is a different animal, so it gets a different seam rather
+than a cleverer table, and three properties are why:
+
+- **It runs before the slate.** The whitespace in front of a Python line *is*
+  its indentation, so an extra must not eat it before the offside rule sees it.
+- **It may answer zero-width.** The slate must refuse a zero-length match -
+  nothing in a regex promises the next call differs - but every `_dedent` pops
+  a column, so the memory is the proof of progress. `Carry.pinned` checks that
+  proof rather than trusting it.
+- **It is asked at end of input.** A file ending inside three open blocks still
+  owes three dedents.
+
+What generalises is the memory, not the scanners: a stack of columns
+(`offside.zig`) and a stack of open marks (`fence.zig`), both fixed-capacity so
+a push cannot fail and nothing allocates mid-scan. An opener's spelling never
+generalises, and `outside.zig` does not pretend it does - `troupes` is a map
+from one language's terminal names onto the parts of a shape, which is the most
+that is true. A grammar binds a troupe by declaring its anchor as an external,
+and binding **claims** the other members, so the roll stops seating a flat
+pattern for a name a hand now answers.
 
 ## Lexing is state-directed, and that is not a refinement
 
-The naive reading — offer every terminal at every offset — does not survive
+The naive reading - offer every terminal at every offset - does not survive
 contact with a real grammar, and the smallest grammar we have is already enough
 to break it. tree-sitter-json declares
 
@@ -85,8 +117,8 @@ null], ` in one bite, and thirty-two bytes that should be twenty-one tokens
 become thirteen. `outliner lex` prints exactly this, which is the cheapest way
 to watch it happen.
 
-So `Scanner.next` takes an `Expected` — the terminals the parse state will
-accept — and the restriction rides irregex's walk rather than filtering its
+So `Scanner.next` takes an `Expected` - the terminals the parse state will
+accept - and the restriction rides irregex's walk rather than filtering its
 answer. Filtering afterward recovers nothing: the long illegal match has
 already suppressed every short legal one behind it, and there is no result left
 to filter. Passing `null` asks the unconditional question, which is honest only
@@ -98,27 +130,27 @@ separate folders rather than one lexer that also parses.
 
 ## What the corpus says
 
-The measure that means anything is the state-directed one — `outliner joints
+The measure that means anything is the state-directed one - `outliner joints
 <grammar.json> <file>`, which lexes from the live LALR row. Over
 `research/joinery/corpus/`, blind counts from `outliner lex`:
 
-| Grammar | Blind | Where the walk stops, and whose problem that is |
-|---|---|---|
-| json | 0 | accepted |
-| rust | 9 | accepted — `string_content` and `string_close` were the whole gap |
-| c | 0 | byte 490. `long ledger_total(` reads as a `sized_type_specifier`, so by `(` the only live item is `parenthesized_declarator` and `primitive_type` is not in the row. A table fact |
-| go | 0 | byte 167, `&Ledger{`. `{` has no action in state 192 — the composite-literal conflict. A table fact |
-| java | 0 | byte 265, `rows.addAll(`. A table fact |
-| cpp | 2 | byte 248, `for (std::size_t i`. A table fact |
-| javascript | 3 | byte 123, `constructor(seed = [])`. A table fact |
-| typescript | 5 | byte 267, the `=>` after `(v, i)`. State 1554 holds only `parenthesized_expression -> ( expression ) .`, so `=>` is not in the row. A table fact |
-| ruby | 25 | byte 136. `_line_break` and `simple_symbol` work now; the string family needs the delimiter stack |
-| bash | 19 | byte 113, `declare -a rows=()`. An array value is glued by `_concat`, which is zero-width |
-| python | 7 | byte 0, a module docstring. `string_start` needs to remember which fence opened |
+| Grammar | Where the walk stops, and whose problem that is |
+|---|---|
+| json | accepted |
+| rust | accepted |
+| java | accepted |
+| javascript | accepted |
+| typescript | accepted |
+| c | byte 841, the `"` of `printf(…)`. Twelve roots deep in recovery, and c declares no external at all, so nothing lexical is missing. A table fact |
+| cpp | byte 290, the same shape at twenty-five roots. A table fact |
+| go | byte 167, `&Ledger{`. `{` has no action in state 194 - the composite-literal conflict. A table fact |
+| python | byte 153, the `:` of a typed parameter. The layout tokens in front of it are all correct. A table fact |
+| ruby | byte 136. The string family works; the space after `@rows` arrives as ruby's `%w[]` separator, which is `\s+` spelled as a significant terminal |
+| bash | byte 143, the `\n` after an assignment. bash declares `\n` as an **anonymous external** and the press drops it, so the terminator terminal does not exist |
 
-Seven of the nine remaining stops are the table collapsing a conflict
-tree-sitter keeps alive with GLR. A lexer cannot fix a table; those belong to
-whoever owns the press.
+Five of the six remaining stops are the table collapsing a conflict tree-sitter
+keeps alive with GLR. A lexer cannot fix a table; those belong to whoever owns
+the press.
 
 Getting there cost four fixes, three of them in irregex, and each was a real
 defect rather than a missing feature:
@@ -137,13 +169,24 @@ defect rather than a missing feature:
 - **A refused pattern renumbered its neighbours.** A munch reports the ordinals
   it was handed and never renumbers around a refusal, so compacting the
   ordinal→symbol map here shifted every terminal after the first refusal onto
-  its neighbour's name — Go reported `}` as an `interface` and nothing crashed.
+  its neighbour's name - Go reported `}` as an `interface` and nothing crashed.
 
-## Known gap
+## Known gaps
 
-The stateful half of the externals. An indent/dedent column stack, a heredoc tag
-stack, and a delimiter-matched raw span are three general built-ins that would
-cover python, bash's heredocs, and ruby's strings between them, and none of them
-is a pattern — each needs run state the slate has nowhere to keep. That is the
-next thing this folder should grow, and it is a mechanism rather than a table
-row, which is why `outside.zig` does not pretend to hold it.
+**The press hands us a numbering that is not tree-sitter's.** The tie-break
+chain here matches tree-sitter rung for rung, derived from tree-sitter's own
+generated parsers rather than from us, but the last rung sorts on symbol id and
+`import.zig` numbers a named token rule below an earlier rule's inline pattern
+where tree-sitter numbers the inline one first. That is every `#include` in the
+C corpus becoming `preproc_call`. Two smaller siblings: a negative token
+precedence is clamped to zero, and an `externals` entry that is a `STRING` or
+`PATTERN` rather than a `SYMBOL` is skipped entirely, which is what deletes
+bash's statement terminator.
+
+**C++ raw strings.** cpp's delimiter is a node the grammar names, and `fence`
+models one mark and one close. Bending the model to fit it meant special-casing
+it into meaninglessness, so it is absent rather than half-built.
+
+**Heredocs.** bash and ruby both want the tag from the opener carried to a body
+that begins on the next line. That is the same mark stack `fence` already has,
+plus a deferral to a line boundary, and it is the next honest thing to grow.

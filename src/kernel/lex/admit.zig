@@ -1,7 +1,7 @@
 //! What the scan is allowed to consider, cut the two ways that are not "does
 //! this pattern match".
 //!
-//! A slate answers one question — longest anchored match — and two facts about
+//! A slate answers one question - longest anchored match - and two facts about
 //! a grammar sit outside that question entirely. **Lexical precedence** says a
 //! terminal the author ranked up takes the token even when a lower one reaches
 //! further, so the slate is cut into tiers and asked strongest-first.
@@ -13,7 +13,7 @@
 //!
 //! A parse state's permission set mirrors that shape rather than paralleling
 //! it. `Expected` is one `Tier` per `Rank`, refilled per token from the LALR
-//! row, and the restriction rides the walk instead of filtering its answer —
+//! row, and the restriction rides the walk instead of filtering its answer -
 //! filtering afterward recovers nothing, because the long illegal match has
 //! already suppressed every short legal one behind it.
 
@@ -21,7 +21,7 @@ const std = @import("std");
 const irregex = @import("irregex");
 const g = @import("../../press/grammar.zig");
 const Scanner = @import("scanner.zig").Scanner;
-const Munch = irregex.regex_munch.Munch;
+const Munch = irregex.Munch;
 
 /// One precedence tier: every terminal of that rank, and the same set without
 /// the immediate ones for a position an extra already moved past.
@@ -44,6 +44,25 @@ pub const Rank = struct {
 /// is also a terminal.
 pub const Expected = struct {
     tiers: []Tier,
+    /// Every terminal the state admitted, seated or not.
+    ///
+    /// The tiers can only carry a terminal the slate has a pattern for, and a
+    /// terminal produced by a hand-written scanner has none by definition. So
+    /// the same admissions are also recorded flat, which is the `valid_symbols`
+    /// array tree-sitter hands its external scanners - and the whole reason
+    /// those scanners are written in C is that they need to read it.
+    wanted: std.DynamicBitSetUnmanaged,
+    /// The subset of `wanted` the state named for itself, extras excluded.
+    ///
+    /// `wanted` cannot answer this, because it auto-admits every extra so that
+    /// an external scanner reading it sees what tree-sitter's `valid_symbols`
+    /// would show. That conflation is fine for a hand and wrong for the skip:
+    /// a terminal can be an extra *and* carry meaning, and then whether this
+    /// position is whitespace or a token is exactly the question the state
+    /// answers. elixir is the case - `\r?\n` is extras[0] and is also the whole
+    /// of `_terminator`, one symbol in both roles - so skipping it wherever it
+    /// matches loses every statement boundary in the file.
+    named: std.DynamicBitSetUnmanaged,
 
     pub const Tier = struct {
         here: Munch.Allow,
@@ -69,7 +88,11 @@ pub const Expected = struct {
                 .later = try s.munch.allowNone(gpa),
             };
         }
-        var e: Expected = .{ .tiers = tiers };
+        var e: Expected = .{
+            .tiers = tiers,
+            .wanted = try .initEmpty(gpa, s.seat.len),
+            .named = try .initEmpty(gpa, s.seat.len),
+        };
         e.clear(s);
         return e;
     }
@@ -80,6 +103,8 @@ pub const Expected = struct {
             t.later.deinit(gpa);
         }
         gpa.free(e.tiers);
+        e.wanted.deinit(gpa);
+        e.named.deinit(gpa);
         e.* = undefined;
     }
 
@@ -90,12 +115,22 @@ pub const Expected = struct {
             t.live_here = false;
             t.live_later = false;
         }
+        e.wanted.unsetAll();
+        e.named.unsetAll();
         var it = s.skipped.iterator(.{});
-        while (it.next()) |i| e.admit(s, @intCast(i));
+        while (it.next()) |i| e.open(s, @intCast(i));
     }
 
     pub fn admit(e: *Expected, s: *const Scanner, sym: g.Symbol) void {
         if (sym >= s.seat.len) return;
+        e.named.set(sym);
+        e.open(s, sym);
+    }
+
+    /// Admit without claiming the state named it, which is how the extras are
+    /// seeded: they are lexable everywhere and meant by nobody.
+    fn open(e: *Expected, s: *const Scanner, sym: g.Symbol) void {
+        e.wanted.set(sym);
         const ordinal = s.seat[sym];
         if (ordinal == Scanner.no_seat) return;
         const t = &e.tiers[s.tier[sym]];

@@ -1,8 +1,8 @@
-//! M1 — the terminal scanner: bytes in, tokens out.
+//! M1 - the terminal scanner: bytes in, tokens out.
 //!
 //! Every terminal a grammar declares is a regex (a literal is the degenerate
 //! case), so the whole lexer is one anchored longest-match question asked once
-//! per token. irregex answers exactly that question — `regex_munch` — which is
+//! per token. irregex answers exactly that question - `regex.munch` - which is
 //! why this file is short and contains no automaton of its own. What lives here
 //! is the part that is a property of *this grammar* rather than of automata:
 //!
@@ -10,45 +10,50 @@
 //!     pattern ordinal to the grammar symbol that owns it.
 //!   * **The tie-break.** Longest is not the whole rule. `if` and `[a-z]+` both
 //!     reach two bytes, and which one a language means is a fact about the
-//!     language. tree-sitter's rule — a string beats a pattern of equal length,
-//!     and otherwise the earlier declaration wins — is the rule here, and it is
+//!     language. tree-sitter's rule - a string beats a pattern of equal length,
+//!     and otherwise the earlier declaration wins - is the rule here, and it is
 //!     expressible exactly because the IR kept `.literal` and `.regex` apart.
 //!   * **Where a terminal may begin.** `token.immediate` says a terminal is
-//!     legal only at the offset the last token ended — no extra in between.
+//!     legal only at the offset the last token ended - no extra in between.
 //!   * **Who wins when both match.** Lexical precedence outranks length: the
 //!     slate is partitioned into tiers and asked highest-first, so a terminal
 //!     the author ranked up takes the token even when a lower one reaches
-//!     further. Losing either of these is not cosmetic — tree-sitter-json's
+//!     further. Losing either of these is not cosmetic - tree-sitter-json's
 //!     `string_content` is immediate *and* `prec(1)*, and its `//` comment
 //!     extra is neither, so a `"//"` string value otherwise opens a comment
 //!     that eats the rest of the line.
 //!   * **The keyword rule.** `Grammar.word` names the terminal a keyword is
 //!     spelled as before anybody knows it is a keyword. When both reach the
 //!     same bytes the language means the keyword, and nothing about either
-//!     pattern says so — see `choose`.
+//!     pattern says so - see `choose`.
 //!   * **What the skip threw away.** An extra is stepped over, but a comment
 //!     is a node on the tree, and after the skip nobody can tell where it
-//!     was. `nextKeeping` is the same walk handing them back — see `read`.
+//!     was. `nextKeeping` is the same walk handing them back - see `read`.
 //!   * **What we are blind to.** A grammar with an external scanner (Python's
 //!     indent/dedent) or a token body outside the linear syntax has terminals
 //!     no slate can recognize. Where the external is really just a spelling,
 //!     `outside.zig` declares it and it joins the slate like anything else;
-//!     the rest are named in `blind`, once, at compile — never discovered
-//!     halfway through a file as a mysterious stray byte.
+//!     the rest are named in `blind`, once, at compile - never discovered
+//!     halfway through a file as a mysterious stray byte. `unskippable` is the
+//!     other half of that answer: an extra spelled as a rule rather than a
+//!     terminal, which no seat can step over. Between them a caller can ask what
+//!     this scanner cannot do for a grammar and get the whole truth, which is
+//!     the point - a partial answer is what let a dropped extra strand two
+//!     grammars at byte zero without any instrument noticing.
 //!
-//! **Lexing is state-directed, and this is not optional.** The naive reading —
-//! offer every terminal at every offset — does not survive contact with a real
+//! **Lexing is state-directed, and this is not optional.** The naive reading -
+//! offer every terminal at every offset - does not survive contact with a real
 //! grammar. tree-sitter-json declares `string_content` as `[^\\"\n]+`, which is
 //! legal only between quotes but, asked unconditionally, eats `: [1, true,
 //! null], ` in one bite and hides every structural token behind it. So `next`
 //! takes the set of terminals the parse state will accept, and the restriction
-//! rides irregex's walk rather than filtering its answer — filtering afterward
+//! rides irregex's walk rather than filtering its answer - filtering afterward
 //! recovers nothing, because the long illegal match already suppressed the
 //! short legal one. Passing `null` asks the unconditional question, which is
 //! honest only for a grammar with no context-dependent terminal.
 //!
-//! The permission set and the two slate cuts it mirrors — precedence tiers and
-//! immediacy — live in `admit.zig`, because they are one subject: everything
+//! The permission set and the two slate cuts it mirrors - precedence tiers and
+//! immediacy - live in `admit.zig`, because they are one subject: everything
 //! here that narrows the walk before it starts, as against everything in this
 //! file that settles what the walk came back with.
 
@@ -58,8 +63,30 @@ const g = @import("../../press/grammar.zig");
 const lexeme = @import("../../press/lexeme.zig");
 const admit = @import("admit.zig");
 const outside = @import("outside.zig");
+pub const lexicon = @import("lexicon.zig");
 
-const Munch = irregex.regex_munch.Munch;
+const Munch = irregex.Munch;
+
+/// How every terminal pattern is compiled, named once because two things have
+/// to agree on it: the automata, and the stamp a folio carries them under.
+///
+/// Source files are UTF-8 and tree-sitter grammars are written in JavaScript's
+/// regex dialect, so `unicode` is on - `\w`, `.`, and `\p{…}` are codepoint-wise,
+/// and a byte-wise reading would split `café` mid-character.
+///
+/// `multiline` without `dotall` is one decision rather than two, and it is the
+/// asymmetry JS has without the `s` flag: a negated class admits a newline, `.`
+/// does not. Asked of tree-sitter 0.26.11 directly rather than assumed -
+/// `/a[^x]b/` accepts `a\nb`, `/a.b/` rejects it. irregex gates the two apart,
+/// `complement` on `multiline` alone and `.` on `dotall and multiline`, so this
+/// pair reproduces both halves and neither construct needs compiling separately.
+/// A terminal is still matched anchored at one offset; `multiline` buys the
+/// buffer as the universe, not a second place to start.
+///
+/// Without it a terminal spelled "content up to a delimiter" - the usual
+/// `[^x]+` - cannot cross a line, which is most of what a block comment, a raw
+/// string, or a template body is.
+const how: Munch.Options = .{ .unicode = true, .multiline = true };
 
 test {
     _ = outside;
@@ -79,8 +106,8 @@ pub const Token = struct {
 /// a token, a byte no terminal can begin at, and the end of the input.
 pub const Step = union(enum) {
     token: Token,
-    /// Nothing in the slate starts at this offset. The caller owns the policy —
-    /// resynchronize by a byte, or stop and report — because a lexer that
+    /// Nothing in the slate starts at this offset. The caller owns the policy -
+    /// resynchronize by a byte, or stop and report - because a lexer that
     /// silently skipped would turn a syntax error into a wrong parse.
     stray: u32,
     end,
@@ -89,6 +116,15 @@ pub const Step = union(enum) {
 pub const Scanner = struct {
     gpa: std.mem.Allocator,
     munch: Munch,
+    /// The one buffer a read-back slate's automata live in, empty when they
+    /// were determinized here. It is the slate's backing store rather than
+    /// anything the scan consults, and it is held for exactly as long as the
+    /// automata pointing into it.
+    image: []align(@alignOf(u64)) u8,
+    /// Which slate this scanner was built over. A folio and its grammar travel
+    /// together, so this only ever differs after somebody rebuilt one of them
+    /// alone - and then the carried automata name terminals that have moved.
+    stamp: u64,
     /// Pattern ordinal -> the terminal it stands for.
     owners: []const g.Symbol,
     /// Terminal -> is it skipped between tokens (whitespace, comments)?
@@ -107,13 +143,57 @@ pub const Scanner = struct {
     /// tree-sitter's does: keyword extraction only ever sees tokens the grammar
     /// file itself defined.
     provided: std.DynamicBitSetUnmanaged,
+    /// Terminal -> the provision that seated it, when that provision states a
+    /// trailing context. Null for every other terminal, which is nearly all of
+    /// them.
+    guard: []const ?*const outside.Provision,
+    /// Those terminals as a slate cut, or null when the grammar has none. The
+    /// pass that reads it runs before the ordinary search - see `refusing`.
+    guarded: ?Munch.Allow,
     /// The terminal a keyword is spelled as, when the grammar named one.
     word: ?g.Symbol,
-    /// Terminals no slate can recognize: external scanners, and token bodies
-    /// irregex declined. Ascending. Non-empty means any token stream from this
-    /// scanner is incomplete, and every consumer is required to say so rather
-    /// than present a partial lex as a whole one.
+    /// Terminals no slate can recognize because they are externally scanned and
+    /// no hand answers them. Ascending. Non-empty means any token stream from
+    /// this scanner is incomplete, and every consumer is required to say so
+    /// rather than present a partial lex as a whole one.
     blind: []const g.Symbol,
+    /// Terminals whose pattern the regex engine would not build: a syntax it
+    /// does not parse, the powerset safety bound, or a word-boundary assertion
+    /// reached through the body. Ascending, and the same incompleteness as
+    /// `blind` from a reader's point of view.
+    ///
+    /// Separate because the two have different owners. A blind terminal is
+    /// someone else's C to reimplement; a declined one is our own engine
+    /// refusing a pattern, which is ours to fix - and it is far more common
+    /// than anyone assumed while the two were one number.
+    declined: []const g.Symbol,
+    /// Extras this scanner cannot step over: the grammar declared them, but they
+    /// are rules rather than terminals, so there is no token to skip and no seat
+    /// to skip it with. lua spells `comment` as a rule around `--`, julia spells
+    /// `line_comment` as one around `#`, and each strays on the first one in the
+    /// file rather than skipping it.
+    ///
+    /// Separate from `blind` because the consequence is different - blind is a
+    /// token we cannot produce where one is wanted, this is a token we can
+    /// produce and then cannot get out of the way of - and because folding it in
+    /// would make every existing reader of `blind` describe a nonterminal as an
+    /// externally scanned terminal. Being outside `blind` is also exactly how it
+    /// stayed invisible: `blind` is the honesty surface, and a fact that is not a
+    /// terminal had nowhere in it to sit.
+    unskippable: []const g.Symbol,
+    /// The hand-written scanners this grammar binds, with their terminal names
+    /// already resolved to symbols. Empty for a grammar whose externals are all
+    /// spellings, which is most of them.
+    casts: []const outside.Cast,
+    /// What those hands remember between tokens. It is per *file*, not per
+    /// grammar, which is why `rewind` exists and why the two entry points below
+    /// notice a restart on their own: a column stack left over from the last
+    /// file would open every block in the next one.
+    carry: outside.Carry,
+    /// The furthest offset a hand has been asked at since the last rewind. Only
+    /// ever read to tell a fresh file from a zero-width token that left the
+    /// offset where it was.
+    reached: u32,
     /// Terminal -> its pattern ordinal, or `no_seat`. The bridge between the
     /// grammar's numbering and the slate's.
     seat: []const u32,
@@ -127,7 +207,7 @@ pub const Scanner = struct {
     pub const no_seat = std.math.maxInt(u32);
 
     /// The two cuts of the slate that are not "does this pattern match", and
-    /// the per-state permission set shaped like them — see `admit.zig`.
+    /// the per-state permission set shaped like them - see `admit.zig`.
     pub const Rank = admit.Rank;
     pub const Expected = admit.Expected;
 
@@ -136,9 +216,15 @@ pub const Scanner = struct {
         return Expected.of(s, gpa);
     }
 
-    /// Null when the grammar has no lexable terminal at all — a grammar that is
+    /// Null when the grammar has no lexable terminal at all - a grammar that is
     /// entirely external scanners, which is a thing we cannot lex rather than a
     /// thing we lex to nothing.
+    ///
+    /// A grammar that arrived from a folio carries its slate already
+    /// determinized, and this reads it rather than rebuilding it - which is the
+    /// difference between two milliseconds of startup and eighty. Everything
+    /// else about the scanner is derived here either way, because everything
+    /// else is cheap; only the automata are worth carrying.
     pub fn compile(gpa: std.mem.Allocator, gr: *const g.Grammar) !?Scanner {
         var arena_state = std.heap.ArenaAllocator.init(gpa);
         defer arena_state.deinit();
@@ -154,27 +240,63 @@ pub const Scanner = struct {
         errdefer immediate.deinit(gpa);
         var provided: std.DynamicBitSetUnmanaged = try .initEmpty(gpa, gr.terminal_count);
         errdefer provided.deinit(gpa);
+        const guard = try gpa.alloc(?*const outside.Provision, gr.terminal_count);
+        errdefer gpa.free(guard);
+        @memset(guard, null);
+
+        // The hands, resolved before the slate is cut. A terminal a hand
+        // answers must not also be seated as a pattern: the slate is asked at
+        // every offset and knows nothing of the memory, so a seat for
+        // `string_content` would answer it with Rust's spelling in the middle
+        // of a Ruby `%w[]`.
+        var casts: std.ArrayList(outside.Cast) = .empty;
+        errdefer casts.deinit(gpa);
+        const names: struct {
+            gr: *const g.Grammar,
+            pub fn external(n: @This(), name: []const u8) ?g.Symbol {
+                return externalNamed(n.gr, name);
+            }
+            pub fn terminal(n: @This(), name: []const u8) ?g.Symbol {
+                return terminalNamed(n.gr, name);
+            }
+        } = .{ .gr = gr };
+        for (&outside.troupes) |*t| {
+            const cast = outside.provision(t, names) orelse continue;
+            try casts.append(gpa, cast);
+        }
 
         // The lexical standing of every terminal, resolved once. A provisioned
         // external's standing comes from its declaration rather than from the
-        // IR, which has no wrapper on an external to read it off — and the
+        // IR, which has no wrapper on an external to read it off - and the
         // tiers below need the same answer this loop used, or a terminal lexes
         // in one rank and is admitted in another.
         const lexis = try arena.alloc(g.Lexis, gr.terminal_count);
         for (0..gr.terminal_count) |i| {
             const sym: g.Symbol = @intCast(i);
             lexis[i] = gr.lexisOf(sym);
-            var pattern = gr.patterns[i].?;
+            // `patterns` is optional per symbol because nonterminals have none,
+            // so nothing in the type says a terminal has one. Panicking here is
+            // not the safer answer: this is a library whose whole job is to
+            // accept grammars nobody has looked at, and the press has dropped a
+            // terminal's pattern before. Refuse by name instead.
+            var pattern = gr.patterns[i] orelse return error.TerminalWithoutPattern;
+            var handed = false;
             if (pattern == .external) {
-                if (outside.provisionFor(gr.nameOf(sym))) |p| {
+                const name = gr.nameOf(sym);
+                for (casts.items) |*c| {
+                    if (outside.claimed(c.troupe, name)) handed = true;
+                }
+                if (!handed) if (outside.provisionFor(gr, name)) |p| {
                     pattern = .{ .regex = p.pattern };
                     lexis[i] = p.lexis;
                     provided.set(i);
-                }
+                    if (outside.guards(p)) guard[i] = p;
+                };
             }
             if (lexis[i].immediate) immediate.set(i);
             switch (pattern) {
-                .external => try blind.append(gpa, sym),
+                // A hand answers this one, so it is neither seated nor blind.
+                .external => if (!handed) try blind.append(gpa, sym),
                 .literal => |lit| {
                     literal.set(i);
                     var rx: std.ArrayList(u8) = .empty;
@@ -191,41 +313,67 @@ pub const Scanner = struct {
         errdefer owners.deinit(gpa);
         errdefer blind.deinit(gpa);
 
-        // Unicode on, and nothing else. Source files are UTF-8 and tree-sitter
-        // grammars are written in JavaScript's regex dialect, where `\w`, `.`,
-        // and `\p{…}` are all codepoint-wise — a byte-wise reading would split
-        // `café` mid-character. `dotall` stays off for the same reason: JS `.`
-        // does not match a newline, so a token written `.` must not swallow one.
-        var munch = (try Munch.compile(gpa, slate.items, .{ .unicode = true })) orelse {
-            owners.deinit(gpa);
-            blind.deinit(gpa);
-            literal.deinit(gpa);
-            immediate.deinit(gpa);
-            provided.deinit(gpa);
-            return null;
+        const stamp = lexicon.digest(slate.items, how);
+        var image: []align(@alignOf(u64)) u8 = &.{};
+        errdefer if (image.len != 0) gpa.free(image);
+        var munch = blk: {
+            if (try lexicon.thaw(gpa, gr.lexicon, slate.items.len, stamp)) |carried| {
+                image = carried.image;
+                break :blk carried.munch;
+            }
+            break :blk (try Munch.compile(gpa, slate.items, how)) orelse {
+                owners.deinit(gpa);
+                blind.deinit(gpa);
+                casts.deinit(gpa);
+                literal.deinit(gpa);
+                immediate.deinit(gpa);
+                provided.deinit(gpa);
+                gpa.free(guard);
+                return null;
+            };
         };
         errdefer munch.deinit();
 
         // A pattern irregex refused is a terminal we cannot see, exactly like an
-        // external — the reason differs, the consequence does not. Merging them
+        // external - the reason differs, the consequence does not. Merging them
         // here is what lets `blind` stay one list a caller checks once.
         //
         // `owners` is NOT compacted to remove them. A munch reports matches in
         // the ordinals it was handed and never renumbers around a refusal, so
         // closing the gaps here would shift every terminal after the first
-        // refused one onto its neighbor's name — which is not a crash, just a
+        // refused one onto its neighbor's name - which is not a crash, just a
         // lexer quietly reporting the wrong token forever.
-        for (munch.declined) |ordinal| try blind.append(gpa, owners.items[ordinal]);
+        // Kept apart from `blind`, and the reason is that folding them together
+        // was actively misleading: three readers print `blind` as "externally
+        // scanned terminal(s)", and php declares twelve externals against
+        // ninety-nine blind, of which eighty-seven are patterns the engine
+        // would not build. A reader of this lane believed that number was
+        // externals and reported it. Two populations, two fields, and the
+        // sentence each reader already prints becomes true.
+        var declined: std.ArrayList(g.Symbol) = .empty;
+        errdefer declined.deinit(gpa);
+        for (munch.declined) |ordinal| try declined.append(gpa, owners.items[ordinal]);
         std.mem.sort(g.Symbol, blind.items, {}, std.sort.asc(g.Symbol));
+        std.mem.sort(g.Symbol, declined.items, {}, std.sort.asc(g.Symbol));
 
         var skipped: std.DynamicBitSetUnmanaged = try .initEmpty(gpa, gr.terminal_count);
         errdefer skipped.deinit(gpa);
         var kept: std.DynamicBitSetUnmanaged = try .initEmpty(gpa, gr.terminal_count);
         errdefer kept.deinit(gpa);
-        for (gr.extras) |e| if (gr.isTerminal(e)) {
+        var unskippable: std.ArrayList(g.Symbol) = .empty;
+        errdefer unskippable.deinit(gpa);
+        for (gr.extras) |e| {
+            // A nonterminal extra is a subtree the parser has to reduce, which is
+            // not something a seat can do. Recording it rather than passing over
+            // it is the difference between a caller that knows the skip is
+            // incomplete and one that reads a stray at the first comment.
+            if (!gr.isTerminal(e)) {
+                try unskippable.append(gpa, e);
+                continue;
+            }
             skipped.set(e);
             if (gr.shapeOf(e).visible()) kept.set(e);
-        };
+        }
 
         const seat = try gpa.alloc(u32, gr.terminal_count);
         errdefer gpa.free(seat);
@@ -234,8 +382,8 @@ pub const Scanner = struct {
         for (munch.declined) |ordinal| seat[owners.items[ordinal]] = no_seat;
 
         // The tiers, strongest first. Only precedences a seated terminal
-        // actually carries become a tier, so the common grammar — every token
-        // at rank zero — asks exactly one question per token, as it should.
+        // actually carries become a tier, so the common grammar - every token
+        // at rank zero - asks exactly one question per token, as it should.
         var levels: std.ArrayList(i32) = .empty;
         defer levels.deinit(arena);
         for (0..gr.terminal_count) |i| {
@@ -244,6 +392,17 @@ pub const Scanner = struct {
             if (std.mem.indexOfScalar(i32, levels.items, p) == null) try levels.append(arena, p);
         }
         std.mem.sort(i32, levels.items, {}, std.sort.desc(i32));
+
+        // The guarded stand-ins, as one cut of the slate. Built here rather
+        // than per call because it never changes, and left null when nothing
+        // is guarded so the common grammar pays no probe at all.
+        var guarded: ?Munch.Allow = null;
+        errdefer if (guarded) |*a| a.deinit(gpa);
+        for (0..gr.terminal_count) |i| {
+            if (guard[i] == null or seat[i] == no_seat) continue;
+            if (guarded == null) guarded = try munch.allowNone(gpa);
+            guarded.?.admit(&munch, seat[i]);
+        }
 
         const tier = try gpa.alloc(u8, gr.terminal_count);
         errdefer gpa.free(tier);
@@ -259,7 +418,14 @@ pub const Scanner = struct {
         for (0..gr.terminal_count) |i| {
             if (seat[i] == no_seat) continue;
             const lx = lexis[i];
-            const at: u8 = @intCast(std.mem.indexOfScalar(i32, levels.items, lx.prec).?);
+            // Total only because this loop and the one that filled `levels`
+            // share the `seat[i] == no_seat` filter twenty-five lines apart.
+            // Nothing in the types says so, so it is asserted rather than left
+            // to hold by luck; if a later reader widens one filter and not the
+            // other, this names the coupling instead of unwrapping a null.
+            const found = std.mem.indexOfScalar(i32, levels.items, lx.prec);
+            std.debug.assert(found != null); // every seated prec was levelled
+            const at: u8 = @intCast(found.?);
             tier[i] = at;
             ranks[at].all.admit(&munch, seat[i]);
             if (!lx.immediate) ranks[at].after.admit(&munch, seat[i]);
@@ -268,29 +434,78 @@ pub const Scanner = struct {
         return .{
             .gpa = gpa,
             .munch = munch,
+            .image = image,
+            .stamp = stamp,
             .owners = try owners.toOwnedSlice(gpa),
             .skipped = skipped,
             .kept = kept,
             .literal = literal,
             .immediate = immediate,
             .provided = provided,
+            .guard = guard,
+            .guarded = guarded,
             .word = if (gr.word) |w| (if (seat[w] == no_seat) null else w) else null,
             .blind = try blind.toOwnedSlice(gpa),
+            .declined = try declined.toOwnedSlice(gpa),
+            .unskippable = try unskippable.toOwnedSlice(gpa),
+            .casts = try casts.toOwnedSlice(gpa),
+            .carry = .{},
+            .reached = 0,
             .seat = seat,
             .tier = tier,
             .ranks = ranks,
         };
     }
 
+    /// The terminal spelled `name`, if the grammar has one. Linear, and asked
+    /// once per troupe member at compile; a map would cost more to build than
+    /// the twenty scans it would save.
+    fn terminalNamed(gr: *const g.Grammar, name: []const u8) ?g.Symbol {
+        if (name.len == 0) return null;
+        for (0..gr.terminal_count) |i| {
+            const sym: g.Symbol = @intCast(i);
+            if (std.mem.eql(u8, gr.nameOf(sym), name)) return sym;
+        }
+        return null;
+    }
+
+    /// The same, restricted to terminals the grammar declared external. A
+    /// grammar that happens to spell an ordinary token `string_start` means its
+    /// own token by it, and binding a hand to that would be us renaming it.
+    fn externalNamed(gr: *const g.Grammar, name: []const u8) ?g.Symbol {
+        const sym = terminalNamed(gr, name) orelse return null;
+        const pattern = gr.patterns[sym] orelse return null;
+        return if (pattern == .external) sym else null;
+    }
+
+    /// This scanner's slate, written down for a folio to carry. Null when the
+    /// slate was read back rather than determinized - re-deflating what we just
+    /// inflated would only prove we can - and when it holds an automaton the
+    /// format refuses.
+    ///
+    /// The bytes are opaque: nothing outside `lexicon.zig` reads them, and the
+    /// only thing a caller has to know is that `compile` will find them again
+    /// on `Grammar.lexicon`.
+    pub fn freeze(s: *const Scanner, gpa: std.mem.Allocator) !?[]u8 {
+        if (s.image.len != 0) return null;
+        return lexicon.freeze(gpa, &s.munch, s.stamp);
+    }
+
     pub fn deinit(s: *Scanner) void {
         s.munch.deinit();
+        if (s.image.len != 0) s.gpa.free(s.image);
         s.gpa.free(s.owners);
+        s.gpa.free(s.casts);
         s.skipped.deinit(s.gpa);
         s.kept.deinit(s.gpa);
         s.literal.deinit(s.gpa);
         s.immediate.deinit(s.gpa);
         s.provided.deinit(s.gpa);
+        s.gpa.free(s.guard);
+        if (s.guarded) |*a| a.deinit(s.gpa);
         s.gpa.free(s.blind);
+        s.gpa.free(s.declined);
+        s.gpa.free(s.unskippable);
         s.gpa.free(s.seat);
         s.gpa.free(s.tier);
         for (s.ranks) |*r| r.deinit(s.gpa);
@@ -302,15 +517,16 @@ pub const Scanner = struct {
     ///
     /// `expected` is the set of terminals the parse state will accept; `null`
     /// offers the whole slate, which is only honest for a grammar with no
-    /// context-dependent terminal (see the module header — JSON is already not
+    /// context-dependent terminal (see the module header - JSON is already not
     /// one of those).
     ///
     /// Resume from `tok.end()`.
     pub fn next(s: *Scanner, bytes: []const u8, at: u32, expected: ?*const Expected) Step {
+        s.restarting(at);
         var i = at;
         while (true) switch (s.read(bytes, i, i == at, expected)) {
             .token => |tok| {
-                if (!s.skipped.isSet(tok.symbol)) return .{ .token = tok };
+                if (!s.stepping(tok.symbol, expected)) return .{ .token = tok };
                 i = tok.end();
             },
             .stray => |off| return .{ .stray = off },
@@ -318,11 +534,26 @@ pub const Scanner = struct {
         };
     }
 
+    /// Whether this token is bytes to step over rather than the answer.
+    ///
+    /// Being an extra is not enough, because a symbol can be an extra and also
+    /// be named by the state it arrived in - and then it is both, with the
+    /// state deciding which. tree-sitter lowers the same rule into its tables:
+    /// a shift-extra action is emitted for a state only where that state has no
+    /// action of its own for the symbol, so a real action always wins.
+    ///
+    /// With no state to consult every extra is stepped over, which is the only
+    /// honest reading of the whole slate.
+    fn stepping(s: *const Scanner, sym: g.Symbol, expected: ?*const Expected) bool {
+        if (!s.skipped.isSet(sym)) return false;
+        return if (expected) |e| !e.named.isSet(sym) else true;
+    }
+
     /// The same walk, appending the extras it steps over to `keep` rather than
     /// dropping them. A tree that means to be tree-sitter-identical carries
     /// `(comment)` nodes, and the skip is the only place a comment is ever
-    /// seen. Extras that emit no node — a bare `\s` is a symbol the author
-    /// never wrote — are dropped as they always were, so a caller appends what
+    /// seen. Extras that emit no node - a bare `\s` is a symbol the author
+    /// never wrote - are dropped as they always were, so a caller appends what
     /// it receives without re-deciding what the tree keeps.
     ///
     /// A sibling rather than a flag on `next`, because the two differ by one
@@ -336,10 +567,11 @@ pub const Scanner = struct {
         expected: ?*const Expected,
         keep: *std.ArrayList(Token),
     ) !Step {
+        s.restarting(at);
         var i = at;
         while (true) switch (s.read(bytes, i, i == at, expected)) {
             .token => |tok| {
-                if (!s.skipped.isSet(tok.symbol)) return .{ .token = tok };
+                if (!s.stepping(tok.symbol, expected)) return .{ .token = tok };
                 if (s.kept.isSet(tok.symbol)) try keep.append(gpa, tok);
                 i = tok.end();
             },
@@ -348,18 +580,130 @@ pub const Scanner = struct {
         };
     }
 
+    /// Forget everything the hands remember. A file's worth of state, so the
+    /// caller that starts a new file says so.
+    pub fn rewind(s: *Scanner) void {
+        s.carry.rewind();
+        s.reached = 0;
+    }
+
+    /// Where a scan had got to, so it can be put back there.
+    ///
+    /// Opaque: produced by `save`, consumed by `restore`, and compared with
+    /// `same`. Nothing else should read a field of it, and in particular
+    /// nothing should compare two of them with `std.meta.eql` - the stacks
+    /// inside are fixed-capacity arrays whose bytes past the live prefix are
+    /// `undefined`, so a structural comparison of two identical states can
+    /// answer no, and answers differently in a release build than in a debug
+    /// one. `same` flattens the dead bytes first.
+    ///
+    /// It is a plain value: no pointers, no allocation, ~1 KB, and copying it
+    /// is copying the state. That is a property of the two stacks being
+    /// fixed-capacity, which they are for the same reason a hand cannot fail -
+    /// see `offside.Columns` and `fence.Spans`.
+    pub const Save = struct {
+        carry: outside.Carry,
+        /// The furthest offset asked for. It travels, and it has to: it is not
+        /// part of `Carry`, and a carry put back without it leaves the scanner
+        /// thinking a resumed offset of zero is a new file.
+        reached: u32,
+
+        pub fn same(a: *const Save, b: *const Save) bool {
+            return a.reached == b.reached and a.carry.same(&b.carry);
+        }
+    };
+
+    /// Everything a resumed scan has to be told. Every hand's memory is in
+    /// `Carry` - the offside column stack, the fence mark stack, the
+    /// zero-width progress guard - and the marrow and caesura hands hold
+    /// nothing at all. Nothing else on `Scanner` moves while a file is being
+    /// read; the rest is the compiled grammar, which is per grammar and not
+    /// per file.
+    pub fn save(s: *const Scanner) Save {
+        return .{ .carry = s.carry, .reached = s.reached };
+    }
+
+    pub fn restore(s: *Scanner, to: Save) void {
+        s.carry = to.carry;
+        s.reached = to.reached;
+    }
+
+    /// Notice a new file without being told. A parse that got anywhere left
+    /// `reached` past zero, so an offset of zero after that is a restart; a
+    /// zero-width token at the top of a file leaves the offset at zero but has
+    /// not moved `reached` either, so it is not mistaken for one.
+    fn restarting(s: *Scanner, at: u32) void {
+        if (at == 0 and s.reached > 0) s.rewind();
+        if (at > s.reached) s.reached = at;
+    }
+
     /// One token at `i`, extra or not: the whole answer at one offset, with
     /// what to do about an extra left to the two loops above. `fresh` is
-    /// theirs to pass — immediacy is a fact about the walk rather than about
+    /// theirs to pass - immediacy is a fact about the walk rather than about
     /// this offset (see `reach`).
+    ///
+    /// A hand is asked first, and asked even at the end of the input. Both are
+    /// tree-sitter's order and both are load-bearing: the whitespace in front
+    /// of a Python line *is* its indentation, so an extra must not eat it
+    /// before the offside rule sees it, and end of input still owes a dedent
+    /// for every block left open. `fresh` goes through rather than gating the
+    /// call, because only the layout hand needs it - see `outside.step`.
     fn read(s: *Scanner, bytes: []const u8, i: u32, fresh: bool, expected: ?*const Expected) Step {
+        if (s.casts.len > 0) if (expected) |e| {
+            if (outside.step(s.casts, &s.carry, bytes, i, fresh, &e.wanted)) |h| {
+                return .{ .token = .{ .symbol = h.symbol, .start = i + h.skip, .len = h.len } };
+            }
+        };
         if (i >= bytes.len) return .end;
+        if (s.guarded) |*allow| if (expected) |e| {
+            if (s.refusing(allow, bytes, i, e)) |tok| return .{ .token = tok };
+        };
         const hit = s.reach(bytes, i, fresh, expected) orelse return .{ .stray = i };
         return .{ .token = .{
-            .symbol = s.choose(hit.patterns),
+            .symbol = s.choose(hit.patterns, expected),
             .start = i,
             .len = @intCast(hit.len),
         } };
+    }
+
+    /// A stand-in that states the refusal its scanner makes, asked before the
+    /// slate the way tree-sitter asks the external scanner before the internal
+    /// lexer - and losing the position outright when its trailing context does
+    /// not hold, which is what "the scanner returned false" means.
+    ///
+    /// Going first is the whole point, and a tie-break could not have done it.
+    /// bash is the case: `word` matches `rows=` and `variable_name` matches
+    /// `rows`, so longest-match hands the assignment target to `word` before
+    /// any tie is reached, and `declare -a rows=()` strays on the bracket.
+    /// tree-sitter never runs that comparison, because its scanner already
+    /// answered.
+    ///
+    /// Narrow on purpose. Only a guarded row is asked here, because only a
+    /// guarded row has said what it refuses; an unguarded stand-in is still
+    /// our approximation of a C function and still defers to the slate. No
+    /// guarded row is immediate or precedence-ranked, so this pass reads
+    /// neither - see the test that holds the roll to it.
+    fn refusing(
+        s: *Scanner,
+        allow: *const Munch.Allow,
+        bytes: []const u8,
+        i: u32,
+        expected: *const Expected,
+    ) ?Token {
+        const hit = s.munch.longestAmong(bytes, i, allow) orelse return null;
+        if (hit.len == 0) return null;
+        const end = i + @as(u32, @intCast(hit.len));
+        var best: ?g.Symbol = null;
+        for (hit.patterns) |ordinal| {
+            const sym = s.owners[ordinal];
+            if (!expected.wanted.isSet(sym)) continue;
+            const p = s.guard[sym] orelse continue;
+            if (!outside.holds(p, bytes, end)) continue;
+            // Ordinals arrive ascending, so the earliest declaration stands.
+            if (best == null) best = sym;
+        }
+        const sym = best orelse return null;
+        return .{ .symbol = sym, .start = i, .len = @intCast(hit.len) };
     }
 
     /// The match at `i`: the strongest tier that answers at all, and the
@@ -367,8 +711,8 @@ pub const Scanner = struct {
     /// the last token ended, which is the only place an immediate terminal may
     /// begin.
     ///
-    /// A zero-length match is not an answer — a terminal that accepts the empty
-    /// string would pin the scan at one offset forever — so the search passes
+    /// A zero-length match is not an answer - a terminal that accepts the empty
+    /// string would pin the scan at one offset forever - so the search passes
     /// over it and lets a weaker tier, or the stray, have the position.
     fn reach(
         s: *Scanner,
@@ -376,7 +720,7 @@ pub const Scanner = struct {
         i: u32,
         fresh: bool,
         expected: ?*const Expected,
-    ) ?irregex.regex_munch.Match {
+    ) ?irregex.regex.munch.Match {
         for (s.ranks, 0..) |*rank, t| {
             const allow = if (expected) |e| blk: {
                 const tier = &e.tiers[t];
@@ -399,7 +743,7 @@ pub const Scanner = struct {
     /// Two rules, and the second only ever settles what the first left as a
     /// coin flip.
     ///
-    /// A string beats a pattern — `if` over `[a-z]+` — and among equals the
+    /// A string beats a pattern - `if` over `[a-z]+` - and among equals the
     /// earlier declaration wins, which is exactly tree-sitter's rule and is
     /// also the only one a grammar author can predict. Below both sits a
     /// stand-in for an external scanner, because it is a guess about a C
@@ -431,21 +775,26 @@ pub const Scanner = struct {
     /// ever sees tokens the grammar file defined, and bash's `variable_name` is
     /// a subset of its `word` that is emphatically not a keyword of it. Without
     /// the exclusion every bare bash word would come back as an assignment.
-    fn choose(s: *const Scanner, tied: []const u32) g.Symbol {
-        const plain = s.pick(tied, false).?;
-        if (s.word) |w| if (plain == w) return s.pick(tied, true) orelse plain;
+    fn choose(s: *const Scanner, tied: []const u32, expected: ?*const Expected) g.Symbol {
+        const plain = s.pick(tied, false, expected).?;
+        if (s.word) |w| if (plain == w) return s.pick(tied, true, expected) orelse plain;
         return plain;
     }
 
     /// The strongest of the patterns that reached the same length. `keywords`
     /// drops the word terminal and every stand-in, which is the keyword pass.
-    fn pick(s: *const Scanner, tied: []const u32, keywords: bool) ?g.Symbol {
+    fn pick(
+        s: *const Scanner,
+        tied: []const u32,
+        keywords: bool,
+        expected: ?*const Expected,
+    ) ?g.Symbol {
         var best: ?g.Symbol = null;
         var strength: u3 = 0;
         for (tied) |ordinal| {
             const sym = s.owners[ordinal];
             if (keywords and (sym == s.word.? or s.provided.isSet(sym))) continue;
-            const of = s.standing(sym);
+            const of = s.standing(sym, expected);
             // Ordinals arrive ascending, so `>` rather than `>=` on the class
             // and `<` on the symbol both hold the earliest declaration.
             if (best) |b| {
@@ -463,8 +812,15 @@ pub const Scanner = struct {
 
     /// How much a terminal's spelling is worth in a tie: an extra least, then a
     /// stand-in for an external scanner, and an exact string most.
-    fn standing(s: *const Scanner, sym: g.Symbol) u3 {
-        if (s.skipped.isSet(sym)) return 0;
+    ///
+    /// An extra the state named is not on that floor, and the floor's own
+    /// reason says why: it is there because an extra steps over bytes nobody
+    /// asked for, and a state that named the symbol asked for it. Two extras
+    /// can reach the same byte with only one of them meant - elixir's `\r?\n`
+    /// beside its `[ \t]|\r?\n|\\\r?\n` - and without this the coin flip
+    /// between them decides whether the file has statement boundaries.
+    fn standing(s: *const Scanner, sym: g.Symbol, expected: ?*const Expected) u3 {
+        if (s.skipped.isSet(sym) and s.stepping(sym, expected)) return 0;
         if (s.provided.isSet(sym)) return 1;
         return if (s.literal.isSet(sym)) 3 else 2;
     }
@@ -476,7 +832,7 @@ pub const Scanner = struct {
 };
 
 /// Every token in `bytes`, extras already dropped. Stops at the first stray and
-/// reports where — a partial stream plus the offset that ended it is strictly
+/// reports where - a partial stream plus the offset that ended it is strictly
 /// more useful than an error with no prefix, and strictly more honest than a
 /// stream that resynchronized without saying so.
 pub const Run = struct {
