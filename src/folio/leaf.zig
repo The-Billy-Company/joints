@@ -4,7 +4,7 @@
 //! One vocabulary, spoken by both the writer and the reader, because those two
 //! agreeing is the whole promise and there is nowhere else to make them agree.
 //! Every section is `count * stride` bytes at an eight-aligned offset, so
-//! checking one is a multiply and two comparisons rather than a parse — which is
+//! checking one is a multiply and two comparisons rather than a parse - which is
 //! what lets the reader prove the entire layout before it trusts a single byte
 //! of payload.
 //!
@@ -22,16 +22,16 @@
 const std = @import("std");
 const irregex = @import("irregex");
 
-pub const signet = irregex.signet;
+pub const signet = irregex.index.signet;
 
 pub const magic = "OTLFOLIO";
 
-/// Bumped whenever anything below changes meaning — a new section, a new field
+/// Bumped whenever anything below changes meaning - a new section, a new field
 /// in a record, a new flag bit. The reader demands equality, so an old binary
 /// refuses a new folio rather than reading the prefix it recognizes and
 /// inventing the rest. That refusal is what lets `press` keep growing its IR:
 /// every field it grows is a version here instead of a break.
-pub const version: u16 = 1;
+pub const version: u16 = 3;
 
 pub const header_len = 96;
 pub const entry_len = 16;
@@ -54,7 +54,7 @@ pub const Error = error{
     FolioBadMagic,
     /// Written by a different version of this format.
     FolioBadVersion,
-    /// Same version number, different meaning — a record layout changed under a
+    /// Same version number, different meaning - a record layout changed under a
     /// version somebody forgot to bump.
     FolioBadSchema,
     /// The BLAKE3 seal does not match the bytes. The only check that catches a
@@ -107,10 +107,33 @@ pub const Error = error{
 /// tell anyone what it parsed, which makes every `highlights.scm` in the world
 /// useless against it.
 ///
-/// What is deliberately absent is everything the press consumed on the way in —
-/// step precedence and associativity, declared conflicts, precedence orderings —
-/// and everything it produced as a report: the contested and frayed cells. A
-/// folio is the table, not the argument that made it.
+/// What is deliberately absent is everything the press *consumed* on the way in
+/// - step precedence and associativity, declared ambiguity groups, precedence
+/// orderings. A folio is the table, not the argument that made it.
+///
+/// Also absent, and this one was here once: the kernel items that identify each
+/// state. They are the automaton's construction identity, and no parse and no
+/// tree build reads them; keeping them was carrying a second opinion about
+/// what the table already says, at eight percent of the file. What a folio can
+/// still be checked against a pressing by is its behaviour, which is what
+/// `mint` compares and what actually has to match.
+///
+/// What it does carry, and did not at first, is the press's *verdict* on the
+/// cells the grammar left contested. That is not provenance: a parse forks at a
+/// cell the author declared ambiguous, and the reading it forks into is the one
+/// the table dropped there, which exists nowhere else. A folio without it parses
+/// a declaredly-ambiguous grammar as though the author had declared nothing.
+///
+/// The table itself is `row` through `odd`, and its shape is worth stating
+/// once. A parse table written out in full is 97% cells that say nothing, and
+/// the 3% that do say something say it over and over: a state, a value, and the
+/// set of columns holding that value repeat across an automaton far more than
+/// they vary. So each layer is stored once and pointed at - a state names a
+/// row, a row names its groups, a group names a value and a column set, and a
+/// column set is shared by every group that happens to have it. Terminals and
+/// nonterminals share the column space, so a goto is a group like any other.
+/// Nothing here is compressed; there is simply one copy of each distinct thing,
+/// which is what lets it still be read where it lies.
 pub const Kind = enum(u16) {
     /// Every string in the grammar, run together. Names, patterns, aliases, and
     /// field names all point in here, so one bounds check covers all of them.
@@ -139,26 +162,60 @@ pub const Kind = enum(u16) {
     /// `rhs_off .. rhs_off + rhs_len` locates the body in `rhs`.
     production,
     rhs,
-    /// Parallel to `rhs`, one per symbol of every body: what the child it
-    /// produces is renamed to and filed under. A rename belongs to the use site,
-    /// never to the symbol, so it has to live out here beside the position.
+    /// Parallel to `rhs`, one per symbol of every body: which step it takes. A
+    /// rename belongs to the use site and never to the symbol, so it has to
+    /// live out here beside the position - but a grammar has a few dozen
+    /// distinct things to say and tens of thousands of positions to say them
+    /// at, and almost every one of them is "nothing". Narrow: see `narrow`.
+    stepref,
+    /// Every distinct step, interned.
     step,
-    /// Dense, `state_count * width`, row-major by state.
-    action,
-    goto_span,
-    /// Every transition, terminal ones included. They are not redundant with the
-    /// shifts in `action`: precedence can delete a read from a state that still
-    /// has the edge, and anything that wants to know what the automaton *could*
-    /// have done needs the edge rather than the verdict.
-    goto_edge,
+    /// Per state, which row it uses. Thousands of states share a few hundred
+    /// rows in every real grammar, and this indirection is what lets them.
+    row,
+    /// Per row, where its groups begin in `groupref`. `rows + 1` long.
+    row_span,
+    /// A group id, ascending within a row. Narrow: see `narrow`.
+    groupref,
+    /// One thing a row says, and the columns it says it about. Interned across
+    /// the whole file, because "reduce production 41 on any of these nine
+    /// terminals" is a sentence hundreds of rows say verbatim.
+    group,
+    /// Per set, where its columns begin in `setsym`. `sets + 1` long.
+    set_span,
+    /// A column, ascending within a set. Narrow: see `narrow`. Columns below
+    /// `width` are terminals and the end marker; the rest are nonterminals,
+    /// offset by `width - terminal_count`.
+    setsym,
+    /// The transitions the table cannot account for. A shift cell already says
+    /// where a terminal goes, so nearly every terminal edge is derivable from
+    /// the row it is already written in; these are the ones where precedence or
+    /// unfolding left the cell saying something else, or nothing.
+    odd,
     complete_span,
     /// Per state, the productions whose dot has reached the end there.
     complete,
-    kernel_span,
-    /// Per state, the items that identify it. Two states are the same state
-    /// exactly when these match, so this is what makes an automaton in a file
-    /// checkable against one in memory.
-    kernel,
+    /// Every cell the grammar did not determine, with what the table chose and
+    /// one of the readings it dropped. Sorted by cell.
+    conflict,
+    /// The rules party to each conflict, run together; a `ConflictRecord` names
+    /// its own slice. Deduplicated and sorted by the press, which is what makes
+    /// a measured group comparable to a declared one by bytes.
+    party,
+    /// Cells that are only contested because one LR(0) state stands in for
+    /// several LR(1) ones. A report, not a decision - but a report the press
+    /// cannot reproduce from a folio, so dropping it would make a loaded
+    /// grammar look cleaner than the pressed one it came from.
+    frayed,
+    /// The terminal slate, already determinized, deflated. Opaque here: the
+    /// layout belongs to `kernel/lex/lexicon.zig` and nothing else reads it.
+    ///
+    /// It is the only section a reader may ignore. Everything else in the file
+    /// is the grammar; this is an answer about the grammar that we could always
+    /// work out again, and a folio written without it - or with one this binary
+    /// does not recognize - still loads and still parses. It is here because
+    /// working it out again is the whole of startup.
+    lexicon,
 };
 
 pub const kind_count = std.enums.values(Kind).len;
@@ -196,7 +253,7 @@ pub const PatternRecord = extern struct {
 };
 
 /// An alias plus whether the name it installs counts as named. The flag is not
-/// derivable from the name — `alias($.x, 'y')` and `alias($.x, '(')` differ only
+/// derivable from the name - `alias($.x, 'y')` and `alias($.x, '(')` differ only
 /// by the author's say-so.
 pub const AliasRecord = extern struct {
     off: u32,
@@ -215,14 +272,31 @@ pub const StepRecord = extern struct {
     field: u32,
 };
 
-pub const EdgeRecord = extern struct {
-    symbol: u32,
-    target: u32,
+/// One thing a row says: the cell, and which columns hold it.
+///
+/// The cell is a raw `Action` rather than the struct, because a group is also
+/// how a goto is written - `shift` into the nonterminal half of the column
+/// space is exactly what a goto is - and a raw word makes that one encoding
+/// instead of two that have to agree.
+pub const GroupRecord = extern struct {
+    cell: u32,
+    set: u32,
 };
 
-pub const ItemRecord = extern struct {
-    prod: u32,
-    dot: u32,
+/// A transition that is not what the row it lives in implies.
+///
+/// Terminal edges are nearly all derivable: a `shift` cell says where the
+/// terminal goes, and that is the edge. The exceptions are real and both
+/// directions occur - precedence can delete a read from a state that still has
+/// the edge, so the cell is silent where an edge exists; and unfolding can
+/// leave a read whose target is not the edge's. `target` of `none` is the third
+/// case, a cell that reads where the automaton has no edge at all. Anything
+/// that wants to know what the automaton *could* have done needs these; the
+/// verdict alone is not the same fact.
+pub const OddRecord = extern struct {
+    state: u32,
+    symbol: u32,
+    target: u32,
 };
 
 /// What a state does on a terminal, in the folio's own encoding.
@@ -239,20 +313,71 @@ pub const Action = packed struct(u32) {
     pub const Verb = enum(u2) { err, shift, reduce, accept };
 };
 
+/// Which two readings collided. Same two cases as the press.
+pub const ConflictKind = enum(u32) { shift_reduce, reduce_reduce };
+
+/// Whose ambiguity a contested cell is. Only `declared` changes what a parse
+/// does - it is the cell a reading is allowed to fork at - but all three are
+/// written, because a folio that carried only the forkable ones could no longer
+/// answer how much residue the grammar left.
+pub const ConflictClass = enum(u32) { repetition, declared, residual };
+
+/// Which way a merged answer went in a frayed cell.
+pub const Harm = enum(u32) { read_dropped, fold_dropped };
+
+pub const ConflictRecord = extern struct {
+    state: u32,
+    terminal: u32,
+    kind: u32,
+    class: u32,
+    /// The `Action` the table will take here, and one of the readings that lost.
+    /// Both as raw cells, so this record stays the same width whatever the
+    /// action encoding does.
+    chosen: u32,
+    other: u32,
+    party_off: u32,
+    party_len: u32,
+};
+
+pub const FrayedRecord = extern struct {
+    state: u32,
+    terminal: u32,
+    harm: u32,
+};
+
 pub fn Record(comptime k: Kind) type {
     return switch (k) {
-        .text => u8,
-        .owner, .supertype, .extra, .rhs, .goto_span, .complete_span, .complete, .kernel_span => u32,
+        .text, .lexicon => u8,
+        .owner, .supertype, .extra, .rhs, .row, .row_span, .set_span, .complete_span, .complete, .party => u32,
+        .groupref, .setsym, .stepref => u32,
         .shape => ShapeKind,
         .name, .field => Span,
-        .action => Action,
         .pattern => PatternRecord,
         .lexis => LexisRecord,
         .alias => AliasRecord,
         .production => ProductionRecord,
         .step => StepRecord,
-        .goto_edge => EdgeRecord,
-        .kernel => ItemRecord,
+        .group => GroupRecord,
+        .odd => OddRecord,
+        .conflict => ConflictRecord,
+        .frayed => FrayedRecord,
+    };
+}
+
+/// Sections whose every record is one bare id, written at the narrowest width
+/// that holds the largest id in *this* file: two bytes below 65,536 of whatever
+/// they index, four above.
+///
+/// These three are half the file between them and the ids are dense from zero,
+/// so the top sixteen bits are zero in every grammar anyone has. Spending them
+/// anyway would be the single largest remaining piece of longhand in the file.
+/// It is only safe because they are bare ids: there is no field to misread and
+/// no sign to lose, the width is in the sealed directory, and `open` refuses
+/// any width but the two.
+pub fn narrow(k: Kind) bool {
+    return switch (k) {
+        .groupref, .setsym, .stepref => true,
+        else => false,
     };
 }
 
@@ -262,8 +387,15 @@ const strides = blk: {
     break :blk out;
 };
 
+/// The fixed width of a section that has one. Narrow sections do not; ask
+/// `strideFor` on the way in and the directory on the way out.
 pub fn strideOf(k: Kind) u16 {
     return strides[@intFromEnum(k)];
+}
+
+/// How wide to write `k`, given how many distinct things its ids point at.
+pub fn strideFor(k: Kind, span: u32) u16 {
+    return if (narrow(k) and span <= 1 << 16) 2 else strideOf(k);
 }
 
 /// One directory row: what a section is, how wide its records are, how many
@@ -373,7 +505,12 @@ pub const Head = struct {
 pub const schema_preimage = blk: {
     @setEvalBranchQuota(20_000);
     var out: []const u8 = magic ++ std.fmt.comptimePrint("/v{d}", .{version});
-    for (std.enums.values(Kind)) |k| out = out ++ ";" ++ @tagName(k) ++ "=" ++ spell(Record(k));
+    // A narrow section spells as its shape and not its width, because the width
+    // is a property of the grammar rather than of the layout, and the sealed
+    // directory is where it is stated.
+    for (std.enums.values(Kind)) |k| {
+        out = out ++ ";" ++ @tagName(k) ++ "=" ++ (if (narrow(k)) "id" else spell(Record(k)));
+    }
     break :blk out ++ ";";
 };
 
@@ -415,7 +552,7 @@ test "the schema digest is a function of the layout and names every section" {
 
 test "a directory row round-trips, and a wild kind is refused rather than folded" {
     var buf: [entry_len]u8 = undefined;
-    const e: Entry = .{ .kind = .action, .stride = 4, .count = 1234, .offset = 4096 };
+    const e: Entry = .{ .kind = .group, .stride = 8, .count = 1234, .offset = 4096 };
     e.write(&buf);
     const back = try Entry.parse(&buf);
     try testing.expectEqual(e.kind, back.kind);
@@ -456,10 +593,19 @@ test "a header round-trips through its own bytes" {
     try testing.expect(h.schema.eql(back.schema));
 }
 
+test "a narrow section is written at the width its own count needs" {
+    try testing.expectEqual(@as(u16, 2), strideFor(.groupref, 40_000));
+    try testing.expectEqual(@as(u16, 2), strideFor(.setsym, 1 << 16));
+    try testing.expectEqual(@as(u16, 4), strideFor(.setsym, (1 << 16) + 1));
+    // And a fixed section ignores the count entirely.
+    try testing.expectEqual(@as(u16, 8), strideFor(.group, 3));
+    try testing.expectEqual(@as(u16, 8), strideFor(.group, 1 << 30));
+}
+
 test "every section's stride is the width of the record it carries" {
     try testing.expectEqual(@as(u16, 1), strideOf(.text));
-    try testing.expectEqual(@as(u16, 4), strideOf(.action));
-    try testing.expectEqual(@as(u16, 8), strideOf(.goto_edge));
+    try testing.expectEqual(@as(u16, 8), strideOf(.group));
+    try testing.expectEqual(@as(u16, 12), strideOf(.odd));
     try testing.expectEqual(@as(u16, 12), strideOf(.production));
     // Nothing is padded, or the on-disk size would depend on the host's ABI.
     try testing.expectEqual(@as(usize, 12), @sizeOf(PatternRecord));

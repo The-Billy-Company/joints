@@ -1,5 +1,5 @@
 //! The gate that guards the format: press, pack, load, and compare field by
-//! field — then break the bytes on purpose, one failure mode at a time, and
+//! field - then break the bytes on purpose, one failure mode at a time, and
 //! insist on the named refusal.
 //!
 //! The round trip alone is not enough and never was. A writer and a reader that
@@ -11,7 +11,7 @@
 //!
 //! Rejection tests re-seal after mutating, because otherwise every one of them
 //! would stop at `FolioBadSeal` and prove only that BLAKE3 works. Re-sealing is
-//! what a determined corrupter — or an older writer — would do anyway, which is
+//! what a determined corrupter - or an older writer - would do anyway, which is
 //! precisely the case the layout checks exist for.
 
 const std = @import("std");
@@ -133,32 +133,48 @@ test "a pressed grammar survives the round trip field by field" {
     for (gr.productions, 0..) |prod, i| {
         try testing.expectEqual(prod.lhs, f.productions()[i].lhs);
         try testing.expectEqualSlices(u32, prod.rhs, f.rhsOf(@intCast(i)));
-        for (prod.steps, f.stepsOf(@intCast(i))) |step, back| {
+        const refs = f.stepsOf(@intCast(i));
+        for (prod.steps, 0..) |step, j| {
+            const back = f.stepAt(refs.at(@intCast(j)));
             try testing.expectEqual(step.alias orelse leaf.none, back.alias);
             try testing.expectEqual(step.field orelse leaf.none, back.field);
         }
     }
 
     for (0..c.states.len) |i| {
-        const q: u32 = @intCast(i);
-        const st = c.states[i];
-        try testing.expectEqualSlices(u32, st.complete, f.completeOf(q));
-        for (st.edges, f.edgesOf(q)) |want, back| {
-            try testing.expectEqual(want.symbol, back.symbol);
-            try testing.expectEqual(want.target, back.target);
-            try testing.expectEqual(@as(?u32, want.target), f.gotoOf(q, want.symbol));
-        }
-        for (st.kernel, f.kernelOf(q)) |want, back| {
-            try testing.expectEqual(want.prod, back.prod);
-            try testing.expectEqual(want.dot, back.dot);
-        }
-        for (0..t.width) |col| {
-            const want = t.at(q, @intCast(col));
-            const back = f.at(q, @intCast(col));
-            try testing.expectEqualStrings(@tagName(want.kind), @tagName(back.verb));
-            try testing.expectEqual(want.value, back.value);
+        try testing.expectEqualSlices(u32, c.states[i].complete, f.completeOf(@intCast(i)));
+    }
+}
+
+test "the table and the automaton come back out of the interned form intact" {
+    var p = try Pressed.of(testing.allocator);
+    defer p.deinit();
+    const bytes = try folio.pack(testing.allocator, &p.grammar, &p.result);
+    defer testing.allocator.free(bytes);
+    const f = try folio.open(bytes);
+
+    // The table is not stored as a table any more: rows are shared, groups are
+    // interned, and the edges are derived from the shifts. So the round trip
+    // that matters is through `bind`, which is what a parse actually gets.
+    var back = try folio.bind(testing.allocator, &f);
+    defer back.deinit();
+    const c = &p.result.collection;
+    const t = &p.result.tables;
+
+    try testing.expectEqual(t.width, back.tables.width);
+    try testing.expectEqual(t.end, back.tables.end);
+    try testing.expectEqualSlices(u32, @ptrCast(t.action), @ptrCast(back.tables.action));
+    try testing.expectEqual(c.states.len, back.collection.states.len);
+    for (c.states, back.collection.states) |want, got| {
+        try testing.expectEqualSlices(u32, want.complete, got.complete);
+        try testing.expectEqual(want.edges.len, got.edges.len);
+        for (want.edges, got.edges) |a, b| {
+            try testing.expectEqual(a.symbol, b.symbol);
+            try testing.expectEqual(a.target, b.target);
         }
     }
+    try testing.expectEqual(t.conflicts.len, back.tables.conflicts.len);
+    try testing.expectEqual(t.frayed.len, back.tables.frayed.len);
 }
 
 test "the same pressing packs to the same bytes" {
@@ -186,10 +202,11 @@ test "loading copies nothing" {
     const inside = @intFromPtr(bytes.ptr);
     const end = inside + bytes.len;
     for ([_]usize{
-        @intFromPtr(f.actions().ptr),
+        @intFromPtr(f.view(.group, leaf.GroupRecord).ptr),
         @intFromPtr(f.productions().ptr),
         @intFromPtr(f.nameOf(0).ptr),
-        @intFromPtr(f.edgesOf(0).ptr),
+        @intFromPtr(f.groupsOf(f.rowOf(0)).raw.ptr),
+        @intFromPtr(f.stepsOf(0).raw.ptr),
     }) |at| {
         try testing.expect(at >= inside and at < end);
     }
@@ -271,7 +288,7 @@ test "an offset pointing outside the file is refused" {
     defer p.deinit();
     const bytes = try corrupt(testing.allocator, &p);
     defer testing.allocator.free(bytes);
-    const e = entryAt(bytes, .action);
+    const e = entryAt(bytes, .group);
     std.mem.writeInt(u64, e[8..16], bytes.len + 4096, .little);
     reseal(bytes);
     try testing.expectError(leaf.Error.FolioSectionOutOfBounds, folio.open(bytes));
@@ -282,7 +299,7 @@ test "an offset off the alignment is refused" {
     defer p.deinit();
     const bytes = try corrupt(testing.allocator, &p);
     defer testing.allocator.free(bytes);
-    const e = entryAt(bytes, .action);
+    const e = entryAt(bytes, .group);
     const was = std.mem.readInt(u64, e[8..16], .little);
     std.mem.writeInt(u64, e[8..16], was + 4, .little);
     reseal(bytes);
@@ -294,7 +311,7 @@ test "a count that overflows its section is refused" {
     defer p.deinit();
     const bytes = try corrupt(testing.allocator, &p);
     defer testing.allocator.free(bytes);
-    const e = entryAt(bytes, .goto_edge);
+    const e = entryAt(bytes, .group);
     std.mem.writeInt(u32, e[4..8], std.math.maxInt(u32), .little);
     reseal(bytes);
     // `count * stride` is computed in u64 precisely so this is a bounds
@@ -342,7 +359,7 @@ test "a shift naming a state that is not there is refused" {
     defer p.deinit();
     const bytes = try corrupt(testing.allocator, &p);
     defer testing.allocator.free(bytes);
-    const at: usize = @intCast(std.mem.readInt(u64, entryAt(bytes, .action)[8..16], .little));
+    const at: usize = @intCast(std.mem.readInt(u64, entryAt(bytes, .group)[8..16], .little));
     const cell: leaf.Action = .{ .verb = .shift, .value = 1 << 20 };
     std.mem.writeInt(u32, bytes[at..][0..4], @bitCast(cell), .little);
     reseal(bytes);
@@ -354,7 +371,7 @@ test "a fold naming a production that is not there is refused" {
     defer p.deinit();
     const bytes = try corrupt(testing.allocator, &p);
     defer testing.allocator.free(bytes);
-    const at: usize = @intCast(std.mem.readInt(u64, entryAt(bytes, .action)[8..16], .little));
+    const at: usize = @intCast(std.mem.readInt(u64, entryAt(bytes, .group)[8..16], .little));
     const cell: leaf.Action = .{ .verb = .reduce, .value = 1 << 20 };
     std.mem.writeInt(u32, bytes[at..][0..4], @bitCast(cell), .little);
     reseal(bytes);
@@ -366,7 +383,7 @@ test "a span table that goes backwards is refused" {
     defer p.deinit();
     const bytes = try corrupt(testing.allocator, &p);
     defer testing.allocator.free(bytes);
-    const at: usize = @intCast(std.mem.readInt(u64, entryAt(bytes, .goto_span)[8..16], .little));
+    const at: usize = @intCast(std.mem.readInt(u64, entryAt(bytes, .row_span)[8..16], .little));
     std.mem.writeInt(u32, bytes[at..][0..4], 7, .little);
     reseal(bytes);
     try testing.expectError(leaf.Error.FolioBadSpan, folio.open(bytes));
@@ -423,14 +440,27 @@ fn sweep(f: *const folio.Folio) void {
     for (0..f.aliasCount()) |i| sink +%= f.aliasOf(@intCast(i)).name.len;
     for (0..f.fieldCount()) |i| sink +%= f.fieldOf(@intCast(i)).len;
     for (0..f.head.production_count) |i| {
-        sink +%= f.rhsOf(@intCast(i)).len +% f.stepsOf(@intCast(i)).len;
+        const refs = f.stepsOf(@intCast(i));
+        sink +%= f.rhsOf(@intCast(i)).len +% refs.len();
+        for (0..refs.len()) |j| sink +%= f.stepAt(refs.at(@intCast(j))).alias;
     }
+    // Every state, down all three interning layers to the columns themselves,
+    // because a row id that is in range and a group id that is not would pass
+    // any check that stopped at the first hop.
     for (0..f.head.state_count) |i| {
         const q: u32 = @intCast(i);
-        sink +%= f.edgesOf(q).len +% f.completeOf(q).len +% f.kernelOf(q).len;
-        for (0..f.head.width) |col| sink +%= f.at(q, @intCast(col)).value;
+        sink +%= f.completeOf(q).len;
+        const groups = f.groupsOf(f.rowOf(q));
+        for (0..groups.len()) |j| {
+            const gp = f.groupAt(groups.at(@intCast(j)));
+            const cols = f.columnsOf(gp.set);
+            sink +%= gp.cell +% cols.len();
+            for (0..cols.len()) |k| sink +%= cols.at(@intCast(k));
+        }
     }
-    sink +%= f.title().len +% f.extras().len +% f.supertypes().len;
+    for (f.odds()) |o| sink +%= o.state +% o.symbol +% o.target;
+    for (f.conflicts()) |k| sink +%= f.partyOf(k).len;
+    sink +%= f.frayed().len +% f.title().len +% f.extras().len +% f.supertypes().len;
     std.mem.doNotOptimizeAway(sink);
 }
 

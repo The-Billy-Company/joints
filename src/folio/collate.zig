@@ -1,6 +1,6 @@
 //! The reader: bytes in, a folio you can ask questions of, or a named refusal.
 //!
-//! `open` proves the whole file before it answers anything — magic, version,
+//! `open` proves the whole file before it answers anything - magic, version,
 //! schema, seal, then every section's place in the layout, then every id and
 //! every span inside them. After that the accessors below do no checking at all,
 //! because there is nothing left to check; a `nameOf` is two loads and a slice.
@@ -33,8 +33,34 @@ pub const Pattern = union(enum) {
 
 pub const Alias = struct { name: []const u8, named: bool };
 
+/// A run of bare ids at whatever width this file writes them.
+///
+/// Two widths and no third, so `at` is one predictable branch; the alternative
+/// was a `[]const u16` and a `[]const u32` in a union at every call site, which
+/// is the same branch spelled by the caller.
+pub const Ids = struct {
+    raw: []const u8,
+    stride: u8,
+
+    pub fn len(x: Ids) u32 {
+        return @intCast(x.raw.len / x.stride);
+    }
+
+    pub fn at(x: Ids, i: u32) u32 {
+        const off = i * x.stride;
+        return if (x.stride == 2)
+            std.mem.readInt(u16, x.raw[off..][0..2], .little)
+        else
+            std.mem.readInt(u32, x.raw[off..][0..4], .little);
+    }
+
+    fn cut(x: Ids, off: u32, n: u32) Ids {
+        return .{ .raw = x.raw[off * x.stride ..][0 .. n * x.stride], .stride = x.stride };
+    }
+};
+
 /// A verified folio. Three fields, because everything else is a view computed
-/// from the directory on demand — a slice is a pointer add and a length, and
+/// from the directory on demand - a slice is a pointer add and a length, and
 /// caching twenty of them would only be a second copy of the truth.
 pub const Folio = struct {
     bytes: []align(leaf.section_align) const u8,
@@ -128,52 +154,86 @@ pub const Folio = struct {
         return f.view(.rhs, u32)[p.rhs_off..][0..p.rhs_len];
     }
 
-    /// What each child of this production is renamed to and filed under. A
-    /// rename belongs to the use site, so it is indexed the same way the body
-    /// is rather than hung on the symbol.
-    pub fn stepsOf(f: *const Folio, prod: u32) []const leaf.StepRecord {
+    /// Which step each child of this production takes. A rename belongs to the
+    /// use site, so it is indexed the same way the body is rather than hung on
+    /// the symbol; the steps themselves are interned, because a grammar has far
+    /// more positions than it has distinct things to say about them.
+    pub fn stepsOf(f: *const Folio, prod: u32) Ids {
         const p = f.productions()[prod];
-        return f.view(.step, leaf.StepRecord)[p.rhs_off..][0..p.rhs_len];
+        return f.ids(.stepref).cut(p.rhs_off, p.rhs_len);
+    }
+
+    pub fn stepAt(f: *const Folio, id: u32) leaf.StepRecord {
+        return f.view(.step, leaf.StepRecord)[id];
     }
 
     // ── the table ──
 
-    /// The whole dense table. Hoist this out of a parse loop; `at` is for the
-    /// one-off question.
-    pub fn actions(f: *const Folio) []const leaf.Action {
-        return f.view(.action, leaf.Action);
+    /// Columns in a row: a column per terminal, one for end of input, then one
+    /// per nonterminal. The last stretch is where the gotos live.
+    pub fn columnCount(f: *const Folio) u32 {
+        return f.head.width + (f.head.symbol_count - f.head.terminal_count);
     }
 
-    pub fn at(f: *const Folio, state: u32, terminal: u32) leaf.Action {
-        return f.actions()[state * f.head.width + terminal];
+    /// Which symbol a column past the terminals is about. Undefined below
+    /// `width`, where a column is its own terminal and the end marker has no
+    /// symbol at all.
+    pub fn symbolAt(f: *const Folio, column: u32) u32 {
+        return column - f.head.width + f.head.terminal_count;
     }
 
-    pub fn edgesOf(f: *const Folio, state: u32) []const leaf.EdgeRecord {
-        return f.span(.goto_span, .goto_edge, leaf.EdgeRecord, state);
+    pub fn rowOf(f: *const Folio, state: u32) u32 {
+        return f.view(.row, u32)[state];
     }
 
-    /// Where a symbol takes this state, terminal or not. Binary search, because
-    /// the writer keeps edges sorted the way the press does.
-    pub fn gotoOf(f: *const Folio, state: u32, symbol: u32) ?u32 {
-        const edges = f.edgesOf(state);
-        var lo: usize = 0;
-        var hi: usize = edges.len;
-        while (lo < hi) {
-            const mid = lo + (hi - lo) / 2;
-            if (edges[mid].symbol < symbol) lo = mid + 1 else hi = mid;
-        }
-        return if (lo < edges.len and edges[lo].symbol == symbol) edges[lo].target else null;
+    pub fn rowCount(f: *const Folio) u32 {
+        return f.dir[@intFromEnum(leaf.Kind.row_span)].count - 1;
+    }
+
+    /// The groups a row is made of, ascending by id.
+    pub fn groupsOf(f: *const Folio, row: u32) Ids {
+        return f.run(.row_span, .groupref, row);
+    }
+
+    pub fn groupAt(f: *const Folio, id: u32) leaf.GroupRecord {
+        return f.view(.group, leaf.GroupRecord)[id];
+    }
+
+    /// The columns one group covers, ascending.
+    pub fn columnsOf(f: *const Folio, set: u32) Ids {
+        return f.run(.set_span, .setsym, set);
+    }
+
+    /// Every transition the rows do not already imply, sorted by state and
+    /// then by symbol. Small: on real grammars this is under a percent of the
+    /// edges, which is the whole reason the rest are derived.
+    pub fn odds(f: *const Folio) []const leaf.OddRecord {
+        return f.view(.odd, leaf.OddRecord);
     }
 
     pub fn completeOf(f: *const Folio, state: u32) []const u32 {
         return f.span(.complete_span, .complete, u32, state);
     }
 
-    /// The items that identify a state. Two states are the same state exactly
-    /// when these match, so this is what lets an automaton in a file be checked
-    /// against one in memory.
-    pub fn kernelOf(f: *const Folio, state: u32) []const leaf.ItemRecord {
-        return f.span(.kernel_span, .kernel, leaf.ItemRecord, state);
+    /// Every cell the grammar left contested. The `declared` ones are what a
+    /// parse forks at; the rest are the honest measure of what it cost.
+    pub fn conflicts(f: *const Folio) []const leaf.ConflictRecord {
+        return f.view(.conflict, leaf.ConflictRecord);
+    }
+
+    /// The rules party to one conflict, sorted and deduplicated.
+    pub fn partyOf(f: *const Folio, k: leaf.ConflictRecord) []const u32 {
+        return f.view(.party, u32)[k.party_off..][0..k.party_len];
+    }
+
+    pub fn frayed(f: *const Folio) []const leaf.FrayedRecord {
+        return f.view(.frayed, leaf.FrayedRecord);
+    }
+
+    /// The determinized slate, as bytes nobody here interprets. Empty is a
+    /// normal answer and means the lexer builds its own.
+    pub fn lexicon(f: *const Folio) []const u8 {
+        return f.view(.lexicon, u8);
     }
 
     // ── the views themselves ──
@@ -182,12 +242,30 @@ pub const Folio = struct {
     /// every section offset is a multiple of eight and the buffer itself is,
     /// and no record here wants more than eight.
     pub fn view(f: *const Folio, comptime k: leaf.Kind, comptime T: type) []const T {
+        comptime std.debug.assert(!leaf.narrow(k));
         comptime std.debug.assert(@alignOf(T) <= leaf.section_align);
         comptime std.debug.assert(@sizeOf(T) == leaf.strideOf(k));
         const e = f.dir[@intFromEnum(k)];
         const off: usize = @intCast(e.offset);
         const raw = f.bytes[off..][0 .. @as(usize, e.count) * @sizeOf(T)];
         return std.mem.bytesAsSlice(T, @as([]align(@alignOf(T)) const u8, @alignCast(raw)));
+    }
+
+    /// A narrow section's bytes, still where they lie.
+    pub fn ids(f: *const Folio, comptime k: leaf.Kind) Ids {
+        comptime std.debug.assert(leaf.narrow(k));
+        const e = f.dir[@intFromEnum(k)];
+        const off: usize = @intCast(e.offset);
+        return .{
+            .raw = f.bytes[off..][0 .. @as(usize, e.count) * e.stride],
+            .stride = @intCast(e.stride),
+        };
+    }
+
+    /// One entry's slice of a narrow section, by its span table.
+    fn run(f: *const Folio, comptime spans: leaf.Kind, comptime items: leaf.Kind, i: u32) Ids {
+        const table = f.view(spans, u32);
+        return f.ids(items).cut(table[i], table[i + 1] - table[i]);
     }
 
     fn span(
@@ -239,8 +317,12 @@ pub fn open(bytes: []align(leaf.section_align) const u8) Error!Folio {
     for (std.enums.values(leaf.Kind), 0..) |k, i| {
         const e = try leaf.Entry.parse(bytes[leaf.header_len + i * leaf.entry_len ..][0..leaf.entry_len]);
         // Positional: the roster is fixed, so a missing section and a reordered
-        // one are the same comparison.
-        if (e.kind != k or e.stride != leaf.strideOf(k)) return Error.FolioBadDirectory;
+        // one are the same comparison. A narrow section is the one place the
+        // width is the file's to choose, and it chooses between exactly two.
+        if (e.kind != k) return Error.FolioBadDirectory;
+        if (leaf.narrow(k)) {
+            if (e.stride != 2 and e.stride != 4) return Error.FolioBadDirectory;
+        } else if (e.stride != leaf.strideOf(k)) return Error.FolioBadDirectory;
         if (e.offset % leaf.section_align != 0) return Error.FolioSectionMisaligned;
         if (e.offset < at) return Error.FolioSectionOutOfBounds;
         const end = e.offset + @as(u64, e.count) * e.stride;

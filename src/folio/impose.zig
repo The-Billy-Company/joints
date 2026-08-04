@@ -7,7 +7,7 @@
 //! afterwards, so there is no window in which a half-built folio carries a valid
 //! seal.
 //!
-//! Every press-side value is converted explicitly — a `switch` over the press's
+//! Every press-side value is converted explicitly - a `switch` over the press's
 //! action verbs, a `switch` over its shapes, a field-by-field copy of every
 //! record. That is deliberately more code than memcpy'ing the structs. Somebody
 //! else is editing the press right now, and the whole point of having a format
@@ -15,10 +15,14 @@
 //! arriving in a stranger's file as a number that used to mean something.
 
 const std = @import("std");
+const forme = @import("forme.zig");
 const leaf = @import("leaf.zig");
 const g = @import("../press/grammar.zig");
 const lr0 = @import("../press/lr0.zig");
 const press = @import("../press/press.zig");
+const lex = @import("../kernel/lex/scanner.zig");
+
+const cell = forme.cell;
 
 pub const Error = error{
     /// Some count does not fit in the `u32` the format spends on it. A grammar
@@ -45,6 +49,33 @@ pub fn pack(
     return plan.emit(gpa, gr, result);
 }
 
+/// This grammar's terminal slate, determinized here so that nobody has to do it
+/// at load. Empty for a grammar with nothing lexable, and empty rather than
+/// fatal for anything the format cannot write down: the section is an answer we
+/// can always work out again, so refusing to publish one is a slower folio and
+/// never a wrong one.
+///
+/// This is the one place the writer does real work rather than laying out work
+/// already done. It is worth it here for the same reason it is not worth it at
+/// load: a folio is written once and read every time a parse starts.
+fn slate(gpa: std.mem.Allocator, gr: *const g.Grammar) Error![]const u8 {
+    // Two facts wore one answer here. A grammar with nothing lexable is real and
+    // common - yaml declares 113 externals and not one pattern - and publishing
+    // an empty section for it is right. Running out of memory is not that, and
+    // collapsing the two meant a folio written under pressure came back merely
+    // slower, with the writer reporting success. A machine failure fails; a
+    // property of the grammar degrades.
+    var sc = lex.Scanner.compile(gpa, gr) catch |e| switch (e) {
+        error.OutOfMemory => return error.OutOfMemory,
+        else => return &.{},
+    } orelse return &.{};
+    defer sc.deinit();
+    return sc.freeze(gpa) catch |e| switch (e) {
+        error.OutOfMemory => return error.OutOfMemory,
+        else => return &.{},
+    } orelse &.{};
+}
+
 /// Everything the layout needs before a single section byte is written: where
 /// each string landed, and how many records each section holds.
 const Plan = struct {
@@ -54,14 +85,30 @@ const Plan = struct {
     patterns: []leaf.PatternRecord = &.{},
     aliases: []leaf.AliasRecord = &.{},
     fields: []leaf.Span = &.{},
+    /// Every distinct step, and one id per body position pointing into it.
+    /// A grammar has a few dozen things to say about its children and tens of
+    /// thousands of places to say them, nearly all of which say nothing.
+    steps: std.ArrayList(leaf.StepRecord) = .empty,
+    stepref: std.ArrayList(u32) = .empty,
     body_len: u32 = 0,
-    edge_len: u32 = 0,
     complete_len: u32 = 0,
-    kernel_len: u32 = 0,
+    party_len: u32 = 0,
+    /// The table, already interned. Built here rather than while filling,
+    /// because the directory has to know how many groups there are before a
+    /// group is written.
+    table: forme.Forme = undefined,
+    locked: bool = false,
+    /// This grammar's slate, already determinized. Empty when the grammar has
+    /// no lexable terminal at all, or when the slate holds an automaton the
+    /// format refuses - a folio without one costs startup, never correctness.
+    lexicon: []const u8 = &.{},
 
     fn of(gpa: std.mem.Allocator, gr: *const g.Grammar, result: *const press.Result) Error!Plan {
         var p: Plan = .{};
         errdefer p.deinit(gpa);
+        p.table = try forme.lock(gpa, gr, result);
+        p.locked = true;
+        p.lexicon = try slate(gpa, gr);
         p.names = try gpa.alloc(leaf.Span, gr.names.len);
         p.patterns = try gpa.alloc(leaf.PatternRecord, gr.patterns.len);
         p.aliases = try gpa.alloc(leaf.AliasRecord, gr.aliases.len);
@@ -76,20 +123,33 @@ const Plan = struct {
         }
         for (gr.field_names, 0..) |name, i| p.fields[i] = try p.intern(gpa, name);
 
+        var seen: std.AutoHashMapUnmanaged(u64, u32) = .empty;
+        defer seen.deinit(gpa);
         for (gr.productions) |prod| {
             if (prod.steps.len != prod.rhs.len) return Error.StepsNotParallel;
             p.body_len = try add(p.body_len, prod.rhs.len);
+            for (prod.steps) |st| {
+                const rec: leaf.StepRecord = .{
+                    .alias = st.alias orelse leaf.none,
+                    .field = st.field orelse leaf.none,
+                };
+                const slot = try seen.getOrPut(gpa, @as(u64, rec.alias) << 32 | rec.field);
+                if (!slot.found_existing) {
+                    slot.value_ptr.* = try fits(p.steps.items.len);
+                    try p.steps.append(gpa, rec);
+                }
+                try p.stepref.append(gpa, slot.value_ptr.*);
+            }
         }
         for (result.collection.states) |st| {
-            p.edge_len = try add(p.edge_len, st.edges.len);
             p.complete_len = try add(p.complete_len, st.complete.len);
-            p.kernel_len = try add(p.kernel_len, st.kernel.len);
         }
+        for (result.tables.conflicts) |k| p.party_len = try add(p.party_len, k.party.len);
         return p;
     }
 
     /// A nonterminal has no pattern at all, which is not the same fact as
-    /// `.external` — that one is a scanner we do not have, and a consumer has
+    /// `.external` - that one is a scanner we do not have, and a consumer has
     /// to be able to refuse over it.
     fn pattern(p: *Plan, gpa: std.mem.Allocator, pat: ?g.Pattern) Error!leaf.PatternRecord {
         const spelling: []const u8, const kind: leaf.PatternKind = switch (pat orelse
@@ -116,6 +176,10 @@ const Plan = struct {
         gpa.free(p.patterns);
         gpa.free(p.aliases);
         gpa.free(p.fields);
+        p.steps.deinit(gpa);
+        p.stepref.deinit(gpa);
+        gpa.free(p.lexicon);
+        if (p.locked) p.table.deinit();
     }
 
     fn count(p: *const Plan, k: leaf.Kind, gr: *const g.Grammar, result: *const press.Result) u32 {
@@ -128,13 +192,34 @@ const Plan = struct {
             .alias => @intCast(gr.aliases.len),
             .field => @intCast(gr.field_names.len),
             .production => @intCast(gr.productions.len),
-            .rhs, .step => p.body_len,
-            .action => @intCast(result.tables.action.len),
-            .goto_span, .complete_span, .kernel_span => states + 1,
-            .goto_edge => p.edge_len,
+            .rhs, .stepref => p.body_len,
+            .step => @intCast(p.steps.items.len),
+            .row => states,
+            .row_span => @intCast(p.table.row_span.len),
+            .groupref => @intCast(p.table.groupref.len),
+            .group => @intCast(p.table.group.len),
+            .set_span => @intCast(p.table.set_span.len),
+            .setsym => @intCast(p.table.setsym.len),
+            .odd => @intCast(p.table.odd.len),
+            .complete_span => states + 1,
             .complete => p.complete_len,
-            .kernel => p.kernel_len,
+            .conflict => @intCast(result.tables.conflicts.len),
+            .party => p.party_len,
+            .frayed => @intCast(result.tables.frayed.len),
+            .lexicon => @intCast(p.lexicon.len),
         };
+    }
+
+    /// How wide a section's records are. Only the narrow ones have a choice,
+    /// and each is measured against what its ids point at rather than against
+    /// how many of them there are.
+    fn stride(p: *const Plan, k: leaf.Kind, gr: *const g.Grammar, result: *const press.Result) u16 {
+        return leaf.strideFor(k, switch (k) {
+            .groupref => @intCast(p.table.group.len),
+            .setsym => result.tables.width + (@as(u32, @intCast(gr.names.len)) - gr.terminal_count),
+            .stepref => @intCast(p.steps.items.len),
+            else => 0,
+        });
     }
 
     fn emit(
@@ -147,8 +232,9 @@ const Plan = struct {
         var at: u64 = leaf.align8(leaf.header_len + leaf.kind_count * leaf.entry_len);
         for (std.enums.values(leaf.Kind)) |k| {
             const n = p.count(k, gr, result);
-            dir[@intFromEnum(k)] = .{ .kind = k, .stride = leaf.strideOf(k), .count = n, .offset = at };
-            at = leaf.align8(at + @as(u64, n) * leaf.strideOf(k));
+            const wide = p.stride(k, gr, result);
+            dir[@intFromEnum(k)] = .{ .kind = k, .stride = wide, .count = n, .offset = at };
+            at = leaf.align8(at + @as(u64, n) * wide);
         }
         const file_len = try fitsUsize(at + leaf.signet.len);
 
@@ -181,7 +267,7 @@ const Plan = struct {
 
         for (dir) |e| {
             const off: usize = @intCast(e.offset);
-            p.fill(e.kind, buf[off..][0 .. @as(usize, e.count) * e.stride], gr, result);
+            p.fill(e, buf[off..][0 .. @as(usize, e.count) * e.stride], gr, result);
         }
         leaf.signet.sealAt(buf, file_len - leaf.signet.len);
         return buf;
@@ -189,14 +275,15 @@ const Plan = struct {
 
     fn fill(
         p: *const Plan,
-        k: leaf.Kind,
+        e: leaf.Entry,
         out: []u8,
         gr: *const g.Grammar,
         result: *const press.Result,
     ) void {
-        var w: Writer = .{ .out = out };
-        switch (k) {
+        var w: Writer = .{ .out = out, .narrow = e.stride == 2 };
+        switch (e.kind) {
             .text => @memcpy(out, p.text.items),
+            .lexicon => @memcpy(out, p.lexicon),
             .name => for (p.names) |s| w.span(s),
             .pattern => for (p.patterns) |r| {
                 w.put(r.kind);
@@ -229,41 +316,60 @@ const Plan = struct {
             .rhs => for (gr.productions) |prod| {
                 for (prod.rhs) |s| w.put(s);
             },
-            .step => for (gr.productions) |prod| {
-                for (prod.steps) |st| {
-                    w.put(st.alias orelse leaf.none);
-                    w.put(st.field orelse leaf.none);
-                }
+            .stepref => for (p.stepref.items) |id| w.id(id),
+            .step => for (p.steps.items) |st| {
+                w.put(st.alias);
+                w.put(st.field);
             },
-            // The one place the two action encodings meet. A verb the press
-            // grows later lands here as a missing switch prong, not as a cell
-            // that reads back as something else.
-            .action => for (result.tables.action) |a| w.put(@bitCast(leaf.Action{
-                .verb = switch (a.kind) {
-                    .err => .err,
-                    .shift => .shift,
-                    .reduce => .reduce,
-                    .accept => .accept,
-                },
-                .value = a.value,
-            })),
-            .goto_span => w.spans(result.collection.states, edgeCount),
-            .goto_edge => for (result.collection.states) |st| {
-                for (st.edges) |e| {
-                    w.put(e.symbol);
-                    w.put(e.target);
-                }
+            .row => for (p.table.row) |r| w.put(r),
+            .row_span => for (p.table.row_span) |n| w.put(n),
+            .groupref => for (p.table.groupref) |id| w.id(id),
+            .group => for (p.table.group) |rec| {
+                w.put(rec.cell);
+                w.put(rec.set);
+            },
+            .set_span => for (p.table.set_span) |n| w.put(n),
+            .setsym => for (p.table.setsym) |col| w.id(col),
+            .odd => for (p.table.odd) |rec| {
+                w.put(rec.state);
+                w.put(rec.symbol);
+                w.put(rec.target);
             },
             .complete_span => w.spans(result.collection.states, completeCount),
             .complete => for (result.collection.states) |st| {
                 for (st.complete) |prod| w.put(prod);
             },
-            .kernel_span => w.spans(result.collection.states, kernelCount),
-            .kernel => for (result.collection.states) |st| {
-                for (st.kernel) |item| {
-                    w.put(item.prod);
-                    w.put(item.dot);
+            .conflict => {
+                var off: u32 = 0;
+                for (result.tables.conflicts) |x| {
+                    w.put(x.state);
+                    w.put(x.terminal);
+                    w.put(@intFromEnum(switch (x.kind) {
+                        .shift_reduce => leaf.ConflictKind.shift_reduce,
+                        .reduce_reduce => leaf.ConflictKind.reduce_reduce,
+                    }));
+                    w.put(@intFromEnum(switch (x.class) {
+                        .repetition => leaf.ConflictClass.repetition,
+                        .declared => leaf.ConflictClass.declared,
+                        .residual => leaf.ConflictClass.residual,
+                    }));
+                    w.put(cell(x.chosen));
+                    w.put(cell(x.other));
+                    w.put(off);
+                    w.put(@intCast(x.party.len));
+                    off += @intCast(x.party.len);
                 }
+            },
+            .party => for (result.tables.conflicts) |x| {
+                for (x.party) |s| w.put(s);
+            },
+            .frayed => for (result.tables.frayed) |x| {
+                w.put(x.state);
+                w.put(x.terminal);
+                w.put(@intFromEnum(switch (x.harm) {
+                    .read_dropped => leaf.Harm.read_dropped,
+                    .fold_dropped => leaf.Harm.fold_dropped,
+                }));
             },
         }
     }
@@ -278,27 +384,28 @@ fn shapeOf(s: g.Shape) leaf.ShapeKind {
     };
 }
 
-fn edgeCount(st: lr0.State) usize {
-    return st.edges.len;
-}
-
 fn completeCount(st: lr0.State) usize {
     return st.complete.len;
-}
-
-fn kernelCount(st: lr0.State) usize {
-    return st.kernel.len;
 }
 
 /// A cursor over one section. Little-endian on every host, which is the only
 /// reason a folio written on one machine reads on another.
 const Writer = struct {
     out: []u8,
+    /// Set for a narrow section, where every record is one id at half width.
+    narrow: bool = false,
     at: usize = 0,
 
     fn put(w: *Writer, v: u32) void {
         std.mem.writeInt(u32, w.out[w.at..][0..4], v, .little);
         w.at += 4;
+    }
+
+    /// A bare id, at whatever width the directory promised for this section.
+    fn id(w: *Writer, v: u32) void {
+        if (!w.narrow) return w.put(v);
+        std.mem.writeInt(u16, w.out[w.at..][0..2], @intCast(v), .little);
+        w.at += 2;
     }
 
     fn putSigned(w: *Writer, v: i32) void {

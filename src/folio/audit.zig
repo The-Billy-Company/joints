@@ -9,7 +9,7 @@
 //! on.
 //!
 //! Two rules about what belongs here. Everything that could become an
-//! out-of-range index, an out-of-arena slice, or an undefined tag is checked —
+//! out-of-range index, an out-of-arena slice, or an undefined tag is checked  - 
 //! those are the ones that turn a bad file into a bad memory access, and the
 //! accessors do no checking precisely because this pass did. Nothing that is
 //! merely unusual is checked: a nonterminal carrying a pattern is odd and is
@@ -40,15 +40,16 @@ pub fn counts(f: *const Folio) Error!void {
     for ([_]leaf.Kind{ .name, .pattern, .lexis, .shape, .owner }) |k| {
         if (f.dir[@intFromEnum(k)].count != h.symbol_count) return Error.FolioBadCount;
     }
-    for ([_]leaf.Kind{ .goto_span, .complete_span, .kernel_span }) |k| {
-        if (f.dir[@intFromEnum(k)].count != h.state_count + 1) return Error.FolioBadCount;
-    }
+    if (f.dir[@intFromEnum(leaf.Kind.complete_span)].count != h.state_count + 1) return Error.FolioBadCount;
     if (f.dir[@intFromEnum(leaf.Kind.production)].count != h.production_count) return Error.FolioBadCount;
-    if (f.dir[@intFromEnum(leaf.Kind.rhs)].count != f.dir[@intFromEnum(leaf.Kind.step)].count) {
+    if (f.dir[@intFromEnum(leaf.Kind.rhs)].count != f.dir[@intFromEnum(leaf.Kind.stepref)].count) {
         return Error.FolioBadCount;
     }
-    if (@as(u64, h.state_count) * h.width != f.dir[@intFromEnum(leaf.Kind.action)].count) {
-        return Error.FolioBadCount;
+    if (f.dir[@intFromEnum(leaf.Kind.row)].count != h.state_count) return Error.FolioBadCount;
+    // A span table of zero entries has no leading zero and no total, so every
+    // slice taken from it would be read out of somebody else's section.
+    for ([_]leaf.Kind{ .row_span, .set_span }) |k| {
+        if (f.dir[@intFromEnum(k)].count == 0) return Error.FolioBadCount;
     }
     try arena(f, f.head.title);
 }
@@ -86,35 +87,93 @@ pub fn contents(f: *const Folio) Error!void {
     }
     const alias_count = f.aliasCount();
     const field_count = f.fieldCount();
-    for (f.view(.step, leaf.StepRecord)) |st| {
+    const steps = f.view(.step, leaf.StepRecord);
+    for (steps) |st| {
         if (st.alias != leaf.none and st.alias >= alias_count) return Error.FolioBadIndex;
         if (st.field != leaf.none and st.field >= field_count) return Error.FolioBadIndex;
     }
-
-    // The table itself. A shift naming a state that is not there and a fold
-    // naming a production that is not there are the two ways a legal-looking
-    // cell walks a parser off the end of the automaton.
-    for (f.view(.action, leaf.Action)) |a| switch (a.verb) {
-        .shift => if (a.value >= h.state_count) return Error.FolioBadState,
-        .reduce => if (a.value >= h.production_count) return Error.FolioBadProduction,
-        .err, .accept => {},
-    };
-
-    try ascends(f, .goto_span, .goto_edge);
-    try ascends(f, .complete_span, .complete);
-    try ascends(f, .kernel_span, .kernel);
-
-    for (f.view(.goto_edge, leaf.EdgeRecord)) |e| {
-        if (e.symbol >= h.symbol_count) return Error.FolioBadSymbol;
-        if (e.target >= h.state_count) return Error.FolioBadState;
+    const refs = f.ids(.stepref);
+    for (0..refs.len()) |i| {
+        if (refs.at(@intCast(i)) >= steps.len) return Error.FolioBadIndex;
     }
+
+    try table(f);
+
+    try ascends(f, .complete_span, .complete);
     for (f.view(.complete, u32)) |prod| {
         if (prod >= h.production_count) return Error.FolioBadProduction;
     }
-    const prods = f.view(.production, leaf.ProductionRecord);
-    for (f.view(.kernel, leaf.ItemRecord)) |item| {
-        if (item.prod >= h.production_count) return Error.FolioBadProduction;
-        if (item.dot > prods[item.prod].rhs_len) return Error.FolioBadProduction;
+
+    const parties = f.dir[@intFromEnum(leaf.Kind.party)].count;
+    for (f.view(.conflict, leaf.ConflictRecord)) |k| {
+        if (k.state >= h.state_count) return Error.FolioBadState;
+        if (k.terminal >= h.width) return Error.FolioBadSymbol;
+        _ = try tag(leaf.ConflictKind, k.kind);
+        _ = try tag(leaf.ConflictClass, k.class);
+        // A dropped reading is a cell a parse will step into, so it is held to
+        // the same range checks as one the table chose.
+        for ([_]u32{ k.chosen, k.other }) |raw| try reachable(f, @bitCast(raw));
+        if (@as(u64, k.party_off) + k.party_len > parties) return Error.FolioBadIndex;
+    }
+    for (f.view(.party, u32)) |s| {
+        if (s >= h.symbol_count) return Error.FolioBadSymbol;
+    }
+    for (f.view(.frayed, leaf.FrayedRecord)) |x| {
+        if (x.state >= h.state_count) return Error.FolioBadState;
+        if (x.terminal >= h.width) return Error.FolioBadSymbol;
+        _ = try tag(leaf.Harm, x.harm);
+    }
+}
+
+/// Every layer of the interned table, top down: no state reaches a row that is
+/// not there, no row a group, no group a set, no set a column.
+///
+/// What is deliberately not checked is whether two groups of one row claim the
+/// same column. It is a table nobody would write and it is not unsafe - the
+/// expansion writes one cell twice and the second wins - so it falls on the
+/// "merely unusual" side of the line this file draws, and the seal already
+/// catches every accidental way of getting there.
+fn table(f: *const Folio) Error!void {
+    const groups = f.dir[@intFromEnum(leaf.Kind.group)].count;
+    const sets = f.dir[@intFromEnum(leaf.Kind.set_span)].count - 1;
+    const columns = f.columnCount();
+
+    const rows = f.rowCount();
+    for (f.view(.row, u32)) |r| {
+        if (r >= rows) return Error.FolioBadIndex;
+    }
+    try climbs(f, .row_span, f.ids(.groupref).len());
+    try climbs(f, .set_span, f.ids(.setsym).len());
+
+    const refs = f.ids(.groupref);
+    for (0..refs.len()) |i| {
+        if (refs.at(@intCast(i)) >= groups) return Error.FolioBadIndex;
+    }
+    for (f.view(.group, leaf.GroupRecord)) |rec| {
+        try reachable(f, @bitCast(rec.cell));
+        if (rec.set >= sets) return Error.FolioBadIndex;
+    }
+    const cols = f.ids(.setsym);
+    for (0..cols.len()) |i| {
+        if (cols.at(@intCast(i)) >= columns) return Error.FolioBadSymbol;
+    }
+    for (f.odds()) |rec| {
+        if (rec.state >= f.head.state_count) return Error.FolioBadState;
+        // Only a terminal can be strayed: a nonterminal's transition is a
+        // column in the row and has nowhere else to be.
+        if (rec.symbol >= f.head.terminal_count) return Error.FolioBadSymbol;
+        if (rec.target != leaf.none and rec.target >= f.head.state_count) return Error.FolioBadState;
+    }
+}
+
+/// A cell that names something that is there. A shift naming a state that is
+/// not and a fold naming a production that is not are the two ways a
+/// legal-looking cell walks a parser off the end of the automaton.
+fn reachable(f: *const Folio, a: leaf.Action) Error!void {
+    switch (a.verb) {
+        .shift => if (a.value >= f.head.state_count) return Error.FolioBadState,
+        .reduce => if (a.value >= f.head.production_count) return Error.FolioBadProduction,
+        .err, .accept => {},
     }
 }
 
@@ -122,16 +181,19 @@ pub fn contents(f: *const Folio) Error!void {
 /// the length of what it indexes. Anything else and a state's slice is either
 /// somebody else's records or nobody's.
 fn ascends(f: *const Folio, comptime spans: leaf.Kind, comptime items: leaf.Kind) Error!void {
-    const table = f.view(spans, u32);
-    const total = f.dir[@intFromEnum(items)].count;
-    if (table[0] != 0 or table[table.len - 1] != total) return Error.FolioBadSpan;
-    for (table[1..], table[0 .. table.len - 1]) |now, before| {
+    try climbs(f, spans, f.dir[@intFromEnum(items)].count);
+}
+
+fn climbs(f: *const Folio, comptime spans: leaf.Kind, total: u32) Error!void {
+    const at = f.view(spans, u32);
+    if (at[0] != 0 or at[at.len - 1] != total) return Error.FolioBadSpan;
+    for (at[1..], at[0 .. at.len - 1]) |now, before| {
         if (now < before) return Error.FolioBadSpan;
     }
 }
 
 /// A stored number as one of this version's tags. Both tag enums are dense and
-/// start at zero, so being in range is the whole question — and a value out of
+/// start at zero, so being in range is the whole question - and a value out of
 /// it is a meaning a later version gave the field, which is exactly what must
 /// not be guessed at.
 fn tag(comptime E: type, v: u32) Error!E {
