@@ -1,4 +1,15 @@
+/*
+ * The corpus program: a ledger that caches its own total.
+ * push invalidates the cache, total rebuilds it and holds it until the
+ * next push, and every file in this folder tells that same story.
+ */
 use std::collections::HashMap;
+
+// A raw string, where the hash run in the opener is what the closer has to
+// match - so the token's own delimiter is not a fixed pattern.
+const BANNER: &str = r#"ledger receipt
+--------------
+"#;
 
 #[derive(Debug, Clone)]
 pub struct Ledger {
@@ -38,5 +49,6 @@ fn main() {
             Err(e) => eprintln!("skipping {arg}: {e}"),
         }
     }
+    print!("{BANNER}");
     println!("total={}", l.total());
 }

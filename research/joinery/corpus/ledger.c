@@ -1,5 +1,16 @@
+/*
+ * The corpus program: a ledger that caches its own total.
+ * push invalidates the cache, total rebuilds it and holds it until the
+ * next push, and every file in this folder tells that same story.
+ */
 #include <stdio.h>
 #include <stdlib.h>
+
+/* C is the one language here with no multi-line string literal at all, so the
+   banner is spelled the only way it can be: a backslash before the newline,
+   which splices the two lines into one token before the lexer ever sees it. */
+static const char *BANNER = "ledger receipt\n\
+--------------\n";
 
 typedef struct Ledger {
     int *rows;
@@ -35,6 +46,7 @@ long ledger_total(Ledger *l) {
 int main(int argc, char **argv) {
     Ledger l = {0};
     for (int i = 1; i < argc; i++) ledger_push(&l, atoi(argv[i]));
+    fputs(BANNER, stdout);
     printf("total=%ld\n", ledger_total(&l));
     free(l.rows);
     return 0;

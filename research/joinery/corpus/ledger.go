@@ -1,3 +1,8 @@
+/*
+The corpus program: a ledger that caches its own total.
+push invalidates the cache, total rebuilds it and holds it until the
+next push, and every file in this folder tells that same story.
+*/
 package main
 
 import (
@@ -5,6 +10,12 @@ import (
 	"os"
 	"strconv"
 )
+
+// A raw string literal. Go spells it with backquotes, and a newline inside
+// one is text rather than the end of anything.
+const banner = `ledger receipt
+--------------
+`
 
 type Ledger struct {
 	rows  []int64
@@ -48,5 +59,6 @@ func main() {
 		}
 		l.Push(fmt.Sprintf("arg%d", i), v)
 	}
+	fmt.Print(banner)
 	fmt.Printf("total=%d\n", l.Total())
 }

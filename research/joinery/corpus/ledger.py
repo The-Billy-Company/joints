@@ -1,8 +1,18 @@
-"""The corpus program: a ledger that caches its own total."""
+"""The corpus program: a ledger that caches its own total.
+
+push invalidates the cache, total rebuilds it and holds it until the
+next push, and every file in this folder tells that same story.
+"""
 
 from __future__ import annotations
 
 import sys
+
+# A triple-quoted string, which is Python's only literal that may carry a real
+# newline; the docstring above is the same token in its other role.
+BANNER = """ledger receipt
+--------------
+"""
 
 
 class Ledger:
@@ -23,7 +33,10 @@ class Ledger:
     @property
     def total(self) -> int:
         if self._total is None:
-            self._total = sum(r for r in self.rows if r > 0)
+            # A backslash continuation, which splices the two lines before the
+            # lexer sees them.
+            self._total = sum(r for r in self.rows \
+                              if r > 0)
         return self._total
 
     def merge(self, other: Ledger) -> Ledger:
@@ -39,6 +52,7 @@ def main(argv: list[str]) -> int:
             led.push(f"arg{i}", int(arg))
         except ValueError as e:
             print(f"skipping {arg}: {e}", file=sys.stderr)
+    print(BANNER, end="")
     print(f"total={led.total}")
     return 0
 

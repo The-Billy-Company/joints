@@ -40,6 +40,34 @@ Every number quoted about tree-sitter below was read out of its source, its
 issue tracker, or a measurement taken on 2026-08-02. Every number about outliner
 is a target with a kill condition attached, and it is labelled as one.
 
+## What an external scanner costs us
+
+A tree-sitter grammar can declare an **external scanner** - a hand-written C
+function that lexes what a regex cannot: Python's indentation, Ruby's heredocs,
+OCaml's nested comments. Shipping per-language C is the one thing this package
+exists not to do, so outliner reimplements the *mechanisms* instead. A column
+stack covers the offside rule; a mark stack covers delimited spans. A grammar
+gets one of those only when its own declarations prove it follows that
+convention - never because a token happens to be spelled the way some other
+language spells it. If nothing proves it, the grammar gets silence. A token we
+cannot produce beats a token we produce wrongly, and the wrong kind is invisible
+until somebody reads the tree.
+
+That line has a price, and here is where it falls. Eight grammars - haskell,
+markdown, yaml, scala, swift, elixir, kotlin, html - keep per-language state in
+C structs across calls, and that is **310 of the 382 externals** declared across
+the held-out set. No reader that refuses to understand C is going to lower those.
+I am not going to pretend otherwise.
+
+So be concrete about what a grammar with unanswered externals still gets. It
+imports; nineteen unfamiliar grammars went in cold with no refusals at the front
+door. It presses; sixteen of those nineteen reached zero residual conflicts. It
+ships a folio smaller than the shared library - seventeen had a buildable `.so`
+to compare against and the folio won every time, median 29% of its size. And it
+parses every construct that does not need the external. That is a real product;
+"parses whole except inside heredocs" is worth having. "Supports every language"
+would be a lie, and the title of this README is a goal rather than a status line.
+
 ## Overview
 
 outliner is a parsing system for editors and agents: give it a file, get back a

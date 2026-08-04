@@ -1,9 +1,20 @@
+/*
+ * The corpus program: a ledger that caches its own total.
+ * push invalidates the cache, total rebuilds it and holds it until the
+ * next push, and every file in this folder tells that same story.
+ */
 #include <cstdint>
 #include <iostream>
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+// A raw string literal, where the delimiter is part of the token's own
+// spelling and the newline inside it is ordinary text.
+static const char* kBanner = R"(ledger receipt
+--------------
+)";
 
 class Ledger {
  public:
@@ -43,6 +54,6 @@ class Ledger {
 int main() {
   Ledger led{{1, 2, 3}};
   led.push("late", 4);
-  std::cout << "total=" << led.total() << "\n";
+  std::cout << kBanner << "total=" << led.total() << "\n";
   return 0;
 }

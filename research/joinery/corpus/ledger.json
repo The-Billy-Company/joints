@@ -1,6 +1,7 @@
 {
   "ledger": {
     "name": "corpus",
+    "banner": "ledger receipt\n--------------\n",
     "cached": true,
     "total": 10,
     "rows": [
