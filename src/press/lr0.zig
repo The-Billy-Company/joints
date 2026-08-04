@@ -77,17 +77,17 @@ pub const Collection = struct {
 ///
 /// `mark` is zero for the usual case, where a kernel *is* the state and seeing
 /// it twice means arriving somewhere already known. For a kernel named in
-/// `Options.split` it is a hash of the kernel arrived *from*, which makes each
-/// way in a separate state — see `Options.split` for why anyone would want that.
+/// `Options.split` it is the lane the arrival was assigned, which puts arrivals
+/// in different lanes into different states — see `Options.split`.
 ///
-/// The mark names the source by its kernel rather than by its state id, and the
+/// A lane is chosen per *source kernel* rather than per source state id, and the
 /// difference is the difference between terminating and not. An id is minted by
 /// splitting: split a state that lies on a cycle through itself and each copy is
 /// a new id, which is a new mark, which is another copy — a 1300-state automaton
 /// walks past a quarter of a million states and never closes. A kernel is what
 /// the state *is*, so it is the same before and after any split, and the copies
-/// of a marked kernel are at most the distinct kernels that reach it.
-const Key = struct { kernel: []const Item, mark: u64 };
+/// of a marked kernel are at most the lanes its callers asked for.
+const Key = struct { kernel: []const Item, mark: u32 };
 
 /// The interner that makes the collection finite: a key seen twice is one
 /// state. Kernels are hashed by their bytes.
@@ -100,35 +100,51 @@ const Index = std.HashMap(Key, u32, struct {
     }
 }, std.hash_map.default_max_load_percentage);
 
-/// A set of kernels, for asking whether a state is one of the ones being split.
-const Marked = std.HashMap([]const Item, void, struct {
-    pub fn hash(_: @This(), k: []const Item) u64 {
-        return std.hash.Wyhash.hash(0, std.mem.sliceAsBytes(k));
+/// One arrival at one state, and which copy of that state it belongs to.
+///
+/// Both ends are named by kernel rather than by state id, so a lane assignment
+/// computed on one automaton still means the same thing on the next one — which
+/// is what lets the caller iterate.
+pub const Lane = struct {
+    /// The state being unfolded.
+    kernel: []const Item,
+    /// The state the arrival comes from.
+    from: []const Item,
+    /// Which copy. Arrivals of an unfolded kernel that nobody named fall to
+    /// lane zero and share one state, which is the un-unfolded behaviour.
+    lane: u32,
+};
+
+/// Arrival to lane, keyed by both kernels.
+const Lanes = std.HashMap(struct { []const Item, []const Item }, u32, struct {
+    pub fn hash(_: @This(), k: struct { []const Item, []const Item }) u64 {
+        var h: std.hash.Wyhash = .init(0);
+        h.update(std.mem.sliceAsBytes(k[0]));
+        h.update(std.mem.sliceAsBytes(k[1]));
+        return h.final();
     }
-    pub fn eql(_: @This(), a: []const Item, b: []const Item) bool {
-        return std.mem.eql(Item, a, b);
+    pub fn eql(_: @This(), a: struct { []const Item, []const Item }, b: struct { []const Item, []const Item }) bool {
+        return std.mem.eql(Item, a[0], b[0]) and std.mem.eql(Item, a[1], b[1]);
     }
 }, std.hash_map.default_max_load_percentage);
 
 pub const Options = struct {
-    /// Kernels to unfold by predecessor: one state per way in, rather than one
-    /// state per kernel.
+    /// How to unfold: which arrivals at which kernels belong in separate copies.
     ///
     /// Merging states that share a kernel is what makes this an LR(0)
     /// collection rather than a tree, and it is almost always right — it is
     /// the reason the automaton is finite. But the merge also unions what can
-    /// follow each arrival, and a reduction decided from that union is decided
-    /// from lookaheads that belong to a context the parser is not in. That is
-    /// the whole of the LALR-versus-canonical gap, and it shows up only as
-    /// reduce/reduce conflicts: two folds contend on a terminal that is
-    /// genuinely possible after one way in and impossible after the other.
+    /// follow each arrival, so a reduction is decided from lookaheads that
+    /// belong to a context the parser is not in. That is the whole of the
+    /// LALR-versus-canonical gap.
     ///
-    /// Naming a kernel here separates its arrivals, so each copy's lookaheads
-    /// are its own. Doing it everywhere is canonical LR(1) and costs an order
-    /// of magnitude; doing it where a conflict proved the merge too coarse
-    /// costs the states that conflict actually needs. `press.tables` finds
-    /// them by measurement rather than guess.
-    split: []const []const Item = &.{},
+    /// The obvious repair is one copy per way in, and it is far too much
+    /// automaton: a state reached forty ways becomes forty states to separate
+    /// two lookaheads, and every copy multiplies downstream. So the caller says
+    /// which arrivals need separating from which, and arrivals that agree stay
+    /// merged. `lalr` computes that partition from the lookaheads themselves,
+    /// which makes it both sufficient and coarsest — see `lalr.Seam`.
+    split: []const Lane = &.{},
     /// A ceiling on states. Splitting by source kernel terminates, but it can
     /// still cost more automaton than the conflict it buys is worth. Reaching
     /// it returns `error.Unsplittable` rather than a collection nobody asked
@@ -203,9 +219,9 @@ pub fn build(gpa: std.mem.Allocator, gr: *const g.Grammar, opts: Options) !Colle
 
     var index = Index.init(gpa);
     defer index.deinit();
-    var marked = Marked.init(gpa);
-    defer marked.deinit();
-    for (opts.split) |k| try marked.put(k, {});
+    var lanes = Lanes.init(gpa);
+    defer lanes.deinit();
+    for (opts.split) |l| try lanes.put(.{ l.kernel, l.from }, l.lane);
     var kernels: std.ArrayList([]const Item) = .empty;
     defer kernels.deinit(gpa);
     var states: std.ArrayList(State) = .empty;
@@ -269,7 +285,7 @@ pub fn build(gpa: std.mem.Allocator, gr: *const g.Grammar, opts: Options) !Colle
                 .symbol = symbol,
                 .target = try intern(gpa, a, &index, &kernels, &states, .{
                     .kernel = target.items,
-                    .mark = if (marked.contains(target.items)) sourced(kernel) else 0,
+                    .mark = lanes.get(.{ target.items, kernel }) orelse 0,
                 }),
             });
             if (states.items.len > opts.ceiling) return error.Unsplittable;
@@ -288,12 +304,6 @@ pub fn build(gpa: std.mem.Allocator, gr: *const g.Grammar, opts: Options) !Colle
     // allocation appends afterward would be invisible to it.
     const owned = try a.dupe(State, states.items);
     return .{ .arena = arena, .states = owned };
-}
-
-/// The name a source kernel goes by in a mark. Nonzero, so that "arrived from
-/// here" is never confused with "not split".
-fn sourced(kernel: []const Item) u64 {
-    return std.hash.Wyhash.hash(1, std.mem.sliceAsBytes(kernel)) | 1;
 }
 
 fn intern(

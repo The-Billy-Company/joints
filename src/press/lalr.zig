@@ -37,6 +37,111 @@ pub const Action = settle.Action;
 pub const Conflict = settle.Conflict;
 pub const Tally = settle.Tally;
 
+/// A state that admits a token no context of it can hold, and how to take itself
+/// apart so it stops.
+///
+/// The lookahead of a reduction is the union over the contexts that reach it, so
+/// a terminal in the union but not in the intersection is legal after some
+/// arrivals and impossible after the others. Most of the time that costs
+/// nothing: the parser is only ever *in* one of those contexts, and a fold it
+/// would never be asked to make is a cell nobody reads. What makes it fatal here
+/// is that the row is also the lexer's instructions. `gather` scans exactly the
+/// terminals the state does not refuse, so an invented permission is an invented
+/// *token*, and a token that should not have been in the running can win the
+/// tie. Ruby dies at byte 5 of `@rows = 1` that way: the fold of
+/// `_nonlocal_variable -> instance_variable` carries the `%w()` element
+/// separator, which is in the running only inside a word list, and it takes the
+/// one byte the space needed.
+///
+/// So the population is not every over-permitted cell — those are legion and
+/// nearly all harmless — but the ones that are *only* answered by the invention:
+/// no read on that terminal, and no fold whose permission survives the
+/// intersection. Those are the cells where merging changed what the state
+/// admits, which is the only way it can change what gets lexed.
+///
+/// `settle.Frayed` is the neighbouring population: cells where the invention was
+/// *contested*, and a read got deleted or two folds disagreed. The two overlap
+/// and neither contains the other. A contested cell had something to argue with,
+/// so it is at least reported; these are answered without ever being examined,
+/// which is why driving the splitter on contests alone found a tenth of them.
+pub const Seam = struct {
+    state: u32,
+    /// Terminals this state admits only because a merge invented the permission.
+    over: []const u32,
+    /// The arrivals, grouped: one copy of the state per lane. Two arrivals
+    /// share a lane exactly when every fold here draws the same lookahead
+    /// through them, which makes the split *sufficient* — each copy's folds end
+    /// up with a lookahead that has no union left in it — and *coarsest*, which
+    /// is what keeps a state reached forty ways from becoming forty states.
+    ///
+    /// Empty when no arrival stands under the disagreement: the folds all
+    /// consume nothing, or every arrival draws the same lookahead and the
+    /// contexts had already converged before this state. Splitting here cannot
+    /// help, and the caller has to look further back.
+    lanes: []const Lane = &.{},
+    /// Over-permitted terminals that no grouping of *these* arrivals can remove,
+    /// because one arrival already draws the terminal through one path to a fold
+    /// and not through another. A copy holding that arrival holds the same union
+    /// and the same meet, so the invention survives every cut this state admits.
+    /// The disagreement is older than the arrival, and reaching it means walking
+    /// back - which was measured at 24,572 states on bash for nothing.
+    stubborn: []const u32 = &.{},
+    /// Distinct states standing under this one's folds. One means there is
+    /// nothing to separate: the merge widened the lookahead through a single
+    /// context, so no partition of arrivals exists at all.
+    arrivals: u32 = 0,
+
+    pub const Lane = struct { from: u32, lane: u32 };
+};
+
+/// Where the refusals that are left actually stand: what no table construction
+/// can reach, against what this search left on the table.
+///
+/// A refusing cell is a token the state will not admit because precedence gave
+/// the cell to a fold. Whether that is a defect at all depends on why the fold
+/// is there, and there are only four answers - which makes the count of refusals
+/// far less interesting than its partition.
+pub const Floor = struct {
+    /// The fold is legal on this token under *every* context reaching the state.
+    /// Nothing was invented, so nothing was merged wrongly: the grammar itself
+    /// wants both readings here, and LR(1) would build the same cell. Anything
+    /// left to win is the parse loop's, not the table's.
+    agreed: u32 = 0,
+    /// Invented, but through a single arrival. There is no partition of one.
+    alone: u32 = 0,
+    /// Invented through several arrivals that cannot be told apart here; see
+    /// `Seam.stubborn`.
+    stuck: u32 = 0,
+    /// A partition of this state's arrivals exists that removes this cell, and
+    /// the search did not take it - because the round it would have belonged to
+    /// gained nothing overall, or because the plan was cut back to fit under the
+    /// state ceiling. This is the only bucket worth another round.
+    open: u32 = 0,
+
+    pub fn total(f: Floor) u32 {
+        return f.agreed + f.alone + f.stuck + f.open;
+    }
+
+    /// What no arrival partition can reach, at any cost.
+    pub fn sealed(f: Floor) u32 {
+        return f.agreed + f.alone + f.stuck;
+    }
+
+    /// Which bucket one cell is in. The field names are the buckets, so a
+    /// caller asking about a single refusal gets the same four answers the
+    /// tally does rather than a parallel vocabulary.
+    pub const Cause = enum { agreed, alone, stuck, open };
+
+    pub fn of(f: Floor, c: Cause) u32 {
+        return switch (c) {
+            .agreed => f.agreed,
+            .alone => f.alone,
+            .stuck => f.stuck,
+            .open => f.open,
+        };
+    }
+};
+
 pub const Tables = struct {
     arena: std.heap.ArenaAllocator,
     /// One past the last real terminal: the synthetic end-of-input column.
@@ -48,6 +153,10 @@ pub const Tables = struct {
     action: []const Action,
     conflicts: []const Conflict,
     frayed: []const settle.Frayed,
+    /// Every cell a merged lookahead over-permits, contested or not. Empty by
+    /// default because a table read back out of a folio has none to report: the
+    /// artifact carries the decided cells, not the search that decided them.
+    seams: []const Seam = &.{},
 
     pub fn deinit(t: *Tables) void {
         t.arena.deinit();
@@ -69,6 +178,63 @@ pub const Tables = struct {
             },
         };
         return out;
+    }
+
+    /// Sort every refusing cell into why it is still there. Needs the seams, so
+    /// it answers zero on a table read back out of a folio.
+    ///
+    /// Linear in the refusals times the width of a seam's over-set, which is a
+    /// few hundred against a few hundred; the state lookup is a binary search
+    /// because seams are built in state order.
+    pub fn floor(t: Tables) Floor {
+        var out: Floor = .{};
+        for (t.frayed) |f| {
+            if (f.harm != .read_dropped) continue;
+            switch (t.cause(f)) {
+                .agreed => out.agreed += 1,
+                .alone => out.alone += 1,
+                .stuck => out.stuck += 1,
+                .open => out.open += 1,
+            }
+        }
+        return out;
+    }
+
+    /// Why one refusing cell is still there. `floor` is this tallied over every
+    /// refusal; asking about a single cell - which is what attributing one wall
+    /// needs - is the same question and must not be a second implementation of
+    /// it. Answers about a `fold_dropped` cell too, where the reading it names
+    /// is a fold rather than a read; the four buckets are about the seam, not
+    /// about which side lost.
+    pub fn cause(t: Tables, f: settle.Frayed) Floor.Cause {
+        const seam = t.seamAt(f.state) orelse return .agreed;
+        if (std.mem.indexOfScalar(u32, seam.over, f.terminal) == null) return .agreed;
+        if (seam.arrivals <= 1) return .alone;
+        if (std.mem.indexOfScalar(u32, seam.stubborn, f.terminal) != null) return .stuck;
+        return .open;
+    }
+
+    /// The frayed cell at one address, if the merge damaged it.
+    pub fn frayedAt(t: Tables, state: u32, terminal: u32) ?settle.Frayed {
+        for (t.frayed) |f| if (f.state == state and f.terminal == terminal) return f;
+        return null;
+    }
+
+    /// The conflict recorded at one address, if the cell was contested at all.
+    pub fn conflictAt(t: Tables, state: u32, terminal: u32) ?Conflict {
+        for (t.conflicts) |k| if (k.state == state and k.terminal == terminal) return k;
+        return null;
+    }
+
+    pub fn seamAt(t: Tables, state: u32) ?*const Seam {
+        var lo: usize = 0;
+        var hi: usize = t.seams.len;
+        while (lo < hi) {
+            const mid = lo + (hi - lo) / 2;
+            if (t.seams[mid].state < state) lo = mid + 1 else hi = mid;
+        }
+        if (lo >= t.seams.len or t.seams[lo].state != state) return null;
+        return &t.seams[lo];
     }
 };
 
@@ -283,8 +449,239 @@ const Build = struct {
     }
 
     fn reductionOf(b: Build, state: u32, prod: u32) ?usize {
+        return b.reduction_base[state] + (b.slotOf(state, prod) orelse return null);
+    }
+
+    /// Every state whose admitted set the merge widened, with the arrivals
+    /// grouped so the state can be taken apart.
+    ///
+    /// A terminal is over-permitted here when it is in a fold's lookahead union
+    /// but not its meet, and is not a read the settlement kept. The neighbouring
+    /// hypothesis - that a fold can also be granted a terminal *every* context
+    /// draws and then walk into a state with no answer for it - is false by
+    /// construction and was measured to be: `Follow` of a transition is derived
+    /// from what the goto target reads, so the target admits every bit drawn
+    /// through it. Over 2.6M arrivals across the eleven grammars, folds dead at
+    /// their own goto: zero. Whatever is left after this comes apart further
+    /// along the chain than one goto, where the stack decides and no set does.
+    ///
+    /// Two passes, because the second only wants the states the first found. A
+    /// state's permissions are folded into two scratch rows — what any fold may
+    /// do, and what every context agrees it may do — so finding the seams is a
+    /// word loop per state rather than a bit test per cell.
+    fn seams(b: *Build, arena: std.mem.Allocator, action: []const Action) ![]const Seam {
+        var out: std.ArrayList(Seam) = .empty;
+        errdefer out.deinit(b.gpa);
+        const invented = try b.gpa.alloc(u64, b.la.stride);
+        defer b.gpa.free(invented);
+        const earned = try b.gpa.alloc(u64, b.la.stride);
+        defer b.gpa.free(earned);
+        var over: std.ArrayList(u32) = .empty;
+        defer over.deinit(b.gpa);
+        // Which seam a state holds, so the second pass can reject a landing in
+        // one indexed load. `none` for the overwhelming majority.
+        const holds = try b.gpa.alloc(u32, b.c.states.len);
+        defer b.gpa.free(holds);
+        @memset(holds, none);
+
+        var draws: std.ArrayList(Draw) = .empty;
+        defer draws.deinit(b.gpa);
+        try b.trace(&draws);
+
+        for (b.c.states, 0..) |st, q| {
+            @memset(invented, 0);
+            @memset(earned, 0);
+            // A read the settlement kept is a permission the automaton itself
+            // grants, so that terminal is admitted whatever the folds do. A read
+            // it *dropped* is the opposite: precedence deleted it because the
+            // fold outranked it, so the cell is answered by the invention alone
+            // and the state has to come apart on it. Reading the LR(0) edge
+            // instead of the settled cell hid exactly the class this whole
+            // mechanism was built for - c's `p->q = 1`, where `=` is both
+            // shiftable and in the fold's union, and where crediting the edge
+            // took c from 5 refusing cells to 71.
+            for (st.edges) |e| {
+                if (e.symbol >= b.gr.terminal_count) break;
+                if (action[q * b.width + e.symbol].kind != .shift) continue;
+                earned[e.symbol / 64] |= @as(u64, 1) << @intCast(e.symbol % 64);
+            }
+            for (st.complete, 0..) |prod, k| {
+                // The augmented production accepts rather than folds, and its
+                // lookahead is stated rather than drawn through any context.
+                if (prod == 0) continue;
+                const r = b.reduction_base[q] + k;
+                for (invented, earned, b.la.row(r), b.meet.row(r)) |*i, *e, all, every| {
+                    i.* |= all;
+                    e.* |= every;
+                }
+            }
+            over.clearRetainingCapacity();
+            for (invented, earned, 0..) |all, every, i| {
+                var bits = all & ~every;
+                while (bits != 0) : (bits &= bits - 1) {
+                    try over.append(b.gpa, @intCast(i * 64 + @ctz(bits)));
+                }
+            }
+            if (over.items.len == 0) continue;
+            holds[q] = @intCast(out.items.len);
+            try out.append(b.gpa, .{ .state = @intCast(q), .over = try arena.dupe(u32, over.items) });
+        }
+
+        if (out.items.len > 0) try b.regroup(arena, out.items, holds, draws.items);
+        const owned = try arena.dupe(Seam, out.items);
+        out.deinit(b.gpa);
+        return owned;
+    }
+
+    /// One way a fold is reached: the state holding it, which of that state's
+    /// folds it is, the state standing immediately under it, and the transition
+    /// whose `Follow` it draws.
+    const Draw = struct {
+        landed: u32,
+        slot: u32,
+        under: u32,
+        transition: u32,
+
+        fn before(_: void, x: Draw, y: Draw) bool {
+            if (x.landed != y.landed) return x.landed < y.landed;
+            if (x.under != y.under) return x.under < y.under;
+            return x.slot < y.slot;
+        }
+    };
+
+    const none = std.math.maxInt(u32);
+
+    /// Walk every way every fold in the automaton is reached, once, so that both
+    /// judging a fold and grouping a state's arrivals are passes over this list
+    /// rather than more walks of the transitions.
+    fn trace(b: *Build, draws: *std.ArrayList(Draw)) !void {
+        for (b.transitions, 0..) |t, i| {
+            for (b.gr.productionsOf(t.symbol)) |p| {
+                const rhs = b.gr.productions[p].rhs;
+                // A fold that consumed nothing happens in the state the
+                // transition leaves from, so no arrival stands under it and no
+                // grouping of arrivals can separate its contexts.
+                if (rhs.len == 0) continue;
+                const landed = b.c.walk(t.from, rhs).?;
+                const slot = b.slotOf(landed, p) orelse continue;
+                try draws.append(b.gpa, .{
+                    .landed = landed,
+                    .slot = slot,
+                    .under = b.c.walk(t.from, rhs[0 .. rhs.len - 1]).?,
+                    .transition = @intCast(i),
+                });
+            }
+        }
+        std.mem.sortUnstable(Draw, draws.items, {}, Draw.before);
+    }
+
+    /// Group every seam state's arrivals by the lookahead they contribute.
+    fn regroup(
+        b: *Build,
+        arena: std.mem.Allocator,
+        list: []Seam,
+        holds: []const u32,
+        all: []const Draw,
+    ) !void {
+        var groups: std.AutoHashMapUnmanaged(u64, u32) = .empty;
+        defer groups.deinit(b.gpa);
+        var lanes: std.ArrayList(Seam.Lane) = .empty;
+        defer lanes.deinit(b.gpa);
+        // The state's over-permitted terminals as a mask, so an arrival is
+        // compared only where the disagreement is.
+        const wanted = try b.gpa.alloc(u64, b.follow.stride);
+        defer b.gpa.free(wanted);
+        const drew = try b.gpa.alloc(u64, b.follow.stride);
+        defer b.gpa.free(drew);
+        // The same span intersected rather than unioned, and what that
+        // difference accumulates to over the whole state: an arrival that
+        // reaches one fold two ways and disagrees with itself carries its own
+        // union into every copy, so no cut here removes it.
+        const both = try b.gpa.alloc(u64, b.follow.stride);
+        defer b.gpa.free(both);
+        const stuck = try b.gpa.alloc(u64, b.follow.stride);
+        defer b.gpa.free(stuck);
+        var fixed: std.ArrayList(u32) = .empty;
+        defer fixed.deinit(b.gpa);
+
+        var run: usize = 0;
+        while (run < all.len) {
+            var end = run;
+            while (end < all.len and all[end].landed == all[run].landed) end += 1;
+            const at = holds[all[run].landed];
+            if (at == none) {
+                run = end;
+                continue;
+            }
+            const seam = &list[at];
+            @memset(wanted, 0);
+            for (seam.over) |t| wanted[t / 64] |= @as(u64, 1) << @intCast(t % 64);
+
+            groups.clearRetainingCapacity();
+            lanes.clearRetainingCapacity();
+            @memset(stuck, 0);
+            // Draws arrive sorted by arrival and then by fold, so an arrival's
+            // whole contribution is one contiguous span and its identity can be
+            // hashed as it is read. Materialising the (arrival × fold) matrix
+            // instead costs a state reached three thousand ways with twenty
+            // folds a quarter of a million words of zeroing to write a few
+            // hundred - which was most of rust's press.
+            var from = run;
+            while (from < end) {
+                var mine = from;
+                while (mine < end and all[mine].under == all[from].under) mine += 1;
+                var seal: std.hash.Wyhash = .init(0);
+                var one = from;
+                while (one < mine) {
+                    var same = one;
+                    @memset(drew, 0);
+                    @memcpy(both, wanted);
+                    while (same < mine and all[same].slot == all[one].slot) : (same += 1) {
+                        // Masked as it is gathered. Two arrivals that draw
+                        // different lookaheads *outside* the over-permitted set
+                        // are not what this state is wrong about, and separating
+                        // them is automaton nobody asked for - the difference
+                        // between two copies of a state reached forty ways and
+                        // forty of them.
+                        for (drew, both, b.follow.row(all[same].transition), wanted) |*w, *v, f, m| {
+                            w.* |= f & m;
+                            v.* &= f;
+                        }
+                    }
+                    for (stuck, drew, both) |*s, w, v| s.* |= w & ~v;
+                    // A fold nothing drew is absent rather than zero, so the
+                    // slot travels with the row: two arrivals that reach
+                    // different folds are different contexts even when both
+                    // draw nothing over-permitted.
+                    seal.update(std.mem.asBytes(&all[one].slot));
+                    seal.update(std.mem.sliceAsBytes(drew));
+                    one = same;
+                }
+                const slot = try groups.getOrPut(b.gpa, seal.final());
+                if (!slot.found_existing) slot.value_ptr.* = groups.count() - 1;
+                try lanes.append(b.gpa, .{ .from = all[from].under, .lane = slot.value_ptr.* });
+                from = mine;
+            }
+            seam.arrivals = @intCast(lanes.items.len);
+            fixed.clearRetainingCapacity();
+            for (seam.over) |t| {
+                if (stuck[t / 64] & @as(u64, 1) << @intCast(t % 64) != 0) try fixed.append(b.gpa, t);
+            }
+            seam.stubborn = try arena.dupe(u32, fixed.items);
+            // One lane is the whole state, which is what it already is; a cut
+            // whose every invention is stubborn is a copy that changes nothing.
+            if (groups.count() > 1 and fixed.items.len < seam.over.len) {
+                seam.lanes = try arena.dupe(Seam.Lane, lanes.items);
+            }
+            run = end;
+        }
+    }
+
+    /// Which of a state's completions is this production, as an index into
+    /// `complete` rather than into the lookahead matrix.
+    fn slotOf(b: Build, state: u32, prod: u32) ?u32 {
         for (b.c.states[state].complete, 0..) |p, k| {
-            if (p == prod) return b.reduction_base[state] + k;
+            if (p == prod) return @intCast(k);
         }
         return null;
     }
@@ -300,6 +697,10 @@ const Build = struct {
             .reduction_base = b.reduction_base,
             .width = b.width,
         }, b.gpa, owned.allocator());
+        // Both before the arena is copied into the literal: it captures its
+        // buffer list by value, so anything allocated as a later field would be
+        // invisible to the copy that owns it.
+        const shown = try b.seams(owned.allocator(), verdict.action);
 
         return .{
             .arena = owned,
@@ -308,6 +709,7 @@ const Build = struct {
             .action = verdict.action,
             .conflicts = verdict.conflicts,
             .frayed = verdict.frayed,
+            .seams = shown,
         };
     }
 };

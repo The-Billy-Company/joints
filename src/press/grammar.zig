@@ -159,6 +159,22 @@ pub const Production = struct {
     /// lost its associativity the moment the rule was inlined into its users,
     /// and took 176 of Rust's cells with it.
     steps: []const Step,
+    /// What `prec.dynamic` declared, and the one rank that is per *production*
+    /// rather than per step.
+    ///
+    /// It answers a different question from `Step.prec` and must never be
+    /// confused with it. A static rank resolves a cell while the table is being
+    /// built, so the loser is gone before a parse begins. A dynamic one
+    /// resolves nothing: the cell keeps both actions, the parse forks, and this
+    /// is the tie-break between readings that are all still alive at the end.
+    ///
+    /// So `settle` may *order* by it and must never resolve by it. It does the
+    /// first - a declared tie names the higher-ranked reading as the fork's
+    /// primary, since the parse tries the primary first - and an earlier attempt
+    /// at the second cost 7221 residual conflicts on c. The rest of the job is
+    /// the fork's: tree-sitter compares the *sum* over each candidate subtree,
+    /// which no table can know because the subtrees do not exist yet.
+    dynamic: i16 = 0,
 
     pub fn isEpsilon(p: Production) bool {
         return p.rhs.len == 0;
@@ -254,6 +270,14 @@ pub const Grammar = struct {
     /// a lexer either mis-tokenizes every keyword or needs one hand-written
     /// tie-break per language.
     word: ?Symbol,
+    /// This grammar's terminal slate, already determinized, when it arrived
+    /// from an artifact that carried one. Opaque here and everywhere but
+    /// `kernel/lex/lexicon.zig`, which is the only thing that reads it.
+    ///
+    /// A grammar imported from source has none, and a scanner built over one
+    /// determinizes as it always did - so this is a shortcut a grammar may
+    /// carry, never a thing a grammar needs.
+    lexicon: []const u8 = &.{},
 
     pub fn deinit(g: *Grammar) void {
         g.arena.deinit();
@@ -553,14 +577,24 @@ pub const Builder = struct {
     }
 
     /// Record how a terminal lexes beyond its pattern. A no-op on a
-    /// nonterminal, and additive rather than assigning: the same anonymous
-    /// token can be reached twice through different rules, and a `Lexis` the
-    /// second sighting omits must not erase what the first one saw.
+    /// nonterminal.
+    ///
+    /// `immediate` accumulates because a rule may reach an already-known token
+    /// and add nothing; `prec` assigns, because the front end folds the
+    /// standing into the intern key. Two spellings that rank differently are
+    /// two terminals, so every sighting of one terminal reports the same rank
+    /// and there is nothing to reconcile.
+    ///
+    /// It used to take `@max` against a slot that starts at zero, which reads
+    /// every negative rank as no rank at all. Ruby ranks `comment` at -2 so
+    /// that `#{` outranks it; clamped to zero it outranked nothing and a
+    /// comment ate every interpolated string. Zero is `Lexis`'s spelling for
+    /// "unranked", so it cannot also be the floor of a comparison.
     pub fn describe(b: *Builder, raw: u32, lx: Lexis) void {
         if (!isTerminalRaw(raw)) return;
         const slot = &b.terminals.items[raw].lexis;
         slot.immediate = slot.immediate or lx.immediate;
-        slot.prec = @max(slot.prec, lx.prec);
+        slot.prec = lx.prec;
     }
 
     /// Record that `raw` is machinery the front end invented while lowering
@@ -636,6 +670,20 @@ pub const Builder = struct {
     /// `steps` is parallel to `rhs`; an empty slice means every step is plain,
     /// which is what most productions are and what every test wants to write.
     pub fn addProduction(b: *Builder, lhs: u32, rhs: []const u32, steps: []const Step) !void {
+        return b.addProductionDynamic(lhs, rhs, steps, 0);
+    }
+
+    /// `addProduction` for a body the author gave a runtime tie-break with
+    /// `prec.dynamic`. A separate entry point rather than a fourth parameter
+    /// because only the front end has one to declare, and every other caller
+    /// would have to write the zero.
+    pub fn addProductionDynamic(
+        b: *Builder,
+        lhs: u32,
+        rhs: []const u32,
+        steps: []const Step,
+        dynamic: i16,
+    ) !void {
         const a = b.arena.allocator();
         std.debug.assert(steps.len == 0 or steps.len == rhs.len);
         const owned = if (steps.len == rhs.len)
@@ -649,6 +697,7 @@ pub const Builder = struct {
             .lhs = lhs,
             .rhs = try a.dupe(u32, rhs),
             .steps = owned,
+            .dynamic = dynamic,
         });
     }
 
@@ -836,11 +885,20 @@ pub const Builder = struct {
 /// the author's two node shapes — which nothing downstream could ever notice,
 /// because both parse the same sentences.
 fn dedup(b: *Builder) !void {
-    const Key = struct { lhs: Symbol, rhs: []const Symbol, steps: []const Step };
+    // `dynamic` is in the key because it is a statement about the reading, the
+    // same as a step's precedence is: two identical bodies ranked differently are
+    // two answers to which one a fork should prefer, and collapsing them keeps
+    // whichever the author happened to write first. It fires on none of the
+    // thirty pinned grammars - measured at zero collisions where the ranks
+    // differ - so this changes no table anyone has pressed. It is here so that
+    // the key stays a full account of what makes a production distinct, which is
+    // the only property that keeps a deduplicator honest as the type grows.
+    const Key = struct { lhs: Symbol, rhs: []const Symbol, steps: []const Step, dynamic: i16 };
     const Ctx = struct {
         pub fn hash(_: @This(), k: Key) u64 {
             var h = std.hash.Wyhash.init(k.lhs);
             h.update(std.mem.sliceAsBytes(k.rhs));
+            h.update(std.mem.asBytes(&k.dynamic));
             for (k.steps) |s| {
                 h.update(std.mem.asBytes(&std.meta.activeTag(s.prec)));
                 h.update(std.mem.asBytes(&s.assoc));
@@ -861,7 +919,8 @@ fn dedup(b: *Builder) !void {
             return h.final();
         }
         pub fn eql(_: @This(), x: Key, y: Key) bool {
-            if (x.lhs != y.lhs or !std.mem.eql(Symbol, x.rhs, y.rhs)) return false;
+            if (x.lhs != y.lhs or x.dynamic != y.dynamic) return false;
+            if (!std.mem.eql(Symbol, x.rhs, y.rhs)) return false;
             for (x.steps, y.steps) |a, c| {
                 if (a.assoc != c.assoc or !a.prec.eql(c.prec)) return false;
                 if (a.alias != c.alias or a.field != c.field) return false;
@@ -876,7 +935,7 @@ fn dedup(b: *Builder) !void {
 
     var kept: usize = 0;
     for (b.productions.items) |p| {
-        const key: Key = .{ .lhs = p.lhs, .rhs = p.rhs, .steps = p.steps };
+        const key: Key = .{ .lhs = p.lhs, .rhs = p.rhs, .steps = p.steps, .dynamic = p.dynamic };
         if (seen.getOrPutAssumeCapacity(key).found_existing) continue;
         b.productions.items[kept] = p;
         kept += 1;
@@ -983,7 +1042,7 @@ test "a folded rule is swept, not indicted" {
     try b.addProduction(start, &.{top}, &.{});
     try b.addProduction(top, &.{alias}, &.{});
     try b.addProduction(alias, &.{x}, &.{});
-    _ = try @import("fold.zig").nonterminals(std.testing.allocator, &b, start, &.{alias});
+    _ = try @import("fold.zig").nonterminals(std.testing.allocator, &b, &.{start}, &.{alias});
 
     var g = try b.finish("t", start, &.{}, &.{});
     defer g.deinit();

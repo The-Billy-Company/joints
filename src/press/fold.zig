@@ -44,15 +44,26 @@ pub const Report = struct {
 };
 
 /// Substitute every symbol in `victims` away, rewriting `b.productions` in
-/// place. `start` is the grammar's start symbol, in the builder's own
-/// unresolved numbering — the sweep needs to know what the grammar is *for*
+/// place. `roots` are the symbols the grammar exists to derive, in the builder's
+/// own unresolved numbering - the sweep needs to know what the grammar is *for*
 /// before it can say which rules it no longer needs.
+///
+/// **Every root, not just the start symbol.** A tree-sitter grammar derives its
+/// extras from nowhere: an extra is by construction not reachable from `$start`,
+/// which is exactly what makes it an extra. Seeded with the start symbol alone
+/// the sweep deletes every production a *nonterminal* extra owns, and the
+/// language quietly loses the thing that extra was there for. It reached rust and
+/// julia and nothing else of thirty, because it needs both halves of a
+/// conjunction: a nonterminal extra, and a non-empty `inline` list to make the
+/// caller run the sweep in the first place. lua has the extra with no `inline`
+/// list, which is why lua was fine; c, cpp and bash have `TOKEN` extras, which
+/// own no productions to lose.
 ///
 /// Symbols are not renumbered. A folded nonterminal keeps its id and its name
 /// and simply stops being referenced, because renumbering would invalidate
 /// every id the caller is holding to buy nothing: the LR closure never expands
 /// what nothing references, so an unreachable nonterminal costs one name.
-pub fn nonterminals(gpa: std.mem.Allocator, b: *g.Builder, start: u32, victims: []const u32) !Report {
+pub fn nonterminals(gpa: std.mem.Allocator, b: *g.Builder, roots: []const u32, victims: []const u32) !Report {
     if (victims.len == 0) return .{ .folded = 0, .declined = 0 };
 
     var scratch = std.heap.ArenaAllocator.init(gpa);
@@ -73,7 +84,7 @@ pub fn nonterminals(gpa: std.mem.Allocator, b: *g.Builder, start: u32, victims: 
     }
 
     _ = scratch.reset(.retain_capacity);
-    try sweep(gpa, scratch.allocator(), b, start);
+    try sweep(gpa, scratch.allocator(), b, roots);
     return tally(b, victims);
 }
 
@@ -107,11 +118,24 @@ fn substitute(
         }
         touched = true;
         const a = b.arena.allocator();
-        for (fan) |alt| try rewritten.append(gpa, .{
-            .lhs = p.lhs,
-            .rhs = try a.dupe(u32, alt.rhs),
-            .steps = try a.dupe(g.Step, alt.steps),
-        });
+        // Copy the host and name only what the substitution rewrote, rather than
+        // listing the fields. A rewrite that enumerates them is a defect
+        // generator: it was written when `Production` had three, and when
+        // `dynamic` became the fourth every ranked production that inlines
+        // anything silently came out at 0. That is all of c's
+        // `sized_type_specifier`, since they inline `_type_identifier`, and it
+        // read as tree-sitter disagreeing about `long total;` for three rounds.
+        //
+        // The host's values are the right default for the same reason the host's
+        // rank was: substituting a hidden rule into its caller keeps the
+        // *caller's* reading, so anything the author said about the caller has to
+        // survive the rewrite.
+        for (fan) |alt| {
+            var out = p;
+            out.rhs = try a.dupe(u32, alt.rhs);
+            out.steps = try a.dupe(g.Step, alt.steps);
+            try rewritten.append(gpa, out);
+        }
     }
 
     b.productions.clearRetainingCapacity();
@@ -119,15 +143,17 @@ fn substitute(
     return touched;
 }
 
-/// Drop every production whose left-hand side is no longer reachable from
-/// `start`. This is what actually removes a folded rule, and doing it by
+/// Drop every production whose left-hand side is no longer reachable from any
+/// root. This is what actually removes a folded rule, and doing it by
 /// reachability rather than by name is what keeps a victim's rules alive while
 /// a *declined* victim still references them.
-fn sweep(gpa: std.mem.Allocator, s: std.mem.Allocator, b: *g.Builder, start: u32) !void {
+fn sweep(gpa: std.mem.Allocator, s: std.mem.Allocator, b: *g.Builder, roots: []const u32) !void {
     var live = std.AutoHashMap(u32, void).init(s);
     var queue: std.ArrayList(u32) = .empty;
-    try live.put(start, {});
-    try queue.append(s, start);
+    for (roots) |r| {
+        if ((try live.getOrPut(r)).found_existing) continue;
+        try queue.append(s, r);
+    }
 
     while (queue.pop()) |sym| {
         for (b.productions.items) |p| {
@@ -267,7 +293,7 @@ test "a folded alias disappears into every caller" {
     try b.addProduction(alias, &.{x}, &.{});
     try b.addProduction(alias, &.{y}, &.{});
 
-    _ = try nonterminals(testing.allocator, &b, start, &.{alias});
+    _ = try nonterminals(testing.allocator, &b, &.{start}, &.{alias});
     var gr = try b.finish("t", start, &.{}, &.{});
     defer gr.deinit();
 
@@ -275,6 +301,66 @@ test "a folded alias disappears into every caller" {
     // no productions left at all.
     try testing.expectEqual(@as(usize, 3), gr.productions.len);
     for (gr.productions) |p| for (p.rhs) |s| try testing.expect(gr.isTerminal(s) or s == gr.start + 1);
+}
+
+test "a nonterminal extra keeps its productions, being a root of its own" {
+    var b = g.Builder.init(testing.allocator);
+    defer b.deinit();
+    const x = try b.intern("x", "x", .{ .literal = "x" });
+    const hash = try b.intern("#", "#", .{ .literal = "#" });
+    const start = try b.intern("$start", "$start", null);
+    const top = try b.intern("top", "top", null);
+    const alias = try b.intern("alias", "alias", null);
+    const comment = try b.intern("comment", "comment", null);
+
+    try b.addProduction(start, &.{top}, &.{});
+    try b.addProduction(top, &.{alias}, &.{});
+    try b.addProduction(alias, &.{x}, &.{});
+    // Reachable from nothing, which is what being an extra means.
+    try b.addProduction(comment, &.{hash}, &.{});
+
+    _ = try nonterminals(testing.allocator, &b, &.{ start, comment }, &.{alias});
+    var gr = try b.finish("t", start, &.{comment}, &.{});
+    defer gr.deinit();
+
+    // Seeded with `start` alone the sweep takes this to zero, and the grammar
+    // parses a language with no comments in it. rust lost 8 extras that way and
+    // julia 5.
+    var owns: usize = 0;
+    for (gr.productions) |p| {
+        if (std.mem.eql(u8, gr.nameOf(p.lhs), "comment")) owns += 1;
+    }
+    try testing.expectEqual(@as(usize, 1), owns);
+}
+
+test "the caller's rank survives folding a victim into it" {
+    var b = g.Builder.init(testing.allocator);
+    defer b.deinit();
+    const x = try b.intern("x", "x", .{ .literal = "x" });
+    const y = try b.intern("y", "y", .{ .literal = "y" });
+    const start = try b.intern("$start", "$start", null);
+    const top = try b.intern("top", "top", null);
+    const alias = try b.intern("alias", "alias", null);
+
+    try b.addProduction(start, &.{top}, &.{});
+    try b.addProductionDynamic(top, &.{ alias, y }, &.{}, -1);
+    try b.addProduction(alias, &.{x}, &.{});
+    try b.addProduction(alias, &.{y}, &.{});
+
+    _ = try nonterminals(testing.allocator, &b, &.{start}, &.{alias});
+    var gr = try b.finish("t", start, &.{}, &.{});
+    defer gr.deinit();
+
+    // Both halves of the fan carry it. Losing it here is why c's
+    // `sized_type_specifier` read as unranked: every one of them inlines
+    // `_type_identifier`, so every one of them was rewritten.
+    var ranked: usize = 0;
+    for (gr.productions) |p| {
+        if (p.lhs != gr.start + 1) continue;
+        try testing.expectEqual(@as(i16, -1), p.dynamic);
+        ranked += 1;
+    }
+    try testing.expectEqual(@as(usize, 2), ranked);
 }
 
 test "one right-hand side mentioning a victim twice fans out as a product" {
@@ -291,7 +377,7 @@ test "one right-hand side mentioning a victim twice fans out as a product" {
     try b.addProduction(alias, &.{x}, &.{});
     try b.addProduction(alias, &.{y}, &.{});
 
-    _ = try nonterminals(testing.allocator, &b, start, &.{alias});
+    _ = try nonterminals(testing.allocator, &b, &.{start}, &.{alias});
     var gr = try b.finish("t", start, &.{}, &.{});
     defer gr.deinit();
 
@@ -313,7 +399,7 @@ test "a victim inside a victim resolves rather than surviving one round" {
     try b.addProduction(outer, &.{inner}, &.{});
     try b.addProduction(inner, &.{x}, &.{});
 
-    const report = try nonterminals(testing.allocator, &b, start, &.{ outer, inner });
+    const report = try nonterminals(testing.allocator, &b, &.{start}, &.{ outer, inner });
     try testing.expectEqual(@as(usize, 0), report.declined);
     try testing.expectEqual(@as(usize, 2), report.folded);
 
@@ -337,7 +423,7 @@ test "a recursive victim is declined, not chased forever" {
     try b.addProduction(loop, &.{ loop, x }, &.{});
     try b.addProduction(loop, &.{x}, &.{});
 
-    const report = try nonterminals(testing.allocator, &b, start, &.{loop});
+    const report = try nonterminals(testing.allocator, &b, &.{start}, &.{loop});
     try testing.expectEqual(@as(usize, 1), report.declined);
 
     // Declining is not damaging: the grammar it hands back is the one it was

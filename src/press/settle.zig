@@ -159,6 +159,87 @@ pub const Tally = struct {
     }
 };
 
+/// Where a parse may legitimately split, and into what.
+///
+/// A contested cell still answers once, because a table has to. But the reading
+/// it dropped is not a mistake: it is the other half of an ambiguity the author
+/// declared, and it is the whole difference between C's `long total;` being a
+/// declaration and being nothing the table can continue from. `Conflict` already
+/// records the loser; this is that record turned into something a parse loop can
+/// ask on every token without noticing.
+///
+/// **Only `declared` cells are forks.** A `repetition` cell is a list deciding
+/// whether it is over, and reading on is what a repeat *means* - the language
+/// never saw a choice, so forking there would double the parse on every element
+/// of every list to reach a reading nobody wanted. A `residual` cell is a
+/// defect: nobody sanctioned that ambiguity, and exploring it would be guessing
+/// on the author's behalf a second time, in the other direction.
+///
+/// Built by the consumer rather than carried in the `Verdict`, because it is an
+/// index over a table and not a fact the table was missing. A press that only
+/// means to report on a grammar should not pay for it.
+pub const Forks = struct {
+    /// One bit per cell, so an uncontested cell costs a masked load and never a
+    /// search. Contested cells number in the hundreds against a table of
+    /// hundreds of thousands, which is exactly the ratio that makes a bitset
+    /// over a sorted list beat a second dense table by thirty-two to one on
+    /// space and lose nothing on time.
+    marked: []const u64,
+    /// Cell, and the reading the table dropped there. Sorted by cell.
+    splits: []const Split,
+    width: u32,
+
+    pub const Split = struct { cell: u32, other: Action };
+
+    pub fn of(
+        gpa: std.mem.Allocator,
+        conflicts: []const Conflict,
+        states: usize,
+        width: u32,
+    ) !Forks {
+        var splits: std.ArrayList(Split) = .empty;
+        errdefer splits.deinit(gpa);
+        for (conflicts) |k| {
+            if (k.class != .declared or k.other.none()) continue;
+            try splits.append(gpa, .{ .cell = k.state * width + k.terminal, .other = k.other });
+        }
+        std.mem.sortUnstable(Split, splits.items, {}, before);
+
+        const marked = try gpa.alloc(u64, (states * width + 63) / 64);
+        @memset(marked, 0);
+        for (splits.items) |s| marked[s.cell >> 6] |= @as(u64, 1) << @truncate(s.cell);
+        return .{ .marked = marked, .splits = try splits.toOwnedSlice(gpa), .width = width };
+    }
+
+    fn before(_: void, a: Split, b: Split) bool {
+        return a.cell < b.cell;
+    }
+
+    fn seek(key: u32, s: Split) std.math.Order {
+        return std.math.order(key, s.cell);
+    }
+
+    pub fn deinit(f: *Forks, gpa: std.mem.Allocator) void {
+        gpa.free(f.marked);
+        gpa.free(f.splits);
+        f.* = undefined;
+    }
+
+    /// The reading this cell dropped, when the author declared the cell a
+    /// choice. Null for every other cell, which is nearly all of them.
+    pub fn at(f: Forks, state: u32, terminal: u32) ?Action {
+        const cell = state * f.width + terminal;
+        if (f.marked[cell >> 6] & (@as(u64, 1) << @truncate(cell)) == 0) return null;
+        return f.splits[std.sort.lowerBound(Split, f.splits, cell, seek)].other;
+    }
+
+    /// How many cells a parse over this table may split at. Zero is a grammar
+    /// that never forks, which is why a fork must cost json nothing.
+    pub fn count(f: Forks) usize {
+        return f.splits.len;
+    }
+};
+
 /// Everything needed to judge one grammar's cells, and nothing else: the
 /// grammar, its automaton, which reductions are legal where, and what each
 /// symbol can begin with.
@@ -262,11 +343,21 @@ const Folds = struct {
             // they leave no trace — not even an associativity flag.
             .gt => f.* = .{ .chosen = act, .prec = step.prec },
             .lt => return,
-            // A tie is the contested case. The table takes the earlier
-            // production, which is the order the author wrote them in.
+            // A tie is the contested case, and both readings survive it: what
+            // gets decided here is only which one the table takes *first*,
+            // since a declared tie becomes the fork's primary and its rival,
+            // and the parse prefers the primary.
+            //
+            // Which is the question `prec.dynamic` was written to answer. The
+            // real generator keeps both folds in the cell and carries the ranks
+            // beside them - `REDUCE(sym_wide, 2, -1, 0), REDUCE(sym_plain, 2,
+            // 0, 0)` for a two-branch tie where one branch is ranked -1 - so a
+            // dynamic rank resolves nothing and orders everything. Ranked
+            // equally, the earlier production wins, which is the order the
+            // author wrote them in.
             .eq => {
                 f.prec = step.prec;
-                if (act.value < f.chosen.value) {
+                if (keener(gr, act, f.chosen)) {
                     f.rival = f.chosen;
                     f.chosen = act;
                 } else if (f.rival.none()) {
@@ -290,6 +381,23 @@ const Folds = struct {
     }
 };
 
+/// Whether `a` is the reading to take ahead of `b`, for two folds a static
+/// ordering left tied. The higher dynamic rank first, and among equals the
+/// earlier production - so a grammar that never writes `prec.dynamic` gets the
+/// order it always got, and one that does gets the order it asked for.
+///
+/// Per-production, where tree-sitter compares the *sum* over each candidate
+/// subtree. The two agree whenever the difference is on the fold being compared,
+/// which is the shape authors write: c ranks the branch that swallows an
+/// identifier into a type at -1 and its rival at 0. Where a rank deeper in
+/// either subtree would flip it, only the fork can know, since only the fork has
+/// the subtrees.
+fn keener(gr: *const g.Grammar, a: Action, b: Action) bool {
+    const x = gr.productions[a.value].dynamic;
+    const y = gr.productions[b.value].dynamic;
+    return if (x != y) x > y else a.value < b.value;
+}
+
 /// What the readings standing in a state have to say about one contested cell.
 const Survey = struct {
     /// How each in-progress reading's precedence compared with the surviving
@@ -299,6 +407,9 @@ const Survey = struct {
     above: bool = false,
     below: bool = false,
     level: bool = false,
+    /// Some reading is the surviving fold's own production, continuing. Not an
+    /// ambiguity at all - see `Ladder.step`.
+    continues: bool = false,
     /// The one rule every reading belongs to, when there is one.
     sole: ?g.Symbol = null,
     one_rule: bool = true,
@@ -427,6 +538,12 @@ const Bench = struct {
         var keep_fold = true;
         var survey = try b.poll(state, t, items, f, .all);
 
+        // A rule's own tail only outranks its fold where the fold had no business
+        // in this column: `frays` is true exactly when the lookahead admits the
+        // terminal under the union over arrivals and not under the intersection,
+        // so the permission is the merge's invention rather than the grammar's.
+        survey.continues = survey.continues and frayed;
+
         if (reading) {
             // One synthesized rule arguing with itself is a list deciding
             // whether it is over. Reading on is what a repeat means, and the
@@ -455,15 +572,38 @@ const Bench = struct {
         // productions, and only those should be named in the report.
         if (!keep_read and reading) survey = try b.poll(state, t, items, f, .folds_only);
 
+        // A read and a fold both still standing, and nothing static between
+        // them: the table names the read, which is the right default and the
+        // wrong one where the author ranked every available reading below the
+        // fold. Yielding changes which of two surviving actions is primary and
+        // which one the fork speculates on - `standing` and the conflict's kind
+        // are what they were, so no cell becomes any more or less contested.
+        const yield = keep_read and keep_fold and
+            b.leading(items, t) < b.x.gr.productions[f.chosen.value].dynamic;
+
         const standing: u32 = @as(u32, @intFromBool(keep_read)) +
             (if (keep_fold) @as(u32, if (f.tied()) 2 else 1) else 0);
-        r[t] = if (keep_read) r[t] else f.chosen;
+        const read = r[t];
+        r[t] = if (keep_read and !yield) read else f.chosen;
         if (frayed) try b.fray(state, t, if (reading and !keep_read) .read_dropped else .fold_dropped);
         if (standing <= 1) return;
 
         const kind: Conflict.Kind = if (keep_read) .shift_reduce else .reduce_reduce;
-        const other = if (keep_read) f.chosen else f.rival;
+        const other = if (!keep_read) f.rival else if (yield) read else f.chosen;
         try b.record(state, t, kind, try b.attribute(state), r[t], other);
+    }
+
+    /// The best dynamic rank among the readings that would shift this terminal.
+    /// The best rather than any, so a reading only yields to a fold when every
+    /// one of them was ranked below it.
+    fn leading(b: Bench, items: []const lr0.Item, t: u32) i16 {
+        var best: i16 = std.math.minInt(i16);
+        for (items) |it| {
+            const p = b.x.gr.productions[it.prod];
+            if (it.dot >= p.rhs.len or p.rhs[it.dot] != t) continue;
+            best = @max(best, p.dynamic);
+        }
+        return if (best == std.math.minInt(i16)) 0 else best;
     }
 
     fn fray(b: *Bench, state: u32, t: u32, harm: Frayed.Harm) !void {
@@ -532,6 +672,7 @@ const Bench = struct {
                     .lt => out.below = true,
                     .eq => out.level = true,
                 }
+                if (b.resumes(item, f)) out.continues = true;
             }
 
             if (out.sole) |s| {
@@ -545,6 +686,27 @@ const Bench = struct {
             }
         }
         return out;
+    }
+
+    /// Whether this reading is a surviving fold's own production, continuing past
+    /// where the fold stops: same rule, same steps consumed, and more to come.
+    ///
+    /// That is an optional suffix written as two branches of one rule, not two
+    /// readings of the same text, and the distinguishing mark is the dot. A
+    /// left-associative operator puts the two dots in *different* places - `E ->
+    /// E + E .` against `E -> E . + E` - because the fold has consumed an operand
+    /// the read has not. Here both have consumed the same prefix and one simply
+    /// has further to go, so there is no second instance of anything for a side
+    /// to be chosen between.
+    fn resumes(b: Bench, item: lr0.Item, f: Folds) bool {
+        const p = b.x.gr.productions[item.prod];
+        for ([2]Action{ f.chosen, f.rival }) |act| {
+            if (act.kind != .reduce) continue;
+            const fold = b.x.gr.productions[act.value];
+            if (fold.lhs != p.lhs or fold.rhs.len != item.dot) continue;
+            if (std.mem.eql(g.Symbol, fold.rhs, p.rhs[0..item.dot])) return true;
+        }
+        return false;
     }
 
     /// Add one rule to a party, keeping it sorted and deduplicated. Sorted
@@ -667,6 +829,22 @@ const Ladder = struct {
         }
         // Precedence tied, or never spoke. Associativity is the author's answer
         // to exactly this, and only when the folds agree on it.
+        //
+        // Except that it was not asked this. A rule with an optional tail comes
+        // out of the front end as two productions sharing a prefix, so the state
+        // that has read the prefix holds the short one complete and the long one
+        // with its dot before the tail - and the whole rule sits inside one
+        // `prec.left`, so both carry the same rank and the tie is guaranteed.
+        // Answering that tie with associativity denies the tail outright: elixir
+        // loses every `do` block, because `defmodule Foo do` folds the call at
+        // `do` in six states whose own items shift it.
+        //
+        // `decide` has already narrowed this to cells a merge over-permitted, and
+        // the narrowing is what makes it safe. Unconditional, the same rule reads
+        // on wherever a tail is optional and the terminal could also follow the
+        // rule - the dangling-else shape - and it cost c 356 bytes, sql 368 and
+        // verilog 1118 to gain elixir's 54.
+        if (s.continues) return .read;
         if (purely(f, .left)) return .fold;
         if (purely(f, .right)) return .read;
         return .undecided;
@@ -689,12 +867,32 @@ const testing = std.testing;
 
 /// A grammar that ranks nothing, for the tests whose subject is numbers. Every
 /// comparison then falls to the numeric arm, which is what they are about.
+///
+/// Nine alike, because the tests below name productions by index and a tie now
+/// reads the production it was offered to find its dynamic rank. An index has to
+/// be a real one.
 fn ungoverned(a: std.mem.Allocator) !g.Grammar {
     var b = g.Builder.init(a);
     defer b.deinit();
-    const x = try b.intern("x", "x", .{ .literal = "x" });
     const s = try b.intern("S", "S", null);
-    try b.addProduction(s, &.{x}, &.{});
+    for ([_][]const u8{ "a", "b", "c", "d", "e", "f", "g", "h", "i" }) |name| {
+        const t = try b.intern(name, name, .{ .literal = name });
+        try b.addProduction(s, &.{t}, &.{});
+    }
+    return b.finish("t", s, &.{}, &.{});
+}
+
+/// The same, with one production the author ranked below the rest.
+fn ranking(a: std.mem.Allocator, at: usize, level: i16) !g.Grammar {
+    var b = g.Builder.init(a);
+    defer b.deinit();
+    const s = try b.intern("S", "S", null);
+    for ([_][]const u8{ "a", "b", "c", "d", "e", "f", "g", "h", "i" }, 0..) |name, i| {
+        const t = try b.intern(name, name, .{ .literal = name });
+        if (i == at) {
+            try b.addProductionDynamic(s, &.{t}, &.{}, level);
+        } else try b.addProduction(s, &.{t}, &.{});
+    }
     return b.finish("t", s, &.{}, &.{});
 }
 
@@ -732,6 +930,28 @@ test "a tie keeps the earlier production and remembers it was contested" {
     try testing.expectEqual(@as(u30, 7), f.rival.value);
 }
 
+test "a dynamic rank takes a tie ahead of the order they were written in" {
+    // Production 5 is ranked below 7, so 7 becomes the reading the table takes
+    // and 5 the rival - the reverse of the same tie ungoverned. Both survive
+    // either way: `prec.dynamic` orders a fork, it does not resolve one.
+    var gr = try ranking(testing.allocator, 5, -1);
+    defer gr.deinit();
+    var f: Folds = .{};
+    f.offer(&gr, 7, gr.start, ranked(2, .none));
+    f.offer(&gr, 5, gr.start, ranked(2, .none));
+    try testing.expect(f.tied());
+    try testing.expectEqual(@as(u30, 7), f.chosen.value);
+    try testing.expectEqual(@as(u30, 5), f.rival.value);
+
+    // And in the other offering order, since a rank is a property of the
+    // production rather than of when it was reached.
+    var later: Folds = .{};
+    later.offer(&gr, 5, gr.start, ranked(2, .none));
+    later.offer(&gr, 7, gr.start, ranked(2, .none));
+    try testing.expectEqual(@as(u30, 7), later.chosen.value);
+    try testing.expectEqual(@as(u30, 5), later.rival.value);
+}
+
 test "precedence decides before associativity, and unanimity is required" {
     const left: Folds = .{ .chosen = Action.reduce(1), .left = true };
     const right: Folds = .{ .chosen = Action.reduce(1), .right = true };
@@ -747,6 +967,24 @@ test "precedence decides before associativity, and unanimity is required" {
     try testing.expectEqual(
         Ladder.Outcome.read,
         Ladder.step(.{ .above = true, .below = true }, right),
+    );
+}
+
+test "a rule's own tail outranks associativity, and only inside its own tie" {
+    const left: Folds = .{ .chosen = Action.reduce(1), .left = true };
+
+    // The elixir shape: the fold and the read are one rule, `prec.left` wraps
+    // the whole of it so the tie is guaranteed, and answering the tie by side
+    // would deny the tail in every context at once.
+    try testing.expectEqual(
+        Ladder.Outcome.read,
+        Ladder.step(.{ .level = true, .continues = true }, left),
+    );
+    // Precedence still speaks first. An author who ranked the tail below the
+    // fold said so on purpose, and this rung never hears the cell.
+    try testing.expectEqual(
+        Ladder.Outcome.fold,
+        Ladder.step(.{ .below = true, .continues = true }, left),
     );
 }
 

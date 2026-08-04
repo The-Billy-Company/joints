@@ -35,9 +35,10 @@
 //! So the signal is not "what is still contested" but "what is contested *only
 //! because of the merge*": a terminal in a reduction's lookahead union that is
 //! not in its intersection over the paths that reach it. `settle` records those
-//! as frayed cells and this loop unfolds them — build, name the frayed kernels,
-//! build again with their arrivals kept apart. Each round strictly narrows
-//! lookaheads, so the count can only shrink; the loop stops when it does not.
+//! as frayed cells and this loop unfolds them — build, ask the lookaheads which
+//! of a damaged state's arrivals actually disagree, build again with those kept
+//! apart. The loop stops the first time a round does not improve, which on every
+//! grammar tried is the second one.
 //!
 //! Building canonical LR(1) everywhere would answer both at once and cost an
 //! order of magnitude in states for every grammar, including the ones that need
@@ -52,11 +53,12 @@ const std = @import("std");
 const g = @import("grammar.zig");
 const lalr = @import("lalr.zig");
 const lr0 = @import("lr0.zig");
+pub const inquest = @import("inquest.zig");
 
-/// How many times to unfold before accepting the residue. Each round splits the
-/// states that are still contested, which is the same lane one step further
-/// back; four reaches contexts four gotos apart, and no real grammar has needed
-/// a second.
+/// A ceiling on unfolding, not a schedule: the loop stops as soon as a round
+/// fails to improve, and no grammar tried has improved twice. It stays above one
+/// so that a grammar whose second automaton exposes a seam the first one hid can
+/// still take it.
 const rounds = 4;
 
 /// How far the automaton may grow while unfolding, as a multiple of the
@@ -65,7 +67,13 @@ const rounds = 4;
 /// more automaton than the frayed cells are worth. The loop keeps the best
 /// result it reached, so a refusal here costs accuracy in the report, never
 /// correctness of the table.
-var growth: u32 = 8;
+///
+/// Four, because it is the smallest multiple that fits the cut ruby stops on.
+/// The plan is ordered by value, and a ceiling too low does not shorten the
+/// automaton so much as truncate the plan: at two, ruby's ceiling forces `dare`
+/// to halve twice, the 43-copy separation of `_nonlocal_variable` falls off the
+/// end, and the grammar goes back to stopping at byte 136.
+var growth: u32 = 4;
 
 pub fn setGrowth(n: u32) void {
     growth = n;
@@ -92,37 +100,54 @@ pub const Result = struct {
         r.collection.deinit();
         r.* = undefined;
     }
+
+    /// Whose wall a stopped parse is, decided from this table rather than by
+    /// hand. See `inquest.zig` for the three arguments; a caller that can supply
+    /// the fold chain the token drove gets a proof about that parse rather than a
+    /// suspicion about the table.
+    ///
+    /// Here rather than exported beside `tables` because every caller already has
+    /// the `Result` - the question is about a table, and asking it should not need
+    /// a second import.
+    pub fn whose(r: *const Result, wall: inquest.Wall) inquest.Finding {
+        return inquest.over(&r.tables, wall);
+    }
+
+    /// Re-exported so a caller that can ask the question can also name it. A
+    /// `Result` is the only thing an outside caller is handed, and a method whose
+    /// argument type is unreachable from there is a method nobody can call.
+    pub const Wall = inquest.Wall;
+    pub const Finding = inquest.Finding;
 };
 
 pub fn tables(gpa: std.mem.Allocator, gr: *const g.Grammar) !Result {
-    // Kernels naming the states to split. They are read out of one automaton
-    // and handed to the next, so they are copied here rather than borrowed:
-    // the automaton that named them is often the one being thrown away. The
-    // list only grows — a kernel that was worth splitting stays split, or the
-    // damage it was hiding comes straight back and the loop chases its own tail.
+    // The unfolding is read out of one automaton and handed to the next, so it
+    // is copied into this arena rather than borrowed: the automaton that named a
+    // kernel is usually the one being thrown away.
     var scratch = std.heap.ArenaAllocator.init(gpa);
     defer scratch.deinit();
-    var split: std.ArrayList([]const lr0.Item) = .empty;
+    var plan: Plan = .{ .gpa = gpa, .a = scratch.allocator() };
+    defer plan.deinit();
 
     var best: ?Result = null;
     errdefer if (best) |*b| b.deinit();
     var ceiling: u32 = 1 << 19;
-    // How much of the list this round dares use. Splitting is not additive:
-    // marked states on a common path multiply, so a list that is merely twice
+    // How much of the plan this round dares use. Splitting is not additive:
+    // unfolded states on a common path multiply, so a plan that is merely twice
     // as long can be an automaton fifty times the size. Rather than abandon the
-    // round, drop back to the head of the list — which is ordered by damage —
+    // round, drop back to the head of the plan — which is ordered by damage —
     // and take the unfolding that fits.
-    var dare = split.items.len;
+    var dare = plan.cuts.items.len;
 
     for (0..rounds + 1) |round| {
         var c = while (true) {
             break lr0.build(gpa, gr, .{
-                .split = split.items[0..dare],
+                .split = try plan.flatten(dare),
                 .ceiling = ceiling,
             }) catch |e| switch (e) {
                 error.Unsplittable => {
                     if (trace) {
-                        std.debug.print("round {d}: {d} split is past {d} states\n", .{
+                        std.debug.print("round {d}: {d} unfolded is past {d} states\n", .{
                             round, dare, ceiling,
                         });
                     }
@@ -141,15 +166,12 @@ pub fn tables(gpa: std.mem.Allocator, gr: *const g.Grammar) !Result {
         if (best == null) {
             ceiling = @max(4096, growth * @as(u32, @intCast(round_result.collection.states.len)));
         }
+        const now = try defects(gpa, &round_result);
         if (trace) {
-            const d = try defects(gpa, &round_result);
-            std.debug.print("round {d}: {d} states, {d} split, residual {d}, refused {d}\n", .{
-                round,      round_result.collection.states.len,
-                dare,       d.residual,
-                d.refused,
+            std.debug.print("round {d}: {d} states, {d} unfolded, residual {d}, contested {d}\n", .{
+                round, round_result.collection.states.len, dare, now.residual, now.contested,
             });
         }
-        const now = try defects(gpa, &round_result);
         const better = best == null or now.betterThan(try defects(gpa, &best.?));
 
         if (now.clean()) {
@@ -157,38 +179,132 @@ pub fn tables(gpa: std.mem.Allocator, gr: *const g.Grammar) !Result {
             return round_result;
         }
 
-        // Named from the newest automaton whether or not that automaton is
-        // kept. A round that gained nothing still split *something*, and the
-        // states frayed after it are one context further back than the ones
-        // frayed before — which is the only way a fray two gotos deep is ever
-        // reached. Keeping the best table and continuing the search are
-        // separate decisions.
-        const was = split.items.len;
-        try contested(scratch.allocator(), &split, dare, &round_result);
-        if (split.items.len == was) {
-            if (better) {
-                if (best) |*b| b.deinit();
-                best = round_result;
-            } else round_result.deinit();
+        // A round that gained nothing is where the search stops, because on all
+        // eleven grammars it is also where the search stops gaining: every one
+        // of them improves on the first unfolding and none of them improves on
+        // any later one. What the later rounds do instead is pay - typescript
+        // 9424 states to 27009, bash 7753 to 24572 - for a table that is
+        // discarded, since the best one reached is what gets returned. A
+        // disagreement the lookaheads cannot reach in one step is a disagreement
+        // this shape of search does not reach at all.
+        if (!better) {
+            round_result.deinit();
             break;
         }
-        dare = split.items.len;
 
-        if (better) {
-            if (best) |*b| b.deinit();
-            best = round_result;
-        } else round_result.deinit();
+        const was = plan.cuts.items.len;
+        try unfold(&plan, &round_result);
+        if (best) |*b| b.deinit();
+        best = round_result;
+        if (plan.cuts.items.len == was) break;
+        dare = plan.cuts.items.len;
     }
     return best.?;
 }
 
+/// The unfolding accumulated so far, one cut per kernel, ordered by the damage
+/// that named it — because when the whole plan does not fit under the ceiling,
+/// the head of it is what gets used.
+///
+/// A kernel is cut at most once. A later round may add kernels but never revise
+/// one, which is what keeps the search monotone: every round's automaton is a
+/// refinement of the last, so the seam a cut removed cannot come back and the
+/// loop cannot chase its own tail.
+const Plan = struct {
+    gpa: std.mem.Allocator,
+    /// Kernels and lane arrays live here, since they outlive the automaton that
+    /// named them.
+    a: std.mem.Allocator,
+    cuts: std.ArrayList(Cut) = .empty,
+    /// The same kernels by hash. A plan reaches thousands of cuts and every
+    /// candidate asks whether it is already in one, so the answer has to be a
+    /// lookup rather than a scan comparing item arrays: rust spent forty times
+    /// its own press time in that scan.
+    marks: std.AutoHashMapUnmanaged(u64, void) = .empty,
+
+    const Cut = struct { kernel: []const lr0.Item, lanes: []const lr0.Lane };
+
+    fn deinit(p: *Plan) void {
+        p.cuts.deinit(p.gpa);
+        p.marks.deinit(p.gpa);
+    }
+
+    fn mark(kernel: []const lr0.Item) u64 {
+        return std.hash.Wyhash.hash(0, std.mem.sliceAsBytes(kernel));
+    }
+
+    fn cutting(p: Plan, kernel: []const lr0.Item) bool {
+        return p.marks.contains(mark(kernel));
+    }
+
+    /// Separate `kernel`'s arrivals as `lanes` says, addressing both ends by the
+    /// kernel of the state rather than its id so the cut survives the rebuild
+    /// that acts on it. Arrivals that share a kernel share a lane, taking the
+    /// lower of the two: copies of one predecessor are one context as far as any
+    /// later automaton can tell.
+    fn cut(p: *Plan, c: *const lr0.Collection, kernel: []const lr0.Item, lanes: []const lalr.Seam.Lane) !void {
+        const mine = try p.a.dupe(lr0.Item, kernel);
+        var out: std.ArrayList(lr0.Lane) = .empty;
+        defer out.deinit(p.gpa);
+        var seen: std.AutoHashMapUnmanaged(u64, u32) = .empty;
+        defer seen.deinit(p.gpa);
+        for (lanes) |l| {
+            const from = c.states[l.from].kernel;
+            const slot = try seen.getOrPut(p.gpa, mark(from));
+            if (slot.found_existing) {
+                const at = &out.items[slot.value_ptr.*];
+                at.lane = @min(at.lane, l.lane);
+                continue;
+            }
+            slot.value_ptr.* = @intCast(out.items.len);
+            try out.append(p.gpa, .{
+                .kernel = mine,
+                .from = try p.a.dupe(lr0.Item, from),
+                .lane = l.lane,
+            });
+        }
+        const owned = try p.a.dupe(lr0.Lane, out.items);
+        if (trace) {
+            var copies: u32 = 0;
+            for (owned) |l| copies = @max(copies, l.lane + 1);
+            std.debug.print("  cut {d} items, {d} arrivals -> {d} copies\n", .{
+                mine.len, owned.len, copies,
+            });
+        }
+        try p.cuts.append(p.gpa, .{ .kernel = mine, .lanes = owned });
+        try p.marks.put(p.gpa, mark(mine), {});
+    }
+
+    /// The first `n` cuts as the one flat list `lr0.build` reads.
+    fn flatten(p: Plan, n: usize) ![]const lr0.Lane {
+        var total: usize = 0;
+        for (p.cuts.items[0..n]) |c| total += c.lanes.len;
+        const out = try p.a.alloc(lr0.Lane, total);
+        var at: usize = 0;
+        for (p.cuts.items[0..n]) |c| {
+            @memcpy(out[at..][0..c.lanes.len], c.lanes);
+            at += c.lanes.len;
+        }
+        return out;
+    }
+};
+
 /// What is still wrong with a table that unfolding could fix. Both terms are
-/// merge damage: a reduce/reduce nobody declared, and a cell whose contest only
-/// exists because arrivals were pooled.
+/// merge damage a reader can *see*: a reduce/reduce nobody declared, and a cell
+/// where the invented permission was contested — a read deleted, or two folds
+/// disagreeing.
+///
+/// Deliberately not `lalr.Tables.seams`, though those are named for splitting.
+/// The uncontested seams outnumber the contested ones by two orders of magnitude
+/// (ruby: 27548 cells against 347) and nearly all of them are harmless, so
+/// ranking two automata by that count ranks noise. It was tried: judging by
+/// seams put rust and c on a round whose seam count was lower and whose parse
+/// was worse — rust 1006 bytes to 213. The count that discriminates is the one
+/// that only rises when something was actually taken away.
 fn defects(gpa: std.mem.Allocator, r: *const Result) !Defects {
     var out: Defects = .{ .residual = r.tables.tally().residual.reduce_reduce };
 
-    // By kernel, not by state. Splitting makes copies, and a fray in a state
+    // By kernel, not by state. Splitting makes copies, and damage in a state
     // that was copied five times is five cells describing one defect. Counted
     // per cell, unfolding looks like it made every grammar worse the moment it
     // made any grammar bigger — which is the search comparing two automata by
@@ -199,7 +315,7 @@ fn defects(gpa: std.mem.Allocator, r: *const Result) !Defects {
         const kernel = r.collection.states[f.state].kernel;
         const key = .{ std.hash.Wyhash.hash(0, std.mem.sliceAsBytes(kernel)), f.terminal };
         if ((try seen.getOrPut(gpa, key)).found_existing) continue;
-        out.refused += 1;
+        out.contested += 1;
     }
     return out;
 }
@@ -207,151 +323,175 @@ fn defects(gpa: std.mem.Allocator, r: *const Result) !Defects {
 /// Ordered, not summed. A reduce/reduce residue is a cell the report calls a
 /// defect, so a round that trades one of those for any number of frayed cells
 /// has made the table worse by the measure the table is judged on.
+///
+/// Splitting `read_dropped` out as a third term, ranked above the bulk count, was
+/// tried on the reasoning that a token dying in its own cell is worse news than a
+/// fold taken wrongly - and every wall this package can attribute to the press is
+/// a `read_dropped` cell whose cut the plan already holds. It moved nothing: the
+/// cut does not remove the cell. zig cuts seven kernels, one of them the 396
+/// arrivals behind `struct_initializer`, reaches 1834 states, and reports
+/// contested 2006 either way, so the round is discarded and the grammar returns
+/// `unfolded 0`. Across the thirty it changed one automaton (scala, state 126 to
+/// 144) and no grammar's reach. The reason is a level down, in `Plan.cut`:
+/// arrivals that share a predecessor *kernel* share a lane, so when the
+/// difference lives in the predecessor the partition cannot express it.
 const Defects = struct {
     residual: u32 = 0,
-    refused: u32 = 0,
+    contested: u32 = 0,
 
     fn betterThan(a: Defects, b: Defects) bool {
         if (a.residual != b.residual) return a.residual < b.residual;
-        return a.refused < b.refused;
+        return a.contested < b.contested;
     }
 
     fn clean(d: Defects) bool {
-        return d.residual == 0 and d.refused == 0;
+        return d.residual == 0 and d.contested == 0;
     }
 };
 
-/// The kernels of every state still holding merge damage — and, where splitting
-/// that state has already been tried and failed, the states it is reached from.
+/// Extend the plan with a cut for every damaged state the lookaheads can say
+/// how to separate, best value first.
 ///
-/// Splitting a kernel by predecessor separates the ways in *as the current
-/// automaton counts them*. If the disagreement is older than that — if the two
-/// contexts already converged one goto earlier — every arrival comes from the
-/// same merged predecessor, the split makes one state where there was one
-/// state, and the fray survives untouched. Naming that state again next round
-/// would do the identical nothing forever.
-///
-/// So a fray that survives its own split escalates: the predecessors are named
-/// too, and the disagreement is separated one goto further back. Rounds walk
-/// backwards along the paths that actually disagree, rather than splitting the
-/// whole automaton on the chance that it helps.
-fn contested(
-    gpa: std.mem.Allocator,
-    out: *std.ArrayList([]const lr0.Item),
-    prior: usize,
-    r: *const Result,
-) !void {
-    var back: ?Back = null;
-    defer if (back) |*b| b.deinit(gpa);
+/// A state whose arrivals all draw the same lookahead is left alone, and that is
+/// the whole discipline: splitting it would be a guess that its predecessors
+/// differ where it did not. Guessing was tried - separate the state one arrival
+/// apiece, and failing that its predecessors, walking the disagreement backwards
+/// a goto per round. On all eleven grammars it bought two frayed cells and cost
+/// three to five times the press: bash reached 24572 states against 7753, and
+/// the refusing counts that motivate the whole exercise did not move at all
+/// (ruby 104, bash 380, rust 35, either way). What the lookaheads cannot locate
+/// in one step, a bigger automaton does not find.
+fn unfold(plan: *Plan, r: *const Result) !void {
+    const gpa = plan.gpa;
 
-    // Worst first. The list is a preference order, not a set: when the whole of
-    // it does not fit under the ceiling the head of it is what gets used, so
-    // the states holding the most refused tokens have to be at the front.
-    var damage: std.AutoArrayHashMapUnmanaged(u32, u32) = .empty;
-    defer damage.deinit(gpa);
+    // Whether this table has enough fixable damage to be worth guessing about.
+    // The aim below licenses a cut on a merged lookahead nothing has contested,
+    // on the evidence that one of its terminals is refused *somewhere*. That
+    // evidence is only worth acting on where the refusals are the kind a cut can
+    // reach: `open`, meaning a partition of the arrivals exists. A table whose
+    // refusals are all `alone`, `stuck` or `agreed` cannot be improved by any
+    // partition at any price, so every speculative copy it buys is a tax.
+    //
+    // Measured, per grammar rather than per cell, because per cell there is
+    // nothing to read: go's single refusing cell *is* open, and the contested
+    // cuts remove it either way - splitting spent 902 states on it and go stops
+    // at the same byte with or without them. Ungated, that tax was go +75%
+    // (1919 against 1095), python +82% (2913/1600) and typescript +22%
+    // (11439/9338), all three for byte-identical reach and identical refusing
+    // counts. c, cpp, ruby, rust and bash are untouched by the gate, and they
+    // are the five that buy bytes.
+    //
+    // Five is a calibration, not a law, and the eleven make it auditable: plain
+    // LALR leaves java, javascript, typescript and json at 0 open, go at 1 and
+    // python at 3, then rust 10, cpp 140, c 67, ruby 47, bash 305. The widest
+    // gap in that sample is 3 to 10 and the threshold sits inside it.
+    const speculate = r.tables.floor().open >= 5;
+
+    // Best value first, and the plan is a preference order rather than a set:
+    // when the whole of it does not fit under the ceiling the head of it is what
+    // gets used. Value is cells removed *per copy the cut costs*, because the
+    // two are wildly uncorrelated — ruby's fatal state carries 137 invented
+    // permissions and separates into 43 copies, while hundreds of one-cell seams
+    // separate into 2. Ranking by damage alone spends the whole ceiling on the
+    // expensive end of that list.
+    var worth: std.AutoArrayHashMapUnmanaged(u32, Worth) = .empty;
+    defer worth.deinit(gpa);
     for (r.tables.conflicts) |k| {
         if (k.class != .residual or k.kind != .reduce_reduce) continue;
-        const slot = try damage.getOrPutValue(gpa, k.state, 0);
-        slot.value_ptr.* += 1;
+        const slot = try worth.getOrPutValue(gpa, k.state, .{});
+        slot.value_ptr.removes += 1;
+        slot.value_ptr.contested += 1;
     }
+    // A cell the merge invented *and* something contested is worth more of a
+    // ceiling than the rest: the refusal is in that very cell rather than a few
+    // states along, and it is the only kind a reader can see without knowing
+    // what will be parsed. Their terminals are also the table's own evidence
+    // about which inventions matter, which is what gates the rest.
+    var refused: std.AutoHashMapUnmanaged(u32, void) = .empty;
+    defer refused.deinit(gpa);
     for (r.tables.frayed) |f| {
-        const slot = try damage.getOrPutValue(gpa, f.state, 0);
-        slot.value_ptr.* += @as(u32, if (f.harm == .read_dropped) 4 else 1);
+        const slot = try worth.getOrPutValue(gpa, f.state, .{});
+        slot.value_ptr.removes += if (f.harm == .read_dropped) 8 else 2;
+        slot.value_ptr.contested += 1;
+        if (f.harm == .read_dropped) try refused.put(gpa, f.terminal, {});
     }
-    const states = damage.keys();
-    const counts = damage.values();
+    var lanes: std.AutoHashMapUnmanaged(u32, []const lalr.Seam.Lane) = .empty;
+    defer lanes.deinit(gpa);
+    for (r.tables.seams) |s| {
+        if (s.lanes.len == 0) continue;
+        const slot = try worth.getOrPutValue(gpa, s.state, .{});
+        slot.value_ptr.removes += @intCast(s.over.len);
+        for (s.lanes) |l| slot.value_ptr.copies = @max(slot.value_ptr.copies, l.lane + 1);
+        // An uncontested invention is worth separating only where the table has
+        // said, somewhere, that one of these very terminals gets refused. That
+        // is the difference between ruby's fatal state - whose `\s+` is
+        // uncontested here and refused further along the fold chain - and the
+        // hundreds of states whose merged lookahead nothing anywhere objects to.
+        // Unaimed, every one of those is a copy bought on spec: java 3298 states
+        // and javascript 3144 became 1953 and 2229 under the aim, with identical
+        // refusing counts, and the sweep against HEAD went from 9.5% smaller to
+        // 18.1% smaller.
+        //
+        // A table with nothing refused therefore takes no speculative cuts at
+        // all, which is the same statement read from the other end.
+        //
+        // Somewhere, rather than nearby, and that is not for want of trying to
+        // localise it. Aiming at refusals *forward-reachable* from the seam
+        // reads the automaton's arrows in the wrong direction, since taking an
+        // invented fold pops back to an arrival: ruby fell to 1866 states and
+        // stopped at byte 136 again. Aiming at the fold's own landing state -
+        // pop to the arrival, goto on the folded head - is the relation the
+        // parser actually follows, and it too dropped the one cut that matters
+        // (4403 states, byte 136), while keeping the same 95 refusing cells the
+        // 223-byte table has. Which is the lesson: it is not the count.
+        if (slot.value_ptr.contested == 0) {
+            if (!speculate) continue;
+            for (s.over) |t| {
+                if (!refused.contains(t)) continue;
+                try lanes.put(gpa, s.state, s.lanes);
+                break;
+            }
+        } else try lanes.put(gpa, s.state, s.lanes);
+    }
+    const states = worth.keys();
     const order = try gpa.alloc(u32, states.len);
     defer gpa.free(order);
     for (order, 0..) |*o, i| o.* = @intCast(i);
-    std.mem.sort(u32, order, counts, struct {
-        fn less(c: []const u32, x: u32, y: u32) bool {
-            return c[x] > c[y];
-        }
-    }.less);
+    std.mem.sort(u32, order, worth.values(), Worth.before);
 
-    for (order) |i| try escalate(gpa, out, prior, r, &back, states[i]);
-}
-
-fn escalate(
-    gpa: std.mem.Allocator,
-    out: *std.ArrayList([]const lr0.Item),
-    prior: usize,
-    r: *const Result,
-    back: *?Back,
-    state: u32,
-) !void {
-    const kernel = r.collection.states[state].kernel;
-    const known = try name(gpa, out, kernel);
-    // Splitting this one has already been tried and the fray is still here, so
-    // the contexts had already converged before it: separate them one goto
-    // further back instead of asking for the same state twice.
-    if (!known or indexOf(out.items[0..prior], kernel) == null) return;
-    if (back.* == null) back.* = try Back.of(gpa, &r.collection);
-    for (back.*.?.into(state)) |from| {
-        _ = try name(gpa, out, r.collection.states[from].kernel);
+    for (order) |i| {
+        const separable = lanes.get(states[i]) orelse continue;
+        const kernel = r.collection.states[states[i]].kernel;
+        if (plan.cutting(kernel)) continue;
+        try plan.cut(&r.collection, kernel, separable);
     }
 }
 
-fn indexOf(haystack: []const []const lr0.Item, kernel: []const lr0.Item) ?usize {
-    for (haystack, 0..) |seen, i| {
-        if (std.mem.eql(lr0.Item, seen, kernel)) return i;
-    }
-    return null;
-}
+/// What cutting one state buys and what it costs, so the plan can be ordered by
+/// the ratio rather than by either half of it.
+const Worth = struct {
+    removes: u32 = 0,
+    copies: u32 = 0,
+    /// Cells here that something actually contested, as against invented and
+    /// unremarked. Zero makes the cut speculative - see `unfold`.
+    contested: u32 = 0,
 
-/// Which states lead into each state, bucketed. Built at most once per round,
-/// and only when some fray has survived a split.
-const Back = struct {
-    base: []u32,
-    from: []u32,
-
-    fn of(gpa: std.mem.Allocator, c: *const lr0.Collection) !Back {
-        const n = c.states.len;
-        const base = try gpa.alloc(u32, n + 1);
-        errdefer gpa.free(base);
-        @memset(base, 0);
-        for (c.states) |st| {
-            for (st.edges) |e| base[e.target + 1] += 1;
-        }
-        for (1..n + 1) |i| base[i] += base[i - 1];
-
-        const from = try gpa.alloc(u32, base[n]);
-        errdefer gpa.free(from);
-        const fill = try gpa.alloc(u32, n);
-        defer gpa.free(fill);
-        @memset(fill, 0);
-        for (c.states, 0..) |st, q| {
-            for (st.edges) |e| {
-                from[base[e.target] + fill[e.target]] = @intCast(q);
-                fill[e.target] += 1;
-            }
-        }
-        return .{ .base = base, .from = from };
-    }
-
-    fn into(b: Back, state: u32) []const u32 {
-        return b.from[b.base[state]..b.base[state + 1]];
-    }
-
-    fn deinit(b: *Back, gpa: std.mem.Allocator) void {
-        gpa.free(b.base);
-        gpa.free(b.from);
+    fn before(w: []const Worth, x: u32, y: u32) bool {
+        // Cross-multiplied rather than divided, so the comparison is exact and a
+        // state nobody could separate (zero copies) sorts by damage alone
+        // against the same.
+        const a = w[x];
+        const b = w[y];
+        return a.removes * @max(1, b.copies) > b.removes * @max(1, a.copies);
     }
 };
 
-/// Add a kernel to the list if it is not already there, reporting whether it
-/// already was.
-fn name(
-    gpa: std.mem.Allocator,
-    out: *std.ArrayList([]const lr0.Item),
-    kernel: []const lr0.Item,
-) !bool {
-    if (indexOf(out.items, kernel) != null) return true;
-    try out.append(gpa, try gpa.dupe(lr0.Item, kernel));
-    return false;
-}
-
 const testing = std.testing;
+// Test-only: the front end, for a proof that starts at `grammar.json` rather than
+// at a `Builder` call, and `Forks`, which is the shape a parse consumes a
+// contested cell in.
+const import = @import("import.zig");
+const settle = @import("settle.zig");
 
 /// The smallest grammar that is LR(1) and not LALR(1), and the shape of C++'s
 /// `A<int>;`.
@@ -533,9 +673,171 @@ test "a read that precedence deleted from a context that never contested it" {
     for (out.tables.frayed) |x| try testing.expect(x.harm != .read_dropped);
 }
 
+test "a reading the author ranked below the fold stops being the primary" {
+    // The shape of c's `long total;`: after `a`, the state can read `x` to
+    // finish `S -> a x`, or fold `A -> a` and read it as `S -> A x`. Nothing
+    // static separates them, so the table takes the read - unless the author
+    // ranked that reading below, which is what `prec.dynamic(-1, …)` says.
+    for ([_]i16{ 0, -1 }) |rank| {
+        var b = g.Builder.init(testing.allocator);
+        defer b.deinit();
+        const a = try b.intern("a", "a", .{ .literal = "a" });
+        const x = try b.intern("x", "x", .{ .literal = "x" });
+        const start = try b.intern("$start", "$start", null);
+        const s = try b.intern("S", "S", null);
+        const nt = try b.intern("A", "A", null);
+        try b.addProduction(start, &.{s}, &.{});
+        try b.addProduction(s, &.{ nt, x }, &.{});
+        try b.addProductionDynamic(s, &.{ a, x }, &.{}, rank);
+        try b.addProduction(nt, &.{a}, &.{});
+        var gr = try b.finish("ranked", start, &.{}, &.{&.{ s, nt }});
+        defer gr.deinit();
+
+        var flat = try lr0.build(testing.allocator, &gr, .{});
+        defer flat.deinit();
+        var built = try lalr.build(testing.allocator, &gr, &flat);
+        defer built.deinit();
+
+        // Whichever way it lands, both readings still stand: a rank orders a
+        // fork, it never resolves one.
+        var forked = false;
+        for (built.conflicts) |k| {
+            if (k.terminal != x) continue;
+            forked = true;
+            const led: lalr.Action.Kind = if (rank < 0) .reduce else .shift;
+            try testing.expectEqual(led, built.at(k.state, x).kind);
+            try testing.expectEqual(led, k.chosen.kind);
+            try testing.expectEqual(
+                @as(lalr.Action.Kind, if (rank < 0) .shift else .reduce),
+                k.other.kind,
+            );
+        }
+        try testing.expect(forked);
+    }
+}
+
+/// c's `f(a);`, small enough to press in a millisecond: `f(a)` is a
+/// `parenthesized_declarator` inside a declaration, or a call inside an
+/// expression statement, and the two bodies are the same four tokens. The rank is
+/// a parameter because the proof is the *flip* - see the test.
+fn twoReadingsOfACall(gpa: std.mem.Allocator, rank: i16) !g.Grammar {
+    const src = try std.fmt.allocPrint(gpa,
+        \\{{"name":"decl","rules":{{
+        \\ "statement":{{"type":"CHOICE","members":[
+        \\  {{"type":"SYMBOL","name":"declaration"}},
+        \\  {{"type":"SYMBOL","name":"expression_statement"}}]}},
+        \\ "declaration":{{"type":"SEQ","members":[
+        \\  {{"type":"SYMBOL","name":"declarator"}},{{"type":"STRING","value":";"}}]}},
+        \\ "expression_statement":{{"type":"SEQ","members":[
+        \\  {{"type":"SYMBOL","name":"call"}},{{"type":"STRING","value":";"}}]}},
+        \\ "declarator":{{"type":"PREC_DYNAMIC","value":{d},"content":{{
+        \\  "type":"SEQ","members":[
+        \\   {{"type":"SYMBOL","name":"identifier"}},{{"type":"STRING","value":"("}},
+        \\   {{"type":"SYMBOL","name":"identifier"}},{{"type":"STRING","value":")"}}]}}}},
+        \\ "call":{{"type":"SEQ","members":[
+        \\  {{"type":"SYMBOL","name":"identifier"}},{{"type":"STRING","value":"("}},
+        \\  {{"type":"SYMBOL","name":"identifier"}},{{"type":"STRING","value":")"}}]}},
+        \\ "identifier":{{"type":"PATTERN","value":"[a-z]+"}}}},
+        \\ "conflicts":[["declarator","call"]],"extras":[]}}
+    , .{rank});
+    defer gpa.free(src);
+    return import.treeSitter(gpa, src);
+}
+
+test "a dynamic rank crosses the whole press and is still there for the fork" {
+    // The rank's journey, in one test, because every rung of it has been lost at
+    // least once: the front end reads `prec.dynamic`, `spread` reconciles it over
+    // a body, `fold` carries it through a substitution, `dedup` keys on it,
+    // `settle.keener` orders two tied folds by it, and `Forks` hands the loser to
+    // a parse. Nothing here resolves the cell - a rank orders a fork and must
+    // never remove one - so the assertions are about *which* reading leads and
+    // that both survive.
+    //
+    // The proof is the flip. Press the same grammar twice with the rank negated
+    // and the leading fold has to change sides; if it does not, the order came
+    // from production indices and the rank was decoration. c writes -10 on its
+    // three parenthesized declarators, so the negative run is the real grammar
+    // and the positive one is the control.
+    for ([_]i16{ -10, 10 }) |rank| {
+        var gr = try twoReadingsOfACall(testing.allocator, rank);
+        defer gr.deinit();
+
+        const declarator = gr.productionsOf(named(&gr, "declarator"))[0];
+        const call = gr.productionsOf(named(&gr, "call"))[0];
+        try testing.expectEqual(rank, gr.productions[declarator].dynamic);
+        try testing.expectEqual(@as(i16, 0), gr.productions[call].dynamic);
+
+        var out = try tables(testing.allocator, &gr);
+        defer out.deinit();
+        const semi = named(&gr, ";");
+
+        // Declared, so it is a fork rather than a defect, and it stayed one: no
+        // amount of unfolding separates two readings of the same four tokens.
+        const tally = out.tables.tally();
+        try testing.expectEqual(@as(u32, 0), tally.residual.total());
+        try testing.expect(tally.declared > 0);
+
+        var seen = false;
+        for (out.tables.conflicts) |k| {
+            if (k.terminal != semi) continue;
+            seen = true;
+            try testing.expectEqual(settle.Conflict.Kind.reduce_reduce, k.kind);
+            try testing.expectEqual(settle.Conflict.Class.declared, k.class);
+            // The rank decides, and the table agrees with the record.
+            const ahead = if (rank < 0) call else declarator;
+            const behind = if (rank < 0) declarator else call;
+            try testing.expectEqual(ahead, k.chosen.value);
+            try testing.expectEqual(behind, k.other.value);
+            try testing.expectEqual(k.chosen, out.tables.at(k.state, semi));
+        }
+        try testing.expect(seen);
+
+        // And what a parse is handed at that cell: the reading the table dropped,
+        // as a production index. The rank that ordered the two is *not* in there,
+        // and cannot be recovered from a loaded grammar either - `ProductionRecord`
+        // carries no rank, which `carry_test.zig` holds as the one pending loss.
+        // Until it does, a fork that re-ranks its own versions reads 0 for every
+        // production of every grammar.
+        var forks = try settle.Forks.of(
+            testing.allocator,
+            out.tables.conflicts,
+            out.collection.states.len,
+            out.tables.width,
+        );
+        defer forks.deinit(testing.allocator);
+        try testing.expect(forks.count() > 0);
+        for (out.tables.conflicts) |k| {
+            if (k.terminal != semi) continue;
+            const other = forks.at(k.state, semi) orelse return error.ForkNotOffered;
+            try testing.expectEqual(k.other, other);
+        }
+    }
+}
+
+fn named(gr: *const g.Grammar, name: []const u8) g.Symbol {
+    for (0..gr.symbolCount()) |s| {
+        if (std.mem.eql(u8, gr.nameOf(@intCast(s)), name)) return @intCast(s);
+    }
+    unreachable;
+}
+
 fn eqOf(gr: *const g.Grammar) u32 {
     for (0..gr.terminal_count) |t| {
         if (std.mem.eql(u8, gr.nameOf(@intCast(t)), "=")) return @intCast(t);
     }
     unreachable;
+}
+
+test {
+    // Reached from here rather than from `root`, because what it protects is a
+    // press invariant: the IR this file computes has to arrive at a parse
+    // intact, and the folio is the only place it can quietly not.
+    _ = @import("carry_test.zig");
+    _ = @import("inquest.zig");
+    // The census over a verdict list, which `zig build census` narrows to. Also
+    // inert without its request file, so being in the suite costs a no-op.
+    _ = @import("census_test.zig");
+    // An instrument rather than an assertion: it answers "which cell decided
+    // this" over a real grammar, and returns immediately unless asked.
+    _ = @import("wall_test.zig");
 }
