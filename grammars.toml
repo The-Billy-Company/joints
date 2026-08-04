@@ -27,7 +27,50 @@
 # `commit = "unverified"` and a `note` saying what was found, and `fetch` would
 # refuse it rather than guess at a URL - there are none of those today.
 #
-# Schema: one [[grammar]] table per language, every field required but `note`.
+# A grammar.json is not always the whole pin, which is what `[[grammar.companion]]`
+# is for. ocaml and php are monorepo grammars whose `scanner.c` is a 27- and a
+# 17-line shim over a `common/scanner.h` living one or two directories up,
+# outside the grammar's own tree - so a pin naming one path cannot describe the
+# bytes anyone needs to read, and the lex lane cannot verify what it is
+# implementing. A companion carries a path, a sha256 and a size, and is checked
+# offline exactly as hard as the grammar is; a companion without its hash is
+# refused at load, because a path we fetch and never check is worse than no pin
+# at all - it looks like one.
+#
+# `path` is relative to the REPOSITORY ROOT, the same frame `path` above uses,
+# and that is load-bearing rather than tidy. ocaml's `common/scanner.h` is 14,631
+# bytes and php's file at the identical path is 18,018 different ones. Resolving
+# either against its own scanner's directory - the way an `#include` reads - puts
+# both on one path and hands whichever language was built second the other
+# repository's scanner. `fetch` writes companions to
+# `upstream/grammars/companion/<name>/<path>`, one tree per grammar, so that
+# collision is impossible by construction rather than avoided by ordering.
+#
+# Two sets live here now, and `set` is what tells them apart.
+#
+# `dossier` is the eleven. Every measurement this repo quotes - the sweep, the
+# differential, the reach numbers, the folio sizes in TESTING.md - runs over
+# those and only those, and the package was built against them. Adding one
+# means adding a file to research/joinery/corpus/ too, and that folder's README
+# explains why it has to be the same program again.
+#
+# `breadth` is a held-out set, and the point of it is that it was chosen before
+# any of it was pressed and nothing was tuned against it. Eleven grammars we
+# developed against are a training set, so the claim that this presses any
+# language is a claim no number in the dossier can support. These nineteen are
+# where it holds or stops being a claim. They deliberately do NOT get a corpus
+# file: the dossier's discipline is the same program in every language, which is
+# what makes those eleven numbers comparable, and it is the wrong instrument
+# here - a held-out grammar is asked about a real file from a real project
+# instead. Nothing tuned against a breadth grammar should ever be tuned against
+# it; the moment one is, it has stopped being held out and belongs in the other
+# set.
+#
+# `load()` defaults to `dossier` for exactly that reason, so widening this file
+# cannot widen what an existing sweep measures.
+#
+# Schema: one [[grammar]] table per language, every field required but `note`,
+# `fixture` and `set`.
 #
 #   name    the file `fetch` writes - `<name>.json` under upstream/grammars/
 #   repo    GitHub `owner/repo`
@@ -41,9 +84,7 @@
 #           hashes it against `sha256` and fails naming both paths on a drift.
 #           Only for a grammar something in the build graph has to reach without
 #           a fetch - one, today.
-#
-# Adding a grammar means adding a file to research/joinery/corpus/ too, and
-# that folder's README explains why it has to be the same program again.
+#   set     which of the two above; absent means `dossier`.
 
 [[grammar]]
 name = "bash"
@@ -146,3 +187,236 @@ sha256 = "99dc4b95424dff47c89acb50d5d3f25b081b07eaff43994b7881dccd4186b214"
 size = 281518
 date = "2025-01-30"
 note = "one repo holds typescript and tsx; this is the typescript dialect"
+
+  [[grammar.companion]]
+  path = "typescript/src/scanner.c"
+  sha256 = "9125013b42cb888379d9be909f1d73dfb75a37626c2cdbf4122718a2b431a6d3"
+  size = 573
+  note = "a shim over the header below; typescript and tsx share it"
+
+  [[grammar.companion]]
+  path = "common/scanner.h"
+  sha256 = "da66ef2bd14a3f7ea743e25ba068c6c9aae2c3509db200ff80c4a0e6116e564c"
+  size = 10097
+  note = "10,097 bytes where php's file at this same path is 18,018"
+
+
+# ---------------------------------------------------------------------------
+# The held-out set. Chosen before any of it was pressed; see the note above.
+# ---------------------------------------------------------------------------
+
+[[grammar]]
+name = "css"
+repo = "tree-sitter/tree-sitter-css"
+commit = "dda5cfc5722c429eaba1c910ca32c2c0c5bb1a3f"
+path = "src/grammar.json"
+sha256 = "1a170e0c93009b5b592a611c663d4af4d625ddb97ebff1550c3e7f32fd045292"
+size = 55833
+date = "2025-09-28"
+set = "breadth"
+
+[[grammar]]
+name = "elixir"
+repo = "elixir-lang/tree-sitter-elixir"
+commit = "4b0c7118760af58a2e7081bbc8396e136f820b37"
+path = "src/grammar.json"
+sha256 = "320c4af03d6d34085c744ac9923d9b963848bd639a97c5f04401472931b059c4"
+size = 170077
+date = "2026-07-20"
+set = "breadth"
+
+[[grammar]]
+name = "embedded-template"
+repo = "tree-sitter/tree-sitter-embedded-template"
+commit = "3499d85f0a0d937c507a4a65368f2f63772786e1"
+path = "src/grammar.json"
+sha256 = "2e256b623d0aafae535c082460554b50da89dca71713964587bb66d73c7f9a22"
+size = 5025
+date = "2025-08-31"
+set = "breadth"
+
+[[grammar]]
+name = "haskell"
+repo = "tree-sitter/tree-sitter-haskell"
+commit = "0975ef72fc3c47b530309ca93937d7d143523628"
+path = "src/grammar.json"
+sha256 = "509bd0c498d149234296d0cf6a5e93de3320679371ead4ce97d1c266b3102c3e"
+size = 298399
+date = "2025-01-31"
+set = "breadth"
+
+[[grammar]]
+name = "html"
+repo = "tree-sitter/tree-sitter-html"
+commit = "73a3947324f6efddf9e17c0ea58d454843590cc0"
+path = "src/grammar.json"
+sha256 = "242c55ee874835b2d47288859878a0cf5dba50ffaae861a81d19fef6d010e227"
+size = 10208
+date = "2025-09-15"
+set = "breadth"
+
+[[grammar]]
+name = "julia"
+repo = "tree-sitter/tree-sitter-julia"
+commit = "e0f9dcd180fdcfcfa8d79a3531e11d99e79321d3"
+path = "src/grammar.json"
+sha256 = "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1"
+size = 185357
+date = "2025-11-08"
+set = "breadth"
+
+[[grammar]]
+name = "kotlin"
+repo = "fwcd/tree-sitter-kotlin"
+commit = "1852ea17b7f60fb3f9d84e0b1555d56b46b39fb1"
+path = "src/grammar.json"
+sha256 = "56082f33c3a77b410c37e351e6668cf354f87fa3f6ef47a070018b9e8a2681ed"
+size = 171146
+date = "2026-08-01"
+set = "breadth"
+
+[[grammar]]
+name = "latex"
+repo = "latex-lsp/tree-sitter-latex"
+commit = "fa8df448fc2c0192a8c2f8cfc97de53cb2b4ecb9"
+path = "src/grammar.json"
+sha256 = "617ee120cda4772e0d0998e21e7044f29c460a5f64e1c86c915e604a22e43616"
+size = 172556
+date = "2026-08-01"
+set = "breadth"
+
+[[grammar]]
+name = "lua"
+repo = "tree-sitter-grammars/tree-sitter-lua"
+commit = "10fe0054734eec83049514ea2e718b2a56acd0c9"
+path = "src/grammar.json"
+sha256 = "016172714e10e7b5a3b25433cfd2a9626c983c6ede228fcc8301537da516e462"
+size = 84462
+date = "2026-02-26"
+set = "breadth"
+
+[[grammar]]
+name = "markdown"
+repo = "tree-sitter-grammars/tree-sitter-markdown"
+commit = "a0a00f817d02412bd92c54d316f164d827b57b5c"
+path = "tree-sitter-markdown/src/grammar.json"
+sha256 = "a96d7cd418f0af885bdee8cbdef098879c1542e8895fe4f977e248b630011ce2"
+size = 159555
+date = "2026-07-19"
+set = "breadth"
+
+[[grammar]]
+name = "ocaml"
+repo = "tree-sitter/tree-sitter-ocaml"
+commit = "b40028552b03e291ac43b59b51908d56effa597b"
+path = "grammars/ocaml/src/grammar.json"
+sha256 = "618293e3e7924b25c23f1827af7dd604807cc8da17c31a06a2f446d2f260d541"
+size = 285677
+date = "2026-08-02"
+set = "breadth"
+
+  [[grammar.companion]]
+  path = "grammars/ocaml/src/scanner.c"
+  sha256 = "fa23af8a5db2aaaf7041b60f7e762c23f1b5950388a592e2bc4dcffaffa75f5b"
+  size = 992
+  note = "a 27-line shim; every rule it implements is in the header below"
+
+  [[grammar.companion]]
+  path = "common/scanner.h"
+  sha256 = "e4934793536f53c076b24b16de2f6a48a125c632e6cce58c80c02d6d65f8dbed"
+  size = 14631
+  note = "shared by the repo's four dialects, and NOT php's file of the same name"
+
+
+[[grammar]]
+name = "php"
+repo = "tree-sitter/tree-sitter-php"
+commit = "3fda2fb9577166c6399834917f9844f30370beea"
+path = "php/src/grammar.json"
+sha256 = "4dd996a822c6d9130db3541104169cc45db90f03ec10627dd1a1aa3197916e7a"
+size = 233111
+date = "2026-07-20"
+set = "breadth"
+
+  [[grammar.companion]]
+  path = "php/src/scanner.c"
+  sha256 = "58c92cafe4ebda509c3ad3864fa6fc0e9877bbac26e17a03d23ea2101c291ad5"
+  size = 595
+  note = "a 17-line shim over the header below"
+
+  [[grammar.companion]]
+  path = "common/scanner.h"
+  sha256 = "b882662c76677999dc22c4fe0146626282170171dcca2af5b6a38e1c1829352c"
+  size = 18018
+  note = "18,018 bytes where ocaml's file at this same path is 14,631"
+
+
+[[grammar]]
+name = "scala"
+repo = "tree-sitter/tree-sitter-scala"
+commit = "0e0ce5203752a263f04b9da0359f9b2b20d1b829"
+path = "src/grammar.json"
+sha256 = "0040c891e6f062e929a7c1b596a306c8a7661d9f868a6ccdd9963381482d3589"
+size = 357877
+date = "2026-08-03"
+set = "breadth"
+
+[[grammar]]
+name = "sql"
+repo = "DerekStride/tree-sitter-sql"
+commit = "851e9cb257ba7c66cc8c14214a31c44d2f1e954e"
+path = "src/grammar.json"
+sha256 = "f00d71ceca19d7bb0372fa7ac0b65886613d9fa4d59d0ac1c533620195fc43d3"
+size = 580028
+date = "2026-02-22"
+set = "breadth"
+
+[[grammar]]
+name = "swift"
+repo = "alex-pinkus/tree-sitter-swift"
+commit = "8d02b7ff390a17a43ce90c4e987c49315cfc4be6"
+path = "src/grammar.json"
+sha256 = "081ee7a9601afc12869659d407729a4024e5c8e1c21cc46aed3387502d430156"
+size = 269850
+date = "2026-08-02"
+set = "breadth"
+
+[[grammar]]
+name = "toml"
+repo = "tree-sitter-grammars/tree-sitter-toml"
+commit = "64b56832c2cffe41758f28e05c756a3a98d16f41"
+path = "src/grammar.json"
+sha256 = "fe710cf103c58a843cadba4bc64f6bef1306c90421616ebce56c9120871e28db"
+size = 19209
+date = "2024-12-03"
+set = "breadth"
+
+[[grammar]]
+name = "verilog"
+repo = "tree-sitter/tree-sitter-verilog"
+commit = "227d277b6a1a5e2bf818d6206935722a7503de08"
+path = "src/grammar.json"
+sha256 = "d6651a19d973281d90981eb8f3fa6b750070e8c671be390c4861fcdccced1227"
+size = 772230
+date = "2024-11-11"
+set = "breadth"
+
+[[grammar]]
+name = "yaml"
+repo = "tree-sitter-grammars/tree-sitter-yaml"
+commit = "a1c4812a73ec5e089de8e441fdea3a921e8d5079"
+path = "src/grammar.json"
+sha256 = "a2c03fcc9bd9b7843780854f5e8264c9d465a34172b530d9511d6e89c5d2630e"
+size = 157109
+date = "2026-05-22"
+set = "breadth"
+
+[[grammar]]
+name = "zig"
+repo = "tree-sitter-grammars/tree-sitter-zig"
+commit = "6479aa13f32f701c383083d8b28360ebd682fb7d"
+path = "src/grammar.json"
+sha256 = "c8c9c3e2e60f9b7f6ab149ff106dcaee7ab94ce5a5d1fd5ff724fbb9a403cb5a"
+size = 158029
+date = "2025-09-10"
+set = "breadth"

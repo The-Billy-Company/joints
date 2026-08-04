@@ -41,6 +41,9 @@ error. That is the CLI's family, so a shell script can treat both the same way.
 
 from __future__ import annotations
 
+import atexit
+import contextlib
+import fcntl
 import hashlib
 import json
 import os
@@ -48,14 +51,18 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, NamedTuple
 
 from grammars import digest, load
 from rung1 import pairs
+from stamp import Outcome, take
+from stamp import ask as ask_one
 
 ROOT = Path(__file__).resolve().parent.parent
 GRAMMARS = ROOT / "upstream" / "grammars"
@@ -63,7 +70,46 @@ CORPUS = ROOT / "research" / "joinery" / "corpus"
 WORK = ROOT / ".local" / "differential"
 CLI = WORK / "cli"
 TS = CLI / "node_modules" / ".bin" / "tree-sitter"
+# Ours, not `~/.cache/tree-sitter/lib`, which every tool on the machine shares
+# and keys by language name alone; see `cli()`.
+# A lane's own corner of the workspace. Keyed by the *calling shell* rather than
+# by this process, so running the tool twice in one terminal reuses everything
+# it built the first time, while two lanes in two terminals share nothing
+# writable. `OUTLINER_LANE` names it explicitly where a caller knows better.
+#
+# What goes in here is what a second writer corrupts. `TREE_SITTER_LIBDIR` moves
+# the compiled libraries and *nothing else*: the CLI also keeps a lockfile per
+# language under `$XDG_CACHE_HOME/tree-sitter/lock/` and deletes it on the way
+# out, so two processes sharing that directory have one removing the file the
+# other is opening - the loser reports `No such file or directory` on a language
+# sitting right there. And the libraries themselves cannot be shared either,
+# because the CLI recompiles on its own criterion, not one this side can
+# predict; asked to do it twice at once it says so plainly: `Are you running
+# multiple processes building to the same output location?`.
+#
+# What stays shared is `lang/`, where the expensive work is - `tree-sitter
+# generate` on c and cpp is minutes - and that one is guarded by `alone()`
+# instead, because it is worth queueing for. Compiling a `.dylib` is seconds, so
+# owning one outright is cheaper than any protocol for sharing it.
+# `getppid()` of an orphan is 1, and pid 1 is both immortal and shared - so
+# every orphaned run would pile into one seat that is never reaped, which is the
+# collision this whole mechanism exists to stop. A run with no living caller
+# owns itself instead.
+SEAT = WORK / "seat" / os.environ.get(
+    "OUTLINER_LANE", str(os.getppid() if os.getppid() > 1 else os.getpid()))
+LIB = SEAT / "lib"
 BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
+# How long a lane will wait for another lane's compile of the same language
+# before refusing. Long enough for the slowest grammar in the set to generate
+# and compile from cold; short enough that a crashed holder is not forever.
+PATIENCE = float(os.environ.get("OUTLINER_ORACLE_PATIENCE", "300"))
+# The token a contended skip carries, so the summary can tell a fact about the
+# grammar apart from a fact about how many lanes were running.
+CONTENDED = "another lane holds"
+# Skip reasons that are facts about the machine rather than about a grammar.
+FRAGILE = (CONTENDED, "dlopen", "same output location", "No such file or directory",
+           "printer says", "not found after build attempt")
+WAITED: set[str] = set()  # languages this run had to queue behind
 
 USAGE = """\
 differential.py - is outliner's tree the tree tree-sitter builds?
@@ -72,7 +118,8 @@ usage:
   differential.py run       compare every case (offline; skips if no oracle)
   differential.py show      both trees for one case, side by side
   differential.py list      the cases, and where each one's grammar comes from
-  differential.py oracle    is the tree-sitter CLI here, and which version
+  differential.py spans     every reader of their stdout, across every span shape
+  differential.py sandbox   does every scanner include resolve inside its own grammar\n  differential.py scanners  lay every external scanner down, pinned bytes where pinned\n  differential.py oracle    is the tree-sitter CLI here, and which version
   differential.py install   put that CLI under .local/differential (the network verb)
 
 flags:
@@ -259,7 +306,7 @@ class Case(NamedTuple):
     grammar: Path  # the bytes both sides read
     lang: Path  # where the oracle's parser is generated
     source: Path
-    origin: str  # corpus · case · probe
+    origin: str  # corpus · case · probe · span · held-out
 
 
 class Report(NamedTuple):
@@ -335,13 +382,32 @@ def ours_tree(text: str) -> list[Node]:
     return roots
 
 
-def cst_tree(text: str, at: Lines) -> tuple[Node, bool]:
+def cst_tree(text: str, at: Lines, shift: int = 1) -> tuple[Node, bool]:
     """`tree-sitter parse --cst`. The only format that gives an anonymous node's
     *type* rather than its text, which is exactly what an alias to a string
-    changes. Its indentation is two spaces a level, except that a node the CLI
-    marks with a bullet is printed one column left of where it belongs - so a
-    tree with any error in it is reported as untrustworthy and cross-checking
-    against the XML is what decides whether to believe this at all."""
+    changes. Its indentation is two spaces a level, except around the bullet the
+    CLI marks a node carrying an error with, which is why a tree with any error
+    in it is reported as untrustworthy and cross-checking against the XML is
+    what decides whether to believe this at all.
+
+    `shift` is how many columns a bullet stands to the left of the column its
+    unbulleted siblings put their name in, and the honest answer is that it
+    depends on the render: measured over real output it is 1 in some trees and 0
+    in others, and no function of depth, row width or parent I could find
+    predicts which. So this does not guess. The caller reads the tree both ways
+    and keeps whichever reconciles with the XML, which is sound because the XML
+    nests unambiguously and already has to agree before any tree is used.
+
+    A leaf short enough to sit on one line carries its text on its own row, as
+    `identifier `a``. A leaf whose text crosses a newline cannot, so the CLI
+    prints the name alone and follows it with one backtick-quoted piece of that
+    text per line the token covers - blank lines included, `\\r\\n` and an inner
+    backtick escaped, always exactly one output row each. Those pieces are the
+    token the line above already named, so they are text and not nodes, and the
+    leading backtick is what says so: an anonymous node is always double quoted,
+    even when it is itself a backtick. Their ranges are worth nothing anyway,
+    since a continuation row is printed with the *parent's* start column and can
+    read as ending before it began."""
     roots: list[Node] = []
     stack: list[tuple[int, Node]] = []
     hurt = False
@@ -350,8 +416,15 @@ def cst_tree(text: str, at: Lines) -> tuple[Node, bool]:
         if not m:
             continue  # the trailing summary line, or a token's own newline
         col, body = m.start(6), m[6]
-        if body.startswith("\u2022"):
-            col, body, hurt = col + 1, body[1:], True
+        # The bullet sits immediately before the *name*, so after the `field: `
+        # prefix when the node has one. Looking for it only at the start of the
+        # body left every bulleted node that also carries a field uncorrected,
+        # reading a level too shallow and adopting the siblings that followed it.
+        cut = 0 if (mf := BODY.match(body))[1] is None else len(mf[1]) + 2
+        if body[cut:].startswith("\u2022"):
+            col, body, hurt = col + shift, body[:cut] + body[cut + 1:], True
+        if body.startswith("`"):
+            continue
         missing = body.startswith("MISSING: ")
         if missing:
             col, body, hurt = col + len("MISSING: "), body[len("MISSING: "):], True
@@ -387,8 +460,41 @@ def xml_tree(text: str, at: Lines) -> Node:
     return build(source[0])
 
 
+def reconciled(text: str, at: Lines, theirs: Node) -> tuple[Node | None, bool]:
+    """The CST, read the way the XML confirms. Which column a bullet stands in
+    is not constant across renders, so rather than guess we read the tree under
+    each reading and keep the one whose named shape the XML agrees with. That is
+    not curve-fitting: agreement with the XML was always the condition for using
+    the tree at all, so this only widens which trees can meet it. `None` when
+    neither reading does, which stays a refusal rather than a comparison against
+    a shape nobody can confirm."""
+    first: ValueError | None = None
+    hurt = False
+    for shift in (1, 0):
+        try:
+            full, hurt = cst_tree(text, at, shift)
+        except ValueError as e:
+            first = first or e
+            continue
+        if same(full.named_only(), theirs):
+            return full, hurt
+    if first is not None:
+        raise first
+    return None, hurt
+
+
 QPATTERN = re.compile(r"^ *pattern: (\d+)\s*$")
-QCAPTURE = re.compile(r"^ *capture: \d+ - (\w+), start: \((\d+), (\d+)\), end: \((\d+), (\d+)\)")
+# Their query printer has two forms for one capture and switches on the span
+# alone: a capture with `end.row > start.row` loses both its index and its
+# `text:` tail, and everything else keeps them. Probed across spans of one, two,
+# three, four and twenty rows, a blank row inside, a 300-column single row, a
+# backtick in the text, and a node ending at column zero of the next row - that
+# last one has no characters on its final row and still takes the short form, so
+# the switch is the row numbers and not the bytes. Demanding the index is what
+# dropped every multi-line parent on the floor, and a dropped parent is a field
+# never grafted; see `.local/queryprobe.py`.
+QCAPTURE = re.compile(
+    r"^ *capture: (?:\d+ - )?(\w+), start: \((\d+), (\d+)\), end: \((\d+), (\d+)\)")
 
 
 def declared(doc: dict[str, Any], kind: str, key: str) -> list[str]:
@@ -421,11 +527,18 @@ def graft_fields(root: Node, lang: Path, source: Path, names: list[str], at: Lin
     printed field that the query contradicts raises rather than being
     overwritten; the two faces of one runtime must agree or neither is usable.
     """
-    q = WORK / "query.scm"
+    # Per lane, not per workspace. This file was `WORK / "query.scm"`, one
+    # mutable path every concurrent measurement wrote its own pattern list to -
+    # and the reader below maps a pattern *ordinal* back to a name through the
+    # local `names`, so reading another lane's file does not fail, it silently
+    # renames every field. That is the shape of "the printer says value, its
+    # query says declaration": not a disagreement between two faces of one
+    # library, but this process reading an answer to somebody else's question.
+    q = SEAT / "query.scm"
+    SEAT.mkdir(parents=True, exist_ok=True)
     while names:
         q.write_text("".join(f"((_ {n}: _ @child) @parent)\n" for n in names), encoding="utf-8")
-        got = subprocess.run([str(TS), "query", "-p", str(lang), str(q), str(source)],
-                             capture_output=True, text=True, cwd=WORK)
+        got = cli([str(TS), "query", "-p", str(lang), str(q), str(source)], WORK)
         if got.returncode == 0:
             break
         # A field the grammar declares but the compiled language does not have
@@ -434,6 +547,14 @@ def graft_fields(root: Node, lang: Path, source: Path, names: list[str], at: Lin
         gone = re.search(r'Invalid field name "(\w+)"', got.stderr)
         if not gone:
             raise ValueError(f"tree-sitter query: {gripe(got.stderr)}")
+        if gone[1] not in names:
+            # The CLI is complaining about a field we did not ask about, so it
+            # read a different file than the one just written and dropping the
+            # name would not shrink anything. This loop used to spin on that
+            # forever, silently, which is how a shared `query.scm` presented as
+            # a hang rather than as a fault.
+            raise ValueError(f"tree-sitter query: rejected {gone[1]!r}, which this "
+                             "query never asked for; the query file was not ours")
         names = [n for n in names if n != gone[1]]
     else:
         return
@@ -558,10 +679,28 @@ def compare(ours: Node, theirs: Node, where: str, out: list[Finding], judge: Jud
 
 # ------------------------------------------------------------------- both sides
 
+def cli(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    """Every call into their CLI, with its compiled-language cache pinned here.
+
+    Left alone, the CLI compiles a grammar into `~/.cache/tree-sitter/lib/` under
+    the *language name* - so this run's pinned `javascript` and any other tool's
+    `javascript` are one file. One measurement is three separate invocations
+    (`-x`, then `--cst`, then `query`), and a rebuild landing between two of them
+    swaps the language out underneath a comparison that has already started.
+    `graft_fields` caught exactly that once, as its two faces disagreeing, which
+    is why it refuses rather than grafting. Own the directory and the race is
+    gone rather than rare.
+    """
+    env = {**os.environ, "TREE_SITTER_LIBDIR": str(LIB), "XDG_CACHE_HOME": str(SEAT)}
+    LIB.mkdir(parents=True, exist_ok=True)
+    SEAT.mkdir(parents=True, exist_ok=True)
+    return subprocess.run(args, capture_output=True, text=True, cwd=cwd, env=env)
+
+
 def oracle_ready() -> str:
     if not TS.exists():
         return ""
-    got = subprocess.run([str(TS), "--version"], capture_output=True, text=True)
+    got = cli([str(TS), "--version"], WORK)
     return got.stdout.strip() if got.returncode == 0 else ""
 
 
@@ -576,14 +715,70 @@ def gripe(stderr: str) -> str:
     return lines[-1] if lines else "no reason given"
 
 
-def oracle_run(lang: Path, source: Path, *flags: str) -> str:
-    got = subprocess.run([str(TS), "parse", "-p", str(lang), *flags, str(source)],
-                         capture_output=True, text=True, cwd=WORK)
+def oracle_full(lang: Path, source: Path, *flags: str) -> tuple[str, str]:
+    """The oracle's tree, and everything it said around it.
+
+    Both halves, because they carry different things: an `ERROR` is a node in
+    the tree, while a `MISSING` is announced on the summary line and appears
+    nowhere in it. A caller counting repairs needs the pair, and a caller
+    counting nodes wants `oracle_run` below.
+    """
+    got = cli([str(TS), "parse", "-p", str(lang), *flags, str(source)], WORK)
     # Exit 1 means the file has an ERROR in it, which is an answer, not a
     # refusal - so what separates the two is whether a tree came back at all.
     if not got.stdout.strip():
         raise ValueError(gripe(got.stderr))
-    return got.stdout
+    return got.stdout, got.stderr
+
+
+def oracle_run(lang: Path, source: Path, *flags: str) -> str:
+    return oracle_full(lang, source, *flags)[0]
+
+
+_HOMES: dict[str, str] = {}
+
+
+def oracle_root(name: str, work: Path | None = None) -> Path:
+    """One grammar's whole sandbox. Nothing it includes may resolve above here."""
+    return (work if work is not None else WORK) / "lang" / name
+
+
+def named(home: Path) -> str:
+    """Back from a language directory to the grammar's name.
+
+    The directory under `lang/` rather than the leaf, since a monorepo grammar's
+    home is nested and its leaf is not always its name - `lang/ocaml/grammars/
+    ocaml` and `lang/ocaml/grammars/interface` are both ocaml's.
+    """
+    parts = home.parts
+    return parts[parts.index("lang") + 1] if "lang" in parts else home.name
+
+
+def oracle_home(name: str, work: Path | None = None) -> Path:
+    """The directory the oracle CLI is handed for one grammar.
+
+    Usually `lang/<name>/`, holding `src/grammar.json` - and for 27 of the 30
+    that is exactly what this returns. A monorepo grammar gets the *repository's
+    own depth* reproduced under its own root: ocaml at
+    `lang/ocaml/grammars/ocaml/`, php at `lang/php/php/`, typescript at
+    `lang/typescript/typescript/`.
+
+    The depth is not decoration. Those three scanners are shims whose whole body
+    is `#include "../../common/scanner.h"` (ocaml climbs one further), written to
+    resolve inside the repository they came from. Laid out flat, php's climb and
+    typescript's climb land on the *same* `lang/common/scanner.h` - and those two
+    files are 18,018 and 10,097 different bytes, so whichever was written second
+    silently owned both oracles. Reproducing the repository depth under a
+    per-grammar root makes the collision impossible instead of a matter of whose
+    include happened to be a level deeper.
+    """
+    work = work if work is not None else WORK
+    if name not in _HOMES:
+        pin = next((p for p in load("all") if p.name == name), None)
+        # `<dir>/src/grammar.json` -> `<dir>`; a bare `src/grammar.json` -> ``.
+        deep = pin.path.rsplit("/src/", 1)[0] if pin and "/src/" in pin.path else ""
+        _HOMES[name] = deep
+    return oracle_root(name, work) / _HOMES[name]
 
 
 def oracle_build(lang: Path, want: Path) -> None:
@@ -596,8 +791,7 @@ def oracle_build(lang: Path, want: Path) -> None:
         (lang / "src" / "parser.c").unlink(missing_ok=True)
     if (lang / "src" / "parser.c").exists():
         return
-    got = subprocess.run([str(TS), "generate", "src/grammar.json"],
-                         capture_output=True, text=True, cwd=lang)
+    got = cli([str(TS), "generate", "src/grammar.json"], lang)
     if got.returncode != 0:
         raise ValueError(f"tree-sitter generate: {gripe(got.stderr)}")
 
@@ -635,7 +829,43 @@ def beside(url: str, home: Path, blob: bytes) -> int:
     return bad
 
 
-def fetch_scanners() -> int:
+def lay(pin: Any, work: Path | None = None) -> int:
+    """A monorepo grammar's scanner, from the verified pins rather than a URL.
+
+    Offline, and byte-checked on the way in: `grammars.py fetch` has already put
+    these under `upstream/grammars/companion/<name>/` at their repo-relative
+    paths and `verify` hashes them there. Laying them down at the *same*
+    repo-relative paths under this grammar's own oracle root is what makes a
+    shim's `#include "../../common/scanner.h"` reach its own repository's header
+    - the pin frame and the oracle layout are deliberately one frame.
+
+    Contrast `beside()` below, which derives a URL by gluing the include's
+    relative path onto the grammar's own. That reads the *include* correctly and
+    the *destination* not at all: php and typescript both climb two levels, so
+    both landed on one shared file, and the second writer owned both oracles.
+    """
+    from grammars import DEST, digest as sha, kin
+    root, bad = oracle_root(pin.name, work), 0
+    for mate in pin.companion:
+        have = kin(pin, DEST) / mate.path
+        if not have.exists():
+            print(f"  none {pin.name:<11} {mate.path}: not fetched; run grammars.py fetch")
+            bad += 1
+            continue
+        if sha(have) != mate.sha256:
+            print(f" DRIFT {pin.name:<11} {mate.path}: on disk {sha(have)[:16]}, "
+                  f"pinned {mate.sha256[:16]}")
+            bad += 1
+            continue
+        target = root / mate.path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(have, target)
+        (oracle_home(pin.name, work) / "src" / "parser.c").unlink(missing_ok=True)
+        print(f" wrote {pin.name:<11} {mate.path:<32} {mate.sha256[:16]} {mate.size} bytes")
+    return 1 if bad else 0
+
+
+def fetch_scanners(which: str = "dossier", work: Path | None = None) -> int:
     """The external scanners, from the same commit as the grammar beside them.
 
     Seven of the eleven pins are for grammars whose lexer is partly hand-written
@@ -644,16 +874,20 @@ def fetch_scanners() -> int:
     `grammars.toml` pins a repo, a commit and a path; the scanner is the file
     next to that path in that same commit, which is the same pin and not a new
     one. Its sha256 is printed so it can be written into the manifest by
-    whoever owns that file.
+    whoever owns that file. A grammar whose scanner is *not* beside its grammar
+    goes through `lay()` instead, off pinned bytes.
     """
     bad = 0
-    for pin in load():
+    for pin in load(which):
         doc = json.loads((GRAMMARS / f"{pin.name}.json").read_text(encoding="utf-8")) \
             if (GRAMMARS / f"{pin.name}.json").exists() else {}
         if not doc.get("externals") or not pin.reproducible:
             continue
-        home = WORK / "lang" / pin.name / "src"
+        home = oracle_home(pin.name, work) / "src"
         home.mkdir(parents=True, exist_ok=True)
+        if pin.companion:
+            bad += lay(pin, work)
+            continue
         for leaf in ("scanner.c", "scanner.cc"):
             url = pin.url[: -len(pin.path)] + pin.path.rsplit("/", 1)[0] + "/" + leaf
             try:
@@ -673,28 +907,90 @@ def fetch_scanners() -> int:
     return 1 if bad else 0
 
 
-def ours_run(case: Case) -> tuple[list[Node], str]:
-    got = subprocess.run([str(BIN), "parse", str(case.grammar), str(case.source), "--ranges", "--all"],
-                         capture_output=True, text=True, cwd=ROOT)
-    if got.returncode == 2:
-        raise ValueError(f"outliner refused: {got.stderr.strip().splitlines()[-1:] or ['?']}")
-    stop = next((ln.split(": ", 2)[2] for ln in reversed(got.stderr.splitlines())
-                 if ln.startswith("outliner: ") and ln.count(": ") >= 2), "no verdict")
-    return ours_tree(got.stdout), stop
+def sandboxed(work: Path | None = None) -> int:
+    """Does every `#include` a scanner writes resolve inside its own grammar?
+
+    The check that would have caught the collision the day it was written, and
+    the one that catches the next monorepo grammar. It reads the scanners on
+    disk rather than the pins, so it judges what the compiler will actually
+    open. A target that resolves above `lang/<name>/` is a file two grammars can
+    reach, and two grammars reaching one mutable path is the whole fault.
+    """
+    work = work if work is not None else WORK
+    bad = 0
+    for sc in sorted((work / "lang").rglob("src/scanner.c*")):
+        name = sc.relative_to(work / "lang").parts[0]
+        root = oracle_root(name, work).resolve()
+        for hit in INCLUDE.findall(sc.read_bytes()):
+            want = hit.decode()
+            if want.startswith("tree_sitter/"):
+                continue
+            target = (sc.parent / want).resolve()
+            if not target.is_relative_to(root):
+                print(f"  ESCAPES {name:<12} {want:<30} -> {target}")
+                bad += 1
+            elif not target.exists():
+                print(f"  MISSING {name:<12} {want:<30} -> {here(target)}")
+                bad += 1
+    print(f"includes: {'every one resolves inside its own grammar' if not bad else f'{bad} bad'}")
+    return 1 if bad else 0
+
+
+def ours_run(case: Case) -> tuple[list[Node], Outcome]:
+    end = ask_one(BIN, case.grammar, case.source, tree=True)
+    if end.code == 2:
+        raise ValueError(f"outliner refused: {end.verdict}")
+    return ours_tree(end.tree), end
 
 
 def cases(pins: set[str]) -> list[Case]:
-    out = [Case(f"corpus/{g}", GRAMMARS / f"{g}.json", WORK / "lang" / g, CORPUS / f, "corpus")
+    out = [Case(f"corpus/{g}", GRAMMARS / f"{g}.json", oracle_home(g), CORPUS / f, "corpus")
            for g, f in pairs() if g in pins]
     for name in SOURCES:
         lang = name.split("/", 1)[0]
         if lang not in pins:
             continue
         out.append(Case(f"{lang}/{Path(name).stem}", GRAMMARS / f"{lang}.json",
-                        WORK / "lang" / lang, WORK / "case" / name, "case"))
+                        oracle_home(lang), WORK / "case" / name, "case"))
     for name in PROBES:
         out.append(Case(f"probe/{name}", WORK / "probe" / name / "src" / "grammar.json",
                         WORK / "probe" / name, WORK / "probe" / name / "sample.txt", "probe"))
+    # The span fixtures compare like any other case, and that is the whole point:
+    # `spans` says which reader broke, but only a comparison can *fail*. A reader
+    # that drops a field leaves the oracle's tree short of one node's label, and
+    # javascript is byte-exact, so the difference is the reader every time.
+    if "javascript" in pins:
+        out += [Case(f"span/{p.stem}", GRAMMARS / "javascript.json",
+                     oracle_home("javascript"), p, "span")
+                for p in sorted(SPANS.glob("*.js"))]
+    out += held_out()
+    return out
+
+
+def held_out() -> list[Case]:
+    """The nineteen, addressable by name like anything else.
+
+    They were reachable only through `breadth.py run`, the whole sweep, so
+    `differential.py run --grammar=toml` answered `no case matches` - which two
+    lanes read as "this grammar cannot be compared" rather than "this CLI does
+    not enumerate it". toml's oracle was the only thing standing between the
+    scanner lane and 3,535 bytes, and lua is the control for the extras
+    predicate; a control nobody can run is not a control.
+
+    They point at breadth's workspace rather than this one, because that is
+    where their scanners and generated parsers already are. One oracle per
+    grammar, not two - which is the same discipline as one scanner walk.
+
+    Imported here rather than at the top: `breadth` imports this module, so the
+    dependency only works in one direction at load time.
+    """
+    import breadth  # noqa: PLC0415 - deliberate, see above
+    out = []
+    for pin in sorted(load("breadth"), key=lambda p: p.name):
+        src = breadth.source_of(pin.name)
+        if src.exists():
+            out.append(Case(f"held-out/{pin.name}", GRAMMARS / f"{pin.name}.json",
+                            oracle_home(pin.name, breadth.LANG.parent), src, "held-out"))
     return out
 
 
@@ -713,6 +1009,40 @@ def lay_out() -> None:
         (home / "sample.txt").write_text(text, encoding="utf-8")
 
 
+def built(name: str, home: Path) -> bool:
+    """Is there a library the CLI will *use* rather than rebuild?
+
+    Existing is not enough, and assuming it was cost a concurrent sweep two
+    rows. The CLI recompiles whenever anything under `src/` is newer than the
+    library - which is exactly what laying a scanner down does - and it says so
+    itself when two processes get there at once: `Are you running multiple
+    processes building to the same output location?`. So the predicate that
+    decides whether a build needs the exclusive lock has to be their predicate,
+    not `exists()`.
+    """
+    so = next((LIB / f"{name}{x}" for x in (".dylib", ".so") if (LIB / f"{name}{x}").exists()), None)
+    if so is None:
+        return False
+    made = so.stat().st_mtime
+    return all(f.stat().st_mtime <= made for f in (home / "src").glob("*") if f.is_file())
+
+
+def unbuilt(case: Case) -> bool:
+    """Would a build write anything? Asked before taking the exclusive lock.
+
+    `flock` is not fair: a writer waiting behind a stream of readers waits for
+    all of them, and a sweep is 45 cases over 11 languages, so a per-case
+    exclusive lock taken unconditionally has each lane starving the other on
+    every language in turn - 2 minutes became 20. Asking first turns 45
+    exclusive acquisitions into nought on a warm tree, which is the state every
+    acquisition after the first is in anyway.
+    """
+    src = case.lang / "src" / "grammar.json"
+    return (not built(named(case.lang), case.lang) or not src.exists()
+            or not (case.lang / "src" / "parser.c").exists()
+            or digest(src) != digest(case.grammar))
+
+
 def measure(case: Case) -> Report:
     def skip(why: str) -> Report:
         return Report(case, "skipped", why, 0, 0, [])
@@ -722,20 +1052,36 @@ def measure(case: Case) -> Report:
     if not case.grammar.exists():
         return skip("grammar not resolved; run `python3 tool/grammars.py fetch`")
     try:
-        oracle_build(case.lang, case.grammar)
-        doc = json.loads(case.grammar.read_text(encoding="utf-8"))
-        blob = case.source.read_bytes()
-        at = Lines(blob)
-        theirs = xml_tree(oracle_run(case.lang, case.source, "-x"), at)
-        full, hurt = cst_tree(oracle_run(case.lang, case.source, "--cst"), at)
-        if not same(full.named_only(), theirs):
-            # Either the CST indentation lied (it does inside an error tree) or
-            # this reader is wrong about one of the two formats. Refusing is the
-            # only honest move: a comparison against a tree nobody can confirm
-            # is noise wearing the clothes of a result.
-            return skip("tree-sitter's CST and XML disagree with each other"
-                        + (" (the tree has errors in it)" if hurt else ""))
-        graft_fields(full, case.lang, case.source, declared(doc, "FIELD", "name"), at)
+        # The build takes the exclusive side and the measurement the shared one,
+        # in that order and never nested - a writer inside a reader is how a
+        # readers-writer lock becomes a deadlock. `warm` has usually done this
+        # already, in which case both are a digest check and a no-op.
+        if unbuilt(case):
+            with alone(named(case.lang)):
+                oracle_build(case.lang, case.grammar)
+                # The CLI compiles on first use, so the compile has to happen on
+                # the exclusive side too. `warm` normally gets here first; this
+                # covers callers that measure without warming, like breadth.py.
+                if not built(named(case.lang), case.lang):
+                    cli([str(TS), "parse", "-p", str(case.lang), "-q", str(case.source)], WORK)
+        with alone(named(case.lang), writing=False):
+            # Shared for the whole measurement: `-x`, `--cst` and `query` are
+            # three processes and must be three faces of one library. Held here
+            # rather than around each call, because the window that matters is
+            # between them.
+            doc = json.loads(case.grammar.read_text(encoding="utf-8"))
+            blob = case.source.read_bytes()
+            at = Lines(blob)
+            theirs = xml_tree(oracle_run(case.lang, case.source, "-x"), at)
+            full, hurt = reconciled(oracle_run(case.lang, case.source, "--cst"), at, theirs)
+            if full is None:
+                # Either the CST indentation lied (it does inside an error tree)
+                # or this reader is wrong about one of the two formats. Refusing
+                # is the only honest move: a comparison against a tree nobody
+                # can confirm is noise wearing the clothes of a result.
+                return skip("tree-sitter's CST and XML disagree with each other"
+                            + (" (the tree has errors in it)" if hurt else ""))
+            graft_fields(full, case.lang, case.source, declared(doc, "FIELD", "name"), at)
         roots, stop = ours_run(case)
     except (ValueError, KeyError, ET.ParseError, OSError) as e:
         return skip(str(e))
@@ -743,9 +1089,9 @@ def measure(case: Case) -> Report:
     extras = {e["name"] for e in doc.get("extras", []) if e.get("type") == "SYMBOL"}
     aliases = set(declared(doc, "ALIAS", "value"))
     out: list[Finding] = []
-    if stop.startswith("accepted") and len(roots) == 1:
+    if stop.kind == "whole" and len(roots) == 1:
         compare(roots[0], full, full.label(), out, Judge(extras, aliases, blob, False), root=True)
-        return Report(case, "whole", stop, roots[0].count(), full.count(), out)
+        return Report(case, "whole", stop.verdict, roots[0].count(), full.count(), out)
 
     # A partial parse leaves a forest. Anchor a root only where the oracle has a
     # node covering exactly those bytes; a root with no counterpart is reported
@@ -770,17 +1116,168 @@ def measure(case: Case) -> Report:
         held += 1
         compare(r, peers[0], r.label(), out, judge, root=True)
     if not held:
-        return skip(f"stopped at once ({stop}); no root lines up with an oracle node")
-    return Report(case, "prefix", f"{stop}; {held}/{len(roots)} roots anchored",
+        return skip(f"stopped at once ({stop.verdict}); no root lines up with an oracle node")
+    return Report(case, "prefix", f"{stop.verdict}; {held}/{len(roots)} roots anchored",
                   sum(r.count() for r in roots), full.count(), out)
+
+
+# -------------------------------------------------------------------- the spans
+
+SPANS = ROOT / "research" / "joinery" / "spans"
+
+
+def spans() -> list[tuple[str, str, str, str]]:
+    """Drive every reader of their stdout across every span shape.
+
+    Twice a reader here has broken at a newline - `cst_tree` on a token spanning
+    rows, then `graft_fields` on a *capture* spanning rows - and both times the
+    eleven ledger programs had nothing multi-line to catch it. Their printers
+    change shape at `end.row > start.row` in at least two places, so the honest
+    assumption is that the next reader will too.
+
+    So the shapes live in the repo rather than in a probe somebody has to
+    remember, and every reader is pointed at all of them on every run. javascript
+    hosts them because it has a multi-row block comment, a multi-row template
+    literal and a field on an anonymous child - the three faces' three weak
+    points in one grammar - and because it is byte-exact, so a difference here is
+    the reader and never the parser.
+
+    One row per fixture: the three readers' verdicts, `ok` or the refusal.
+    """
+    lang, want = oracle_home("javascript"), GRAMMARS / "javascript.json"
+    oracle_build(lang, want)
+    fields = declared(json.loads(want.read_text()), "FIELD", "name")
+    out = []
+    for src in sorted(SPANS.glob("*.js")):
+        at = Lines(src.read_bytes())
+        try:
+            theirs = xml_tree(oracle_run(lang, src, "-x"), at)
+            xml = f"ok, {theirs.count()} nodes"
+        except (ValueError, ET.ParseError, OSError) as e:
+            out.append((src.stem, f"BROKE: {e}", "not reached", "not reached"))
+            continue
+        try:
+            full, hurt = reconciled(oracle_run(lang, src, "--cst"), at, theirs)
+            cst = f"ok, {full.count()} nodes" if full else f"REFUSED (errors={hurt})"
+        except (ValueError, OSError) as e:
+            out.append((src.stem, xml, f"BROKE: {e}", "not reached"))
+            continue
+        if full is None:
+            out.append((src.stem, xml, cst, "not reached"))
+            continue
+        # Count fields, not just survival: this round's bug threw no exception,
+        # it quietly grafted nothing.
+        def borne(n: Node) -> int:
+            return bool(n.field) + sum(borne(k) for k in n.kids)
+        was = borne(full)
+        try:
+            graft_fields(full, lang, src, fields, at)
+            got = f"ok, {was} -> {borne(full)} fields"
+        except (ValueError, OSError) as e:
+            got = f"BROKE: {e}"
+        out.append((src.stem, xml, cst, got))
+    return out
+
+
+def broke(rows: list[tuple[str, str, str, str]]) -> int:
+    return sum(1 for r in rows for v in r[1:] if v.startswith("BROKE"))
+
+
+@contextlib.contextmanager
+def alone(name: str, writing: bool = True) -> Iterator[None]:
+    """Hold one grammar, so a rebuild cannot land under a lane that is reading.
+
+    Four lanes share this checkout, so `TREE_SITTER_LIBDIR` moved the race from
+    `~/.cache` into `.local/differential` rather than ending it: `lang/<name>/`
+    and `lib/<name>.dylib` are still one mutable path keyed by a language name
+    with no owner. Isolating a copy per lane would end it too, but it would also
+    throw away the cache, and thirty generates and thirty compiles is minutes
+    per lane - so the shared directory is worth keeping and the writes are worth
+    serialising.
+
+    Readers-writer, because the two hazards are different. A *build* must be
+    alone: it writes `lang/<name>/src/parser.c` and the CLI writes
+    `lib/<name>.dylib`, and the second writer of a `.dylib` produces a file the
+    first lane is halfway through `dlopen`-ing. A *measurement* only has to be
+    sure no build lands in the middle of it - one measurement is three
+    invocations, and they must all see one library - so measurements share.
+
+    Only the cold path ever takes the exclusive side twice: a warm
+    `oracle_build` sees a matching digest and returns without writing. So the
+    second lane through waits once, per language, on the first day, and every
+    lane after that reads in parallel with every other.
+
+    The wait is announced and the timeout refuses, because the failure this
+    replaces was silent: a contended run came back as a skip that read exactly
+    like a grammar we could not parse.
+    """
+    lock = WORK / "lock"
+    lock.mkdir(parents=True, exist_ok=True)
+    fd = os.open(lock / f"{name}.lock", os.O_CREAT | os.O_RDWR, 0o644)
+    began, said = time.monotonic(), False
+    try:
+        while True:
+            try:
+                fcntl.flock(fd, (fcntl.LOCK_EX if writing else fcntl.LOCK_SH) | fcntl.LOCK_NB)
+                break
+            except OSError:
+                waited = time.monotonic() - began
+                if waited > PATIENCE:
+                    raise ValueError(
+                        f"{CONTENDED} the {name} oracle after {waited:.0f}s; "
+                        f"refusing rather than writing beside it") from None
+                if not said:
+                    print(f"  waiting on {name}: another lane is building it", file=sys.stderr)
+                    said, _ = True, WAITED.add(name)
+                time.sleep(0.2)
+        if writing:
+            os.write(fd, f"{os.getpid()}\n".encode())
+        yield
+    finally:
+        with contextlib.suppress(OSError):
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+
+
+def warm(picked: list[Case]) -> None:
+    """Compile every language before anything is measured.
+
+    One measurement is three CLI invocations - `-x`, `--cst`, then `query` - and
+    the CLI compiles a grammar on first use. A compile landing *between* two of
+    them serves the second invocation a different library from the first, and the
+    comparison is then between two runtimes rather than two faces of one. Only
+    `graft_fields` cross-checks, so that is where it surfaces, as its printer and
+    its query disagreeing about a field; it refuses, which is right, and the case
+    reads as skipped for a reason that has nothing to do with the case.
+
+    Doing every compile up front leaves no window inside a measurement. It costs
+    one extra parse per language on a cold cache and nothing on a warm one.
+    """
+    for lang in dict.fromkeys(c.lang for c in picked):
+        src = next(c.source for c in picked if c.lang == lang)
+        try:
+            # The lock spans generate *and* the probe parse, because the probe is
+            # what triggers the compile into LIB; holding only the generate would
+            # leave the two lanes racing on the .dylib instead of the parser.c.
+            with alone(named(lang)):
+                oracle_build(lang, next(c.grammar for c in picked if c.lang == lang))
+                cli([str(TS), "parse", "-p", str(lang), "-q", str(src)], WORK)
+        except (OSError, ValueError):
+            pass  # measure() reports it properly; this pass only pre-compiles.
 
 
 # ------------------------------------------------------------------------ verbs
 
 def run(picked: list[Case], as_json: bool, verbose: bool) -> int:
+    # Taken before the measurement rather than after, so the stamp names the
+    # tree the run started against; a lane landing something mid-run then shows
+    # up as a later run disagreeing, which is the honest way round.
+    mark = take(BIN)
+    warm(picked)
     reports = [measure(c) for c in picked]
     if as_json:
-        print(json.dumps({"oracle": oracle_ready(), "case": [r.as_dict() for r in reports]}, indent=2))
+        print(json.dumps({"oracle": oracle_ready(), "stamp": mark.as_dict(),
+                          "case": [r.as_dict() for r in reports]}, indent=2))
         return 1 if any(r.unexplained for r in reports) else 0
     print(f"{'case':<20} {'mode':<8} {'ours':>7} {'theirs':>7} {'known':>6} {'unexplained':>12}  why")
     for r in reports:
@@ -803,11 +1300,51 @@ def run(picked: list[Case], as_json: bool, verbose: bool) -> int:
     done = [r for r in reports if r.mode != "skipped"]
     print(f"\n{len(done)} compared, {len(reports) - len(done)} skipped · "
           + (", ".join(f"{n} {k}" for k, n in sorted(tally.items())) or "no differences at all"))
+    print(mark.line())
+    # A skip caused by another lane is not a fact about the grammar, and it used
+    # to read exactly like one. Say so, loudly, rather than letting a contended
+    # run be quoted as a measurement.
+    # A skip is only ever quotable if it is a fact about the grammar. These
+    # reasons are facts about the machine - a library half-written, a lockfile
+    # deleted underneath us, a printer and a query reading two different
+    # libraries - and every one of them has been mistaken for a result at least
+    # once. Say so unconditionally rather than only when this process is the one
+    # that noticed it queued.
+    fought = [r for r in reports if r.mode == "skipped" and any(m in r.why for m in FRAGILE)]
+    if fought or WAITED:
+        who = sorted({named(r.case.lang) for r in fought} | WAITED)
+        print(f"differential: another lane was in the oracle workspace during this run "
+              f"({', '.join(who)})."
+              + (f" {len(fought)} skip(s) are that, not the grammar. Do not quote this run; "
+                 "re-run it when the checkout is quiet." if fought else ""), file=sys.stderr)
     sys.stdout.flush()
+    if span := sum(r.unexplained for r in reports if r.case.origin == "span"):
+        print(f"differential: {span} of those are span fixtures, so a reader of "
+              "tree-sitter's own output is wrong before the parser is; "
+              "`differential.py spans` says which one", file=sys.stderr)
     if bad := sum(r.unexplained for r in reports):
         print(f"differential: {bad} difference(s) nobody owns", file=sys.stderr)
         return 1
     return 0
+
+
+def survey(as_json: bool) -> int:
+    """`spans`: the reader inventory, one row per shape. A reader that survives
+    is a row too - the output is an inventory, not a bug list."""
+    warm([Case("javascript", GRAMMARS / "javascript.json", oracle_home("javascript"),
+               p, "span") for p in sorted(SPANS.glob("*.js"))])
+    rows = spans()
+    if as_json:
+        print(json.dumps({"span": [dict(zip(("shape", "xml", "cst", "query"), r))
+                                   for r in rows]}, indent=2))
+        return 1 if broke(rows) else 0
+    wide = max((len(r[0]) for r in rows), default=10) + 2
+    print(f"{'span shape':<{wide}}{'xml_tree (-x)':<26}{'cst_tree (--cst)':<26}query")
+    for shape, x, c, q in rows:
+        print(f"{shape:<{wide}}{x:<26}{c:<26}{q}")
+    hurt = broke(rows)
+    print(f"\n{len(rows)} shapes x 3 readers · {hurt or 'none'} broke")
+    return 1 if hurt else 0
 
 
 def show(picked: list[Case]) -> int:
@@ -821,7 +1358,7 @@ def show(picked: list[Case]) -> int:
         at = Lines(blob)
         theirs, _ = cst_tree(oracle_run(case.lang, case.source, "--cst"), at)
         ours, stop = ours_run(case)
-        print(f"  {r.why}\n\n  -- outliner ({stop})")
+        print(f"  {r.why}\n\n  -- outliner ({stop.verdict})")
         for root in ours:
             print("\n".join("    " + ln for ln in root.render()))
         print("\n  -- tree-sitter")
@@ -865,7 +1402,34 @@ def oops(msg: str) -> int:
     return 2
 
 
+def vacate() -> None:
+    """Drop the CLI's lockfiles; keep the libraries this lane compiled.
+
+    Also reaps the seats of lanes that are gone, since a shell that exits takes
+    its pid with it and nothing else would ever remove the directory.
+    """
+    shutil.rmtree(SEAT / "tree-sitter", ignore_errors=True)
+    for seat in (WORK / "seat").glob("*"):
+        if seat == SEAT:
+            continue
+        if seat.name.isdigit():
+            try:
+                os.kill(int(seat.name), 0)
+                continue  # its owner is still running
+            except ProcessLookupError:
+                pass
+            except OSError:
+                continue  # alive, just not ours to signal
+        # Either its owner is gone, or it is a named lane nobody has used in a
+        # day. A named seat has no pid to ask after, so age is the only owner
+        # test there is; a lane still working touches its libraries constantly.
+        elif time.time() - seat.stat().st_mtime < 86400:
+            continue
+        shutil.rmtree(seat, ignore_errors=True)
+
+
 def main(argv: list[str]) -> int:
+    atexit.register(vacate)
     as_json = verbose = False
     want_case = want_grammar = verb = ""
     for a in argv:
@@ -891,19 +1455,33 @@ def main(argv: list[str]) -> int:
         return 2
     if verb == "install":
         return install()
+    if verb == "scanners":
+        return fetch_scanners("all")
+    if verb == "sandbox":
+        return sandboxed()
     version = oracle_ready()
     if verb == "oracle":
         print(f"tree-sitter {version} at {TS}" if version else
               f"no tree-sitter CLI at {TS}\nrun `python3 tool/differential.py install` to put one there")
         return 0 if version else 1
-    if verb not in ("run", "show", "list"):
+    if verb not in ("run", "show", "list", "spans"):
         return oops(f"no such verb {verb!r}\n\n{USAGE}")
+    if verb == "spans":
+        if not version:
+            return oops(f"no tree-sitter CLI at {TS}; nothing to read the output of")
+        lay_out()
+        return survey(as_json)
     try:
         lay_out()
         pins = {p.name for p in load()}
         picked = [c for c in cases(pins)
                   if (not want_case or c.name == want_case or c.name.endswith("/" + want_case))
-                  and (not want_grammar or c.grammar.stem == want_grammar)]
+                  and (not want_grammar or c.grammar.stem == want_grammar)
+                  # A held-out grammar answers when it is asked for by name; a
+                  # bare `run` stays the corpus and the spans, which is the
+                  # slate cheap enough to be a gate. `breadth.py run` is still
+                  # how you sweep all nineteen.
+                  and (c.origin != "held-out" or want_case or want_grammar)]
     except (OSError, ValueError) as e:
         return oops(str(e))
     if not picked:

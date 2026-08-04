@@ -32,6 +32,9 @@ import sys
 from pathlib import Path
 from typing import NamedTuple
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from stamp import take  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 GRAMMARS = ROOT / "upstream" / "grammars"
 CORPUS = ROOT / "research" / "joinery" / "corpus"
@@ -102,6 +105,9 @@ def measure(name: str, filename: str) -> Result:
         held=f"{held[1]}/{held[2]}" if held else "0/0",
         refused=int(m[1]) if (m := REFUSED.search(verdict)) else 0,
         disagreed="DISAGREED" in verdict,
+        # sole: the `joints` verb's own report, not a parse verdict. The two
+        # verbs share the word and nothing else - `stamp.outcome` reads what
+        # `parse` writes on stderr, and this is what `joints` writes on stdout.
         accepted=any("accepted" in ln for ln in lines),
         faults=[],
     )
@@ -122,6 +128,10 @@ def main(argv: list[str]) -> int:
     if not BIN.exists():
         print(f"rung1.py: no binary at {BIN}; run `zig build` first", file=sys.stderr)
         return 2
+    # Taken before the sweep rather than after, so a lane landing mid-run shows
+    # up as the stamp disagreeing with the numbers underneath it. Three of
+    # tonight's runs were caught that way.
+    mark = take(BIN)
     try:
         todo = [(g, f) for g, f in pairs() if not want or g in want]
         if not todo:
@@ -132,7 +142,8 @@ def main(argv: list[str]) -> int:
         return 2
 
     if as_json:
-        print(json.dumps({"grammar": [r._asdict() for r in results]}, indent=2))
+        print(json.dumps({"stamp": mark.as_dict(),
+                          "grammar": [r._asdict() for r in results]}, indent=2))
     else:
         print(f"{'grammar':<11} {'states':>6} {'residual':>8} {'p99 rank':>8} {'residue':>7} {'chains':>7}  stops")
         for r in results:
@@ -150,6 +161,8 @@ def main(argv: list[str]) -> int:
                 f"{r.residue:>7} {r.held:>7}  {stop}"
             )
     faults = [(r.name, f) for r in results if r.faults for f in r.faults]
+    if not as_json:
+        print(mark.line())
     sys.stdout.flush()
     for name, fault in faults:
         print(f"rung1: {name}: {fault}", file=sys.stderr)

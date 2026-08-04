@@ -78,6 +78,19 @@ jobs:
       # bytes the `json` pin claims, which nothing downstream would notice.
       - name: verify the bytes on disk, and the committed fixture against its pin
         run: python3 tool/grammars.py verify
+      # Reads the instruments' own source and nothing else, so it belongs in the
+      # one job with no toolchain to wait on. Six second copies of the same
+      # rules were once found here by hand and five were live defects; this is
+      # that audit as a gate, so a seventh is caught by CI rather than by
+      # somebody happening to look again.
+      - name: exactly one copy of each rule the instruments share
+        run: |
+          python3 tool/sole.py --list
+          python3 tool/sole.py
+      # A gate nobody has watched fail is decoration. This builds the four
+      # shapes it claims to catch, in a scratch tree, and fails if one walks.
+      - name: and the gate still bites
+        run: python3 tool/sole.py --probe
 
   press:
     name: press (${{ matrix.os }})
