@@ -64,11 +64,48 @@ const inert = [_]Loss{
     .{ .at = "unicode_word", .why = "the word axis's fold, absent for the same reason" },
 };
 
+/// The roster's own fields, as distinct from an automaton's. Two structures
+/// cross this block, not one: a `Munch` is a list of voices *and* the map from
+/// the caller's ordinals onto their bits, and the map is the half a `Dfa`
+/// survey cannot see. It is also the half whose loss is loud rather than quiet -
+/// a seat pointing at the wrong bit makes `Allow.admit` permit some other
+/// terminal, which is a wrong token stream - so it is surveyed for completeness
+/// rather than because it is the likelier defect.
+const Voice = Munch.Voice;
+const Seat = @typeInfo(@TypeOf(@as(Munch, undefined).seats)).pointer.child;
+
+const roster = [_]Loss{
+    .{ .at = "gpa", .why = "the far side's own, by construction" },
+    .{ .at = "because", .why = "why each decline happened, which is a compile-time diagnostic no reader on this side consults - `declined` itself is load-bearing and does cross" },
+    .{ .at = "winners", .why = "scratch, rewritten by every scan; only its width is a fact" },
+};
+
+fn rostered(name: []const u8) ?Loss {
+    for (roster) |d| if (std.mem.eql(u8, d.at, name)) return d;
+    return null;
+}
+
 comptime {
     if (std.meta.fields(Dfa).len != 22) @compileError(
         "Dfa changed width: give the new field a distinguishing value in `sample`, " ++
             "then either carry it through `freeze`/`thaw` or declare the loss in " ++
             "`dropped` and update the count here",
+    );
+    // The same argument one level out. A field added to `Munch` or to what it
+    // holds is reconstructed by `adopt`, and a field `adopt` forgets reads as
+    // its default with no line of wrong code anywhere - which is exactly how
+    // `Dfa.reach` was lost.
+    if (std.meta.fields(Munch).len != 6) @compileError(
+        "Munch changed width: carry the new field through `freeze`/`adopt` or " ++
+            "declare it in `roster` and update the count here",
+    );
+    if (std.meta.fields(Voice).len != 2) @compileError(
+        "Munch.Voice changed width: carry the new field through `freeze`/`thaw` " ++
+            "and update the count here",
+    );
+    if (std.meta.fields(Seat).len != 3) @compileError(
+        "Munch's seat changed width: `adopt` rebuilds every seat, so a new field " ++
+            "needs rebuilding there before the count moves here",
     );
 }
 
@@ -171,6 +208,65 @@ test "every field of an automaton either crosses the lexicon block or is a decla
             return error.FieldUnseen;
         }
     }
+}
+
+test "every field of the roster either crosses the lexicon block or is a declared loss" {
+    // The `Dfa` survey above walks what is inside each voice. This walks what
+    // holds them, because a folio-backed `Munch` is rebuilt by `adopt` rather
+    // than read whole, and `adopt` enumerates by hand exactly the way `thaw`
+    // does. Same failure mode, one level out.
+    const gpa = testing.allocator;
+    var m = try sample(gpa);
+    defer m.deinit();
+
+    const stamp = lexicon.digest(&slate, .{});
+    const block = (try lexicon.freeze(gpa, &m, stamp)) orelse return error.BlockRefused;
+    defer gpa.free(block);
+    var back = (try lexicon.thaw(gpa, block, slate.len, stamp)) orelse return error.BlockNotRead;
+    defer back.deinit(gpa);
+
+    // `declined` is the one that would be quiet and is not diagnostic:
+    // `compile` unseats every refused ordinal, so a folio that lost the list
+    // would hand a seat back to a terminal the engine cannot run, and the slate
+    // would admit a pattern that is not there. Bytes, not lengths.
+    inline for (std.meta.fields(Munch)) |f| {
+        if (comptime rostered(f.name) == null) {
+            const mv = @field(m, f.name);
+            const tv = @field(back.munch, f.name);
+            try testing.expectEqual(mv.len, tv.len);
+            if (comptime !std.mem.eql(u8, f.name, "voices")) {
+                try testing.expectEqualSlices(
+                    u8,
+                    std.mem.sliceAsBytes(mv),
+                    std.mem.sliceAsBytes(tv),
+                );
+            }
+        }
+    }
+
+    // `winners` is scratch, but its *width* is a fact: it is sized once to the
+    // widest answer the slate can give, and a narrow one is a buffer overrun on
+    // the first tie rather than a wrong answer.
+    try testing.expectEqual(m.winners.len, back.munch.winners.len);
+
+    // And a voice is its automaton plus the ordinals its bits stand for. The
+    // automaton is surveyed above; the ordinals are the reason a refusal can be
+    // a hole rather than a renumber, so they are bytes rather than a length.
+    for (m.voices, back.munch.voices) |mine, theirs| {
+        try testing.expectEqualSlices(u32, mine.ordinals, theirs.ordinals);
+    }
+
+    // The seats really do say something - an all-default map would satisfy the
+    // comparison above and mean nothing. The slate deliberately holds one
+    // member the engine refuses, so the live count is a number rather than a
+    // restatement of the slate's length, and the refusal is the thing the
+    // `declined` bytes above have to reproduce.
+    try testing.expect(m.declined.len > 0);
+    var live: usize = 0;
+    for (m.seats) |s| {
+        if (s.live) live += 1;
+    }
+    try testing.expectEqual(slate.len - m.declined.len, live);
 }
 
 test "a block that lost the reachability mask is refused rather than read slowly" {
