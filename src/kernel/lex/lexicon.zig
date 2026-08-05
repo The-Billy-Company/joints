@@ -40,7 +40,7 @@ const Dfa = Munch.Dfa;
 
 /// What a block claims to be. Bumped for any layout change, so a block written
 /// before one is refused rather than read as the shape that replaced it.
-const magic: u32 = 0x4c58_4e31; // "LXN1"
+const magic: u32 = 0x4c58_4e32; // "LXN2"
 
 /// The window `std.compress.flate` needs on both sides. Named once because both
 /// directions allocate one and neither should guess.
@@ -54,13 +54,27 @@ const window = std.compress.flate.max_window_len;
 /// grammars it hit were the ones whose tables happened to sum to an odd four.
 const grain = 8;
 
+/// Deflating fails only where the machine does; there is no file here, only an
+/// allocating writer, and `WriteFailed` is that writer's name for the same fact
+/// `OutOfMemory` names. An automaton this format cannot describe is `null`, not
+/// a member - see `freeze`.
+pub const Frozen = error{WriteFailed} || std.mem.Allocator.Error;
+
+/// Inflating fails on the machine, or on bytes that do not read back. Every
+/// *expected* reason not to inflate - no section, a stale digest, a different
+/// pattern count - is `null`, because a slate can always be determinized again
+/// and a folio that declines to help is only slower. `LexiconUnreadable` is the
+/// one that is not that: the block announced its own shape and then did not
+/// have it, under a seal that already matched.
+pub const Thawed = error{LexiconUnreadable} || std.mem.Allocator.Error;
+
 /// A slate's automata, deflated. Free with `gpa.free`.
 ///
 /// Null when the slate holds an automaton this format cannot describe: one
 /// carrying a start-state dwell, which is derived only for an unanchored start
 /// and so cannot arise from a munch. Refused rather than dropped, because
 /// dropping it would be a scanner that skips bytes it should have walked.
-pub fn freeze(gpa: std.mem.Allocator, m: *const Munch, stamp: u64) !?[]u8 {
+pub fn freeze(gpa: std.mem.Allocator, m: *const Munch, stamp: u64) Frozen!?[]u8 {
     var raw: std.Io.Writer.Allocating = .init(gpa);
     defer raw.deinit();
     const w = &raw.writer;
@@ -78,6 +92,18 @@ pub fn freeze(gpa: std.mem.Allocator, m: *const Munch, stamp: u64) !?[]u8 {
     for (m.voices) |v| {
         const d = v.dfa;
         if (d.start_dwell != null) return null;
+        // The reachability mask is written like any other table, and unlike
+        // any other table its *absence* is silent: `reachableFrom` answers
+        // all-ones without one, so a block that dropped it lexes the same
+        // tokens and walks to end-of-file at every position to get them.
+        //
+        // So the two sides agree on exactly when it is there, and the rule is
+        // checkable from the block alone. An automaton over one pattern has no
+        // attribution table and therefore no mask, and needs none: `permitted`
+        // for such a voice is all-or-nothing, so the mask could only ever
+        // repeat what the dead state already says. Every other voice carries
+        // one per state, or this format will not describe it.
+        if (d.reach.len != if (v.ordinals.len == 1) 0 else d.nstates) return null;
         try seat(&raw);
         try w.writeAll(std.mem.asBytes(&Head{
             .ncls = d.ncls,
@@ -91,6 +117,7 @@ pub fn freeze(gpa: std.mem.Allocator, m: *const Munch, stamp: u64) !?[]u8 {
             .trans_fin = @intCast(d.trans_fin.len),
             .trans_in_w = @intCast(d.trans_in_w.len),
             .pat_runs = @intCast(d.pat_runs.len),
+            .reach = @intCast(d.reach.len),
             .ordinals = @intCast(v.ordinals.len),
             .flags = (if (d.empty_match) Flag.empty_match else 0) |
                 (if (d.anchored) Flag.anchored else 0) |
@@ -107,6 +134,8 @@ pub fn freeze(gpa: std.mem.Allocator, m: *const Munch, stamp: u64) !?[]u8 {
         try w.writeAll(std.mem.sliceAsBytes(d.trans_in_w));
         try seat(&raw);
         try w.writeAll(std.mem.sliceAsBytes(d.pat_runs));
+        try seat(&raw);
+        try w.writeAll(std.mem.sliceAsBytes(d.reach));
         try seat(&raw);
         try w.writeAll(std.mem.sliceAsBytes(v.ordinals));
     }
@@ -135,7 +164,7 @@ pub fn freeze(gpa: std.mem.Allocator, m: *const Munch, stamp: u64) !?[]u8 {
 /// The result owns one inflate image and one handle per automaton; releasing
 /// both is `Lexicon.deinit`, because the automata are borrowed and free nothing
 /// of their own.
-pub fn thaw(gpa: std.mem.Allocator, block: []const u8, npatterns: usize, stamp: u64) !?Lexicon {
+pub fn thaw(gpa: std.mem.Allocator, block: []const u8, npatterns: usize, stamp: u64) Thawed!?Lexicon {
     if (block.len < @sizeOf(u64)) return null;
     const want = std.mem.bytesToValue(u64, block[0..@sizeOf(u64)]);
     if (want == 0 or want % grain != 0 or want > max_image) return null;
@@ -194,6 +223,7 @@ pub fn thaw(gpa: std.mem.Allocator, block: []const u8, npatterns: usize, stamp: 
         const trans_fin = r.slice(u32, h.trans_fin) orelse return null;
         const trans_in_w = r.slice(u32, h.trans_in_w) orelse return null;
         const pat_runs = r.slice(Dfa.PatRun, h.pat_runs) orelse return null;
+        const reach = r.slice(u64, h.reach) orelse return null;
         const ordinals = r.slice(u32, h.ordinals) orelse return null;
 
         // The walk indexes `trans[state + class[b]]` unchecked, so a table that
@@ -204,6 +234,11 @@ pub fn thaw(gpa: std.mem.Allocator, block: []const u8, npatterns: usize, stamp: 
         if (trans_fin.len != trans_in.len) return null;
         if (trans_in_w.len != 0 and trans_in_w.len != trans_in.len) return null;
         if (h.match_hi > trans_in.len) return null;
+        // `freeze`'s rule, read back: one mask per state, except for the
+        // single-pattern voice that provably needs none. A block disagreeing
+        // was written by a binary that did not have the mask, and loading it
+        // would be correct and quadratic - so it determinizes again instead.
+        if (reach.len != if (ordinals.len == 1) 0 else @as(usize, h.nstates)) return null;
 
         const own = try gpa.dupe(u32, ordinals);
         errdefer gpa.free(own);
@@ -216,6 +251,7 @@ pub fn thaw(gpa: std.mem.Allocator, block: []const u8, npatterns: usize, stamp: 
             .trans_fin = trans_fin,
             .trans_in_w = trans_in_w,
             .pat_runs = pat_runs,
+            .reach = reach,
             .match_hi = h.match_hi,
             .start = h.start,
             .start_w = h.start_w,
@@ -301,6 +337,12 @@ const Head = extern struct {
     trans_fin: u32,
     trans_in_w: u32,
     pat_runs: u32,
+    /// The per-state reachability mask. Written and read like every other
+    /// array here, and called out only because it is the one whose *absence*
+    /// is silent: a folio without it still lexes, still returns the same
+    /// tokens, and costs a walk to end-of-file per position for the rest of
+    /// the file's life. See `thaw`.
+    reach: u32,
     ordinals: u32,
     flags: u32,
 };

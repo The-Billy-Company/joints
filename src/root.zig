@@ -109,6 +109,7 @@ test {
     std.testing.refAllDecls(@This());
     _ = @import("kernel/lex/scanner.zig");
     _ = @import("kernel/lex/scanner_test.zig");
+    _ = @import("kernel/lex/lexicon_test.zig");
     _ = @import("kernel/joint/effect.zig");
     _ = @import("kernel/joint/stack.zig");
     _ = @import("kernel/joint/roster.zig");
