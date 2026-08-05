@@ -1,0 +1,872 @@
+[
+ {
+  "name": "c",
+  "source": "ledger.c",
+  "size": 1444,
+  "wide": {
+   "reach": 1443,
+   "under": 1355,
+   "tokens": 277,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 6,
+   "refused_span": 24,
+   "honest_reach": 1441,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.c: unexpected (?:[^\\\\\"\\n]+) at 1354 in state 1146, 26 roots, mended 7"
+  },
+  "spot": {
+   "reach": 1443,
+   "under": 1370,
+   "tokens": 283,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 8,
+   "refused_span": 8,
+   "honest_reach": 1441,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.c: unexpected , at 1354 in state 1146, 32 roots, mended 9"
+  }
+ },
+ {
+  "name": "cpp",
+  "source": "ledger.cpp",
+  "size": 1408,
+  "wide": {
+   "reach": 1407,
+   "under": 1278,
+   "tokens": 280,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 5,
+   "refused_span": 11,
+   "honest_reach": 1407,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.cpp: unexpected \" at 690 in state 935, 30 roots, mended 6"
+  },
+  "spot": {
+   "reach": 1407,
+   "under": 1278,
+   "tokens": 280,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 11,
+   "refused_span": 11,
+   "honest_reach": 1407,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.cpp: unexpected \" at 690 in state 935, 30 roots, mended 12"
+  }
+ },
+ {
+  "name": "go",
+  "source": "ledger.go",
+  "size": 1189,
+  "wide": {
+   "reach": 1189,
+   "under": 544,
+   "tokens": 68,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 1,
+   "refused_span": 626,
+   "honest_reach": 562,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.go: unexpected { at 535 in state 188, 16 roots, mended 3"
+  },
+  "spot": {
+   "reach": 1188,
+   "under": 712,
+   "tokens": 294,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 9,
+   "refused_span": 9,
+   "honest_reach": 1187,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.go: unexpected { at 535 in state 188, 39 roots, mended 12"
+  }
+ },
+ {
+  "name": "java",
+  "source": "Ledger.java",
+  "size": 1258,
+  "wide": {
+   "reach": 1258,
+   "under": 1258,
+   "tokens": 203,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 1257,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/Ledger.java: accepted, 1 root"
+  },
+  "spot": {
+   "reach": 1258,
+   "under": 1258,
+   "tokens": 203,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 1257,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/Ledger.java: accepted, 1 root"
+  }
+ },
+ {
+  "name": "javascript",
+  "source": "ledger.js",
+  "size": 1080,
+  "wide": {
+   "reach": 1080,
+   "under": 1080,
+   "tokens": 226,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 1079,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.js: accepted, 1 root"
+  },
+  "spot": {
+   "reach": 1080,
+   "under": 1080,
+   "tokens": 226,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 1079,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.js: accepted, 1 root"
+  }
+ },
+ {
+  "name": "typescript",
+  "source": "ledger.ts",
+  "size": 1253,
+  "wide": {
+   "reach": 1253,
+   "under": 1253,
+   "tokens": 293,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 1252,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.ts: accepted, 1 root"
+  },
+  "spot": {
+   "reach": 1253,
+   "under": 1253,
+   "tokens": 293,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 1252,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.ts: accepted, 1 root"
+  }
+ },
+ {
+  "name": "python",
+  "source": "ledger.py",
+  "size": 1728,
+  "wide": {
+   "reach": 1727,
+   "under": 1557,
+   "tokens": 371,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 3,
+   "refused_span": 25,
+   "honest_reach": 1727,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.py: unexpected : at 482 in state 880, 46 roots, mended 9"
+  },
+  "spot": {
+   "reach": 1727,
+   "under": 1566,
+   "tokens": 374,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 5,
+   "refused_span": 5,
+   "honest_reach": 1727,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.py: unexpected : at 482 in state 880, 54 roots, mended 13"
+  }
+ },
+ {
+  "name": "ruby",
+  "source": "ledger.rb",
+  "size": 1020,
+  "wide": {
+   "reach": 1020,
+   "under": 351,
+   "tokens": 2,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 1,
+   "refused_span": 664,
+   "honest_reach": 356,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.rb: unexpected uninterpreted at 356 in state 1523, 6 roots, mended 1"
+  },
+  "spot": {
+   "reach": 1020,
+   "under": 872,
+   "tokens": 194,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 29,
+   "refused_span": 29,
+   "honest_reach": 1020,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.rb: unexpected uninterpreted at 356 in state 1523, 68 roots, mended 32"
+  }
+ },
+ {
+  "name": "rust",
+  "source": "ledger.rs",
+  "size": 1434,
+  "wide": {
+   "reach": 1434,
+   "under": 1434,
+   "tokens": 330,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 1433,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.rs: accepted, 1 root"
+  },
+  "spot": {
+   "reach": 1434,
+   "under": 1434,
+   "tokens": 330,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 1433,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.rs: accepted, 1 root"
+  }
+ },
+ {
+  "name": "bash",
+  "source": "ledger.sh",
+  "size": 1068,
+  "wide": {
+   "reach": 1068,
+   "under": 1022,
+   "tokens": 219,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 4,
+   "refused_span": 7,
+   "honest_reach": 1068,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.sh: unexpected [ at 565 in state 1178, 39 roots, mended 4"
+  },
+  "spot": {
+   "reach": 1068,
+   "under": 1026,
+   "tokens": 220,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 3,
+   "refused_span": 3,
+   "honest_reach": 1068,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.sh: unexpected [ at 565 in state 1178, 37 roots, mended 4"
+  }
+ },
+ {
+  "name": "json",
+  "source": "ledger.json",
+  "size": 774,
+  "wide": {
+   "reach": 774,
+   "under": 774,
+   "tokens": 288,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 773,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.json: accepted, 1 root"
+  },
+  "spot": {
+   "reach": 774,
+   "under": 774,
+   "tokens": 288,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 773,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/research/joinery/corpus/ledger.json: accepted, 1 root"
+  }
+ },
+ {
+  "name": "css",
+  "source": "normalize.css",
+  "size": 6138,
+  "wide": {
+   "reach": 6138,
+   "under": 6138,
+   "tokens": 516,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 6137,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/normalize.css: accepted, 1 root"
+  },
+  "spot": {
+   "reach": 6138,
+   "under": 6138,
+   "tokens": 516,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 6137,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/normalize.css: accepted, 1 root"
+  }
+ },
+ {
+  "name": "elixir",
+  "source": "router.ex",
+  "size": 46089,
+  "wide": {
+   "reach": 46089,
+   "under": 34003,
+   "tokens": 8930,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 971,
+   "refused_span": 1271,
+   "honest_reach": 46089,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/router.ex: unexpected (?:\\r?\\n) at 74 in state 17, 4927 roots, mended 1752"
+  },
+  "spot": {
+   "reach": 46089,
+   "under": 34114,
+   "tokens": 8984,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 646,
+   "refused_span": 689,
+   "honest_reach": 46089,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/router.ex: unexpected alias at 79 in state 17, 4958 roots, mended 1426"
+  }
+ },
+ {
+  "name": "embedded-template",
+  "source": "application.html.erb",
+  "size": 6006,
+  "wide": {
+   "reach": 6006,
+   "under": 6006,
+   "tokens": 828,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 6006,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/application.html.erb: accepted, 1 root"
+  },
+  "spot": {
+   "reach": 6006,
+   "under": 6006,
+   "tokens": 828,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 6006,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/application.html.erb: accepted, 1 root"
+  }
+ },
+ {
+  "name": "haskell",
+  "source": "Shared.hs",
+  "size": 34240,
+  "wide": {
+   "reach": 34239,
+   "under": 8133,
+   "tokens": 2,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 13580,
+   "refused_span": 33337,
+   "honest_reach": 681,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/Shared.hs: unexpected . at 681 in state 7, 449 roots, mended 13801"
+  },
+  "spot": {
+   "reach": 25164,
+   "under": 6251,
+   "tokens": 2,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 16073,
+   "refused_span": 16514,
+   "honest_reach": 681,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/Shared.hs: unexpected . at 681 in state 7, 140 roots, mended 16384"
+  }
+ },
+ {
+  "name": "html",
+  "source": "viewer.html",
+  "size": 72288,
+  "wide": {
+   "reach": 72288,
+   "under": 72288,
+   "tokens": 9710,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 72287,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/viewer.html: accepted, 1 root"
+  },
+  "spot": {
+   "reach": 72288,
+   "under": 72288,
+   "tokens": 9710,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 72287,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/viewer.html: accepted, 1 root"
+  }
+ },
+ {
+  "name": "julia",
+  "source": "set.jl",
+  "size": 27360,
+  "wide": {
+   "reach": 27359,
+   "under": 3063,
+   "tokens": 545,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 1282,
+   "refused_span": 22569,
+   "honest_reach": 27232,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/set.jl: unexpected (?:\\r?\\n) at 82 in state 45, 330 roots, mended 1283"
+  },
+  "spot": {
+   "reach": 24415,
+   "under": 5379,
+   "tokens": 2785,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 16224,
+   "refused_span": 16224,
+   "honest_reach": 24415,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/set.jl: unexpected (?:\\r?\\n) at 82 in state 45, 1792 roots, mended 16384"
+  }
+ },
+ {
+  "name": "kotlin",
+  "source": "Maps.kt",
+  "size": 35815,
+  "wide": {
+   "reach": 35814,
+   "under": 32251,
+   "tokens": 3763,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 81,
+   "refused_span": 1959,
+   "honest_reach": 35814,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/Maps.kt: unexpected @ at 245 in state 944, 926 roots, mended 219"
+  },
+  "spot": {
+   "reach": 35814,
+   "under": 32783,
+   "tokens": 4207,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 232,
+   "refused_span": 232,
+   "honest_reach": 35814,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/Maps.kt: unexpected @ at 245 in state 944, 1155 roots, mended 449"
+  }
+ },
+ {
+  "name": "latex",
+  "source": "ltnews01.tex",
+  "size": 5246,
+  "wide": {
+   "reach": 5245,
+   "under": 5135,
+   "tokens": 814,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 2,
+   "refused_span": 11,
+   "honest_reach": 5245,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/ltnews01.tex: unexpected command_name at 3057 in state 537, 71 roots, mended 4"
+  },
+  "spot": {
+   "reach": 5245,
+   "under": 5144,
+   "tokens": 815,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 1,
+   "refused_span": 1,
+   "honest_reach": 5245,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/ltnews01.tex: unexpected command_name at 3057 in state 537, 72 roots, mended 4"
+  }
+ },
+ {
+  "name": "lua",
+  "source": "uri.lua",
+  "size": 3707,
+  "wide": {
+   "reach": 3707,
+   "under": 3707,
+   "tokens": 560,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 3706,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/uri.lua: accepted, 1 root"
+  },
+  "spot": {
+   "reach": 3707,
+   "under": 3707,
+   "tokens": 560,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 3706,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/uri.lua: accepted, 1 root"
+  }
+ },
+ {
+  "name": "markdown",
+  "source": "README.md",
+  "size": 3304,
+  "wide": {
+   "reach": 3304,
+   "under": 568,
+   "tokens": 1167,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 79,
+   "refused_span": 79,
+   "honest_reach": 3303,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/README.md: unexpected _newline_token at 20 in state 442, 430 roots, mended 79"
+  },
+  "spot": {
+   "reach": 3304,
+   "under": 568,
+   "tokens": 1167,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 79,
+   "refused_span": 79,
+   "honest_reach": 3303,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/README.md: unexpected _newline_token at 20 in state 442, 430 roots, mended 79"
+  }
+ },
+ {
+  "name": "ocaml",
+  "source": "list.ml",
+  "size": 16878,
+  "wide": {
+   "reach": 16877,
+   "under": 8135,
+   "tokens": 2404,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 18,
+   "refused_span": 8500,
+   "honest_reach": 16877,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/list.ml: unexpected (?:[^\\\\\"%@]+|%|@) at 79 in state 220, 150 roots, mended 34"
+  },
+  "spot": {
+   "reach": 16877,
+   "under": 15714,
+   "tokens": 4428,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 509,
+   "refused_span": 509,
+   "honest_reach": 16877,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/list.ml: unexpected (?:\\s+) at 79 in state 220, 352 roots, mended 547"
+  }
+ },
+ {
+  "name": "php",
+  "source": "Str.php",
+  "size": 67845,
+  "wide": {
+   "reach": 67845,
+   "under": 50517,
+   "tokens": 2743,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 1,
+   "refused_span": 2995,
+   "honest_reach": 67845,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/Str.php: unexpected (?:[^\\s<][^<]*) at 26849 in state 149, 93 roots, mended 1"
+  },
+  "spot": {
+   "reach": 67845,
+   "under": 53511,
+   "tokens": 2744,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 1,
+   "refused_span": 1,
+   "honest_reach": 67845,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/Str.php: unexpected / at 26849 in state 149, 93 roots, mended 1"
+  }
+ },
+ {
+  "name": "scala",
+  "source": "Option.scala",
+  "size": 20107,
+  "wide": {
+   "reach": 20106,
+   "under": 3534,
+   "tokens": 988,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 152,
+   "refused_span": 15657,
+   "honest_reach": 20093,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/Option.scala: unexpected , at 75 in state 126, 392 roots, mended 192"
+  },
+  "spot": {
+   "reach": 20106,
+   "under": 15285,
+   "tokens": 4280,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 462,
+   "refused_span": 502,
+   "honest_reach": 20102,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/Option.scala: unexpected , at 75 in state 126, 1292 roots, mended 643"
+  }
+ },
+ {
+  "name": "sql",
+  "source": "case.sql",
+  "size": 6390,
+  "wide": {
+   "reach": 6389,
+   "under": 5788,
+   "tokens": 973,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 185,
+   "refused_span": 385,
+   "honest_reach": 6389,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/case.sql: unexpected _identifier at 2907 in state 256, 194 roots, mended 185"
+  },
+  "spot": {
+   "reach": 6389,
+   "under": 5788,
+   "tokens": 973,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 273,
+   "refused_span": 277,
+   "honest_reach": 6389,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/case.sql: unexpected _identifier at 2907 in state 256, 194 roots, mended 273"
+  }
+ },
+ {
+  "name": "swift",
+  "source": "Chunked.swift",
+  "size": 28468,
+  "wide": {
+   "reach": 28468,
+   "under": 1857,
+   "tokens": 52,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 16,
+   "refused_span": 26473,
+   "honest_reach": 28385,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/Chunked.swift: unexpected (?:[^\\\\\"]+) at 626 in state 72, 66 roots, mended 29"
+  },
+  "spot": {
+   "reach": 28467,
+   "under": 14208,
+   "tokens": 1307,
+   "blamed": 3,
+   "blamed_span": 3,
+   "blamed_widest": 1,
+   "refused": 11434,
+   "refused_span": 11434,
+   "honest_reach": 28454,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/Chunked.swift: unexpected (?:[^\\r\\n]*) at 626 in state 72, 1455 roots, mended 11516"
+  }
+ },
+ {
+  "name": "toml",
+  "source": "Cargo.toml",
+  "size": 3544,
+  "wide": {
+   "reach": 3544,
+   "under": 3544,
+   "tokens": 809,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 3544,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/Cargo.toml: accepted, 1 root"
+  },
+  "spot": {
+   "reach": 3544,
+   "under": 3544,
+   "tokens": 809,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 3544,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/Cargo.toml: accepted, 1 root"
+  }
+ },
+ {
+  "name": "verilog",
+  "source": "picorv32.v",
+  "size": 94657,
+  "wide": {
+   "reach": 94657,
+   "under": 14248,
+   "tokens": 2442,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 80,
+   "refused_span": 62866,
+   "honest_reach": 67164,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/picorv32.v: unexpected , at 3057 in state 2083, 1216 roots, mended 664"
+  },
+  "spot": {
+   "reach": 94656,
+   "under": 47661,
+   "tokens": 8929,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 1858,
+   "refused_span": 1858,
+   "honest_reach": 94656,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/picorv32.v: unexpected , at 3057 in state 2083, 3854 roots, mended 3470"
+  }
+ },
+ {
+  "name": "yaml",
+  "source": "ci.yml",
+  "size": 18935,
+  "wide": {
+   "reach": 0,
+   "under": 0,
+   "tokens": 0,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 0,
+   "verdict": "outliner: yaml has no lexable terminal at all"
+  },
+  "spot": {
+   "reach": 0,
+   "under": 0,
+   "tokens": 0,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 0,
+   "refused_span": 0,
+   "honest_reach": 0,
+   "verdict": "outliner: yaml has no lexable terminal at all"
+  }
+ },
+ {
+  "name": "zig",
+  "source": "ascii.zig",
+  "size": 16125,
+  "wide": {
+   "reach": 16124,
+   "under": 16059,
+   "tokens": 3354,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 1,
+   "refused_span": 1,
+   "honest_reach": 16124,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/ascii.zig: unexpected { at 4101 in state 715, 55 roots, mended 3"
+  },
+  "spot": {
+   "reach": 16124,
+   "under": 16059,
+   "tokens": 3354,
+   "blamed": 0,
+   "blamed_span": 0,
+   "blamed_widest": 0,
+   "refused": 1,
+   "refused_span": 1,
+   "honest_reach": 16124,
+   "verdict": "outliner: /Users/griffinstrier/Billy-Company/outliner/upstream/sources/ascii.zig: unexpected { at 4101 in state 715, 55 roots, mended 3"
+  }
+ }
+]
