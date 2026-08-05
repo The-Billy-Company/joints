@@ -1,0 +1,1921 @@
+[
+  {
+    "name": "c",
+    "source": "ledger.c",
+    "size": 1444,
+    "kind": "mended",
+    "first": [
+      ",",
+      1146
+    ],
+    "reach": 1441,
+    "roots": 28,
+    "mends": 5,
+    "crossed": 5,
+    "distinct": [
+      [
+        "state",
+        "\" in state 523"
+      ],
+      [
+        "state",
+        "% in state 175"
+      ],
+      [
+        "state",
+        ") in state 1"
+      ],
+      [
+        "state",
+        ", in state 1146"
+      ],
+      [
+        "state",
+        "preproc_arg in state 1"
+      ]
+    ],
+    "closed": false,
+    "why": "unclosed at 1444, which no step gets past",
+    "covered": 99.8,
+    "voice": 1.0
+  },
+  {
+    "name": "cpp",
+    "source": "ledger.cpp",
+    "size": 1408,
+    "kind": "mended",
+    "first": [
+      "\"",
+      935
+    ],
+    "reach": 1407,
+    "roots": 29,
+    "mends": 6,
+    "crossed": 6,
+    "distinct": [
+      [
+        "state",
+        "\" in state 1513"
+      ],
+      [
+        "state",
+        "\" in state 935"
+      ],
+      [
+        "state",
+        ") in state 94"
+      ],
+      [
+        "state",
+        ", in state 0"
+      ],
+      [
+        "state",
+        "; in state 190"
+      ],
+      [
+        "state",
+        "} in state 180"
+      ]
+    ],
+    "closed": true,
+    "why": "",
+    "covered": 99.9,
+    "voice": 1.0
+  },
+  {
+    "name": "go",
+    "source": "ledger.go",
+    "size": 1189,
+    "kind": "mended",
+    "first": [
+      "{",
+      188
+    ],
+    "reach": 1188,
+    "roots": 39,
+    "mends": 8,
+    "crossed": 8,
+    "distinct": [
+      [
+        "state",
+        ") in state 485"
+      ],
+      [
+        "state",
+        ", in state 58"
+      ],
+      [
+        "state",
+        "{ in state 188"
+      ],
+      [
+        "state",
+        "} in state 0"
+      ],
+      [
+        "state",
+        "} in state 259"
+      ],
+      [
+        "state",
+        "} in state 71"
+      ],
+      [
+        "state",
+        "} in state 727"
+      ]
+    ],
+    "closed": true,
+    "why": "",
+    "covered": 99.9,
+    "voice": 1.1
+  },
+  {
+    "name": "java",
+    "source": "Ledger.java",
+    "size": 1258,
+    "kind": "whole",
+    "first": null,
+    "reach": 1258,
+    "roots": 1,
+    "mends": 0,
+    "crossed": 0,
+    "distinct": [],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 0.0
+  },
+  {
+    "name": "javascript",
+    "source": "ledger.js",
+    "size": 1080,
+    "kind": "whole",
+    "first": null,
+    "reach": 1080,
+    "roots": 1,
+    "mends": 0,
+    "crossed": 0,
+    "distinct": [],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 0.0
+  },
+  {
+    "name": "typescript",
+    "source": "ledger.ts",
+    "size": 1253,
+    "kind": "whole",
+    "first": null,
+    "reach": 1253,
+    "roots": 1,
+    "mends": 0,
+    "crossed": 0,
+    "distinct": [],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 0.0
+  },
+  {
+    "name": "python",
+    "source": "ledger.py",
+    "size": 1728,
+    "kind": "mended",
+    "first": [
+      ":",
+      880
+    ],
+    "reach": 1727,
+    "roots": 54,
+    "mends": 13,
+    "crossed": 13,
+    "distinct": [
+      [
+        "state",
+        "(?:[^{}\\n]+) in state 215"
+      ],
+      [
+        "state",
+        ") in state 1"
+      ],
+      [
+        "state",
+        ") in state 660"
+      ],
+      [
+        "state",
+        ") in state 79"
+      ],
+      [
+        "state",
+        ": in state 686"
+      ],
+      [
+        "state",
+        ": in state 79"
+      ],
+      [
+        "state",
+        ": in state 880"
+      ],
+      [
+        "state",
+        "= in state 79"
+      ],
+      [
+        "state",
+        "> in state 29"
+      ]
+    ],
+    "closed": true,
+    "why": "",
+    "covered": 99.9,
+    "voice": 1.4
+  },
+  {
+    "name": "ruby",
+    "source": "ledger.rb",
+    "size": 1020,
+    "kind": "mended",
+    "first": [
+      "uninterpreted",
+      1523
+    ],
+    "reach": 1020,
+    "roots": 68,
+    "mends": 26,
+    "crossed": 26,
+    "distinct": [
+      [
+        "state",
+        ", in state 407"
+      ],
+      [
+        "state",
+        "[ in state 553"
+      ],
+      [
+        "state",
+        "uninterpreted in state 0"
+      ],
+      [
+        "state",
+        "uninterpreted in state 1"
+      ],
+      [
+        "state",
+        "uninterpreted in state 1467"
+      ],
+      [
+        "state",
+        "uninterpreted in state 1523"
+      ],
+      [
+        "state",
+        "uninterpreted in state 2360"
+      ],
+      [
+        "state",
+        "uninterpreted in state 37"
+      ]
+    ],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 3.2
+  },
+  {
+    "name": "rust",
+    "source": "ledger.rs",
+    "size": 1434,
+    "kind": "whole",
+    "first": null,
+    "reach": 1434,
+    "roots": 1,
+    "mends": 0,
+    "crossed": 0,
+    "distinct": [],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 0.0
+  },
+  {
+    "name": "bash",
+    "source": "ledger.sh",
+    "size": 1068,
+    "kind": "mended",
+    "first": [
+      "[",
+      1178
+    ],
+    "reach": 1068,
+    "roots": 37,
+    "mends": 4,
+    "crossed": 4,
+    "distinct": [
+      [
+        "state",
+        "[ in state 1178"
+      ],
+      [
+        "state",
+        "] in state 35"
+      ],
+      [
+        "state",
+        "_c_word in state 507"
+      ],
+      [
+        "state",
+        "} in state 74"
+      ]
+    ],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 1.0
+  },
+  {
+    "name": "json",
+    "source": "ledger.json",
+    "size": 774,
+    "kind": "whole",
+    "first": null,
+    "reach": 774,
+    "roots": 1,
+    "mends": 0,
+    "crossed": 0,
+    "distinct": [],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 0.0
+  },
+  {
+    "name": "css",
+    "source": "normalize.css",
+    "size": 6138,
+    "kind": "whole",
+    "first": null,
+    "reach": 6138,
+    "roots": 1,
+    "mends": 0,
+    "crossed": 0,
+    "distinct": [],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 0.0
+  },
+  {
+    "name": "elixir",
+    "source": "router.ex",
+    "size": 46089,
+    "kind": "mended",
+    "first": [
+      ")",
+      550
+    ],
+    "reach": 46089,
+    "roots": 2071,
+    "mends": 303,
+    "crossed": 273,
+    "distinct": [
+      [
+        "lexical",
+        "stray b':'"
+      ],
+      [
+        "state",
+        "( in state 300"
+      ],
+      [
+        "state",
+        "(?::\\s) in state 4"
+      ],
+      [
+        "state",
+        "(?:\\r?\\n) in state 743"
+      ],
+      [
+        "state",
+        "(?u:[_\\p{Ll}\\p{Lm}\\p{Lo}\\p{Nl}\\x{1885}\\x{1886}\\x{2118}\\x{212E}\\x{309B}\\x{309C}][\\p{ID_Continue}]*[?!]?) in state 100"
+      ],
+      [
+        "state",
+        "(?u:[_\\p{Ll}\\p{Lm}\\p{Lo}\\p{Nl}\\x{1885}\\x{1886}\\x{2118}\\x{212E}\\x{309B}\\x{309C}][\\p{ID_Continue}]*[?!]?) in state 38"
+      ],
+      [
+        "state",
+        ") in state 0"
+      ],
+      [
+        "state",
+        ") in state 100"
+      ],
+      [
+        "state",
+        ") in state 116"
+      ],
+      [
+        "state",
+        ") in state 127"
+      ],
+      [
+        "state",
+        ") in state 202"
+      ],
+      [
+        "state",
+        ") in state 203"
+      ],
+      [
+        "state",
+        ") in state 38"
+      ],
+      [
+        "state",
+        ") in state 550"
+      ],
+      [
+        "state",
+        ") in state 743"
+      ],
+      [
+        "state",
+        ") in state 79"
+      ],
+      [
+        "state",
+        ") in state 81"
+      ],
+      [
+        "state",
+        ", in state 0"
+      ],
+      [
+        "state",
+        ", in state 79"
+      ],
+      [
+        "state",
+        ", in state 81"
+      ],
+      [
+        "state",
+        ". in state 0"
+      ],
+      [
+        "state",
+        "[ in state 100"
+      ],
+      [
+        "state",
+        "] in state 79"
+      ],
+      [
+        "state",
+        "] in state 81"
+      ],
+      [
+        "state",
+        "alias in state 100"
+      ],
+      [
+        "state",
+        "atom in state 100"
+      ],
+      [
+        "state",
+        "false in state 100"
+      ],
+      [
+        "state",
+        "fn in state 100"
+      ],
+      [
+        "state",
+        "integer in state 100"
+      ],
+      [
+        "state",
+        "} in state 0"
+      ],
+      [
+        "state",
+        "} in state 1"
+      ],
+      [
+        "state",
+        "} in state 79"
+      ]
+    ],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 9.5
+  },
+  {
+    "name": "embedded-template",
+    "source": "application.html.erb",
+    "size": 6006,
+    "kind": "whole",
+    "first": null,
+    "reach": 6006,
+    "roots": 1,
+    "mends": 0,
+    "crossed": 0,
+    "distinct": [],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 0.0
+  },
+  {
+    "name": "haskell",
+    "source": "Shared.hs",
+    "size": 34240,
+    "kind": "mended",
+    "first": [
+      ".",
+      7
+    ],
+    "reach": 32014,
+    "roots": 90,
+    "mends": 16384,
+    "crossed": 400,
+    "distinct": [
+      [
+        "state",
+        "(?:\\() in state 0"
+      ],
+      [
+        "state",
+        ", in state 0"
+      ],
+      [
+        "state",
+        ". in state 0"
+      ],
+      [
+        "state",
+        ". in state 7"
+      ],
+      [
+        "state",
+        "calling_convention in state 0"
+      ],
+      [
+        "state",
+        "d in state 0"
+      ],
+      [
+        "state",
+        "e in state 0"
+      ],
+      [
+        "state",
+        "p in state 0"
+      ],
+      [
+        "state",
+        "t in state 0"
+      ],
+      [
+        "state",
+        "variable in state 0"
+      ]
+    ],
+    "closed": false,
+    "why": "still walled after 400 rounds",
+    "covered": 93.5,
+    "voice": 1638.4
+  },
+  {
+    "name": "html",
+    "source": "viewer.html",
+    "size": 72288,
+    "kind": "whole",
+    "first": null,
+    "reach": 72288,
+    "roots": 1,
+    "mends": 0,
+    "crossed": 0,
+    "distinct": [],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 0.0
+  },
+  {
+    "name": "julia",
+    "source": "set.jl",
+    "size": 27360,
+    "kind": "mended",
+    "first": null,
+    "reach": 27359,
+    "roots": 1872,
+    "mends": 4761,
+    "crossed": 400,
+    "distinct": [
+      [
+        "lexical",
+        "stray b'A'"
+      ],
+      [
+        "lexical",
+        "stray b'B'"
+      ],
+      [
+        "lexical",
+        "stray b'D'"
+      ],
+      [
+        "lexical",
+        "stray b'E'"
+      ],
+      [
+        "lexical",
+        "stray b'S'"
+      ],
+      [
+        "lexical",
+        "stray b'T'"
+      ],
+      [
+        "lexical",
+        "stray b'a'"
+      ],
+      [
+        "lexical",
+        "stray b'b'"
+      ],
+      [
+        "lexical",
+        "stray b'c'"
+      ],
+      [
+        "lexical",
+        "stray b'd'"
+      ],
+      [
+        "lexical",
+        "stray b'e'"
+      ],
+      [
+        "lexical",
+        "stray b'f'"
+      ],
+      [
+        "lexical",
+        "stray b'g'"
+      ],
+      [
+        "lexical",
+        "stray b'h'"
+      ],
+      [
+        "lexical",
+        "stray b'i'"
+      ],
+      [
+        "lexical",
+        "stray b'j'"
+      ],
+      [
+        "lexical",
+        "stray b'l'"
+      ],
+      [
+        "lexical",
+        "stray b'm'"
+      ],
+      [
+        "lexical",
+        "stray b'n'"
+      ],
+      [
+        "lexical",
+        "stray b'o'"
+      ],
+      [
+        "lexical",
+        "stray b'p'"
+      ],
+      [
+        "lexical",
+        "stray b'q'"
+      ],
+      [
+        "lexical",
+        "stray b'r'"
+      ],
+      [
+        "lexical",
+        "stray b's'"
+      ],
+      [
+        "lexical",
+        "stray b't'"
+      ],
+      [
+        "lexical",
+        "stray b'u'"
+      ],
+      [
+        "lexical",
+        "stray b'v'"
+      ],
+      [
+        "lexical",
+        "stray b'y'"
+      ],
+      [
+        "state",
+        "' in state 0"
+      ],
+      [
+        "state",
+        ") in state 0"
+      ],
+      [
+        "state",
+        ", in state 0"
+      ],
+      [
+        "state",
+        ", in state 46"
+      ],
+      [
+        "state",
+        ". in state 0"
+      ],
+      [
+        "state",
+        ". in state 46"
+      ],
+      [
+        "state",
+        "; in state 0"
+      ],
+      [
+        "state",
+        "= in state 0"
+      ],
+      [
+        "state",
+        "] in state 46"
+      ],
+      [
+        "state",
+        "_delimiter_str_1 in state 66"
+      ],
+      [
+        "state",
+        "_power_operator in state 44"
+      ],
+      [
+        "state",
+        "as in state 0"
+      ],
+      [
+        "state",
+        "do in state 0"
+      ],
+      [
+        "state",
+        "in in state 0"
+      ],
+      [
+        "state",
+        "in in state 46"
+      ],
+      [
+        "state",
+        "} in state 0"
+      ]
+    ],
+    "closed": false,
+    "why": "still walled after 400 rounds",
+    "covered": 100.0,
+    "voice": 108.2
+  },
+  {
+    "name": "kotlin",
+    "source": "Maps.kt",
+    "size": 35815,
+    "kind": "mended",
+    "first": [
+      "@",
+      944
+    ],
+    "reach": 35814,
+    "roots": 1155,
+    "mends": 426,
+    "crossed": 400,
+    "distinct": [
+      [
+        "state",
+        "( in state 581"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 0"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 1"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 277"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 433"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 484"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 493"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 84"
+      ],
+      [
+        "state",
+        ") in state 0"
+      ],
+      [
+        "state",
+        ") in state 110"
+      ],
+      [
+        "state",
+        ") in state 13"
+      ],
+      [
+        "state",
+        ") in state 138"
+      ],
+      [
+        "state",
+        ") in state 468"
+      ],
+      [
+        "state",
+        ") in state 485"
+      ],
+      [
+        "state",
+        ", in state 0"
+      ],
+      [
+        "state",
+        ", in state 110"
+      ],
+      [
+        "state",
+        ", in state 138"
+      ],
+      [
+        "state",
+        ", in state 323"
+      ],
+      [
+        "state",
+        ", in state 480"
+      ],
+      [
+        "state",
+        "-> in state 144"
+      ],
+      [
+        "state",
+        ". in state 480"
+      ],
+      [
+        "state",
+        ": in state 0"
+      ],
+      [
+        "state",
+        ": in state 171"
+      ],
+      [
+        "state",
+        ": in state 338"
+      ],
+      [
+        "state",
+        ": in state 480"
+      ],
+      [
+        "state",
+        ": in state 51"
+      ],
+      [
+        "state",
+        ": in state 856"
+      ],
+      [
+        "state",
+        ": in state 864"
+      ],
+      [
+        "state",
+        "< in state 233"
+      ],
+      [
+        "state",
+        "< in state 480"
+      ],
+      [
+        "state",
+        "< in state 484"
+      ],
+      [
+        "state",
+        "= in state 0"
+      ],
+      [
+        "state",
+        "= in state 117"
+      ],
+      [
+        "state",
+        "= in state 311"
+      ],
+      [
+        "state",
+        "= in state 485"
+      ],
+      [
+        "state",
+        "> in state 0"
+      ],
+      [
+        "state",
+        "> in state 45"
+      ],
+      [
+        "state",
+        "> in state 480"
+      ],
+      [
+        "state",
+        "> in state 485"
+      ],
+      [
+        "state",
+        "@ in state 110"
+      ],
+      [
+        "state",
+        "@ in state 944"
+      ],
+      [
+        "state",
+        "_alpha_identifier in state 946"
+      ],
+      [
+        "state",
+        "get in state 485"
+      ],
+      [
+        "state",
+        "internal in state 110"
+      ],
+      [
+        "state",
+        "public in state 110"
+      ],
+      [
+        "state",
+        "public in state 481"
+      ],
+      [
+        "state",
+        "public in state 484"
+      ],
+      [
+        "state",
+        "quest in state 171"
+      ],
+      [
+        "state",
+        "return in state 310"
+      ],
+      [
+        "state",
+        "wildcard_import in state 436"
+      ],
+      [
+        "state",
+        "} in state 0"
+      ],
+      [
+        "state",
+        "} in state 110"
+      ],
+      [
+        "state",
+        "} in state 117"
+      ],
+      [
+        "state",
+        "} in state 138"
+      ],
+      [
+        "state",
+        "} in state 480"
+      ]
+    ],
+    "closed": false,
+    "why": "still walled after 400 rounds",
+    "covered": 100.0,
+    "voice": 7.7
+  },
+  {
+    "name": "latex",
+    "source": "ltnews01.tex",
+    "size": 5246,
+    "kind": "mended",
+    "first": [
+      "command_name",
+      537
+    ],
+    "reach": 5245,
+    "roots": 72,
+    "mends": 4,
+    "crossed": 4,
+    "distinct": [
+      [
+        "state",
+        "< in state 1739"
+      ],
+      [
+        "state",
+        "\\documentclass in state 537"
+      ],
+      [
+        "state",
+        "command_name in state 537"
+      ],
+      [
+        "state",
+        "} in state 462"
+      ]
+    ],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 1.0
+  },
+  {
+    "name": "lua",
+    "source": "uri.lua",
+    "size": 3707,
+    "kind": "whole",
+    "first": null,
+    "reach": 3707,
+    "roots": 1,
+    "mends": 0,
+    "crossed": 0,
+    "distinct": [],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 0.0
+  },
+  {
+    "name": "markdown",
+    "source": "README.md",
+    "size": 3304,
+    "kind": "mended",
+    "first": null,
+    "reach": 3304,
+    "roots": 430,
+    "mends": 79,
+    "crossed": 79,
+    "distinct": [
+      [
+        "lexical",
+        "stray b'\\n'"
+      ]
+    ],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 79.0
+  },
+  {
+    "name": "ocaml",
+    "source": "list.ml",
+    "size": 16878,
+    "kind": "mended",
+    "first": null,
+    "reach": 16877,
+    "roots": 349,
+    "mends": 87,
+    "crossed": 83,
+    "distinct": [
+      [
+        "lexical",
+        "stray b')'"
+      ],
+      [
+        "lexical",
+        "stray b'*'"
+      ],
+      [
+        "lexical",
+        "stray b'@'"
+      ],
+      [
+        "lexical",
+        "stray b'a'"
+      ],
+      [
+        "lexical",
+        "stray b'f'"
+      ],
+      [
+        "lexical",
+        "stray b'i'"
+      ],
+      [
+        "lexical",
+        "stray b'n'"
+      ],
+      [
+        "lexical",
+        "stray b'o'"
+      ],
+      [
+        "state",
+        "( in state 1441"
+      ],
+      [
+        "state",
+        ") in state 533"
+      ],
+      [
+        "state",
+        ": in state 78"
+      ],
+      [
+        "state",
+        "] in state 78"
+      ],
+      [
+        "state",
+        "_lowercase_identifier in state 239"
+      ],
+      [
+        "state",
+        "_lowercase_identifier in state 240"
+      ],
+      [
+        "state",
+        "_lowercase_identifier in state 263"
+      ],
+      [
+        "state",
+        "_uppercase_identifier in state 240"
+      ],
+      [
+        "state",
+        "{ in state 239"
+      ],
+      [
+        "state",
+        "} in state 78"
+      ]
+    ],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 4.8
+  },
+  {
+    "name": "php",
+    "source": "Str.php",
+    "size": 67845,
+    "kind": "mended",
+    "first": [
+      "/",
+      149
+    ],
+    "reach": 67845,
+    "roots": 93,
+    "mends": 1,
+    "crossed": 1,
+    "distinct": [
+      [
+        "state",
+        "/ in state 149"
+      ]
+    ],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 1.0
+  },
+  {
+    "name": "scala",
+    "source": "Option.scala",
+    "size": 20107,
+    "kind": "mended",
+    "first": [
+      ",",
+      126
+    ],
+    "reach": 20106,
+    "roots": 1267,
+    "mends": 549,
+    "crossed": 400,
+    "distinct": [
+      [
+        "lexical",
+        "stray b'\\x80'"
+      ],
+      [
+        "lexical",
+        "stray b'\\x94'"
+      ],
+      [
+        "state",
+        "\" in state 0"
+      ],
+      [
+        "state",
+        "\" in state 46"
+      ],
+      [
+        "state",
+        "\" in state 582"
+      ],
+      [
+        "state",
+        "\" in state 610"
+      ],
+      [
+        "state",
+        "\" in state 6406"
+      ],
+      [
+        "state",
+        "' in state 1"
+      ],
+      [
+        "state",
+        "' in state 1514"
+      ],
+      [
+        "state",
+        "' in state 81"
+      ],
+      [
+        "state",
+        "( in state 102"
+      ],
+      [
+        "state",
+        "(?:(?u:[\\x{00ac}\\x{00b1}\\x{00d7}\\x{00f7}\\x{2190}-\\x{2194}\\x{2200}-\\x{22ff}\\p{So}\\-!#%&*+/\\\\<>?\\x{005e}\\x{007c}~])|(?u:[\\-!#%&*+\\\\:<=>?@\\x{005e}\\x{007c}~\\p{Sm}\\p{So}][\\-!#%&*+/\\\\:<=>?@\\x{005e}\\x{007c}~\\p{Sm}\\p{So}]+)|(?u:[\\-!#%&*+/\\\\:<=>?@\\x{005e}\\x{007c}~\\p{Sm}\\p{So}][\\-!#%&+\\\\:<=>?@\\x{005e}\\x{007c}~\\p{Sm}\\p{So}][\\-!#%&*+/\\\\:<=>?@\\x{005e}\\x{007c}~\\p{Sm}\\p{So}]*)) in state 244"
+      ],
+      [
+        "state",
+        ") in state 0"
+      ],
+      [
+        "state",
+        ") in state 126"
+      ],
+      [
+        "state",
+        ") in state 170"
+      ],
+      [
+        "state",
+        "* in state 170"
+      ],
+      [
+        "state",
+        "* in state 1740"
+      ],
+      [
+        "state",
+        ", in state 126"
+      ],
+      [
+        "state",
+        ", in state 1720"
+      ],
+      [
+        "state",
+        ", in state 312"
+      ],
+      [
+        "state",
+        ", in state 336"
+      ],
+      [
+        "state",
+        ". in state 0"
+      ],
+      [
+        "state",
+        ". in state 1261"
+      ],
+      [
+        "state",
+        ". in state 294"
+      ],
+      [
+        "state",
+        ". in state 582"
+      ],
+      [
+        "state",
+        ". in state 604"
+      ],
+      [
+        "state",
+        ": in state 0"
+      ],
+      [
+        "state",
+        ": in state 1076"
+      ],
+      [
+        "state",
+        ": in state 426"
+      ],
+      [
+        "state",
+        "= in state 1745"
+      ],
+      [
+        "state",
+        "= in state 1754"
+      ],
+      [
+        "state",
+        "= in state 1823"
+      ],
+      [
+        "state",
+        "= in state 582"
+      ],
+      [
+        "state",
+        "@ in state 1794"
+      ],
+      [
+        "state",
+        "@ in state 584"
+      ],
+      [
+        "state",
+        "@ in state 62"
+      ],
+      [
+        "state",
+        "@ in state 9"
+      ],
+      [
+        "state",
+        "] in state 0"
+      ],
+      [
+        "state",
+        "] in state 1"
+      ],
+      [
+        "state",
+        "] in state 1504"
+      ],
+      [
+        "state",
+        "] in state 1791"
+      ],
+      [
+        "state",
+        "] in state 2487"
+      ],
+      [
+        "state",
+        "_alpha_identifier in state 368"
+      ],
+      [
+        "state",
+        "_interpolation_identifier in state 1021"
+      ],
+      [
+        "state",
+        "_interpolation_identifier in state 170"
+      ],
+      [
+        "state",
+        "_interpolation_identifier in state 4"
+      ],
+      [
+        "state",
+        "_interpolation_identifier in state 426"
+      ],
+      [
+        "state",
+        "_interpolation_identifier in state 580"
+      ],
+      [
+        "state",
+        "xml_text in state 0"
+      ],
+      [
+        "state",
+        "{ in state 6034"
+      ],
+      [
+        "state",
+        "} in state 0"
+      ],
+      [
+        "state",
+        "} in state 111"
+      ],
+      [
+        "state",
+        "} in state 126"
+      ],
+      [
+        "state",
+        "} in state 584"
+      ]
+    ],
+    "closed": false,
+    "why": "still walled after 400 rounds",
+    "covered": 100.0,
+    "voice": 10.2
+  },
+  {
+    "name": "sql",
+    "source": "case.sql",
+    "size": 6390,
+    "kind": "mended",
+    "first": [
+      "_identifier",
+      256
+    ],
+    "reach": 6389,
+    "roots": 194,
+    "mends": 273,
+    "crossed": 277,
+    "distinct": [
+      [
+        "lexical",
+        "stray b\"'\""
+      ],
+      [
+        "state",
+        "(?:([uU]&|[nN])?'([^']|'')*') in state 0"
+      ],
+      [
+        "state",
+        ") in state 0"
+      ],
+      [
+        "state",
+        "* in state 0"
+      ],
+      [
+        "state",
+        ", in state 0"
+      ],
+      [
+        "state",
+        ". in state 0"
+      ],
+      [
+        "state",
+        "; in state 0"
+      ],
+      [
+        "state",
+        "= in state 0"
+      ],
+      [
+        "state",
+        "[ in state 0"
+      ],
+      [
+        "state",
+        "] in state 0"
+      ],
+      [
+        "state",
+        "] in state 397"
+      ],
+      [
+        "state",
+        "_identifier in state 0"
+      ],
+      [
+        "state",
+        "_identifier in state 11"
+      ],
+      [
+        "state",
+        "_identifier in state 119"
+      ],
+      [
+        "state",
+        "_identifier in state 256"
+      ],
+      [
+        "state",
+        "_identifier in state 27"
+      ],
+      [
+        "state",
+        "_identifier in state 322"
+      ],
+      [
+        "state",
+        "_identifier in state 770"
+      ],
+      [
+        "state",
+        "_natural_number in state 27"
+      ]
+    ],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 14.4
+  },
+  {
+    "name": "swift",
+    "source": "Chunked.swift",
+    "size": 28468,
+    "kind": "mended",
+    "first": [
+      "(?:[^\\r\\n]*)",
+      72
+    ],
+    "reach": 28467,
+    "roots": 1393,
+    "mends": 9538,
+    "crossed": 400,
+    "distinct": [
+      [
+        "state",
+        "( in state 66"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 0"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 1"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 26"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 33"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 34"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 36"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 572"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 66"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 72"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 76"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 77"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 80"
+      ],
+      [
+        "state",
+        "(?:[^\\r\\n]*) in state 88"
+      ],
+      [
+        "state",
+        ") in state 0"
+      ],
+      [
+        "state",
+        ", in state 0"
+      ],
+      [
+        "state",
+        ". in state 0"
+      ],
+      [
+        "state",
+        ". in state 38"
+      ],
+      [
+        "state",
+        "@ in state 66"
+      ],
+      [
+        "state",
+        "u in state 0"
+      ],
+      [
+        "state",
+        "u in state 88"
+      ],
+      [
+        "state",
+        "} in state 0"
+      ]
+    ],
+    "closed": false,
+    "why": "still walled after 400 rounds",
+    "covered": 100.0,
+    "voice": 433.5
+  },
+  {
+    "name": "toml",
+    "source": "Cargo.toml",
+    "size": 3544,
+    "kind": "whole",
+    "first": null,
+    "reach": 3544,
+    "roots": 1,
+    "mends": 0,
+    "crossed": 0,
+    "distinct": [],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 0.0
+  },
+  {
+    "name": "verilog",
+    "source": "picorv32.v",
+    "size": 94657,
+    "kind": "mended",
+    "first": [
+      ",",
+      2083
+    ],
+    "reach": 94656,
+    "roots": 3856,
+    "mends": 2234,
+    "crossed": 400,
+    "distinct": [
+      [
+        "state",
+        "! in state 0"
+      ],
+      [
+        "state",
+        "& in state 0"
+      ],
+      [
+        "state",
+        "&& in state 701"
+      ],
+      [
+        "state",
+        "' in state 0"
+      ],
+      [
+        "state",
+        "( in state 0"
+      ],
+      [
+        "state",
+        "( in state 164"
+      ],
+      [
+        "state",
+        "(?:[^\\\\\"\\n]+) in state 0"
+      ],
+      [
+        "state",
+        "(?:[^\\\\\"\\n]+) in state 3183"
+      ],
+      [
+        "state",
+        ") in state 0"
+      ],
+      [
+        "state",
+        ") in state 1371"
+      ],
+      [
+        "state",
+        ") in state 164"
+      ],
+      [
+        "state",
+        ") in state 563"
+      ],
+      [
+        "state",
+        ") in state 701"
+      ],
+      [
+        "state",
+        "* in state 0"
+      ],
+      [
+        "state",
+        "*) in state 164"
+      ],
+      [
+        "state",
+        ", in state 0"
+      ],
+      [
+        "state",
+        ", in state 2083"
+      ],
+      [
+        "state",
+        ". in state 0"
+      ],
+      [
+        "state",
+        "0 in state 0"
+      ],
+      [
+        "state",
+        "1 in state 0"
+      ],
+      [
+        "state",
+        "2 in state 0"
+      ],
+      [
+        "state",
+        "2 in state 1328"
+      ],
+      [
+        "state",
+        "2 in state 534"
+      ],
+      [
+        "state",
+        ": in state 0"
+      ],
+      [
+        "state",
+        ": in state 701"
+      ],
+      [
+        "state",
+        "; in state 701"
+      ],
+      [
+        "state",
+        "< in state 0"
+      ],
+      [
+        "state",
+        "< in state 2606"
+      ],
+      [
+        "state",
+        "< in state 3183"
+      ],
+      [
+        "state",
+        "= in state 0"
+      ],
+      [
+        "state",
+        "` in state 534"
+      ],
+      [
+        "state",
+        "begin in state 562"
+      ],
+      [
+        "state",
+        "end in state 562"
+      ],
+      [
+        "state",
+        "endcase in state 562"
+      ],
+      [
+        "state",
+        "endtask in state 562"
+      ],
+      [
+        "state",
+        "macro_text in state 164"
+      ],
+      [
+        "state",
+        "macro_text in state 513"
+      ],
+      [
+        "state",
+        "macro_text in state 562"
+      ],
+      [
+        "state",
+        "{ in state 0"
+      ],
+      [
+        "state",
+        "| in state 0"
+      ],
+      [
+        "state",
+        "} in state 3183"
+      ]
+    ],
+    "closed": false,
+    "why": "still walled after 400 rounds",
+    "covered": 100.0,
+    "voice": 54.5
+  },
+  {
+    "name": "yaml",
+    "source": "ci.yml",
+    "size": 18935,
+    "kind": "other",
+    "first": null,
+    "reach": 0,
+    "roots": 1,
+    "mends": 0,
+    "crossed": 0,
+    "distinct": [],
+    "closed": false,
+    "why": "other at 0, which no step gets past",
+    "covered": 0.0,
+    "voice": 0.0
+  },
+  {
+    "name": "zig",
+    "source": "ascii.zig",
+    "size": 16125,
+    "kind": "mended",
+    "first": [
+      "{",
+      715
+    ],
+    "reach": 16124,
+    "roots": 55,
+    "mends": 3,
+    "crossed": 3,
+    "distinct": [
+      [
+        "state",
+        "; in state 0"
+      ],
+      [
+        "state",
+        "{ in state 715"
+      ],
+      [
+        "state",
+        "} in state 83"
+      ]
+    ],
+    "closed": true,
+    "why": "",
+    "covered": 100.0,
+    "voice": 1.0
+  }
+]
