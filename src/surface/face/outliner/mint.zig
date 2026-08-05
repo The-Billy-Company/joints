@@ -19,6 +19,7 @@
 
 const std = @import("std");
 const outliner = @import("outliner");
+const intake = @import("intake.zig");
 
 const folio = outliner.folio;
 const leaf = folio.leaf;
@@ -64,7 +65,10 @@ pub fn run(
         // Bound, not merely mapped. What an editor pays to open a language is
         // map plus verify plus the table laid back out, and timing the first
         // two would be quoting a number nothing can parse from.
-        var bound = try folio.bind(gpa, &mapped.folio);
+        var bound = folio.bind(gpa, &mapped.folio) catch |e| {
+            try w.print("outliner: cannot bind {s}: {s}\n", .{ path.?, @errorName(e) });
+            return 2;
+        };
         defer bound.deinit();
         try report(w, &mapped.folio, &bound, .{
             .source = null,
@@ -91,10 +95,7 @@ fn write(
     path: []const u8,
     out: ?[]const u8,
 ) !u8 {
-    const source = std.Io.Dir.cwd().readFileAlloc(io, path, gpa, .limited(64 << 20)) catch |e| {
-        try w.print("outliner: cannot read {s}: {s}\n", .{ path, @errorName(e) });
-        return 2;
-    };
+    const source = intake.slurp(gpa, io, w, path) orelse return 2;
     defer gpa.free(source);
 
     var gr = import.treeSitter(gpa, source) catch |e| {
@@ -104,7 +105,10 @@ fn write(
     defer gr.deinit();
 
     const pressed_at = std.Io.Clock.awake.now(io);
-    var built = try press.tables(gpa, &gr);
+    var built = press.tables(gpa, &gr) catch |e| {
+        try w.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
+        return 2;
+    };
     defer built.deinit();
     const press_us = since(io, pressed_at);
 
@@ -131,7 +135,10 @@ fn write(
         return 1;
     };
     defer mapped.close();
-    var bound = try folio.bind(gpa, &mapped.folio);
+    var bound = folio.bind(gpa, &mapped.folio) catch |e| {
+        try w.print("outliner: cannot bind {s}: {s}\n", .{ target, @errorName(e) });
+        return 2;
+    };
     defer bound.deinit();
     const load_us = since(io, loaded_at);
 

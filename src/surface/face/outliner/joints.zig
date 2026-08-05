@@ -38,6 +38,7 @@
 
 const std = @import("std");
 const outliner = @import("outliner");
+const intake = @import("intake.zig");
 
 const import = outliner.press.import;
 const press = outliner.press;
@@ -135,10 +136,7 @@ pub fn run(
         return 2;
     }
 
-    const source = std.Io.Dir.cwd().readFileAlloc(io, grammar_path, gpa, .limited(64 << 20)) catch |e| {
-        try w.print("outliner: cannot read {s}: {s}\n", .{ grammar_path, @errorName(e) });
-        return 2;
-    };
+    const source = intake.slurp(gpa, io, w, grammar_path) orelse return 2;
     defer gpa.free(source);
 
     var gr = import.treeSitter(gpa, source) catch |e| {
@@ -147,7 +145,10 @@ pub fn run(
     };
     defer gr.deinit();
 
-    var built = try press.tables(gpa, &gr);
+    var built = press.tables(gpa, &gr) catch |e| {
+        try w.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
+        return 2;
+    };
     defer built.deinit();
     const c = &built.collection;
     const t = &built.tables;
@@ -167,7 +168,10 @@ pub fn run(
     cur.limbs_max = limbs;
     if (churn != 0) cur.born_max = churn;
 
-    var sc = (try scanner.Scanner.compile(gpa, &gr)) orelse {
+    var sc = (scanner.Scanner.compile(gpa, &gr) catch |e| {
+        try w.print("outliner: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(e) });
+        return 2;
+    }) orelse {
         try w.print("outliner: {s} has no lexable terminal at all\n", .{gr.name});
         return 1;
     };

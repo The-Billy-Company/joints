@@ -20,6 +20,7 @@ const joints = @import("joints.zig");
 const parse = @import("parse.zig");
 const mint = @import("mint.zig");
 const amend = @import("amend.zig");
+const intake = @import("intake.zig");
 
 const usage =
     \\outliner - parsing as algebra
@@ -141,13 +142,6 @@ pub fn main(init: std.process.Init) !u8 {
     return 2;
 }
 
-fn slurp(gpa: std.mem.Allocator, io: std.Io, w: *std.Io.Writer, path: []const u8) !?[]u8 {
-    return std.Io.Dir.cwd().readFileAlloc(io, path, gpa, .limited(64 << 20)) catch |e| {
-        try w.print("outliner: cannot read {s}: {s}\n", .{ path, @errorName(e) });
-        return null;
-    };
-}
-
 /// Tokenize `path` with the grammar at `grammar_path`, unconditionally.
 ///
 /// Unconditionally is the point, and the output says so: without the parse
@@ -162,7 +156,7 @@ fn lex(
     grammar_path: []const u8,
     path: []const u8,
 ) !u8 {
-    const source = (try slurp(gpa, io, w, grammar_path)) orelse return 2;
+    const source = intake.slurp(gpa, io, w, grammar_path) orelse return 2;
     defer gpa.free(source);
     var gr = import.treeSitter(gpa, source) catch |e| {
         try w.print("outliner: cannot import {s}: {s}\n", .{ grammar_path, @errorName(e) });
@@ -170,10 +164,13 @@ fn lex(
     };
     defer gr.deinit();
 
-    const text = (try slurp(gpa, io, w, path)) orelse return 2;
+    const text = intake.slurp(gpa, io, w, path) orelse return 2;
     defer gpa.free(text);
 
-    var sc = (try scanner.Scanner.compile(gpa, &gr)) orelse {
+    var sc = (scanner.Scanner.compile(gpa, &gr) catch |e| {
+        try w.print("outliner: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(e) });
+        return 2;
+    }) orelse {
         try w.print("outliner: {s} has no lexable terminal at all\n", .{gr.name});
         return 1;
     };
@@ -243,7 +240,7 @@ fn inspect(
     grammar_path: []const u8,
     at: u32,
 ) !u8 {
-    const source = (try slurp(gpa, io, w, grammar_path)) orelse return 2;
+    const source = intake.slurp(gpa, io, w, grammar_path) orelse return 2;
     defer gpa.free(source);
     var gr = import.treeSitter(gpa, source) catch |e| {
         try w.print("outliner: cannot import {s}: {s}\n", .{ grammar_path, @errorName(e) });
@@ -251,7 +248,10 @@ fn inspect(
     };
     defer gr.deinit();
 
-    var built = try outliner.press.tables(gpa, &gr);
+    var built = outliner.press.tables(gpa, &gr) catch |e| {
+        try w.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
+        return 2;
+    };
     defer built.deinit();
     if (at >= built.collection.states.len) {
         try w.print("outliner: {s} has {d} states\n", .{ gr.name, built.collection.states.len });
@@ -402,10 +402,7 @@ fn describe(
     path: []const u8,
     show: Show,
 ) !u8 {
-    const source = std.Io.Dir.cwd().readFileAlloc(io, path, gpa, .limited(64 << 20)) catch |e| {
-        try w.print("outliner: cannot read {s}: {s}\n", .{ path, @errorName(e) });
-        return 2;
-    };
+    const source = intake.slurp(gpa, io, w, path) orelse return 2;
     defer gpa.free(source);
 
     const started = std.Io.Clock.awake.now(io);
@@ -458,7 +455,10 @@ fn describe(
     try w.print("  imported in    {d} us\n", .{elapsed_us});
 
     const lr_started = std.Io.Clock.awake.now(io);
-    var built = try outliner.press.tables(gpa, &gr);
+    var built = outliner.press.tables(gpa, &gr) catch |e| {
+        try w.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
+        return 2;
+    };
     defer built.deinit();
     const c = &built.collection;
     const built_us: i64 = @intCast(@divTrunc(

@@ -55,6 +55,7 @@
 
 const std = @import("std");
 const outliner = @import("outliner");
+const intake = @import("intake.zig");
 
 const folio = outliner.folio;
 const import = outliner.press.import;
@@ -147,7 +148,10 @@ pub fn run(
     defer parser.deinit();
     const gr = parser.grammar();
 
-    var sc = (try scanner.Scanner.compile(gpa, gr)) orelse {
+    var sc = (scanner.Scanner.compile(gpa, gr) catch |err| {
+        try e.print("outliner: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(err) });
+        return 2;
+    }) orelse {
         try e.print("outliner: {s} has no lexable terminal at all\n", .{gr.name});
         return 2;
     };
@@ -169,7 +173,7 @@ pub fn run(
 
     var worst: u8 = 0;
     for (paths.items) |path| {
-        const text = slurp(gpa, io, e, path) orelse {
+        const text = intake.slurp(gpa, io, e, path) orelse {
             worst = 2;
             continue;
         };
@@ -200,7 +204,11 @@ pub fn load(gpa: std.mem.Allocator, io: std.Io, e: *std.Io.Writer, path: []const
     if (folio.map(io, std.Io.Dir.cwd(), path)) |opened| {
         var mapped = opened;
         errdefer mapped.close();
-        return .{ .minted = .{ .mapped = mapped, .bound = try folio.bind(gpa, &mapped.folio) } };
+        const bound = folio.bind(gpa, &mapped.folio) catch |err| {
+            try e.print("outliner: cannot bind {s}: {s}\n", .{ path, @errorName(err) });
+            return null;
+        };
+        return .{ .minted = .{ .mapped = mapped, .bound = bound } };
     } else |err| switch (err) {
         // Not a folio, so it is a grammar.json until proven otherwise.
         error.FolioBadMagic, error.FolioTooSmall => {},
@@ -210,14 +218,18 @@ pub fn load(gpa: std.mem.Allocator, io: std.Io, e: *std.Io.Writer, path: []const
         },
     }
 
-    const source = slurp(gpa, io, e, path) orelse return null;
+    const source = intake.slurp(gpa, io, e, path) orelse return null;
     defer gpa.free(source);
     var gr = import.treeSitter(gpa, source) catch |err| {
         try e.print("outliner: cannot import {s}: {s}\n", .{ path, @errorName(err) });
         return null;
     };
     errdefer gr.deinit();
-    return .{ .pressed = .{ .grammar = gr, .built = try press.tables(gpa, &gr) } };
+    const built = press.tables(gpa, &gr) catch |err| {
+        try e.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(err) });
+        return null;
+    };
+    return .{ .pressed = .{ .grammar = gr, .built = built } };
 }
 
 /// One node per line: `field: name [start, end)`, indented two spaces a level.
@@ -280,11 +292,4 @@ pub fn verdict(
     // reader can learn the forest continues past the byte just named.
     if (q.mends > 0) try e.print(", mended {d}", .{q.mends});
     try e.writeAll("\n");
-}
-
-pub fn slurp(gpa: std.mem.Allocator, io: std.Io, e: *std.Io.Writer, path: []const u8) ?[]u8 {
-    return std.Io.Dir.cwd().readFileAlloc(io, path, gpa, .limited(64 << 20)) catch |err| {
-        e.print("outliner: cannot read {s}: {s}\n", .{ path, @errorName(err) }) catch {};
-        return null;
-    };
 }

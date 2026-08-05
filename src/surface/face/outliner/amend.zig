@@ -31,6 +31,7 @@
 const std = @import("std");
 const outliner = @import("outliner");
 const parse = @import("parse.zig");
+const intake = @import("intake.zig");
 
 const scanner = outliner.kernel.lex.scanner;
 const quire = outliner.kernel.quire;
@@ -89,13 +90,16 @@ pub fn run(
     defer parser.deinit();
     const gr = parser.grammar();
 
-    var sc = (try scanner.Scanner.compile(gpa, gr)) orelse {
+    var sc = (scanner.Scanner.compile(gpa, gr) catch |err| {
+        try e.print("outliner: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(err) });
+        return 2;
+    }) orelse {
         try e.print("outliner: {s} has no lexable terminal at all\n", .{gr.name});
         return 2;
     };
     defer sc.deinit();
 
-    const text = parse.slurp(gpa, io, e, path.?) orelse return 2;
+    const text = intake.slurp(gpa, io, e, path.?) orelse return 2;
     defer gpa.free(text);
 
     var loom = weave.Loom.init(gpa, gr, parser.collection(), parser.tables(), &sc);
