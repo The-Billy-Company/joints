@@ -1140,7 +1140,7 @@ pub const Gather = struct {
             }
         }
         if (asked) {
-            switch (x.scanner.next(bytes, at, &x.expected)) {
+            switch (x.scanner.next(bytes, x.at, &x.expected)) {
                 .token => |tok| return tok,
                 else => {},
             }
