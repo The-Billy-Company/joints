@@ -1140,15 +1140,16 @@ pub const Gather = struct {
             }
         }
         if (asked) {
-            switch (x.scanner.next(bytes, x.at, &x.expected)) {
+            switch (x.scanner.next(bytes, at, &x.expected)) {
                 .token => |tok| return tok,
                 else => {},
             }
         }
 
-        x.expected.clear(x.scanner);
-        for (0..x.gr.terminal_count) |sym| x.expected.admit(x.scanner, @intCast(sym));
-        return switch (x.scanner.next(bytes, x.at, &x.expected)) {
+        // Named, not lexed. This slate is every terminal the grammar has, which
+        // is a set no state asked for, so the longest member of it is a fact
+        // about the grammar rather than about the offset - see `Scanner.spot`.
+        return switch (x.scanner.spot(bytes, x.at)) {
             .token => |tok| tok,
             else => null,
         };

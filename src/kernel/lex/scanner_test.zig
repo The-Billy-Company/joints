@@ -1144,3 +1144,86 @@ test "scanner: a save is a value, and comparing one structurally is a trap" {
     f.sc.restore(first);
     try t.expect(first.same(&f.sc.save()));
 }
+/// A grammar shaped like every real one: a body pattern that runs until a
+/// delimiter, and the delimiters it stops at. Sixteen of the corpus's grammars
+/// hold this shape, which is why the reading below was not a scala problem.
+const bodied =
+    \\{"name":"t","rules":{
+    \\ "doc":{"type":"REPEAT1","content":{"type":"CHOICE","members":[
+    \\   {"type":"SYMBOL","name":"text"},{"type":"SYMBOL","name":"comma"},
+    \\   {"type":"SYMBOL","name":"semi"}]}},
+    \\ "text":{"type":"PATTERN","value":"[^\"]+"},
+    \\ "comma":{"type":"STRING","value":","},
+    \\ "semi":{"type":"STRING","value":";"}}}
+;
+
+test "scanner: with nobody vouching for the slate, the shortest reading names the byte" {
+    // What `blame` asks and what it used to be told. There is no state here -
+    // that is the situation, not a shortcut - so the slate is every terminal
+    // the grammar has, and maximal munch over such a slate reports whichever
+    // member reaches furthest. That member is always the body pattern, so the
+    // answer is a fact about the grammar rather than about the offset: on the
+    // real board this named `xml_text` over 1,777 bytes of a scala file with
+    // no XML in it, at an offset holding a comma.
+    var f = try Fixture.init(bodied);
+    defer f.deinit();
+
+    const src = "," ++ "x" ** 2048;
+
+    // The old reading, pinned rather than deleted: it is still what `next`
+    // says, and still correct for the question `next` answers. Nothing about
+    // maximal munch moved; what moved is which question `blame` asks.
+    var wide = try everything(&f);
+    defer wide.deinit(t.allocator);
+    const longest = f.sc.next(src, 0, &wide).token;
+    try t.expectEqualStrings("text", f.gr.nameOf(longest.symbol));
+    try t.expectEqual(@as(u32, src.len), longest.len);
+
+    // And the reading `spot` gives instead. `text` accepts a lone comma too,
+    // so this is a tie rather than an exclusion - `choose` settles it the
+    // ordinary way, and a literal outranks a regex that merely also fits.
+    const near = f.sc.spot(src, 0).token;
+    try t.expectEqualStrings("comma", f.gr.nameOf(near.symbol));
+    try t.expectEqual(@as(u32, 1), near.len);
+
+    // The cost claim, which is the half a name comparison cannot show. A
+    // caller that mints a token goes on to step past it, so the old reading
+    // did not merely misname this offset - it consumed the file to do it, and
+    // `mend` deleted every byte of what it consumed.
+    try t.expect(near.len * 64 < longest.len);
+}
+
+test "scanner: spot is state-free by construction, not by a caller remembering" {
+    // Two ways to get the wrong answer back, and neither is available: the
+    // slate `spot` reads is built once at compile time from every seated
+    // terminal, so there is no `expected` argument to pass and no tier to
+    // fall through. Precedence is dropped with it - a lexical precedence says
+    // which terminal owns a byte *when both were asked for*, and over the
+    // whole grammar it elects the same wide member reach did.
+    var f = try Fixture.init(bodied);
+    defer f.deinit();
+
+    // Mid-file, after a body run, where the offset is unambiguous to a reader
+    // and was not to the old question.
+    const src = "abc,def";
+    const at = f.sc.spot(src, 3).token;
+    try t.expectEqualStrings("comma", f.gr.nameOf(at.symbol));
+    try t.expectEqual(@as(u32, 3), at.start);
+    try t.expectEqual(@as(u32, 1), at.len);
+
+    // Where the shortest reading *is* the body pattern, it still answers - the
+    // narrowing is "stop at the first accept", not "prefer literals".
+    const body = f.sc.spot(src, 0).token;
+    try t.expectEqualStrings("text", f.gr.nameOf(body.symbol));
+    try t.expectEqual(@as(u32, 1), body.len);
+
+    // Asking twice from the same offset gives the same answer: `spot` resets
+    // whatever state the layout hands carry, the way `next` does, so a
+    // diagnostic cannot be perturbed by the parse that led to it.
+    const again = f.sc.spot(src, 3).token;
+    try t.expectEqual(at.symbol, again.symbol);
+    try t.expectEqual(at.len, again.len);
+
+    // Past the end there is nothing to name, and nothing is what it says.
+    try t.expectEqual(scanner.Step.end, f.sc.spot(src, @intCast(src.len)));
+}

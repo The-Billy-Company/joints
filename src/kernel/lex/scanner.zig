@@ -203,6 +203,12 @@ pub const Scanner = struct {
     /// them in order is what makes precedence outrank length: a tier that
     /// matches at all ends the search, however short its match.
     ranks: []Rank,
+    /// The same slate with the tiers collapsed - every seated terminal in one
+    /// cut, for `spot`, which is the one caller that must not let precedence
+    /// pick for it. `whole_after` drops the immediate terminals, exactly as
+    /// `Rank.after` does.
+    whole: Munch.Allow,
+    whole_after: Munch.Allow,
 
     pub const no_seat = std.math.maxInt(u32);
 
@@ -404,6 +410,11 @@ pub const Scanner = struct {
             guarded.?.admit(&munch, seat[i]);
         }
 
+        var whole = try munch.allowNone(gpa);
+        errdefer whole.deinit(gpa);
+        var whole_after = try munch.allowNone(gpa);
+        errdefer whole_after.deinit(gpa);
+
         const tier = try gpa.alloc(u8, gr.terminal_count);
         errdefer gpa.free(tier);
         @memset(tier, 0);
@@ -429,6 +440,8 @@ pub const Scanner = struct {
             tier[i] = at;
             ranks[at].all.admit(&munch, seat[i]);
             if (!lx.immediate) ranks[at].after.admit(&munch, seat[i]);
+            whole.admit(&munch, seat[i]);
+            if (!lx.immediate) whole_after.admit(&munch, seat[i]);
         }
 
         return .{
@@ -454,6 +467,8 @@ pub const Scanner = struct {
             .seat = seat,
             .tier = tier,
             .ranks = ranks,
+            .whole = whole,
+            .whole_after = whole_after,
         };
     }
 
@@ -508,6 +523,8 @@ pub const Scanner = struct {
         s.gpa.free(s.unskippable);
         s.gpa.free(s.seat);
         s.gpa.free(s.tier);
+        s.whole.deinit(s.gpa);
+        s.whole_after.deinit(s.gpa);
         for (s.ranks) |*r| r.deinit(s.gpa);
         s.gpa.free(s.ranks);
         s.* = undefined;
@@ -532,6 +549,51 @@ pub const Scanner = struct {
             .stray => |off| return .{ .stray = off },
             .end => return .end,
         };
+    }
+
+    /// What is at `at`, for a caller with no state behind the question.
+    ///
+    /// `next` resolves by reach, which is right when a parse state named the
+    /// set: the state vouched for every member, so the longest of them is the
+    /// token. A caller that admits the whole grammar has vouched for nothing,
+    /// and every grammar in the corpus holds a run-of-anything-but-a-delimiter
+    /// that out-reaches every real token at every byte. Asked that way, maximal
+    /// munch reports the widest regex the grammar has, at whatever length the
+    /// next delimiter allows - `xml_text` over 1,777 bytes of a scala file with
+    /// no XML in it, `(?:[^\\"]+)` over every wall swift has.
+    ///
+    /// So this asks for the least the slate can commit to instead. The name is
+    /// then a fact about the bytes rather than about the grammar's widest
+    /// member, and - because a caller that mints a token here goes on to step
+    /// past it - a wrong guess costs one token rather than a kilobyte of source
+    /// that was never read.
+    ///
+    /// Extras are still stepped over, on the same rule and for the same reason
+    /// as in `next`.
+    /// Precedence is dropped here as well as reach, and for the same reason.
+    /// A lexical precedence is the author saying which terminal owns a byte
+    /// *when both were asked for*; over the whole grammar it elects the same
+    /// wide member that reach did, since a body pattern is exactly the kind of
+    /// terminal an author gives precedence to. So the slate is flat, the
+    /// shortest reading wins, and `choose` settles the tie the ordinary way -
+    /// which is where a literal `,` finally outranks the string body that also
+    /// matches that one byte.
+    pub fn spot(s: *Scanner, bytes: []const u8, at: u32) Step {
+        s.restarting(at);
+        var i = at;
+        while (true) {
+            if (i >= bytes.len) return .end;
+            const allow = if (i == at) &s.whole else &s.whole_after;
+            const hit = s.munch.shortestAmong(bytes, i, allow) orelse return .{ .stray = i };
+            if (hit.len == 0) return .{ .stray = i };
+            const tok: Token = .{
+                .symbol = s.choose(hit.patterns, null),
+                .start = i,
+                .len = @intCast(hit.len),
+            };
+            if (!s.stepping(tok.symbol, null)) return .{ .token = tok };
+            i = tok.end();
+        }
     }
 
     /// Whether this token is bytes to step over rather than the answer.
