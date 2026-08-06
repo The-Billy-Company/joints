@@ -206,14 +206,12 @@ const Reading = struct {
     /// has folded. The one number in the grammar written *for* this comparison
     /// and nothing else — see `Reading.beats`.
     heft: i32 = 0,
-    /// How many folds this reading has taken since the parse was last sole -
-    /// which is how many interior nodes it built to explain the bytes it has
-    /// read, a fold being the only thing here that makes one. The size of this
-    /// reading's derivation over the contested span, and nothing to do with the
-    /// size of the file: `roost` puts it back to zero the moment one reading
-    /// stands again, so two readings compared on it were always counting from
-    /// the same fork. See `Reading.beats`.
-    folds: u32 = 0,
+    /// Identity of the `sided` speculation this reading descends from, or
+    /// `sole` for a reading that is nobody's. Keyed on identity and not on
+    /// offset: haskell's 128 supplies produce 255 zero-width nodes, so an
+    /// offset join double-counts there even though verilog's is exact.
+    /// Instrumentation only — `beats` never reads it.
+    from: u32 = sole,
 
     /// Which of two readings the parse should keep, wherever both are standing
     /// and only one tree can be handed back.
@@ -230,38 +228,32 @@ const Reading = struct {
     /// (`subtree.c:353,407`, `parser.c:1030`, `stack.c:164,171`), and versions
     /// are ordered by it in `parser.c:284`.
     ///
-    /// **The shorter derivation second.** Upstream has a rung here and we did
-    /// not, which is what left two thirds of the corpus's ambiguity being
-    /// settled by which reading was born first. Read at v0.26.11: once error
-    /// cost and dynamic precedence have both tied, `ts_parser__select_tree`
-    /// falls through to `ts_subtree_compare` (`parser.c:872`), which compares
-    /// symbol, then **child count, fewer winning** (`subtree.c:605-608`), then
-    /// recurses into the children (`subtree.c:614-619`). Two readings that
-    /// reach `collapse` are `twinned` - same state chain, same depth - so they
-    /// carry the same symbols over the same bytes and the symbol rung is
-    /// vacuous for us. What survives that precondition is the child-count rung,
-    /// and summed over a shared frontier the recursion of "fewer children"
-    /// *is* "fewer interior nodes", which is "fewer folds". So: of two
-    /// derivations the grammar ranked equally, standing on the same states over
-    /// the same bytes, keep the one that asserted less structure to get there.
+    /// Speculation depth second, unchanged. It is a fact about the parse loop
+    /// rather than about the language, so it is the right thing to decide a
+    /// cell the author left arbitrary *and* the wrong thing to let overrule one
+    /// they did not. A grammar that declares no `prec.dynamic` never reaches
+    /// the first line, which is why this cannot move a table that has no
+    /// opinion to spend.
     ///
-    /// That is the shortest-derivation preference and it is a claim about
-    /// parsing, not about this corpus: a fold the grammar did not have to make
-    /// is a node the author did not ask for. It is deliberately not upstream's
-    /// *lexicographic* order, which stops at the first differing child count
-    /// and is a determinism rule rather than a quality one ("select_earlier",
-    /// `parser.c:875`); the aggregate is the half that carries the judgement.
-    ///
-    /// Speculation depth last, unchanged, and now reached only when the author
-    /// ranked nothing *and* the two derivations are the same size. It is a fact
-    /// about the parse loop rather than about the language, so it is the right
-    /// thing to decide a cell nothing else can and the wrong thing to let
-    /// overrule one that can. It is still what keeps the pick total, and so
-    /// deterministic.
+    /// **There is no third rung, and that was measured rather than assumed on
+    /// 2026-08-06.** The obvious candidate is the size of the derivation, on
+    /// the reading that upstream compares structure once its own keys tie. It
+    /// does not port, for three separate reasons, and it does not pay in either
+    /// direction: `research/joinery/arity/RESULT-3-structure.md` has both
+    /// boards and the citation. In short - `ts_parser__condense_stack`
+    /// (`parser.c:1772`) compares error cost and dynamic precedence and nothing
+    /// else, and when they tie it does not choose at all, it merges and keeps
+    /// both derivations as links on one node (`parser.c:1806`, `stack.c:712`).
+    /// The structural comparison is a layer down in `ts_parser__select_tree`
+    /// (`parser.c:872` into `subtree.c:605-619`), it is lexicographic and
+    /// first-difference, and upstream's own name for its outcome is
+    /// `select_earlier` (`parser.c:875`) - a rule for picking a determinate
+    /// representative, which `rank` already is here. Of the two aggregate
+    /// readings it admits, preferring the smaller derivation costs python 15
+    /// square bytes and verilog 31, and preferring the larger costs elixir 651
+    /// and drops markdown to no tree at all.
     fn beats(a: Reading, b: Reading) bool {
-        if (a.heft != b.heft) return a.heft > b.heft;
-        if (a.folds != b.folds) return a.folds < b.folds;
-        return a.rank < b.rank;
+        return if (a.heft != b.heft) a.heft > b.heft else a.rank < b.rank;
     }
 };
 
@@ -272,14 +264,20 @@ const Turn = struct {
     rank: u32,
     seg: u32 = sole,
     heft: i32 = 0,
-    folds: u32 = 0,
     act: ?lalr.Action = null,
+    /// The work item that cast this one off a `sided` cell, and whether that
+    /// caster survived the token. Instrumentation for the question of whether
+    /// an orphaned speculation is ever *confirmed* by what follows it, which
+    /// is the one thing about these cells no table cell can carry.
+    cast_by: ?u32 = null,
+    dead: bool = false,
+    /// Identity of the `sided` speculation this reading is or descends from.
+    from: u32 = sole,
 };
 
 /// No strand: the reading is the only one, so its moves are the file's and go
 /// straight into the trail.
 const sole = std.math.maxInt(u32);
-
 /// What one token's worth of movement did. `lifted` is the one the driver
 /// could not read off a bool: the token was never absorbed, because a whole
 /// subtree arrived in its place and the offset is already past it.
@@ -743,6 +741,10 @@ pub const Gather = struct {
     /// forty times and resolves every one, and only the second is worth
     /// recording a trail per limb for.
     rifts: u32,
+    /// How many `sided` speculations this parse has orphaned - cast off a cell
+    /// an authored side ordered, and then had their caster refuted by the same
+    /// token. Mints the identity each one is tracked by. Instrumentation.
+    orphans: u32 = 0,
     roosts: u32,
     /// How many readings were dropped for standing on a stack another reading
     /// was already standing on. A fork that folds back to the same states is
@@ -1903,6 +1905,20 @@ pub const Gather = struct {
         });
     }
 
+    /// Every reading still standing descends from one orphaned speculation.
+    /// Named apart from `said` because there is no pair of actions to print:
+    /// the whole content is that nothing the table chose is left to disagree.
+    fn orphaned(x: *const Gather, tok: Token) void {
+        if (!assay.lit(.quire)) return;
+        var who: u32 = sole;
+        for (x.next.items) |v| who = v.from;
+        assay.trace(.quire, "orphaned: every reading from #{d} at {d} on {s}\n", .{
+            who,
+            tok.start,
+            x.gr.nameOf(tok.symbol),
+        });
+    }
+
     fn finish(x: *Gather, why: Stop) !Quire {
         // A fork that never collapsed still has a survivor - the reading whose
         // tree this is - so the trail gets its moves rather than nothing. The
@@ -2281,16 +2297,39 @@ pub const Gather = struct {
             .rank = v.rank,
             .seg = v.seg,
             .heft = v.heft,
-            .folds = v.folds,
+            .from = v.from,
         });
         x.lone = x.work.items.len == 1 and !x.grafted;
 
         var i: usize = 0;
         while (i < x.work.items.len) : (i += 1) {
+            // A reading an authored side ordered second, whose caster this same
+            // token then refuted. Ordering the pair was the whole of what the
+            // author said; it was never a claim that the reading they ordered
+            // first is unusable and this one is the answer. Letting it stand
+            // alone promotes it to exactly that, and — because a reading
+            // survived — suppresses the mend that would otherwise rebuild the
+            // span. Verilog's `parameter [31:0] P = …` inside a parameter port
+            // list is the case: `list_of_param_assignments` carries
+            // `prec.left(0)`, the comma folds, the fold is refuted on that same
+            // comma, and the surviving cast read shifts into a state whose
+            // entire slate is `simple_identifier` and `\` — so the next
+            // keyword is lexed as a name. Casters are always processed before
+            // the readings they cast, so this is settled by the time it is
+            // asked.
+            // An orphan is a `sided` speculation whose caster this same token
+            // refuted. Identity is minted here rather than at the split,
+            // because at the split the caster's fate is not yet known.
+            if (x.work.items[i].cast_by) |by| if (x.work.items[by].dead) {
+                if (x.work.items[i].from == sole) {
+                    x.work.items[i].from = x.orphans;
+                    x.orphans += 1;
+                }
+            };
+            const from = x.work.items[i].from;
             var top = x.work.items[i].top;
             const rank = x.work.items[i].rank;
             var heft = x.work.items[i].heft;
-            var folds = x.work.items[i].folds;
             var forced = x.work.items[i].act;
             x.pen = x.work.items[i].seg;
             while (true) {
@@ -2328,8 +2367,8 @@ pub const Gather = struct {
                                 // this cell, so they start level and only the
                                 // folds each takes from here can part them.
                                 .heft = heft,
-                                .folds = folds,
                                 .act = other,
+                                .cast_by = if (split.sided) @intCast(i) else null,
                             });
                             // The perch just handed to the new reading has to
                             // still be there when its turn comes, so nothing
@@ -2354,6 +2393,7 @@ pub const Gather = struct {
                             x.refused = state;
                             x.spent = top;
                         }
+                        x.work.items[i].dead = true;
                         break;
                     },
                     .shift => {
@@ -2367,7 +2407,7 @@ pub const Gather = struct {
                         if (x.lone) {
                             if (try x.lift(top, state, tok)) |grown| {
                                 x.pen = sole;
-                                x.live.items[0] = .{ .top = grown, .rank = rank, .heft = heft, .folds = folds };
+                                x.live.items[0] = .{ .top = grown, .rank = rank, .heft = heft, .from = from };
                                 return .lifted;
                             }
                         } else if (x.graft) |gr| {
@@ -2379,7 +2419,7 @@ pub const Gather = struct {
                             .rank = rank,
                             .seg = x.pen,
                             .heft = heft,
-                            .folds = folds,
+                            .from = from,
                         });
                         break;
                     },
@@ -2390,14 +2430,12 @@ pub const Gather = struct {
                         // folded production's own declaration. See
                         // `Reading.beats`.
                         heft += x.gr.productions[act.value].dynamic;
-                        // And the one node this fold is about to build, which
-                        // is the size half of the same comparison.
-                        folds += 1;
                         top = try x.fold(top, act.value) orelse {
                             if (rank == 0) {
                                 x.refused = state;
                                 x.spent = top;
                             }
+                            x.work.items[i].dead = true;
                             break;
                         };
                     },
@@ -2409,7 +2447,7 @@ pub const Gather = struct {
                             .rank = rank,
                             .seg = x.pen,
                             .heft = heft,
-                            .folds = folds,
+                            .from = from,
                         });
                         break;
                     },
@@ -2417,6 +2455,22 @@ pub const Gather = struct {
             }
         }
         x.pen = sole;
+        // The moment the hypothesis becomes the authority. Every reading still
+        // standing descends from a `sided` speculation whose caster this token
+        // refuted, so the slate the next scanner call is handed is one no
+        // reading the table chose had any part in. Traced rather than acted
+        // on: whether that is the defect depends on what confirms it later.
+        // The moment a speculation becomes the authority. Every reading still
+        // standing descends from a `sided` cast whose caster this same token
+        // refused, so the slate handed to the next scanner call is one no
+        // reading the table chose had any part in. Traced and not acted on:
+        // whether that is the defect turns on what confirms it afterwards,
+        // and this is the last point at which the question can still be put.
+        if (x.next.items.len > 0) {
+            for (x.next.items) |v| {
+                if (v.from == sole) break;
+            } else x.orphaned(tok);
+        }
         if (x.next.items.len == 0) return .refused;
         x.collapse();
         x.live.clearRetainingCapacity();
@@ -2470,18 +2524,21 @@ pub const Gather = struct {
     /// landed like one. What was missing is a key the grammar wrote:
     /// `prec.dynamic`, summed over the fold, which upstream orders its stack
     /// versions by and which nothing here read until `Reading.heft`. It leads
-    /// the comparison. `research/joinery/limb/` has that board.
+    /// the comparison and rank breaks its ties, so a grammar that declared no
+    /// dynamic rank gets the arm measured above and nothing else.
+    /// `research/joinery/limb/` has that board.
     ///
     /// A key the grammar wrote is no use to a grammar that wrote none, and two
-    /// of the three that hold the corpus's ambiguity declare zero
+    /// of the three grammars holding the corpus's ambiguity declare zero
     /// `prec.dynamic`: all 2,708 of verilog's merges and all 536 of haskell's
-    /// read `heft 0 and heft 0`, so until 2026-08-06 rank decided them, and
-    /// rank at a merge is which reading was born first.
+    /// read `heft 0 and heft 0`, so rank decides them, and rank at a merge is
+    /// which reading was born first.
     /// `research/joinery/arity/RESULT-2-reach.md` priced what that costs -
-    /// verilog's 891 entered wide cells opened +1,808 forks and every one died,
-    /// +1,674 of them merged away one step later. The rung between heft and
-    /// rank is now `Reading.folds`, the size of the derivation, which is what
-    /// upstream reaches for at the same point and by the same argument.
+    /// verilog's 891 entered wide cells opened +1,808 forks and every one
+    /// died, +1,674 of them merged away one step later. A third rung was built
+    /// for that hole and declined on measurement: see `Reading.beats` and
+    /// `research/joinery/arity/RESULT-3-structure.md`. The information is not
+    /// at the merge to be read.
     ///
     /// Quadratic in the readings standing, which `crowd` bounds at eight, and
     /// skipped outright for the one reading that is the common case.
@@ -2492,8 +2549,8 @@ pub const Gather = struct {
             for (x.next.items[0..kept]) |*k| {
                 if (!x.twinned(v.top, k.top)) continue;
                 const won = if (v.beats(k.*)) v else k.*;
-                assay.trace(.quire, "merged: rank {d} heft {d} folds {d} and rank {d} heft {d} folds {d} stand on the same states; rank {d} heft {d} folds {d} keeps the nodes\n", .{
-                    k.rank, k.heft, k.folds, v.rank, v.heft, v.folds, won.rank, won.heft, won.folds,
+                assay.trace(.quire, "merged: rank {d} heft {d} and rank {d} heft {d} stand on the same states; rank {d} heft {d} keeps the nodes\n", .{
+                    k.rank, k.heft, v.rank, v.heft, won.rank, won.heft,
                 });
                 k.* = won;
                 x.merges += 1;
@@ -2745,10 +2802,7 @@ pub const Gather = struct {
             try x.stand.append(x.gpa, .{ .down = @intCast(i -| 1), .depth = @intCast(i) });
         }
         // Sole again, so it speaks for the table: a refusal from here is worth
-        // reporting, which `absorb` only does for rank zero. Every key goes
-        // back to its default with it - there is nothing left to be ranked
-        // against, and the next fork wants both its readings counting from
-        // this perch rather than from the whole file behind it.
+        // reporting, which `absorb` only does for rank zero.
         x.live.items[0] = .{ .top = @intCast(x.perches.items.len - 1), .rank = 0 };
     }
 
@@ -3204,18 +3258,17 @@ pub const Gather = struct {
     /// what stands at the end of an accepting reading is the start symbol's own
     /// perch, which is either one root or, for a hidden start rule, the forest
     /// it spliced. Where several readings accept, `Reading.beats` picks: the
-    /// author's `prec.dynamic` over each derivation first, the shorter
-    /// derivation next, and the least speculative reading where neither said
-    /// anything - so preferring the table's own answer still makes forking a
-    /// strict addition rather than a change of mind about files that already
-    /// parsed, for every grammar that declared no dynamic rank to spend.
+    /// author's `prec.dynamic` over each derivation first, and the least
+    /// speculative reading where the author ranked nothing - so preferring the
+    /// table's own answer still makes forking a strict addition rather than a
+    /// change of mind about files that already parsed, for every grammar that
+    /// declared no dynamic rank to spend.
     ///
     /// The end column folds like any other, so its reductions carry their own
-    /// declarations and count toward their own size. A reading that accepts
-    /// after three folds is three productions richer and three nodes bigger
-    /// than the perch it started this function on, and comparing it on the
-    /// total it *arrived* with would be scoring two derivations at different
-    /// points.
+    /// declarations too. A reading that accepts after three folds is three
+    /// productions richer than the perch it started this function on, and
+    /// comparing it on the total it *arrived* with would be scoring two
+    /// derivations at different points.
     fn close(x: *Gather) !struct { top: u32, ok: bool } {
         x.lone = x.live.items.len == 1 and !x.grafted;
         var won: ?Reading = null;
@@ -3223,20 +3276,18 @@ pub const Gather = struct {
         for (x.live.items) |v| {
             var top = v.top;
             var heft = v.heft;
-            var folds = v.folds;
             const ok = done: while (true) {
                 const act = x.t.at(x.perches.items[top].state, x.t.end);
                 switch (act.kind) {
                     .accept => break :done true,
                     .reduce => {
                         heft += x.gr.productions[act.value].dynamic;
-                        folds += 1;
                         top = try x.fold(top, act.value) orelse break :done false;
                     },
                     .err, .shift => break :done false,
                 }
             };
-            const r: Reading = .{ .top = top, .rank = v.rank, .heft = heft, .folds = folds };
+            const r: Reading = .{ .top = top, .rank = v.rank, .heft = heft };
             if (ok) {
                 if (won == null or r.beats(won.?)) won = r;
             } else if (tried == null or r.beats(tried.?)) tried = r;
