@@ -1,4 +1,4 @@
-# Result 12 — what the attribution gate is wrong about, measured, and which half of it now blocks
+# Result 12 — what the gate is wrong about, and which half of it now blocks
 
 `RESULT-10-record.md` built the gate and left one number unmeasured: how often
 it refuses a page that was already fine. It shipped advisory with 206 refusals,
@@ -22,7 +22,7 @@ hour while ten lanes work, so a re-run will not reproduce the populations and
 
 ## The method, and why it is stratified
 
-```
+```sh
 python3 research/joinery/consort/sighting.py --sample 15 --seed 11   # the worklist
 python3 research/joinery/consort/sighting.py --rate                  # the reading
 ```
@@ -149,29 +149,57 @@ diff, and a depth-1 clone has none.
 - run: python3 research/joinery/consort/sighting.py --gate
 ```
 
-`--check` is 22 assertions, each built and watched to fail: that the stamp axis
+`--check` is 28 assertions, each built and watched to fail: that the stamp axis
 blocks and the blind axis does not, that `--strict` reverses that, that a
 seven-digit number is not read as a digest, that the module spawning the oracle
-is never exempt, that a column nothing reports earns nothing, and that a
-`--since` asking about fewer pages is refused while the pin spelled another way
-is not mistaken for a move.
+is never exempt, that a column nothing reports earns nothing, that a contents
+row asks nothing while a data row does, and that a `--since` asking about fewer
+pages is refused while the pin spelled another way is not mistaken for a move.
 
 Cost on the real enforcement path, measured as whole processes with real git,
 median of seven:
 
-| pages in the diff | wall |
-|---:|---:|
-| 1 | 86 ms |
-| 10 | 181 ms |
-| 25 | 253 ms |
-| 50 | 320 ms |
+| pages in the diff | wall (quiet) | wall (nine sibling lanes compiling) |
+|---:|---:|---:|
+| 1 | 91 ms | 115 ms |
+| 10 | 180 ms | 229 ms |
+| 25 | 276 ms | 319 ms |
+| 50 | 330 ms | 344 ms |
 
-About 80 ms fixed and 2.0 ms a page, so the one-second ceiling is a diff of
-roughly 450 pages and the record is 407. The one number over the ceiling is this
-working tree today: `--gate` takes **1.04 s** here because 396 of the 407 pages
-are untracked, so every one of them is "changed since the pin". That is the cost
-of a record that has never been committed, not a property of the gate; the same
-command against a committed record asks about the six pages that actually moved.
+Both columns are on this laptop, hours apart, and the second is the honest one to
+plan against: a gate runs while the rest of the branch is working. The live run
+at the pin `459c097` is **270 ms** over the twelve pages the diff names, which is
+the number that matters — the table above is the shape, this is the gate.
+
+The one number over the ceiling is a diff naming the whole record: **1.2 s** over
+409 pages, which was this working tree for the hour between turning the gate on
+and the record landing in a commit, so every page was "changed since the pin".
+That hour is also the ledger's first real entry: the pin moved from `f7ba400` to
+`459c097` and the line says it cleared 219 refused pages, which is the ceremony
+working rather than an exception to it. A diff that wide is
+either that, or the sweep the ratchet exists to make unnecessary. The gate now
+prints its own cost when it crosses a second rather than being quietly slow — a
+gate that costs more than it admits is the one that gets switched off.
+
+## Asking about the bytes, not about the file
+
+One edit found the granularity bug. Adding five rows to this dossier's table of
+contents made this lane answerable for 23 figures further down the page that
+somebody else wrote months ago. "Refuses a page the diff names and never a page
+already written" is only true if *written* means the bytes.
+
+So a page is asked when the lines it **gained** carry a measured figure. A
+contents row, a link, a fixed typo and a paragraph of prose ask nothing. An
+added *data* row does, and getting that right is the only subtlety: the hunk
+holds `| 311,540 |` and the word `square` is three hundred lines up in a header
+that did not move, so every table's header is re-seated over the diff hunk
+before the count is taken. Headers that name no column are skipped, which is
+exact rather than approximate — a header with no column name cannot pair with
+anything, whatever row is put under it. An untracked page has no diff and is
+asked whole, which is right: every byte of it is new.
+
+On this tree that spares six pages a run today. It will spare more as the
+record gets committed and edits stop being whole-file.
 
 One duplicated pass came out on the way. `onlydamage.read` already computed
 which of our columns carried a number and threw the words away, and the caller

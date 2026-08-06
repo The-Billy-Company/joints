@@ -110,6 +110,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from collections import Counter
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -231,6 +232,38 @@ COSTS = ("regression", "regressed", "cost", "fell", "worse", "lost", "declin",
          "gave back", "paid for")
 
 
+def fresh(blob: str, text: str) -> int:
+    """How many measured figures the lines a page GAINED are carrying.
+
+    The added lines are not read alone. A lane appending `| 311,540 |` under a
+    `| square |` header that has not moved has added a figure, and the diff hunk
+    holds the number without the word - so every table's header row is prepended
+    before the count is taken. That is the only piece of context a data row
+    needs, it costs one pass over a page already in memory, and it errs toward
+    asking rather than toward letting a number through.
+    """
+    if not blob.strip():
+        return 0
+    loose = onlydamage.near(blob, OURS) + onlydamage.near(blob, THEIRS) \
+        + onlydamage.near(blob, "trued|unvouched")
+    if not (rows := [ln for ln in blob.splitlines() if "|" in ln]):
+        return loose
+    # Only headers that name a column can seat a pairing, and most of this
+    # record's tables are inventories and prose. Skipping the rest is exact
+    # rather than approximate: a header with no column name in it cannot pair
+    # with anything, whatever row is put under it.
+    for head in ("|".join(g[0]) for g in tables(text)
+                 if g and (NAMES.search("|".join(g[0]))
+                           or MINE.search("|".join(g[0])))):
+        # Re-seated under each of the page's headers in turn, which over-asks
+        # when a page holds several tables and is the safe direction to be
+        # wrong in: a row seated under the wrong header can only invent a
+        # pairing, never hide one.
+        grid = f"| {head} |\n|{'---|' * (head.count('|') + 1)}\n" + "\n".join(rows)
+        loose += len(paired(grid, NAMES)) + len(paired(grid, MINE))
+    return loose
+
+
 def look(at: Path) -> dict:
     text = at.read_text(errors="replace")
     got = onlydamage.read(at)
@@ -275,6 +308,44 @@ def tracked() -> set[str]:
     except (OSError, subprocess.SubprocessError):
         return set()
     return set(out.split("\n"))
+
+
+def added(since: str, paths: list[str]) -> dict[str, str]:
+    """The lines each page GAINED since REF, as one blob per page.
+
+    Page granularity is the wrong granularity for a forward ratchet and it took
+    one edit to find out: adding a row to a dossier's inventory table made this
+    lane answerable for 23 figures further down the page that somebody else
+    wrote months ago. "Refuses a page the diff names and never a page already
+    written" is only true if *written* means the bytes, not the file.
+
+    So a page is asked for a stamp when the lines it gained carry a measured
+    figure. A page with an untouched wall of old numbers and a new sentence of
+    prose is not, and neither is a table of contents. One `git diff -U0` for the
+    whole selection rather than one per file, because the fixed cost of a git
+    process is most of what a small diff costs.
+
+    An untracked page has no diff and every byte of it is new, which is what the
+    empty string means to the caller: ask the whole page.
+    """
+    if not paths:
+        return {}
+    # A pathspec is cheaper than diffing the tree right up until the pathspec
+    # IS the tree, and this record is 400 pages on the day none of them is
+    # committed - the one day the gate is slowest. So the selection picks: a
+    # lane's handful narrows, a whole-record diff does not pay to enumerate
+    # itself and filters what comes back instead.
+    scope = ["--", *paths] if len(paths) < 64 else ["--", "*.md"]
+    code, out = git("diff", "-U0", since, *scope)
+    if code:
+        return {}
+    want, got, here = set(paths), {}, ""
+    for line in out.splitlines():
+        if line.startswith("+++ b/"):
+            here = line[6:] if line[6:] in want else ""
+        elif here and line.startswith("+") and not line.startswith("+++"):
+            got.setdefault(here, []).append(line[1:])
+    return {p: "\n".join(v) for p, v in got.items()}
 
 
 def changed(since: str) -> set[str]:
@@ -398,11 +469,14 @@ def moved() -> str:
     with no history and is the safe reading in both.
     """
     rel = str(PIN.relative_to(ROOT))
-    code, _ = git("show", f"HEAD:{rel}")
+    code, was = git("show", f"HEAD:{rel}")
     if code:
         return ""
-    code, out = git("diff", "--name-only", "HEAD", "--", rel)
-    return rel if out else ""
+    # The ROWS, not the bytes. This file is mostly the argument for why it
+    # exists, and refusing a run because somebody improved a comment is a false
+    # refusal of exactly the kind this lane spent the morning measuring. A pin
+    # cannot move without a row moving, because `ledger` drops the comments.
+    return "" if ledger(was) == ledger(PIN.read_text()) else rel
 
 
 def banner(since: str, why: str) -> None:
@@ -419,6 +493,10 @@ def banner(since: str, why: str) -> None:
           f"{f' — {note}' if note and since == commit else ''}")
     print(f"  the ref is {PIN.relative_to(ROOT)}, committed and append-only"
           f"{f' · {why}' if why else ''}")
+    # Into a pipe stdout is block-buffered and stderr is not, so a refusal
+    # printed next would arrive ABOVE the pin it is about. The banner exists to
+    # be read beside the refusal; ordering it correctly is the whole point.
+    sys.stdout.flush()
 
 
 def override(since: str, commit: str) -> bool:
@@ -470,12 +548,21 @@ def gate(since: str, explicit: bool, strict: bool = False) -> int:
         return 2
     banner(since, "overridden by --since, asking harder" if explicit else "")
 
+    began = time.perf_counter()
     known = {str(p.relative_to(ROOT)): p for p in onlydamage.pages()}
     touched = sorted(p for p in changed(since) if p in known)
-    bad, noted = [], 0
+    gained = added(since, touched)
+    bad, noted, spared = [], 0, 0
     for path in touched:
         got = look(known[path])
         if not (why := faults(got)):
+            continue
+        # A page in the diff for reasons that are not a number - an inventory
+        # row, a fixed typo, a link - is not asked about the numbers already on
+        # it. An untracked page has no diff and is asked whole.
+        if path in gained and not fresh(gained[path], known[path].read_text(
+                errors="replace")):
+            spared += 1
             continue
         stop = blocking(why, strict)
         noted += len(why) - len(stop)
@@ -487,7 +574,9 @@ def gate(since: str, explicit: bool, strict: bool = False) -> int:
             bad.append(path)
     print(f"\n  {len(bad)} of {len(touched)} page(s) changed since {since} "
           f"report a measurement they cannot stand behind"
-          f"{f', and {noted} more carry a note' if noted else ''}.")
+          f"{f', and {noted} more carry a note' if noted else ''}."
+          + (f"\n  {spared} carried an old figure and gained no new one, so "
+             f"they were not asked." if spared else ""))
     if bad:
         print("  A figure is only true of the tree it was taken on, and the "
               "line above each page\n  renders the figure and that tree from "
@@ -500,6 +589,18 @@ def gate(since: str, explicit: bool, strict: bool = False) -> int:
         print(f"  A `note:` never refuses. The blind axis is 60% false where it "
               f"refuses alone\n  (`--rate`), so it reports until that number "
               f"falls; `--strict` runs it blocking.")
+    # The house ceiling is a second, and this gate is priced at the diff rather
+    # than at the record - so it can only cross the ceiling when a single change
+    # names most of the record, which is the sweep nobody should be running. It
+    # says so out loud rather than being quietly slow: a gate that costs more
+    # than it admits is the one that gets switched off.
+    spent = (time.perf_counter() - began) * 1e3
+    if spent > 1000:
+        print(f"\n  this run cost {spent:.0f} ms over {len(touched)} page(s), "
+              f"past the one-second ceiling.\n  The gate is priced at the diff "
+              f"(~80 ms + ~2 ms a page), so a diff this wide is\n  either a "
+              f"record that has never been committed or a sweep - and a sweep "
+              f"is what\n  the ratchet exists to make unnecessary.")
     return 1 if bad else 0
 
 
@@ -690,6 +791,18 @@ def check(rows: list[dict]) -> int:
     say("a seven-digit number is not mistaken for a digest",
         not STAMP.search("3712000 bytes") and bool(STAMP.search("3d980e308")))
 
+    # --- the granularity, which one edit to an inventory table found.
+    print("\n  is the ratchet asking about the bytes or about the file?")
+    page = ("| grammar | damage |\n|---|---|\n| json | 4,150 |\n\n"
+            "outliner `f6a34cd7c` wrote this.\n")
+    say("a row added to a table of contents asks nothing",
+        not fresh("| `RESULT-12-refusal.md` | the gate's rate |", page))
+    say("...and a data row added under an unchanged header does ask",
+        bool(fresh("| toml | 9,910 |", page)))
+    say("a figure in the added prose asks",
+        bool(fresh("damage falls to 3,100 on this tree", page)))
+    say("an empty diff asks nothing", not fresh("   \n", page))
+
     # --- the self-comparison exemption, asked structurally.
     print("\n  can the self-comparison exemption say no?")
     kits = {m: k for m in instrument.index()
@@ -725,6 +838,11 @@ def check(rows: list[dict]) -> int:
     say("...and the pin spelled another way is not mistaken for a move",
         bool(commit) and not override("HEAD", commit)
         if git("rev-parse", "HEAD")[1] == git("rev-parse", commit)[1] else True)
+    was = git("show", f"HEAD:{PIN.relative_to(ROOT)}")[1]
+    say("an edited comment in the ledger is not a moved pin",
+        not was or ledger(was + "\n# a new comment") == ledger(was))
+    say("...but an appended row is", bool(was)
+        and ledger(was + "\n2099-01-01 deadbeef 0 x") != ledger(was))
 
     # --- the two axes, asked of the corpus rather than of a named page.
     meas = [r for r in rows if r["figures"]]

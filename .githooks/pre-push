@@ -54,6 +54,30 @@ lint_ref() (
   (cd "${snapshot}" && npx --yes markdownlint-cli2@0.23.1 --no-globs -- "${markdown[@]}")
 )
 
+# A press change has to still abide by the hand verdicts. `built`, `nodes` and
+# `standing` are unions over spans and cannot see which node covers a byte, so
+# a table change can swap the structure underneath every headline column while
+# all of them hold still - which is exactly how verilog's `parameter` stopped
+# building a `parameter_declaration` and started lexing as a `simple_identifier`
+# with nothing going red. `collate.py adjudicated` is the one instrument that
+# reads interior structure, and until now nothing ran it on a press change.
+#
+# Here rather than in CI because it needs the oracle, and ci.yml says in its own
+# header that it installs no tree-sitter. It fails closed both ways: on a drifted
+# verdict, and on a press change it could not check. See `tool/abide.py`.
+abide_ref() {
+  local local_sha=$1 remote_sha=$2 base
+
+  [[ "${local_sha}" != "${zero}" ]] || return 0
+  if [[ "${remote_sha}" == "${zero}" ]]; then
+    base=$(base_for "${local_sha}")
+  else
+    base=${remote_sha}
+  fi
+  python3 "$(git rev-parse --show-toplevel)/tool/abide.py" --base "${base}"
+}
+
 while read -r _local_ref local_sha _remote_ref remote_sha; do
   lint_ref "${local_sha}" "${remote_sha}"
+  abide_ref "${local_sha}" "${remote_sha}"
 done
