@@ -1,9 +1,12 @@
 # When the attribution gate started asking, and every time that moved.
 #
-# The gate is a forward ratchet: it refuses a page the diff names and never a
+# The gate is a forward ratchet: it refuses the BYTES a diff added and never a
 # page already written, because the record it inherited has 206 pages that would
 # fail and relitigating them is the sweep this lane's own finding says does not
-# work. That is honest exactly as long as the ref cannot be moved quietly - a
+# work. Page granularity is not enough for that promise - adding a row to a
+# table of contents made one lane answerable for 23 figures further down the
+# page - so a page is asked only when the lines it gained carry a measured
+# figure. That is honest exactly as long as the ref cannot be moved quietly - a
 # pin nudged forward past an inconvenient page clears it while every run still
 # prints "pass".
 #
@@ -18,7 +21,8 @@
 #      convenience;
 #   3. `--since` on the command line may only reach FURTHER BACK than the pin.
 #      An override that asks about fewer pages is refused, so no flag loosens
-#      the gate.
+#      the gate. Both refs are RESOLVED before they are compared, so `--since
+#      HEAD` on the day the pin is HEAD is the same ref rather than a move.
 #
 # Move it with `sighting.py --pin <ref> --because "<why>"`, which appends a line
 # and prints, before it writes, exactly which currently-refused pages the move
@@ -27,3 +31,4 @@
 #
 # date        commit     clears  why
 2026-08-06    f7ba400    0       the commit the gate was turned on at
+2026-08-06    459c097    219     the record was committed after the first pin, so 405 pages read as authored under the gate that were not
