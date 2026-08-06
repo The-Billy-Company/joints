@@ -1,12 +1,13 @@
 # What has to be true before a change lands.
 #
-# Three jobs, because they are three different pieces of news. `grammars` asks
+# Four jobs, because they are four different pieces of news. `grammars` asks
 # whether the pins in `grammars.toml` still resolve to the bytes they claim -
 # that is a fact about upstream repositories, it needs no compiler, and it can
 # go red on a day nobody touched this repo. `press` asks whether the code still
 # builds and still holds rung 1's claims. `topology` asks whether the import
 # graph still matches `contract/outliner.zone`, which needs neither the network
-# nor a compiler and so lands its answer first.
+# nor a compiler and so lands its answer first. `record` asks whether the pages
+# that report numbers still say which tree those numbers are true of.
 #
 # The order inside `press` is load-bearing rather than tidy, and it is: build,
 # test, then fetch, then sweep. `zig build test` needs no network and no
@@ -93,6 +94,64 @@ jobs:
       # shapes it claims to catch, in a scratch tree, and fails if one walks.
       - name: and the gate still bites
         run: python3 tool/sole.py --probe
+      # Bytes only, so it sits with the other manifest checks rather than behind
+      # a build. The pair under research/joinery/order is the load-bearing
+      # evidence for the largest defect on the board, and it is only evidence
+      # while it holds bytes *and* nodes equal - so the committed files are
+      # checked against the construction that makes them, not merely for being
+      # present. The ratio itself needs a binary and runs in `press`.
+      - name: the order pair is still what the construction makes
+        run: python3 tool/order.py verify
+      # The detector for the class that cost this repository three fields in one
+      # day: a column reading something real, faithfully, that is not the thing
+      # it is named after. `verify` restores the worst of them - the oracle field
+      # that read `0` for every input for its whole life while twenty-five green
+      # rows watched - and requires exactly one of eighteen columns of the same
+      # record to redden, and an empty population to fail nothing. It plants its
+      # own three-grammar corpus in a temp tree rather than reading `.local`, so
+      # it needs no toolchain, no network and no sibling's lowering, which is why
+      # it sits here. The full sweep is 2.9 s over 250 MB and deliberately does
+      # not gate; see research/joinery/budge/RESULT-1-sweep.md.
+      - name: the field sweep still catches a field that never moves
+        run: python3 tool/budge.py verify
+
+  # The written record is a fourth kind of news. `grammars` asks whether the
+  # pins still resolve, `press` whether the code still holds its claims,
+  # `topology` whether the imports still match the contract - and this asks
+  # whether a page that reports a number still says which tree the number is
+  # true of. Four boards published in one morning here disagreed by ~1,900
+  # bytes with all four correct about different trees, which is a fact about
+  # the record rather than about any of them.
+  #
+  # It needs history where nothing else in this file does: the gate is a
+  # forward ratchet, it asks only about pages the diff names since the pin in
+  # `research/joinery/consort/sighting.since`, and a depth-1 checkout has no
+  # diff to take. That is the whole reason it is its own job rather than a step
+  # in `grammars` - `fetch-depth: 0` is a cost, and only this needs to pay it.
+  # No toolchain, no sibling, no network beyond the clone.
+  record:
+    name: record (a figure says which tree it is true of)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # A gate nobody has watched fail is decoration, and this one has two
+      # halves that must fail differently - the stamp axis blocks, the blind
+      # axis reports - plus an exemption and a ref that are both worth
+      # defeating quietly. Each of these builds the shape it claims to catch
+      # and fails if it walks.
+      - name: and the gate still bites
+        run: python3 research/joinery/consort/sighting.py --check
+      # The pin is a committed, append-only ledger, and the gate refuses to run
+      # when this working tree's copy differs from HEAD's. On a CI checkout it
+      # never does, so this step is here for the news it prints rather than for
+      # the assertion: every run says which ref it is asking about and how old
+      # that ref is, so a pin nudged forward is visible in the log of the run
+      # it silenced rather than only in the diff nobody re-reads.
+      - name: which pages report a measurement they cannot stand behind
+        run: python3 research/joinery/consort/sighting.py --gate
 
   press:
     name: press (${{ matrix.os }})
@@ -137,6 +196,22 @@ jobs:
         run: python3 tool/grammars.py fetch
       - name: verify the bytes on disk against the manifest
         run: python3 tool/grammars.py verify
+      # Is what came back a TREE. Every byte column on the board is a union
+      # over spans, and a union is silent about parentage: `built` is the union
+      # of the ROOT spans, so on any file one root covers whole it IS the file
+      # size, `standing` is 100% and `damage` is 0 no matter what the tree
+      # underneath looks like. toml rode that hole for as long as anyone had
+      # looked - `100% standing, zero damage` over a `pair` whose `comment`
+      # child was disjoint from it. `Quire.survey` could always see it and said
+      # so on every parse, into a verdict line nothing read as a failure.
+      #
+      # This is the reader. Oracle-free and ten seconds over thirty grammars,
+      # because it asks the tree about itself rather than asking tree-sitter -
+      # so it is the one structural gate that cannot be skipped for want of a
+      # built grammar library. Hard, not `continue-on-error`: a soundness
+      # complaint tolerated is exactly what put toml here.
+      - name: every grammar hands back a tree, not just a forest
+        run: python3 tool/sound.py
       # The gate, not a demo. It holds the run to the three claims
       # research/joinery/TESTING.md actually rests on - zero residual conflicts
       # on every grammar, nothing disagreeing anywhere, and a residue that never
@@ -144,6 +219,52 @@ jobs:
       # those are the lexer and the fork rather than the monoid.
       - name: rung 1, over all eleven grammars
         run: python3 tool/rung1.py
+      # Determinism, which every other claim in this file quietly assumes: a
+      # folio is only worth diffing, caching or content-addressing if the same
+      # grammar and the same binary press to the same bytes. They did not. The
+      # `lexicon` writer handed `asBytes` a struct whose last four bytes no
+      # field owns, so each automaton carried four bytes of this process's heap
+      # into the file, the deflater encoded that differently run to run, and
+      # eleven of thirty grammars minted twice to different bytes seconds apart.
+      #
+      # Six mints rather than two on purpose - the same defect measured nine of
+      # thirty at two mints and eleven at six, because the population is
+      # whichever grammars' garbage happened to differ across the runs sampled.
+      # The gate is the sweep the report was written from, at the sample size
+      # that measured the damage worst.
+      - name: the same grammar presses to the same bytes, thirty for thirty
+        run: python3 research/press/wobble.py --reps 6 --audit
+      # A complexity claim, held the only way a complexity claim can be held on
+      # somebody else's runner: a ratio between two parses of the same bytes and
+      # the same nodes in a different order, back to back in one process. No
+      # wall-clock threshold, because every absolute duration here is
+      # laptop-specific and the report says so.
+      #
+      # Red today, at 2.8x to 4.1x against a 1.6x ceiling, and meant to be: a
+      # gate that passed before the fix would not be a gate. It reports without
+      # blocking for the same reason rung 1 reports its thirty refusals without
+      # blocking - the defect is known, owned, and being fixed right now, and a
+      # red wall across everyone else's work is not how you help the lane
+      # fixing it. json and java go green in the same run, which is what keeps a
+      # broken gate from reading like a fixed parser.
+      #
+      # `continue-on-error` comes off the day all five rows are under the
+      # ceiling. That is the whole condition; nothing else needs deciding.
+      - name: the same work in a different order costs the same
+        continue-on-error: true
+        run: python3 tool/order.py
+
+      # The tail is enumerated in `research/joinery/walls/README.md` as five
+      # families over three lanes, and the plan is read off that grouping rather
+      # than off the wall count - the count is a floor that grows with how long
+      # anyone peels, so gating it would fail on a longer budget for no reason.
+      # What must not change quietly is the CLOSURE: every wall the budget
+      # reaches belongs to a family the board already names. A shape nothing
+      # claims means the tail has a kind of difficulty nobody has planned for,
+      # and that is worth stopping for. Fixed roster, fixed rounds, both peels,
+      # so a red here is the tree's and never the budget's.
+      - name: every wall still belongs to a family the board names
+        run: python3 tool/walls.py gate
 
   # `contract/outliner.zone` declares this package's import topology - the zone
   # stack, the reach ceiling, the cycle ban, and which outside modules each zone

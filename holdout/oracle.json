@@ -1,0 +1,21 @@
+{
+  "when": "2026-08-06T03:50:41Z",
+  "cli": "tree-sitter 0.26.11",
+  "oracle": "8b53a52a7a00",
+  "seat": "still",
+  "binary": "15c266a9a206",
+  "row": {
+    "capnp": {
+      "tree": "d32016f4bc3f9f165526d2d5ea9034c23d636338e81a84401165927fa9575015",
+      "lower": "e56f1756f237e24e21f0bb9106e42b387110dbdc7227ea1777b42017d3c30848",
+      "home": ".local/generalize/holdout/lang/capnp",
+      "distinct_on_disk": 1
+    },
+    "gdscript": {
+      "tree": "2e6b27650aecf8c3b8cf74f471fdd2f97db122f381db4566537fa80a6f43b007",
+      "lower": "29cc852c57e88472d78fb08b631dce4ec372dcfd1187bc15a672c88931f0ca89",
+      "home": ".local/generalize/holdout/lang/gdscript",
+      "distinct_on_disk": 1
+    }
+  }
+}

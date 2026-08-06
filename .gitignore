@@ -37,6 +37,12 @@ dist/
 # Upstream clones kept for study — tree-sitter, lezer, antlr, gpeg
 upstream/
 
+# The sealed holdout's BYTES. The pins, the seal and the ledger are tracked
+# (`holdout/holdout.toml`, `holdout/README.md`, `holdout/ledger.json`); the
+# grammars and source files they name are re-fetchable from those pins and are
+# nobody's to vendor. Same trade as `upstream/`, one directory over.
+holdout/vendor/
+
 # Toolchain overrides for one machine. `.mise.toml` and `mise.lock` are
 # tracked; these are the per-checkout escape hatch and nobody else's business.
 mise.local.toml

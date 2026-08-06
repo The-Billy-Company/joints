@@ -1,0 +1,33 @@
+{
+  // Markdown discipline for `.githooks/pre-push`, which lints the committed
+  // bytes of every changed `*.md` and archives this file alongside them.
+  "config": {
+    // Tables here pair a compact delimiter row with padded content rows.
+    // MD060 infers one style from the delimiter and charges every content
+    // pipe in the repository against it.
+    "MD060": false,
+
+    // Prose wraps at 80. A table column and a captured command line cannot,
+    // and rewrapping either changes what it says.
+    "MD013": {
+      "line_length": 80,
+      "tables": false,
+      "code_blocks": false
+    }
+  },
+  // The hook passes its own file list and ignores these; they only shape a
+  // bare `markdownlint-cli2` run, which should see this repository's prose
+  // and not a vendored grammar's or a scratch directory's.
+  "globs": ["**/*.md"],
+  "gitignore": true,
+  "ignores": ["upstream/**", "holdout/**"],
+  "overrides": [
+    {
+      // towncrier fragments are bodies, not documents: the heading is the
+      // filename and the section is the `.added`/`.fixed` suffix.
+      "filter": ["changelog.d/*.md"],
+      "combine": "merge",
+      "config": { "MD041": false }
+    }
+  ]
+}

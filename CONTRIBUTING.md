@@ -71,6 +71,38 @@ monoid.
 `joints` exits 1 whenever anything refused, so nine grammars out of eleven
 "fail" on their own today. Read what a run says, not what it returns.
 
+## Measure against a pinned binary, never against a path
+
+Everyone builds into the same `zig-out`, so a before/after comparison that
+names `zig-out/bin/outliner` is naming *whatever is there when each half runs*.
+That is not a hypothetical. One lane's reference arm was silently rebuilt
+mid-measurement with that lane's own fix in it, turning the "before" binary
+into an "after" binary and producing a clean thirty-of-thirty for entirely the
+wrong reason. **In this tree, a path is not a version.**
+
+`zig build -p <dir>` installs somewhere else and has always been there, but a
+private prefix is still only a path: a week later nothing on disk says what it
+was built from. So build a *pin*, which is a prefix plus a record of the tree
+that produced it:
+
+```sh
+python3 tool/pin.py build --name before    # zig build -p .local/pin/before, and write down the tree
+# … land your change …
+python3 tool/pin.py build --name after
+OUTLINER_BIN=$(python3 tool/pin.py path before) python3 research/press/wobble.py --reps 6
+python3 tool/pin.py verify                 # do both pins still hold the bytes they recorded?
+```
+
+Every instrument here reads `OUTLINER_BIN`, and `tool/stamp.py` reads the pin's
+record, so a run against a pin whose tree has since moved prints `DRIFT` and
+says which file moved. Without the record it cannot: `stamp` otherwise infers
+the source tree by walking up from the binary looking for a `build.zig`, finds
+none above a private prefix, falls back to the live repo and compares it
+against itself — so the binary you pinned *because* you expected the tree to
+move underneath it was the one binary that could never report that it had.
+`pin.py list` is the inventory; `pin.py show <name>` is one pin against the
+tree as it stands now.
+
 ## House rules that will come up in review
 
 - **Node kind names are byte-identical to tree-sitter's.** Every
@@ -83,6 +115,57 @@ monoid.
 - **A number is not a result until it is timed against bytes**, and you have to
   price both halves of the exchange. An `O(log n)` splice that allocates is not
   automatically better than an `O(n)` walk that does not.
+- **A path is not a version.** Ten lanes share one `zig-out`; a comparison arm
+  spelled as a path is whatever a sibling last installed there. Pin it — see
+  the section above — and say which pin a number came from.
+- **A number written into a page names the tree it is true of.** This is a
+  gate, not an aspiration: CI's `record` job refuses a page you changed that
+  reports a measured figure and names no tree or binary. Four boards published
+  in one morning here disagreed by ~1,900 bytes with all four correct about
+  different trees, so a figure with no world attached is not a small omission.
+  The remedy is one command and one paste, and the refusal prints it for you:
+
+  ```sh
+  python3 tool/standing.py --cite            # 188 ms, one markdown line
+  # outliner `a525dc9b8` · tree `3d0d2e481` (live) · **no oracle** — outliner's own words
+
+  # or, when the figure came off a board you saved, so the two cannot drift:
+  python3 tool/standing.py --cite=board.json --quote=built
+  ```
+
+  What is checked is that a stamp is *present*, never that it is that figure's
+  own — binding those needs a re-press at ~30 s a page, which
+  [`RESULT-11-quotation.md`](research/joinery/consort/RESULT-11-quotation.md)
+  argues is unreachable. It is a floor, and it is the floor the record did not
+  have. Only pages your diff touches are asked; the ratchet's pin lives at
+  `research/joinery/consort/sighting.since`, is committed, and moves only by
+  `sighting.py --pin <ref> --because "..."`, which prints what the move clears
+  before it writes it. Run it yourself with `python3
+  research/joinery/consort/sighting.py --gate`.
+- **A binary's `sha256` is not an oracle for behaviour**, for the same reason a
+  folio's is not an oracle for a press. Two builds differing only in comment
+  lines come out the same size with different digests, because added lines move
+  the DWARF line program and a digest cannot tell a shifted line table from a
+  shifted instruction. If the claim is "this change moves nothing", compare the
+  thing you actually care about — board cells, sections by name, a parse — and
+  never a whole-file hash of either artifact.
+- **A test about uninitialized memory must not build its fixture with
+  `@memcpy`.** A copy carries the *source's* bytes, so copying from a
+  `.rodata` literal lays that literal's zeros over your poison and the slack you
+  meant to exercise is never read — the test then passes against the *unfixed*
+  code, which is worse than having no test. Assign field by field, the way the
+  production writer does, and open the test by asserting the two fixtures really
+  do differ byte-wise before asserting they compare equal. Both halves of this
+  were learned the hard way in `irregex`'s `intern.zig` and `dag_test.zig`.
+- **Never spell a harness's control arm as an empty environment variable.**
+  `OUTLINER_X= cmd` sets `OUTLINER_X` to `""`, and `getenv` answers that with a
+  pointer to an empty string rather than null - so a gate written as
+  `getenv(name) != null` reads the *control* arm as on and runs the treatment in
+  both. The board that measured the composite-literal fix did this and printed
+  nine go repros accepted under a baseline that refuses six of them, which is a
+  confidently wrong report rather than an error, and the arms agreeing is what
+  it looks like. Either unset the variable in the control arm, or test the first
+  byte: `got != null and got.?[0] != 0`.
 - **Files stay under 500 lines**, and a new leaf folder gets a `README.md`.
 - **Comments say why this shape and what breaks otherwise**, ideally naming the
   case that forced it. Not what the next line does, and never a line count.
@@ -107,8 +190,11 @@ that order for a reason: `zig build check`, `zig build test`, `zig build`, *then
 the grammar fetch and its hash check, then the rung-1 sweep as a gate. The
 network comes last because only the sweep needs it, so a press regression is
 never downstream of somebody else's repository being reachable. A second job
-checks the pins on a bare checkout with no toolchain at all. No credentials, no
-GPU, no tree-sitter.
+checks the pins on a bare checkout with no toolchain at all. A third checks the
+import topology against `contract/outliner.zone`. A fourth, `record`, asks
+whether the pages you changed still say which tree their numbers are true of —
+it is the only job that clones with history, because a forward ratchet needs a
+diff. No credentials, no GPU, no tree-sitter.
 
 Apache-2.0, same as the rest of the family. By opening a pull request you are
 licensing your change under it.

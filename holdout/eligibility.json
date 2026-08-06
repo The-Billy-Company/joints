@@ -1,0 +1,2792 @@
+[
+  {
+    "name": "ada",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "briot/tree-sitter-ada",
+    "commit": "dd5fa4cdb3aba91abc687aa68fb1431396fce6a6",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "agda",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter/tree-sitter-agda",
+    "commit": "e8d47a6987effe34d5595baf321d82d3519a8527",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "angular",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "dlvandenberg/tree-sitter-angular",
+    "commit": "38a8014ed5452cd6b7cf1399c00177a1f5374256",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "apex",
+    "ok": false,
+    "why": "E6: no candidate source file (3 extension(s))",
+    "repo": "aheber/tree-sitter-sfapex",
+    "commit": "27a3091a1a444ce19d6099e00cd3788f019d0c2b",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "arduino",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-arduino",
+    "commit": "11dd46c9ae25135c473c0003a133bb06a484af0c",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "asm",
+    "ok": false,
+    "why": "E6: no candidate source file (3 extension(s))",
+    "repo": "RubixDev/tree-sitter-asm",
+    "commit": "839741fef4dab5128952334624905c82b40c7133",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "astro",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "virchau13/tree-sitter-astro",
+    "commit": "213f6e6973d9b456c6e50e86f19f66877e7ef0ee",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "authzed",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "mleonidas/tree-sitter-authzed",
+    "commit": "83e5c26a8687eb4688fe91d690c735cc3d21ad81",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "awk",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "Beaglefoot/tree-sitter-awk",
+    "commit": "34bbdc7cce8e803096f47b625979e34c1be38127",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "bash",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-bash",
+    "commit": "a06c2e4415e9bc0346c6b86d401879ffb44058f7",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "bass",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "vito/tree-sitter-bass",
+    "commit": "28dc7059722be090d04cd751aed915b2fee2f89a",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "beancount",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "polarmutex/tree-sitter-beancount",
+    "commit": "c8a9780610dbe8ade4888045b1f2caa7a0a9d8aa",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "bibtex",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "latex-lsp/tree-sitter-bibtex",
+    "commit": "8d04ed27b3bc7929f14b7df9236797dab9f3fa66",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "bicep",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-bicep",
+    "commit": "bff59884307c0ab009bd5e81afd9324b46a6c0f9",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "bitbake",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-bitbake",
+    "commit": "a5d04fdb5a69a02b8fa8eb5525a60dfb5309b73b",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "blade",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "EmranMR/tree-sitter-blade",
+    "commit": "5dbdcb0ccbe91e64b038b41545d3acc26c74907a",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "bp",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "ambroisie/tree-sitter-bp",
+    "commit": "ee641d15390183d7535777947ce0f2f1fbcee69f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "bpftrace",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "sgruszka/tree-sitter-bpftrace",
+    "commit": "11453f5e4be5026b2b18d4b53f893ded972011ce",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "brightscript",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "ajdelcimmuto/tree-sitter-brightscript",
+    "commit": "253fdfaa23814cb46c2d5fc19049fa0f2f62c6da",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "c",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-c",
+    "commit": "b780e47fc780ddc8da13afa35a3f4ed5c157823d",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "c3",
+    "ok": false,
+    "why": "E6: no candidate source file (3 extension(s))",
+    "repo": "c3lang/tree-sitter-c3",
+    "commit": "1c6a95234c62130763ed1c479f958b74fdbfdb2a",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "caddy",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "opa-oz/tree-sitter-caddy",
+    "commit": "2686186edb61be47960431c93a204fb249681360",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "cairo",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-cairo",
+    "commit": "6238f609bea233040fe927858156dee5515a0745",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "capnp",
+    "ok": true,
+    "why": "",
+    "repo": "tree-sitter-grammars/tree-sitter-capnp",
+    "commit": "7b0883c03e5edd34ef7bcf703194204299d7099f",
+    "best": "examples/12-annotations.capnp",
+    "size": 1123
+  },
+  {
+    "name": "chatito",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-chatito",
+    "commit": "c0ed82c665b732395073f635c74c300f09530a7f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "circom",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "Decurity/tree-sitter-circom",
+    "commit": "02150524228b1e6afef96949f2d6b7cc0aaf999e",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "clojure",
+    "ok": false,
+    "why": "E6: no candidate source file (4 extension(s))",
+    "repo": "sogaiu/tree-sitter-clojure",
+    "commit": "e43eff80d17cf34852dcd92ca5e6986d23a7040f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "cmake",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "uyha/tree-sitter-cmake",
+    "commit": "ca627bb5828616b6246aafdc3c3222789e728e37",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "comment",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "stsewd/tree-sitter-comment",
+    "commit": "66272d2b6c73fb61157541b69dd0a7ce7b42a5ad",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "commonlisp",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-commonlisp",
+    "commit": "32323509b3d9fe96607d151c2da2c9009eb13a2f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "cooklang",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "addcninblue/tree-sitter-cooklang",
+    "commit": "4ebe237c1cf64cf3826fc249e9ec0988fe07e58e",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "corn",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "jakestanger/tree-sitter-corn",
+    "commit": "464654742cbfd3a3de560aba120998f1d5dfa844",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "cpon",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-cpon",
+    "commit": "594289eadfec719198e560f9d7fd243c4db678d5",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "cpp",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-cpp",
+    "commit": "8b5b49eb196bec7040441bee33b2c9a4838d6967",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "css",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-css",
+    "commit": "dda5cfc5722c429eaba1c910ca32c2c0c5bb1a3f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "csv",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "tree-sitter-grammars/tree-sitter-csv",
+    "commit": "f6bf6e35eb0b95fbadea4bb39cb9709507fcb181",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "cuda",
+    "ok": true,
+    "why": "",
+    "repo": "tree-sitter-grammars/tree-sitter-cuda",
+    "commit": "48b066f334f4cf2174e05a50218ce2ed98b6fd01",
+    "best": "examples/rule.cu",
+    "size": 8448
+  },
+  {
+    "name": "cue",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "eonpatapon/tree-sitter-cue",
+    "commit": "dd7b90e0770ff18070c515937ba3c3d6d93db00e",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "cylc",
+    "ok": true,
+    "why": "",
+    "repo": "elliotfontaine/tree-sitter-cylc",
+    "commit": "6d1d81137112299324b526477ce1db989ab58fb8",
+    "best": "examples/rtmet.cylc",
+    "size": 12532
+  },
+  {
+    "name": "d",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "gdamore/tree-sitter-d",
+    "commit": "64f27931b4e6fdd75af1102c79bacbca68a8dacc",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "dart",
+    "ok": true,
+    "why": "",
+    "repo": "UserNobody14/tree-sitter-dart",
+    "commit": "be07cf7118d3dba06236a3f19541685a68209934",
+    "best": "tree_sitter/bin/gen_grammar.freezed.dart",
+    "size": 21542
+  },
+  {
+    "name": "devicetree",
+    "ok": false,
+    "why": "E6: no candidate source file (5 extension(s))",
+    "repo": "joelspadin/tree-sitter-devicetree",
+    "commit": "e78bf56f206cb47bee28a217423acb651e076848",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "dhall",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "jbellerb/tree-sitter-dhall",
+    "commit": "62013259b26ac210d5de1abf64cf1b047ef88000",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "diff",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-diff",
+    "commit": "0f8fe525b2ff5fbd7f21d0dcfb756fbbe30ca844",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "disassembly",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "ColinKennedy/tree-sitter-disassembly",
+    "commit": "0229c0211dba909c5d45129ac784a3f4d49c243a",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "djot",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "treeman/tree-sitter-djot",
+    "commit": "759a61896ccb2200a4becec4443e768638a21d58",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "dockerfile",
+    "ok": false,
+    "why": "E6: no candidate source file (5 extension(s))",
+    "repo": "camdencheek/tree-sitter-dockerfile",
+    "commit": "971acdd908568b4531b0ba28a445bf0bb720aba5",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "dot",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "rydesun/tree-sitter-dot",
+    "commit": "80327abbba6f47530edeb0df9f11bd5d5c93c14d",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "doxygen",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "tree-sitter-grammars/tree-sitter-doxygen",
+    "commit": "ccd998f378c3f9345ea4eeb223f56d7b84d16687",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "dtd",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "tree-sitter-grammars/tree-sitter-xml",
+    "commit": "5000ae8f22d11fbe93939b05c1e37cf21117162d",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "earthfile",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "glehmann/tree-sitter-earthfile",
+    "commit": "5baef88717ad0156fd29a8b12d0d8245bb1096a8",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "ebnf",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "RubixDev/ebnf",
+    "commit": "8e635b0b723c620774dfb8abf382a7f531894b40",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "eds",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "uyha/tree-sitter-eds",
+    "commit": "26d529e6cfecde391a03c21d1474eb51e0285805",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "eex",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "connorlay/tree-sitter-eex",
+    "commit": "f742f2fe327463335e8671a87c0b9b396905d1d1",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "elixir",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "elixir-lang/tree-sitter-elixir",
+    "commit": "4b0c7118760af58a2e7081bbc8396e136f820b37",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "elm",
+    "ok": true,
+    "why": "",
+    "repo": "elm-tooling/tree-sitter-elm",
+    "commit": "e1e8fea161a1e66f3997855d316be2a43e4e956f",
+    "best": "examples/test.elm",
+    "size": 5954
+  },
+  {
+    "name": "elsa",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "glapa-grossklag/tree-sitter-elsa",
+    "commit": "0a66b2b3f3c1915e67ad2ef9f7dbd2a84820d9d7",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "elvish",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "elves/tree-sitter-elvish",
+    "commit": "5e7210d945425b77f82cbaebc5af4dd3e1ad40f5",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "embedded_template",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-embedded-template",
+    "commit": "3499d85f0a0d937c507a4a65368f2f63772786e1",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "enforce",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "simonvic/tree-sitter-enforce",
+    "commit": "d222ea5d2f047e67a16234237cfc1c8489aac2fb",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "erlang",
+    "ok": false,
+    "why": "E6: no candidate source file (6 extension(s))",
+    "repo": "WhatsApp/tree-sitter-erlang",
+    "commit": "6ba4c762eb3065495e3db85697ffeecdf364ce35",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "facility",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "FacilityApi/tree-sitter-facility",
+    "commit": "e4bfd3e960de9f4b4648acb1c92e9b95b47d8cfb",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "faust",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "khiner/tree-sitter-faust",
+    "commit": "6074204d3511392fd0b9c4fa1cef347ded65b246",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "fennel",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "alexmozaidze/tree-sitter-fennel",
+    "commit": "3f0f6b24d599e92460b969aabc4f4c5a914d15a0",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "fidl",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "google/tree-sitter-fidl",
+    "commit": "0a8910f293268e27ff554357c229ba172b0eaed2",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "firrtl",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-firrtl",
+    "commit": "8503d3a0fe0f9e427863cb0055699ff2d29ae5f5",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "fish",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "ram02z/tree-sitter-fish",
+    "commit": "f435b0bd772578c70e5d158b85267bb886316f88",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "foam",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "FoamScience/tree-sitter-foam",
+    "commit": "472c24f11a547820327fb1be565bcfff98ea96a4",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "forth",
+    "ok": false,
+    "why": "E6: no candidate source file (5 extension(s))",
+    "repo": "AlexanderBrevig/tree-sitter-forth",
+    "commit": "7190f2173060d19a2174c96bfb5b7c6f9745512b",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "fortran",
+    "ok": true,
+    "why": "",
+    "repo": "stadelmanma/tree-sitter-fortran",
+    "commit": "7edacd2b21aa80057d9725384a1304a1c758e0f8",
+    "best": "examples/BoundingBox_Method.F90",
+    "size": 25607
+  },
+  {
+    "name": "fsh",
+    "ok": true,
+    "why": "",
+    "repo": "mgramigna/tree-sitter-fsh",
+    "commit": "fad2e175099a45efbc98f000cc196d3674cc45e0",
+    "best": "example/example.fsh",
+    "size": 2416
+  },
+  {
+    "name": "fsharp",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "ionide/tree-sitter-fsharp",
+    "commit": "789d8ea1481345d6f3bc1a06985dbf6a6b202744",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "func",
+    "ok": true,
+    "why": "",
+    "repo": "tree-sitter-grammars/tree-sitter-func",
+    "commit": "f780ca55e65e7d7360d0229331763e16c452fc98",
+    "best": "examples/stdlib.fc",
+    "size": 13918
+  },
+  {
+    "name": "gap",
+    "ok": false,
+    "why": "E6: no candidate source file (3 extension(s))",
+    "repo": "gap-system/tree-sitter-gap",
+    "commit": "96fe2e49745ecd62b80cd19dca01fb52b83f93a1",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "gaptst",
+    "ok": true,
+    "why": "",
+    "repo": "gap-system/tree-sitter-gaptst",
+    "commit": "69086d7627c03e1f4baf766bcef14c60d9e92331",
+    "best": "examples/corner_cases.tst",
+    "size": 1412
+  },
+  {
+    "name": "gdscript",
+    "ok": true,
+    "why": "",
+    "repo": "PrestonKnopp/tree-sitter-gdscript",
+    "commit": "9686853b696db07118ad110e440d6de0ca6498b4",
+    "best": "examples/gdscript-style-guide.gd",
+    "size": 1516
+  },
+  {
+    "name": "gdshader",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "airblast-dev/tree-sitter-gdshader",
+    "commit": "68268631c8b6dc093985f1246b099f81b30ea7d1",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "git_config",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "the-mikedavis/tree-sitter-git-config",
+    "commit": "3a61756a81a86291a0f48e3eeeaa0692b9981aa9",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "git_rebase",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "the-mikedavis/tree-sitter-git-rebase",
+    "commit": "32686d6b72980b36f876ae2d07719c9c3ed154e2",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "gitattributes",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-gitattributes",
+    "commit": "1b7af09d45b579f9f288453b95ad555f1f431645",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "gitcommit",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "gbprod/tree-sitter-gitcommit",
+    "commit": "49715a9e6f19ce3d33b875aacdd6ad8ddaee0ffe",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "gitignore",
+    "ok": true,
+    "why": "",
+    "repo": "shunsambongi/tree-sitter-gitignore",
+    "commit": "f4685bf11ac466dd278449bcfe5fd014e94aa504",
+    "best": ".gitignore",
+    "size": 2393
+  },
+  {
+    "name": "gleam",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "gleam-lang/tree-sitter-gleam",
+    "commit": "cefbd6863983b4df3214b7934bde5e9ca63d5b7f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "glimmer",
+    "ok": false,
+    "why": "E6: no candidate source file (4 extension(s))",
+    "repo": "ember-tooling/tree-sitter-glimmer",
+    "commit": "c67a73679db2945a686ca45d3e5318d86138e72a",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "glimmer_javascript",
+    "ok": true,
+    "why": "",
+    "repo": "NullVoxPopuli/tree-sitter-glimmer-javascript",
+    "commit": "d9cf7a2f1dad3c6b660148eaf77e955d418fdb8b",
+    "best": "examples/content.gjs",
+    "size": 5840
+  },
+  {
+    "name": "glimmer_typescript",
+    "ok": true,
+    "why": "",
+    "repo": "NullVoxPopuli/tree-sitter-glimmer-typescript",
+    "commit": "12d98944c1d5077b957cbdb90d663a7c4d50118c",
+    "best": "examples/menu.gts",
+    "size": 7664
+  },
+  {
+    "name": "glsl",
+    "ok": false,
+    "why": "E6: no candidate source file (5 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-glsl",
+    "commit": "24a6c8ef698e4480fecf8340d771fbcb5de8fbb4",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "gn",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-gn",
+    "commit": "bc06955bc1e3c9ff8e9b2b2a55b38b94da923c05",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "go",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-go",
+    "commit": "2346a3ab1bb3857b48b29d779a1ef9799a248cd7",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "goctl",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "chaozwn/tree-sitter-goctl",
+    "commit": "49c43532689fe1f53e8b9e009d0521cab02c432b",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "godot_resource",
+    "ok": true,
+    "why": "",
+    "repo": "PrestonKnopp/tree-sitter-godot-resource",
+    "commit": "302c1895f54bf74d53a08572f7b26a6614209adc",
+    "best": "examples/main.tscn",
+    "size": 8021
+  },
+  {
+    "name": "gomod",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "camdencheek/tree-sitter-go-mod",
+    "commit": "2e886870578eeba1927a2dc4bd2e2b3f598c5f9a",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "gosum",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-go-sum",
+    "commit": "27816eb6b7315746ae9fcf711e4e1396dc1cf237",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "gotmpl",
+    "ok": false,
+    "why": "E6: no candidate source file (5 extension(s))",
+    "repo": "ngalaiko/tree-sitter-go-template",
+    "commit": "aa71f63de226c5592dfbfc1f29949522d7c95fac",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "gowork",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "omertuc/tree-sitter-go-work",
+    "commit": "949a8a470559543857a62102c84700d291fc984c",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "gpg",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-gpg-config",
+    "commit": "4024eb268c59204280f8ac71ef146b8ff5e737f6",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "graphql",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "bkegley/tree-sitter-graphql",
+    "commit": "5e66e961eee421786bdda8495ed1db045e06b5fe",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "gren",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "MaeBrooks/tree-sitter-gren",
+    "commit": "cecd8ce9b18f1803d37682f33b6224978fd04d31",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "groovy",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "murtaza64/tree-sitter-groovy",
+    "commit": "deb0dcf8c4544f07564060f6e9b9f6e4b0bfc27d",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "groq",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "ajrussellaudio/tree-sitter-groq",
+    "commit": "1fa1ab0eb391a270957e8ad8c731b492e3645649",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "gstlaunch",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "tree-sitter-grammars/tree-sitter-gstlaunch",
+    "commit": "549aef253fd38a53995cda1bf55c501174372bf7",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "hack",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "slackhq/tree-sitter-hack",
+    "commit": "1a7ded90288189746c54861ac144ede97df95081",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "hare",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-hare",
+    "commit": "eed7ddf6a66b596906aa8ca3d40521b8278adc6f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "haskell",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter-grammars/tree-sitter-haskell",
+    "commit": "98aedbd2d6947a168ba3ba3755d70b0cb6b78395",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "haskell_persistent",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "MercuryTechnologies/tree-sitter-haskell-persistent",
+    "commit": "577259b4068b2c281c9ebf94c109bd50a74d5857",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "hcl",
+    "ok": true,
+    "why": "",
+    "repo": "tree-sitter-grammars/tree-sitter-hcl",
+    "commit": "64ad62785d442eb4d45df3a1764962dafd5bc98b",
+    "best": "example/real_world_stuff/coreos/coreos%tectonic-installer%tests%smoke%azure%fixtures%external-vnet%main.tf",
+    "size": 32185
+  },
+  {
+    "name": "heex",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "connorlay/tree-sitter-heex",
+    "commit": "5842537f734d7c12685bf27d6005313e3e5a47a0",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "helm",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "ngalaiko/tree-sitter-go-template",
+    "commit": "aa71f63de226c5592dfbfc1f29949522d7c95fac",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "hjson",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "winston0410/tree-sitter-hjson",
+    "commit": "02fa3b79b3ff9a296066da6277adfc3f26cbc9e0",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "hlsl",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-hlsl",
+    "commit": "bab9111922d53d43668fabb61869bec51bbcb915",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "hocon",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "antosha417/tree-sitter-hocon",
+    "commit": "c390f10519ae69fdb03b3e5764f5592fb6924bcc",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "hoon",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "urbit-pilled/tree-sitter-hoon",
+    "commit": "1545137aadcc63660c47db9ad98d02fa602655d0",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "html",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-html",
+    "commit": "73a3947324f6efddf9e17c0ea58d454843590cc0",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "htmldjango",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "interdependence/tree-sitter-htmldjango",
+    "commit": "a10318892603d9a0b925df7cc7771a840304b997",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "http",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "rest-nvim/tree-sitter-http",
+    "commit": "db8b4398de90b6d0b6c780aba96aaa2cd8e9202c",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "hurl",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "pfeiferj/tree-sitter-hurl",
+    "commit": "597efbd7ce9a814bb058f48eabd055b1d1e12145",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "hyprlang",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-hyprlang",
+    "commit": "cecd6b748107d9da1f7b4ca03ef95f1f71d93b8f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "idl",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "cathaysia/tree-sitter-idl",
+    "commit": "b5ecf511e542e43313ba4602bdb206a08cb06232",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "idris",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "kayhide/tree-sitter-idris",
+    "commit": "c56a25cf57c68ff929356db25505c1cc4c7820f6",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "ini",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "justinmk/tree-sitter-ini",
+    "commit": "e4018b5176132b4f3c5d6e61cea383f42288d0f5",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "ispc",
+    "ok": true,
+    "why": "",
+    "repo": "tree-sitter-grammars/tree-sitter-ispc",
+    "commit": "ba1bb38ac8ddfa6aa7571cbfe9b4d029f7f77447",
+    "best": "examples/SGEMM_kernels.ispc",
+    "size": 25196
+  },
+  {
+    "name": "janet_simple",
+    "ok": false,
+    "why": "E6: no candidate source file (3 extension(s))",
+    "repo": "sogaiu/tree-sitter-janet-simple",
+    "commit": "3c1bdcfff374138da03a1db25c75efce623910fe",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "java",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-java",
+    "commit": "e10607b45ff745f5f876bfa3e94fbcc6b44bdc11",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "javadoc",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "rmuir/tree-sitter-javadoc",
+    "commit": "3c72691166833f1722a0293be604fa2a73c8cafa",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "javascript",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-javascript",
+    "commit": "58404d8cf191d69f2674a8fd507bd5776f46cb11",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "jinja",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "cathaysia/tree-sitter-jinja",
+    "commit": "c213d3745ccdcaaa858869181c7b1bf9557a025f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "jinja_inline",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "cathaysia/tree-sitter-jinja",
+    "commit": "c213d3745ccdcaaa858869181c7b1bf9557a025f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "jq",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "flurie/tree-sitter-jq",
+    "commit": "c204e36d2c3c6fce1f57950b12cabcc24e5cc4d9",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "jsdoc",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "tree-sitter/tree-sitter-jsdoc",
+    "commit": "658d18dcdddb75c760363faa4963427a7c6b52db",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "json",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-json",
+    "commit": "001c28d7a29832b06b0e831ec77845553c89b56d",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "json5",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "Joakker/tree-sitter-json5",
+    "commit": "248b8564567087d7866be76569b182f6dd7e14e9",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "jsonnet",
+    "ok": true,
+    "why": "",
+    "repo": "sourcegraph/tree-sitter-jsonnet",
+    "commit": "ddd075f1939aed8147b7aa67f042eda3fce22790",
+    "best": "examples/syntax.jsonnet",
+    "size": 1856
+  },
+  {
+    "name": "julia",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter-grammars/tree-sitter-julia",
+    "commit": "60fc2370605db09d9b39877c6f754ff345bcb7a5",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "just",
+    "ok": false,
+    "why": "E6: no candidate source file (4 extension(s))",
+    "repo": "IndianBoy42/tree-sitter-just",
+    "commit": "5685543a6e64f66335e25518c9ae8ffa1dae3d01",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "kcl",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "kcl-lang/tree-sitter-kcl",
+    "commit": "026f40fb0a59a35da75b9c8801d52f6c14feda24",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "kconfig",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-kconfig",
+    "commit": "9ac99fe4c0c27a35dc6f757cef534c646e944881",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "kdl",
+    "ok": true,
+    "why": "",
+    "repo": "tree-sitter-grammars/tree-sitter-kdl",
+    "commit": "b37e3d58e5c5cf8d739b315d6114e02d42e66664",
+    "best": "examples/spec/kdl-schema.kdl",
+    "size": 18616
+  },
+  {
+    "name": "kitty",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "OXY2DEV/tree-sitter-kitty",
+    "commit": "0e3eca6e786356bd37b1633f5e8b5a1c864333c1",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "kos",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "kos-lang/tree-sitter-kos",
+    "commit": "a7338629da17c5246dc2129cd2a493a6ee59e922",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "kotlin",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "fwcd/tree-sitter-kotlin",
+    "commit": "c8ac3d2627240160b999a2c100de3babbdb8f419",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "koto",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "koto-lang/tree-sitter-koto",
+    "commit": "e8d41cbaca867aa1b0213e1fc1caeaf593da7bf7",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "kusto",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "Willem-J-an/tree-sitter-kusto",
+    "commit": "8353a1296607d6ba33db7c7e312226e5fc83e8ce",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "lalrpop",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "traxys/tree-sitter-lalrpop",
+    "commit": "27b0f7bb55b4cabd8f01a933d9ee6a49dbfc2192",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "latex",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "latex-lsp/tree-sitter-latex",
+    "commit": "7e0ecdc02926c7b9b2e0c76003d4fe7b0944f957",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "ledger",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "cbarrete/tree-sitter-ledger",
+    "commit": "22a1ab8195c1f6e808679f803007756fe7638c6f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "leo",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "r001/tree-sitter-leo",
+    "commit": "6bc5564917edacd070afc4d33cf5e2e677831ea9",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "linkerscript",
+    "ok": false,
+    "why": "E6: no candidate source file (4 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-linkerscript",
+    "commit": "f99011a3554213b654985a4b0a65b3b032ec4621",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "liquid",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "hankthetank27/tree-sitter-liquid",
+    "commit": "e45dbac8c5fa95b1f0e00e7e0c04bc8855823391",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "liquidsoap",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "savonet/tree-sitter-liquidsoap",
+    "commit": "0169d92b0a93e9f32289533ef23abdafca579e56",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "llvm",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "benwilliamgraham/tree-sitter-llvm",
+    "commit": "2914786ae6774d4c4e25a230f4afe16aa68fe1c1",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "lua",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter-grammars/tree-sitter-lua",
+    "commit": "10fe0054734eec83049514ea2e718b2a56acd0c9",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "luadoc",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-luadoc",
+    "commit": "873612aadd3f684dd4e631bdf42ea8990c57634e",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "luap",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-luap",
+    "commit": "c134aaec6acf4fa95fe4aa0dc9aba3eacdbbe55a",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "luau",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-luau",
+    "commit": "a8914d6c1fc5131f8e1c13f769fa704c9f5eb02f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "m68k",
+    "ok": false,
+    "why": "E6: no candidate source file (6 extension(s))",
+    "repo": "grahambates/tree-sitter-m68k",
+    "commit": "ab9f2ad96db56619d05a6474a52e3dbdd705a637",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "make",
+    "ok": false,
+    "why": "E6: no candidate source file (7 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-make",
+    "commit": "70613f3d812cbabbd7f38d104d60a409c4008b43",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "markdown",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter-grammars/tree-sitter-markdown",
+    "commit": "a0a00f817d02412bd92c54d316f164d827b57b5c",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "markdown_inline",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "tree-sitter-grammars/tree-sitter-markdown",
+    "commit": "a0a00f817d02412bd92c54d316f164d827b57b5c",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "matlab",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "acristoffers/tree-sitter-matlab",
+    "commit": "c9ef947ec67fb6b500d5def4f5e09b56990a9f91",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "menhir",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "Kerl13/tree-sitter-menhir",
+    "commit": "be8866a6bcc2b563ab0de895af69daeffa88fe70",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "mermaid",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "monaqa/tree-sitter-mermaid",
+    "commit": "90ae195b31933ceb9d079abfa8a3ad0a36fee4cc",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "meson",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-meson",
+    "commit": "aa8d472034956f94f51f2ef2cbfec4cc07efbfde",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "mlir",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "artagnon/tree-sitter-mlir",
+    "commit": "8ed481a219b3e67b9b862676d84a7b2e1bc2ea8c",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "nasm",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "naclsn/tree-sitter-nasm",
+    "commit": "d1b3638d017f2a8585e26dcfc66fe1df94185e30",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "nginx",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "opa-oz/tree-sitter-nginx",
+    "commit": "47ade644d754cce57974aac44d2c9450e823d4f4",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "nickel",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "nickel-lang/tree-sitter-nickel",
+    "commit": "fd65591d3c7812b0e3e733506f3f08a354a38ea6",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "nim",
+    "ok": true,
+    "why": "",
+    "repo": "alaviss/tree-sitter-nim",
+    "commit": "ac72ba30d16edf0be021588a9301ede4accd6cf4",
+    "best": "samples/cps/transform.nim",
+    "size": 48409
+  },
+  {
+    "name": "nim_format_string",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "aMOPel/tree-sitter-nim-format-string",
+    "commit": "d45f75022d147cda056e98bfba68222c9c8eca3a",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "ninja",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "alemuller/tree-sitter-ninja",
+    "commit": "0a95cfdc0745b6ae82f60d3a339b37f19b7b9267",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "nix",
+    "ok": true,
+    "why": "",
+    "repo": "nix-community/tree-sitter-nix",
+    "commit": "3d0173d903e630b6e14d17f1cf79488791379ded",
+    "best": "flake.nix",
+    "size": 4157
+  },
+  {
+    "name": "nqc",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-nqc",
+    "commit": "14e6da1627aaef21d2b2aa0c37d04269766dcc1d",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "nu",
+    "ok": true,
+    "why": "",
+    "repo": "nushell/tree-sitter-nu",
+    "commit": "9467420d184bd2c510378f4cda624eca35dd4590",
+    "best": "ts.nu",
+    "size": 3425
+  },
+  {
+    "name": "objc",
+    "ok": false,
+    "why": "E6: no candidate source file (3 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-objc",
+    "commit": "181a81b8f23a2d593e7ab4259981f50122909fda",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "objdump",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "ColinKennedy/tree-sitter-objdump",
+    "commit": "28d3b2e25a0b1881d1b47ed1924ca276c7003d45",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "ocaml",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-ocaml",
+    "commit": "527d62ef0f24ce0d97fbedf004921d75d0a7e086",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "ocaml_interface",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "tree-sitter/tree-sitter-ocaml",
+    "commit": "527d62ef0f24ce0d97fbedf004921d75d0a7e086",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "ocamllex",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "atom-ocaml/tree-sitter-ocamllex",
+    "commit": "33722b8be73079946a7c6dd9598e3f57956ed36d",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "odin",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-odin",
+    "commit": "d2ca8efb4487e156a60d5bd6db2598b872629403",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "pascal",
+    "ok": true,
+    "why": "",
+    "repo": "Isopod/tree-sitter-pascal",
+    "commit": "042119eca2e18a60e56317fb06ee3ba5c32cb447",
+    "best": "examples/foo.pas",
+    "size": 1848
+  },
+  {
+    "name": "passwd",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "ath3/tree-sitter-passwd",
+    "commit": "20239395eacdc2e0923a7e5683ad3605aee7b716",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "pem",
+    "ok": false,
+    "why": "E6: no candidate source file (5 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-pem",
+    "commit": "e525b177a229b1154fd81bc0691f943028d9e685",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "perl",
+    "ok": true,
+    "why": "",
+    "repo": "tree-sitter-perl/tree-sitter-perl",
+    "commit": "c3e17b31179bf8f658c9f37c7a3ea6a202212d5a",
+    "best": "generate_intuit_keywords.pl",
+    "size": 5213
+  },
+  {
+    "name": "php",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-php",
+    "commit": "3fda2fb9577166c6399834917f9844f30370beea",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "php_only",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "tree-sitter/tree-sitter-php",
+    "commit": "3fda2fb9577166c6399834917f9844f30370beea",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "phpdoc",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "claytonrcarter/tree-sitter-phpdoc",
+    "commit": "12d50307e6c02e5f4f876fa6cf2edea1f7808c0d",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "pioasm",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "leo60228/tree-sitter-pioasm",
+    "commit": "afece58efdb30440bddd151ef1347fa8d6f744a9",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "pkl",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "apple/tree-sitter-pkl",
+    "commit": "3486521eb1c2fcb3c9a5e88300215930ee515693",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "po",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-po",
+    "commit": "bd860a0f57f697162bf28e576674be9c1500db5e",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "pod",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-perl/tree-sitter-pod",
+    "commit": "ffbd7f3b7b68edaaa0532898953c627355cb1a1a",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "poe_filter",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-poe-filter",
+    "commit": "205a7d576984feb38a9fc2d8cfe729617f9e0548",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "pony",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-pony",
+    "commit": "73ff874ae4c9e9b45462673cbc0a1e350e2522a7",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "powershell",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "airbus-cert/tree-sitter-powershell",
+    "commit": "e7bd348c49fdfd5c853a146a670965ba516a6239",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "printf",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "tree-sitter-grammars/tree-sitter-printf",
+    "commit": "ec4e5674573d5554fccb87a887c97d4aec489da7",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "prisma",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "victorhqc/tree-sitter-prisma",
+    "commit": "3556b2c1f20ec9ac91e92d32c43d9d2a0ca3cc49",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "promql",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "MichaHoffmann/tree-sitter-promql",
+    "commit": "77625d78eebc3ffc44d114a07b2f348dff3061b0",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "properties",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-properties",
+    "commit": "6310671b24d4e04b803577b1c675d765cbd5773b",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "proto",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "coder3101/tree-sitter-proto",
+    "commit": "10653e646d6f435b723b294634a0e8eb188069e9",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "prql",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "PRQL/tree-sitter-prql",
+    "commit": "09e158cd3650581c0af4c49c2e5b10c4834c8646",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "psv",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "tree-sitter-grammars/tree-sitter-csv",
+    "commit": "f6bf6e35eb0b95fbadea4bb39cb9709507fcb181",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "pug",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "zealot128/tree-sitter-pug",
+    "commit": "13e9195370172c86a8b88184cc358b23b677cc46",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "puppet",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-puppet",
+    "commit": "15f192929b7d317f5914de2b4accd37b349182a6",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "purescript",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "postsolar/tree-sitter-purescript",
+    "commit": "f541f95ffd6852fbbe88636317c613285bc105af",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "pymanifest",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-pymanifest",
+    "commit": "debbdb83fe6356adc7261c41c69b45ba49c97294",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "ql",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "tree-sitter/tree-sitter-ql",
+    "commit": "5b8ee9adaa1f2a1ea958064b61f8feb0a5a886c0",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "qmldir",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-qmldir",
+    "commit": "c57e00865a1a6f1cca83340d6dad91f13df55479",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "qmljs",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "yuja/tree-sitter-qmljs",
+    "commit": "de96ed62abded51fcdfcbeaaa120e0dd0d20c697",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "query",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-query",
+    "commit": "8e9e223812ff30854fbc912adbec696ba5f0e023",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "r",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "r-lib/tree-sitter-r",
+    "commit": "58a22794466c0fc15b0d3b40531db751593721e8",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "racket",
+    "ok": true,
+    "why": "",
+    "repo": "6cdh/tree-sitter-racket",
+    "commit": "e2b8064b32ab1dfa30532aeac1577ae4c1cc3df5",
+    "best": "fuzztest/gen_cases.rkt",
+    "size": 1747
+  },
+  {
+    "name": "ralph",
+    "ok": true,
+    "why": "",
+    "repo": "alephium/tree-sitter-ralph",
+    "commit": "f6d81bf7a4599c77388035439cf5801cd461ff77",
+    "best": "examples/wormhole.ral",
+    "size": 11173
+  },
+  {
+    "name": "rasi",
+    "ok": true,
+    "why": "",
+    "repo": "Fymyte/tree-sitter-rasi",
+    "commit": "e735c6881d8b475aaa4ef8f0a2bdfd825b438143",
+    "best": "examples/fancy.rasi",
+    "size": 6375
+  },
+  {
+    "name": "razor",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tris203/tree-sitter-razor",
+    "commit": "d4664e409caaea12f73c9525484e3cf88b1cf718",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "rbs",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "joker1007/tree-sitter-rbs",
+    "commit": "5282e2f36d4109f5315c1d9486b5b0c2044622bb",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "re2c",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-re2c",
+    "commit": "c18a3c2f4b6665e35b7e50d6048ea3cff770c572",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "readline",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-readline",
+    "commit": "6b744c527aebd12e46a5ecb3aebdb8d621a8e83e",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "regex",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "tree-sitter/tree-sitter-regex",
+    "commit": "b2ac15e27fce703d2f37a79ccd94a5c0cbe9720b",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "rego",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "FallenAngel97/tree-sitter-rego",
+    "commit": "7f8a43138951a13832919312290147bd175180cd",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "requirements",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-requirements",
+    "commit": "2c3bb291f497258ba417d052faa14a2dfee6d401",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "rescript",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "rescript-lang/tree-sitter-rescript",
+    "commit": "19ed8a8e6bcc844b71c37e9edaffc60c77f74d7c",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "rifleconf",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "purarue/tree-sitter-rifleconf",
+    "commit": "6389ef0fc0d48f0397ec233109c074a0cb685e36",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "rnoweb",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "bamonroe/tree-sitter-rnoweb",
+    "commit": "1a74dc0ed731ad07db39f063e2c5a6fe528cae7f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "robots_txt",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "opa-oz/tree-sitter-robots-txt",
+    "commit": "0c066107e3548de79316a6a4ec771e2f7cf7c468",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "roc",
+    "ok": true,
+    "why": "",
+    "repo": "faldor20/tree-sitter-roc",
+    "commit": "40e52f343f1b1f270d6ecb2ca898ca9b8cba6936",
+    "best": "test.roc",
+    "size": 2932
+  },
+  {
+    "name": "ron",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-ron",
+    "commit": "78938553b93075e638035f624973083451b29055",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "rst",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "stsewd/tree-sitter-rst",
+    "commit": "a60f1070b824cb8bb8409b4b6d7da0d07997c30e",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "ruby",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-ruby",
+    "commit": "ad907a69da0c8a4f7a943a7fe012712208da6dee",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "runescript",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "2004Scape/tree-sitter-runescript",
+    "commit": "cf85bbd5da0c5ad243301d889c7f84d790a4cae4",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "rust",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-rust",
+    "commit": "77a3747266f4d621d0757825e6b11edcbf991ca5",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "scala",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-scala",
+    "commit": "bf9ac14f8b95c8ea341d830165de5a66e0f6664b",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "scfg",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "rockorager/tree-sitter-scfg",
+    "commit": "d850fd470445d73de318a21d734d1e09e29b773c",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "scheme",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "6cdh/tree-sitter-scheme",
+    "commit": "c6cb7c7d7a04b3f5d999c28e2e9c0c31b2d50ece",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "scss",
+    "ok": true,
+    "why": "",
+    "repo": "serenadeai/tree-sitter-scss",
+    "commit": "c478c6868648eff49eb04a4df90d703dc45b312a",
+    "best": "examples/reynolds.scss",
+    "size": 5383
+  },
+  {
+    "name": "sflog",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "aheber/tree-sitter-sfapex",
+    "commit": "27a3091a1a444ce19d6099e00cd3788f019d0c2b",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "slang",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-slang",
+    "commit": "1dbcc4abc7b3cdd663eb03d93031167d6ed19f56",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "slim",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "theoo/tree-sitter-slim",
+    "commit": "d4ff7e388eb271c04662f2176c08548c9c51078f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "slint",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "slint-ui/tree-sitter-slint",
+    "commit": "68b25244cec6eb9d7f8f790ef781c29c822d8f84",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "smali",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-smali",
+    "commit": "fdfa6a1febc43c7467aa7e937b87b607956f2346",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "smithy",
+    "ok": true,
+    "why": "",
+    "repo": "indoorvivants/tree-sitter-smithy",
+    "commit": "ec4fe14586f2b0a1bc65d6db17f8d8acd8a90433",
+    "best": "examples/07-complete-example.smithy",
+    "size": 2578
+  },
+  {
+    "name": "snakemake",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "osthomas/tree-sitter-snakemake",
+    "commit": "68010430c3e51c0e84c1ce21c6551df0e2469f51",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "snl",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "minijackson/tree-sitter-snl",
+    "commit": "846e2d6809ac5863a15b5494f20fd267c21221c8",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "solidity",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "JoranHonig/tree-sitter-solidity",
+    "commit": "048fe686cb1fde267243739b8bdbec8fc3a55272",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "soql",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "aheber/tree-sitter-sfapex",
+    "commit": "27a3091a1a444ce19d6099e00cd3788f019d0c2b",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "sosl",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "aheber/tree-sitter-sfapex",
+    "commit": "27a3091a1a444ce19d6099e00cd3788f019d0c2b",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "sourcepawn",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "nilshelmig/tree-sitter-sourcepawn",
+    "commit": "5a8fdd446b516c81e218245c12129c6ad4bccfa2",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "sparql",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "GordianDziwis/tree-sitter-sparql",
+    "commit": "1ef52d35a73a2a5f2e433ecfd1c751c1360a923b",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "sproto",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "hanxi/tree-sitter-sproto",
+    "commit": "d554c1456e35e7b2690552d52921c987d0cf6799",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "sql",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "derekstride/tree-sitter-sql",
+    "commit": "851e9cb257ba7c66cc8c14214a31c44d2f1e954e",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "squirrel",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-squirrel",
+    "commit": "072c969749e66f000dba35a33c387650e203e96e",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "ssh_config",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-ssh-config",
+    "commit": "0c35b243392268f48fd096607da192d76c843398",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "starlark",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-starlark",
+    "commit": "a453dbf3ba433db0e5ec621a38a7e59d72e4dc69",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "strace",
+    "ok": true,
+    "why": "",
+    "repo": "sigmaSd/tree-sitter-strace",
+    "commit": "ac874ddfcc08d689fee1f4533789e06d88388f29",
+    "best": "examples/example-file.strace",
+    "size": 4879
+  },
+  {
+    "name": "styled",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "mskelton/tree-sitter-styled",
+    "commit": "319cdcaa0346ba6db668a222d938e5c3569e2a51",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "supercollider",
+    "ok": true,
+    "why": "",
+    "repo": "madskjeldgaard/tree-sitter-supercollider",
+    "commit": "2b03ff49dd19b046add072d0861c4d1ca8a384c8",
+    "best": "testfiles/benjo.scd",
+    "size": 3254
+  },
+  {
+    "name": "superhtml",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "kristoff-it/superhtml",
+    "commit": "624a3eeadaf8f0cbe2e7d9d64ff621bc2d1c5d69",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "surface",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "connorlay/tree-sitter-surface",
+    "commit": "f4586b35ac8548667a9aaa4eae44456c1f43d032",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "svelte",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-svelte",
+    "commit": "ae5199db47757f785e43a14b332118a5474de1a2",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "sway",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "FuelLabs/tree-sitter-sway",
+    "commit": "9b7845ce06ecb38b040c3940970b4fd0adc331d1",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "swift",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "alex-pinkus/tree-sitter-swift",
+    "commit": "28fe3a8a85586aa297524fe6164140b9521dcaff",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "sxhkdrc",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "RaafatTurki/tree-sitter-sxhkdrc",
+    "commit": "440d5f913d9465c9c776a1bd92334d32febcf065",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "systemtap",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "ok-ryoko/tree-sitter-systemtap",
+    "commit": "f2b378a9af0b7e1192cff67a5fb45508c927205d",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "systemverilog",
+    "ok": false,
+    "why": "E6: no candidate source file (4 extension(s))",
+    "repo": "gmlarumbe/tree-sitter-systemverilog",
+    "commit": "4e7525a777290e341b8a5ad880bd20bb4f291845",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "t32",
+    "ok": false,
+    "why": "E6: no candidate source file (3 extension(s))",
+    "repo": "xasc/tree-sitter-t32",
+    "commit": "acc92b00d8564421f9c9c05ececfd2c7c942fe47",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "tablegen",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-tablegen",
+    "commit": "b1170880c61355aaf38fc06f4af7d3c55abdabc4",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "tact",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tact-lang/tree-sitter-tact",
+    "commit": "1c689f0a8bbe5910db628a62bfc26d37f54bf9be",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "tcl",
+    "ok": false,
+    "why": "E6: no candidate source file (3 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-tcl",
+    "commit": "8f11ac7206a54ed11210491cee1e0657e2962c47",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "teal",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "euclidianAce/tree-sitter-teal",
+    "commit": "05d276e737055e6f77a21335b7573c9d3c091e2f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "templ",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "vrischmann/tree-sitter-templ",
+    "commit": "947404be9598a11dbe606ba9cc06f101606c1e54",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "tera",
+    "ok": true,
+    "why": "",
+    "repo": "uncenter/tree-sitter-tera",
+    "commit": "3a38c368e806268daac9923a27e72bcafbbc16bb",
+    "best": "examples/docs-samples.tera",
+    "size": 3546
+  },
+  {
+    "name": "terraform",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "MichaHoffmann/tree-sitter-hcl",
+    "commit": "64ad62785d442eb4d45df3a1764962dafd5bc98b",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "textproto",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "PorterAtGoogle/tree-sitter-textproto",
+    "commit": "568471b80fd8793d37ed01865d8c2208a9fefd1b",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "thrift",
+    "ok": true,
+    "why": "",
+    "repo": "tree-sitter-grammars/tree-sitter-thrift",
+    "commit": "68fd0d80943a828d9e6f49c58a74be1e9ca142cf",
+    "best": "examples/11-calculator-complicated.thrift",
+    "size": 2103
+  },
+  {
+    "name": "tiger",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "ambroisie/tree-sitter-tiger",
+    "commit": "4a77b2d7a004587646bddc4e854779044b6db459",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "tlaplus",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tlaplus-community/tree-sitter-tlaplus",
+    "commit": "add40814fda369f6efd989977b2c498aaddde984",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "todotxt",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "arnarg/tree-sitter-todotxt",
+    "commit": "3937c5cd105ec4127448651a21aef45f52d19609",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "toml",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter-grammars/tree-sitter-toml",
+    "commit": "64b56832c2cffe41758f28e05c756a3a98d16f41",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "tsv",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "tree-sitter-grammars/tree-sitter-csv",
+    "commit": "f6bf6e35eb0b95fbadea4bb39cb9709507fcb181",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "tsx",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "tree-sitter/tree-sitter-typescript",
+    "commit": "75b3874edb2dc714fb1fd77a32013d0f8699989f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "turtle",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "GordianDziwis/tree-sitter-turtle",
+    "commit": "7f789ea7ef765080f71a298fc96b7c957fa24422",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "twig",
+    "ok": false,
+    "why": "E6: no candidate source file (3 extension(s))",
+    "repo": "gbprod/tree-sitter-twig",
+    "commit": "0afd9a6d808944e65a7be393e31868b85345735f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "typescript",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter/tree-sitter-typescript",
+    "commit": "75b3874edb2dc714fb1fd77a32013d0f8699989f",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "typespec",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "happenslol/tree-sitter-typespec",
+    "commit": "395bef1e1eb4dd18365401642beb534e8a244056",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "typoscript",
+    "ok": true,
+    "why": "",
+    "repo": "Teddytrombone/tree-sitter-typoscript",
+    "commit": "b5d0162b328ec52cf300054a8a23d47f84f55cb4",
+    "best": "examples/testcases.typoscript",
+    "size": 13712
+  },
+  {
+    "name": "typst",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "uben0/tree-sitter-typst",
+    "commit": "46cf4ded12ee974a70bf8457263b67ad7ee0379d",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "udev",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-udev",
+    "commit": "2fcb563a4d56a6b8e8c129252325fc6335e4acbf",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "ungrammar",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-ungrammar",
+    "commit": "debd26fed283d80456ebafa33a06957b0c52e451",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "unison",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "kylegoetz/tree-sitter-unison",
+    "commit": "10365cc70ab2b2de85ea7ab35cf6b7636c36ce8b",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "usd",
+    "ok": false,
+    "why": "E6: no candidate source file (3 extension(s))",
+    "repo": "ColinKennedy/tree-sitter-usd",
+    "commit": "4e0875f724d94d0c2ff36f9b8cb0b12f8b20d216",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "uxntal",
+    "ok": true,
+    "why": "",
+    "repo": "tree-sitter-grammars/tree-sitter-uxntal",
+    "commit": "ad9b638b914095320de85d59c49ab271603af048",
+    "best": "examples/20-display-output.tal",
+    "size": 5003
+  },
+  {
+    "name": "v",
+    "ok": false,
+    "why": "E6: no candidate source file (3 extension(s))",
+    "repo": "vlang/v-analyzer",
+    "commit": "925d4570d1668746762a2cdf0ecb9a25be704a67",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "vala",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "vala-lang/tree-sitter-vala",
+    "commit": "97e6db3c8c73b15a9541a458d8e797a07f588ef4",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "vento",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "ventojs/tree-sitter-vento",
+    "commit": "edd6596d4b0f392b87fc345dc26d84a6c32f7059",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "vhdl",
+    "ok": true,
+    "why": "",
+    "repo": "jpt13653903/tree-sitter-vhdl",
+    "commit": "ec2569db2da2129f83d486240d2fa63a353c4616",
+    "best": "examples/Screenshot.vhd",
+    "size": 2944
+  },
+  {
+    "name": "vhs",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "charmbracelet/tree-sitter-vhs",
+    "commit": "0c6fae9d2cfc5b217bfd1fe84a7678f5917116db",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "vim",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-vim",
+    "commit": "039c8d0aa1deae00ddeb0374dd70bcc0ec56938d",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "vimdoc",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "neovim/tree-sitter-vimdoc",
+    "commit": "23daa416c1ff5d15f59a1aa648f031d6e3ee15c5",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "vrl",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "belltoy/tree-sitter-vrl",
+    "commit": "274b3ce63f72aa8ffea18e7fc280d3062d28f0ba",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "vue",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-vue",
+    "commit": "ce8011a414fdf8091f4e4071752efc376f4afb08",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "wgsl",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "szebniok/tree-sitter-wgsl",
+    "commit": "40259f3c77ea856841a4e0c4c807705f3e4a2b65",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "wgsl_bevy",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-wgsl-bevy",
+    "commit": "d9306a798ede627001a8e5752f775858c8edd7e4",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "wing",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "winglang/tree-sitter-wing",
+    "commit": "76e0c25844a66ebc6e866d690fcc5f4e90698947",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "wxml",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "BlockLune/tree-sitter-wxml",
+    "commit": "7b821c748dc410332f59496c0dea2632168c4e5a",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "xcompose",
+    "ok": false,
+    "why": "E6: no candidate source file (2 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-xcompose",
+    "commit": "a51d6366f041dbefec4da39a7eb3168a9b1cbc0e",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "xml",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "tree-sitter-grammars/tree-sitter-xml",
+    "commit": "5000ae8f22d11fbe93939b05c1e37cf21117162d",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "yaml",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter-grammars/tree-sitter-yaml",
+    "commit": "a1c4812a73ec5e089de8e441fdea3a921e8d5079",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "yang",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "Hubro/tree-sitter-yang",
+    "commit": "2c0e6be8dd4dcb961c345fa35c309ad4f5bd3502",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "yuck",
+    "ok": false,
+    "why": "E6: no candidate source file (1 extension(s))",
+    "repo": "tree-sitter-grammars/tree-sitter-yuck",
+    "commit": "6c60112b3b3e739fb1ca4a8ea4bea2b6ffe11318",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "zig",
+    "ok": false,
+    "why": "E3: already in the working corpus, by name",
+    "repo": "tree-sitter-grammars/tree-sitter-zig",
+    "commit": "6479aa13f32f701c383083d8b28360ebd682fb7d",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "ziggy",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "kristoff-it/ziggy",
+    "commit": "4353b20ef2ac750e35c6d68e4eb2a07c2d7cf901",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "ziggy_schema",
+    "ok": false,
+    "why": "E4: the repository declares no file-types",
+    "repo": "kristoff-it/ziggy",
+    "commit": "4353b20ef2ac750e35c6d68e4eb2a07c2d7cf901",
+    "best": "",
+    "size": 0
+  },
+  {
+    "name": "zsh",
+    "ok": true,
+    "why": "",
+    "repo": "georgeharker/tree-sitter-zsh",
+    "commit": "7a593401efb5418ffdedbe3c0e4c61c6d240166d",
+    "best": "nvim-queries/tests/test.zsh",
+    "size": 9182
+  }
+]
