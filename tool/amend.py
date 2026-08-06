@@ -78,8 +78,16 @@ BEATS = 9
 #  4 lifts over 637 bytes, 29 tokens read, 55 us`
 # The `outliner: <path>: ` prefix is stripped by `stamp.behind` with the path
 # we passed in, so this starts where the payload does.
+#
+# The verdict is read lazily up to the structured tail rather than as "everything
+# before the first comma", because a refusal names the token it refused and that
+# token can *be* a comma: `unexpected , at 583 in state 16`. A comma-terminated
+# verdict silently failed to match those lines, `drive` dropped them, and the
+# rows after the first drop paired an insert against a delete - so a run looked
+# like a session that never recovered. json takes the worst of it, its separator
+# being the comma, which is precisely the grammar this axis reports on.
 ROW = re.compile(
-    r"^(?P<what>opened|\d+\.\.\d+ \+\d+): (?P<verdict>[^,]+)"
+    r"^(?P<what>opened|\d+\.\.\d+ \+\d+): (?P<verdict>.+?)"
     r"(?:, (?P<minted>\d+)/(?P<leaves>\d+) leaves reminted at (?P<at>\d+),"
     r" height (?P<height>\d+))?"
     r", (?P<lifts>\d+) lifts over (?P<skipped>\d+) bytes,"

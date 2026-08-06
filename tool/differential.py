@@ -110,6 +110,10 @@ CONTENDED = "another lane holds"
 FRAGILE = (CONTENDED, "dlopen", "same output location", "No such file or directory",
            "printer says", "not found after build attempt")
 WAITED: set[str] = set()  # languages this run had to queue behind
+# Which grammars *this process* already holds, and whether exclusively. `flock`
+# is per open file description, so without this a nested acquire waits on a lock
+# the same process is holding - see `alone`.
+_HELD: dict[str, tuple[int, bool]] = {}
 
 USAGE = """\
 differential.py - is outliner's tree the tree tree-sitter builds?
@@ -265,9 +269,17 @@ class Node:
 
     def named_only(self) -> Node:
         """The tree `tree-sitter parse` prints. An anonymous node is always a
-        leaf token, so dropping one whole drops nothing under it."""
+        leaf token, so dropping one whole drops nothing under it.
+
+        A `MISSING` placeholder goes with them. The CLI prints one as
+        `MISSING: "kind"` from the branch it takes for *anonymous* nodes - a
+        named node it had to insert prints as a bare kind and is a node in both
+        renders - and `cst_tree` calls it named anyway so a caller counting
+        repairs can see it. The XML has no element for it, so leaving it in is
+        what made twenty-one inserted semicolons read as a shape disagreement."""
         copy = Node(self.name, self.named, self.field, self.start, self.end)
-        copy.kids = [k.named_only() for k in self.kids if k.named]
+        copy.kids = [k.named_only() for k in self.kids
+                     if k.named and not k.name.startswith("MISSING ")]
         return copy
 
     def render(self, depth: int = 0) -> list[str]:
@@ -382,21 +394,55 @@ def ours_tree(text: str) -> list[Node]:
     return roots
 
 
-def cst_tree(text: str, at: Lines, shift: int = 1) -> tuple[Node, bool]:
+def digits(n: int) -> int:
+    """Rust's `n.checked_ilog10().unwrap_or(0)` - one less than the decimal
+    width, and 0 rather than undefined at zero. The CLI's column arithmetic is
+    written in it, so reading that arithmetic back needs the same function."""
+    return len(str(n)) - 1
+
+
+def indents(rows: list[re.Match[str]]) -> list[int]:
+    """How far each CST row is indented, with the range prefix subtracted off.
+
+    The prefix is not a fixed width and the CLI never says how wide it made it,
+    so this inverts the format string that wrote it (`render_node_range`)::
+
+        "{row}:{col}{:pad_start$}- {row}:{col}{:pad_end$}"
+        pad = max(1, total_width - digits(row) - digits(col))
+
+    `total_width` is one number for the whole render, and every row that was
+    not clamped by that `max(1, ...)` states it outright, so the smallest thing
+    any row implies is it. Clamping only ever raises a row's padding, never
+    lowers it, so the minimum cannot be an overshoot.
+
+    What is left after the prefix is `"  " * depth`, plus - and this is the
+    whole reason the arithmetic has to be exact - **one extra space whenever the
+    node sits inside an error subtree without carrying an error itself**
+    (`in_error && !node.has_error()` in `cst_render_node`). That one space is
+    the entire disagreement: it makes a clean node read a level deeper than it
+    is and the bulleted sibling after it read a level shallower, so the sibling
+    is adopted by the node above it. Two spaces a level means the space lands
+    in the odd bit and integer division drops it, which is why callers divide
+    rather than compare columns."""
+    # Rows whose padding was clamped imply a width larger than the real one.
+    width = min(m.start(3) - 2 - m.end(2) + digits(int(m[1])) + digits(int(m[2]))
+                for m in rows) if rows else 1
+    return [len(m[5]) - max(1, width - digits(int(m[3])) - digits(int(m[4]))) for m in rows]
+
+
+def cst_tree(text: str, at: Lines) -> tuple[Node, bool]:
     """`tree-sitter parse --cst`. The only format that gives an anonymous node's
     *type* rather than its text, which is exactly what an alias to a string
-    changes. Its indentation is two spaces a level, except around the bullet the
-    CLI marks a node carrying an error with, which is why a tree with any error
-    in it is reported as untrustworthy and cross-checking against the XML is
-    what decides whether to believe this at all.
+    changes. Its indentation is two spaces a level and one further space for a
+    clean node inside an error - see `indents`, which is where the columns are
+    turned back into depths and where every subtlety of this format lives.
 
-    `shift` is how many columns a bullet stands to the left of the column its
-    unbulleted siblings put their name in, and the honest answer is that it
-    depends on the render: measured over real output it is 1 in some trees and 0
-    in others, and no function of depth, row width or parent I could find
-    predicts which. So this does not guess. The caller reads the tree both ways
-    and keeps whichever reconciles with the XML, which is sound because the XML
-    nests unambiguously and already has to agree before any tree is used.
+    The bullet marking a node that carries an error costs no indentation at all:
+    the CLI writes it *after* the indent and after any `field: `, so it is part
+    of the body and stripping the character is the whole correction. Reading it
+    as a column - under a whole-render `shift` of one or zero, chosen by
+    whichever reconciled - is what could not read verilog or sql, because the
+    perturbation it was standing in for is per-row and in the other direction.
 
     A leaf short enough to sit on one line carries its text on its own row, as
     `identifier `a``. A leaf whose text crosses a newline cannot, so the CLI
@@ -411,30 +457,28 @@ def cst_tree(text: str, at: Lines, shift: int = 1) -> tuple[Node, bool]:
     roots: list[Node] = []
     stack: list[tuple[int, Node]] = []
     hurt = False
-    for raw in text.splitlines():
-        m = CST.match(raw)
-        if not m:
-            continue  # the trailing summary line, or a token's own newline
-        col, body = m.start(6), m[6]
+    rows = [m for m in map(CST.match, text.splitlines()) if m]
+    for m, indent in zip(rows, indents(rows)):
+        body = m[6]
         # The bullet sits immediately before the *name*, so after the `field: `
         # prefix when the node has one. Looking for it only at the start of the
-        # body left every bulleted node that also carries a field uncorrected,
-        # reading a level too shallow and adopting the siblings that followed it.
+        # body left every bulleted node that also carries a field uncorrected.
         cut = 0 if (mf := BODY.match(body))[1] is None else len(mf[1]) + 2
         if body[cut:].startswith("\u2022"):
-            col, body, hurt = col + shift, body[:cut] + body[cut + 1:], True
+            body, hurt = body[:cut] + body[cut + 1:], True
         if body.startswith("`"):
-            continue
+            continue  # a continuation row: the token above's own text, not a node
         missing = body.startswith("MISSING: ")
         if missing:
-            col, body, hurt = col + len("MISSING: "), body[len("MISSING: "):], True
+            body, hurt = body[len("MISSING: "):], True
         field, name, named, _ = head(body)
         node = Node("MISSING " + name if missing else name, named or missing, field,
                     at.off(int(m[1]), int(m[2])), at.off(int(m[3]), int(m[4])))
-        while stack and stack[-1][0] >= col:
+        deep = indent // 2
+        while stack and stack[-1][0] >= deep:
             stack.pop()
         (stack[-1][1].kids if stack else roots).append(node)
-        stack.append((col, node))
+        stack.append((deep, node))
     if len(roots) != 1:
         raise ValueError(f"tree-sitter's CST has {len(roots)} roots")
     return roots[0], hurt
@@ -461,26 +505,14 @@ def xml_tree(text: str, at: Lines) -> Node:
 
 
 def reconciled(text: str, at: Lines, theirs: Node) -> tuple[Node | None, bool]:
-    """The CST, read the way the XML confirms. Which column a bullet stands in
-    is not constant across renders, so rather than guess we read the tree under
-    each reading and keep the one whose named shape the XML agrees with. That is
-    not curve-fitting: agreement with the XML was always the condition for using
-    the tree at all, so this only widens which trees can meet it. `None` when
-    neither reading does, which stays a refusal rather than a comparison against
-    a shape nobody can confirm."""
-    first: ValueError | None = None
-    hurt = False
-    for shift in (1, 0):
-        try:
-            full, hurt = cst_tree(text, at, shift)
-        except ValueError as e:
-            first = first or e
-            continue
-        if same(full.named_only(), theirs):
-            return full, hurt
-    if first is not None:
-        raise first
-    return None, hurt
+    """The CST, only if the XML confirms it. One reading, not a search: the
+    indentation rule is now inverted exactly rather than guessed at (`indents`),
+    so a disagreement here is a real disagreement and not a shift we failed to
+    try. The check itself is unchanged and stays the falsifier - the XML nests
+    unambiguously, so a CST whose named shape it does not confirm is a tree
+    nobody can vouch for. `None` says exactly that, and stays a refusal."""
+    full, hurt = cst_tree(text, at)
+    return (full if same(full.named_only(), theirs) else None), hurt
 
 
 QPATTERN = re.compile(r"^ *pattern: (\d+)\s*$")
@@ -782,21 +814,57 @@ def oracle_home(name: str, work: Path | None = None) -> Path:
 
 
 def oracle_build(lang: Path, want: Path) -> None:
-    """Generate the oracle's parser from the same bytes the press reads."""
-    src = lang / "src" / "grammar.json"
-    src.parent.mkdir(parents=True, exist_ok=True)
-    if not src.exists() or digest(src) != digest(want):
-        shutil.copyfile(want, src)
-        shutil.rmtree(lang / "src" / "tree_sitter", ignore_errors=True)
-        (lang / "src" / "parser.c").unlink(missing_ok=True)
-    if (lang / "src" / "parser.c").exists():
-        return
-    got = cli([str(TS), "generate", "src/grammar.json"], lang)
-    if got.returncode != 0:
-        raise ValueError(f"tree-sitter generate: {gripe(got.stderr)}")
+    """Generate the oracle's parser from the same bytes the press reads.
+
+    **This writes into a directory every lane shares**, so it takes the lock
+    itself. It used to be the caller's job and nine of twelve call sites did it;
+    `recover.py`, `adjudicate.py` and this file's own `graft_fields` did not, and
+    a measurement that overwrites a sibling's `grammar.json` and deletes the
+    `parser.c` beside it is the same family as a folio cache keyed on an mtime -
+    a comparison whose setup mutates the thing being compared, always in the
+    flattering direction, because afterwards both arms agree.
+
+    Nothing changes for a caller that already held it: `alone` is re-entrant.
+    """
+    with alone(named(lang)):
+        src = lang / "src" / "grammar.json"
+        src.parent.mkdir(parents=True, exist_ok=True)
+        if not src.exists() or digest(src) != digest(want):
+            shutil.copyfile(want, src)
+            shutil.rmtree(lang / "src" / "tree_sitter", ignore_errors=True)
+            (lang / "src" / "parser.c").unlink(missing_ok=True)
+        if (lang / "src" / "parser.c").exists():
+            return
+        got = cli([str(TS), "generate", "src/grammar.json"], lang)
+        if got.returncode != 0:
+            raise ValueError(f"tree-sitter generate: {gripe(got.stderr)}")
 
 
 INCLUDE = re.compile(rb'#\s*include\s+"([^"]+)"')
+
+
+def refresh(target: Path, blob: bytes, home: Path) -> bool:
+    """Lay a scanner down, and relink only if it is actually a different one.
+
+    The unconditional `write_bytes` this replaces cost nothing in bytes and
+    everything in identity. `attest` digests an oracle by its whole `src/`, and
+    `parser.c` is in that digest, so unlinking a generated parser beside a
+    scanner that did not change gives one grammar **two identities for one
+    parser**. That is the whole of the source-tree divergence on this machine:
+    30 grammars exist as more than one tree, 28 are byte-identical, and the two
+    that are not - css and toml - agree the moment generated files come out of
+    the comparison. We wrote that difference ourselves, with a `cp` of a file
+    onto its own bytes.
+
+    Returns whether anything moved, so a caller can say `wrote` or `same` rather
+    than claiming a write it did not do.
+    """
+    if target.exists() and target.read_bytes() == blob:
+        return False
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(blob)
+    (home / "src" / "parser.c").unlink(missing_ok=True)  # relink against the scanner
+    return True
 
 
 def beside(url: str, home: Path, blob: bytes) -> int:
@@ -822,9 +890,16 @@ def beside(url: str, home: Path, blob: bytes) -> int:
             print(f"  none {'':<11} {want} is not beside the scanner upstream")
             bad += 1
             continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(more)
-        print(f" wrote {'':<11} {want:<11} {hashlib.sha256(more).hexdigest()[:16]} {len(more)} bytes")
+        # Only on a difference. Rewriting a header with its own bytes leaves the
+        # digest alone and moves the mtime, and the mtime is what `attest` reads
+        # to decide a library predates its sources - so an unconditional `cp`
+        # here reports every oracle on the machine as about to change parsers.
+        moved = not target.exists() or target.read_bytes() != more
+        if moved:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(more)
+        print(f"{' wrote' if moved else '  same'} {'':<11} {want:<11} "
+              f"{hashlib.sha256(more).hexdigest()[:16]} {len(more)} bytes")
         bad += beside(away, target.parent, more)
     return bad
 
@@ -857,11 +932,11 @@ def lay(pin: Any, work: Path | None = None) -> int:
                   f"pinned {mate.sha256[:16]}")
             bad += 1
             continue
-        target = root / mate.path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(have, target)
-        (oracle_home(pin.name, work) / "src" / "parser.c").unlink(missing_ok=True)
-        print(f" wrote {pin.name:<11} {mate.path:<32} {mate.sha256[:16]} {mate.size} bytes")
+        with alone(pin.name):
+            moved = refresh(root / mate.path, have.read_bytes(),
+                            oracle_home(pin.name, work))
+        print(f"{' wrote' if moved else '  same'} {pin.name:<11} {mate.path:<32}"
+              f" {mate.sha256[:16]} {mate.size} bytes")
     return 1 if bad else 0
 
 
@@ -895,10 +970,10 @@ def fetch_scanners(which: str = "dossier", work: Path | None = None) -> int:
                     blob = r.read()
             except (urllib.error.URLError, OSError):
                 continue
-            (home / leaf).write_bytes(blob)
-            (home / "parser.c").unlink(missing_ok=True)  # relink against the scanner
-            print(f" wrote {pin.name:<11} {leaf:<11} {hashlib.sha256(blob).hexdigest()[:16]} "
-                  f"{len(blob)} bytes")
+            with alone(pin.name):
+                moved = refresh(home / leaf, blob, home.parent)
+            print(f"{' wrote' if moved else '  same'} {pin.name:<11} {leaf:<11} "
+                  f"{hashlib.sha256(blob).hexdigest()[:16]} {len(blob)} bytes")
             bad += beside(url, home, blob)
             break
         else:
@@ -1148,7 +1223,7 @@ def spans() -> list[tuple[str, str, str, str]]:
     oracle_build(lang, want)
     fields = declared(json.loads(want.read_text()), "FIELD", "name")
     out = []
-    for src in sorted(SPANS.glob("*.js")):
+    for src in sorted(SPANS.glob("*.js")) + sorted((SPANS / "errors").glob("*.js")):
         at = Lines(src.read_bytes())
         try:
             theirs = xml_tree(oracle_run(lang, src, "-x"), at)
@@ -1158,13 +1233,19 @@ def spans() -> list[tuple[str, str, str, str]]:
             continue
         try:
             full, hurt = reconciled(oracle_run(lang, src, "--cst"), at, theirs)
-            cst = f"ok, {full.count()} nodes" if full else f"REFUSED (errors={hurt})"
         except (ValueError, OSError) as e:
             out.append((src.stem, xml, f"BROKE: {e}", "not reached"))
             continue
         if full is None:
-            out.append((src.stem, xml, cst, "not reached"))
+            # A refusal used to be a shrug here, and that is what let two
+            # grammars sit `unjudged` on the board for a day. The indentation
+            # rule is inverted rather than guessed at now, so nothing in this
+            # directory has a reading left to fall back on: a CST the XML will
+            # not confirm is the gate's own failure and has to fail it.
+            out.append((src.stem, xml, f"BROKE: CST and XML disagree (errors={hurt})",
+                        "not reached"))
             continue
+        cst = f"ok, {full.count()} nodes"
         # Count fields, not just survival: this round's bug threw no exception,
         # it quietly grafted nothing.
         def borne(n: Node) -> int:
@@ -1210,7 +1291,33 @@ def alone(name: str, writing: bool = True) -> Iterator[None]:
     The wait is announced and the timeout refuses, because the failure this
     replaces was silent: a contended run came back as a skip that read exactly
     like a grammar we could not parse.
+
+    **Re-entrant within one process**, so the lock can live in the function that
+    writes rather than in each of the twelve callers that remember to. `flock`
+    is per open file description, so a second `open` of the same lock in the
+    same process conflicts with the first and a nested acquire would hang
+    forever against itself - which is why this used to be a caller's job, and
+    why three of the twelve callers did not do it. Re-entry keeps the depth and
+    returns; the outermost holder releases. A *writer* nested inside a reader
+    still refuses, loudly: that one is a genuine lock-order fault and upgrading
+    a shared hold to an exclusive one is the deadlock the readers-writer split
+    exists to avoid.
     """
+    if (have := _HELD.get(name)) is not None:
+        if writing and not have[1]:
+            raise ValueError(f"{name}: a build inside a measurement - take "
+                             f"alone({name!r}, writing=True) before the read, "
+                             f"never inside it")
+        _HELD[name] = (have[0] + 1, have[1])
+        try:
+            yield
+        finally:
+            held, mine = _HELD[name]
+            if held > 1:
+                _HELD[name] = (held - 1, mine)
+            else:
+                del _HELD[name]
+        return
     lock = WORK / "lock"
     lock.mkdir(parents=True, exist_ok=True)
     fd = os.open(lock / f"{name}.lock", os.O_CREAT | os.O_RDWR, 0o644)
@@ -1232,8 +1339,10 @@ def alone(name: str, writing: bool = True) -> Iterator[None]:
                 time.sleep(0.2)
         if writing:
             os.write(fd, f"{os.getpid()}\n".encode())
+        _HELD[name] = (1, writing)
         yield
     finally:
+        _HELD.pop(name, None)
         with contextlib.suppress(OSError):
             fcntl.flock(fd, fcntl.LOCK_UN)
         os.close(fd)

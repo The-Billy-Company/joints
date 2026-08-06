@@ -209,7 +209,13 @@ def sharpen() -> str:
     """
     global BIN
     if "OUTLINER_BIN" in os.environ:
-        return f"OUTLINER_BIN={BIN}, mode not verified here"
+        # Somebody chose the binary, so the flag that built it is not ours to
+        # report - but the *mode* still is, and the mode is the half that moves
+        # a parse loop. Reading it out of the bytes is the difference between
+        # "we cannot say" and "this is a debug binary and every timing below is
+        # a lie". Pinning a binary across two runs is the legitimate case, and
+        # it is exactly the case that must not be allowed to go unverified.
+        return f"OUTLINER_BIN, and {safety(BIN)}" if BIN.exists() else ""
     made = say(["zig", "build", "-Dcli-optimize=ReleaseFast", "--prefix", str(PREFIX)], ROOT)
     if made.returncode == 0 and BIN.exists():
         return "-Dcli-optimize=ReleaseFast"
@@ -529,9 +535,20 @@ def bench(names: list[str], axes: tuple[str, ...], reps: int) -> tuple[list[Row]
                                  f" · marginal of {COPIES[1]} parses over {COPIES[0]}"
                                  f" · their own clock on the cold parse says {own:.0f} ns/byte"))
         if "startup" in axes:
-            rows.append(Row("startup", case, a.fixed, b.fixed, "ms", spread=a.fixed_spread,
-                            note="everything before the first tree: for us mapping the folio "
-                                 "and compiling the lexer, for them a dlopen"))
+            # `fixed` is `a - marginal * lo`, so a marginal that is large and
+            # noisy swamps it: javascript's nine-second parse produced a fixed
+            # cost of *minus two seconds* with a spread of -145%, and a startup
+            # cost cannot be negative. That is not a slow startup, it is no
+            # measurement at all, and printing it as -171x would have been the
+            # flattering-in-reverse version of the same sin.
+            if a.fixed <= 0 or a.fixed_spread > 0.5:
+                skips.append(Skip("startup", name,
+                                  f"the {a.marginal:.0f} ms parse swamps the fixed cost it is "
+                                  f"subtracted from ({a.fixed:.0f} ms, +-{a.fixed_spread:.0%})"))
+            else:
+                rows.append(Row("startup", case, a.fixed, b.fixed, "ms", spread=a.fixed_spread,
+                                note="everything before the first tree: for us mapping the folio "
+                                     "and compiling the lexer, for them a dlopen"))
         if "memory" in axes:
             ours_rss = min(peak(ours_cmd + [str(inp.path), "--quiet"], ROOT) for _ in range(3))
             theirs_rss = min(peak(theirs_cmd + [str(inp.path)], WORK) for _ in range(3))
@@ -556,11 +573,22 @@ def mbs(size: int, ms: float) -> str:
 # ------------------------------------------------------------------ the keystroke
 
 CUT = 98  # where in the file the edit lands, as a percent
-# Enough keystrokes that each side's own clock has something to divide. Their
-# `Edit:` line is printed to a hundredth of a millisecond and one keystroke is
-# tens of microseconds, so one edit would be reported as two significant digits
-# of nothing.
-KEYS = 25  # insert/delete pairs, so 2 * KEYS edits
+# Insert/delete pairs, so twice this many edits. The two sides need different
+# counts and that is not a thumb on the scale: their `Edit:` line is one total
+# printed to a hundredth of a millisecond, so a single keystroke would come back
+# as two significant digits of nothing and they need a couple of dozen to divide.
+# Ours prints microseconds *per edit*, so a handful is already a median - and a
+# handful is all we can afford, because the grammar this axis exists to expose
+# costs twelve seconds a keystroke and twenty-five pairs of that is ten minutes.
+#
+# Four pairs, not one, because **the first two keystrokes after a file opens
+# cost two to three times the ones after them** - 255 and 245 us against a
+# steady 90 on JSON, which is the caches filling. Their total over fifty edits
+# amortises the same warm-up to nothing, so ours is summarised by the *median*
+# of its edits rather than the mean, and four pairs puts that median past the
+# warm-up. The first edit's own cost is printed beside it, because the first
+# keystroke after opening a file is the one a person notices.
+KEYS = (4, 25)  # ours, theirs
 
 
 def caret(text: bytes, cut: int) -> int:
@@ -604,32 +632,52 @@ def keystroke(name: str, inp: Input, dylib: Path, reps: int) -> tuple[Row | None
     """
     text = inp.path.read_bytes()
     at = caret(text, CUT)
+    mine_keys, their_keys = KEYS
     ours = [str(BIN), "amend", str(folio_for(name)), str(inp.path), "--quiet"] + \
-        [f"{at}..{at}= ", f"{at}..{at + 1}="] * KEYS
+        [f"{at}..{at}= ", f"{at}..{at + 1}="] * mine_keys
     # Their `--edits` is variadic, so it eats the path if the path comes after.
     theirs = [str(NATIVE), "parse", str(inp.path), "-l", str(dylib), "--lang-name", name,
-              "-q", "-t", "--edits"] + [f"{at} 0  ", f"{at} 1"] * KEYS
+              "-q", "-t", "--edits"] + [f"{at} 0  ", f"{at} 1"] * their_keys
 
-    mine, theirs_us, why = [], [], ""
+    mine, theirs_us, cold, first, why = [], [], [], [], ""
     for _ in range(max(1, reps)):
-        a, b, why = keys_once(ours, theirs, inp)
+        got, why = keys_once(ours, theirs, inp)
         if why:
             return None, why
-        mine.append(a)
-        theirs_us.append(b)
-    return Row("incremental", f"{name} @{CUT}%",
-               statistics.median(mine), statistics.median(theirs_us), "us",
+        mine.append(got.mine)
+        theirs_us.append(got.theirs)
+        cold.append(got.cold)
+        first.append(got.first)
+    # Our own cold open of the same bytes, off the same run's `opened:` row.
+    # The comparison against tree-sitter is only half the question; the other
+    # half is whether the incremental path beat *not being incremental*, and a
+    # keystroke that costs more than reopening the file has stopped being a
+    # feature no matter what the other column says.
+    ours_cold = statistics.median(cold)
+    keys = statistics.median(mine)
+    lost = "" if keys < ours_cold else " · SLOWER THAN REOPENING THE FILE"
+    return Row("incremental", f"{name} @{CUT}%", keys, statistics.median(theirs_us), "us",
                spread=spread_of(mine),
-               note=f"one space typed and deleted at byte {at:,} of {inp.size:,} · "
-                    f"{2 * KEYS} edits, each side's own clock · their cold parse of "
-                    f"the same file is {inp.size / 1024:.0f} KB"), ""
+               note=f"one space at byte {at:,} of {inp.size:,}, typed and deleted · "
+                    f"{2 * mine_keys} edits ours, {2 * their_keys} theirs, each side's own "
+                    f"clock · our first keystroke after the open costs "
+                    f"{statistics.median(first):,.0f} us · our own cold open of the same "
+                    f"file is {ours_cold:,.0f} us{lost}"), ""
 
 
 EDIT_MS = re.compile(r"Edit:\s+([\d.]+) ms")
 
 
-def keys_once(ours: list[str], theirs: list[str], inp: Input) -> tuple[float, float, str]:
-    """One run of the edit script on each side, in microseconds per edit.
+class Keys(NamedTuple):
+    mine: float  # median microseconds per edit, ours
+    theirs: float  # their `Edit:` total over the edits they were given
+    cold: float  # our own open of the same bytes, off the same run
+    first: float  # our first edit after that open, which is the warm one
+
+
+def keys_once(ours: list[str], theirs: list[str], inp: Input) -> tuple[Keys, str]:
+    """One run of the edit script on each side, in microseconds per edit, with
+    our own cold open of the same bytes beside them.
 
     Both sides are also *admitted* here, on the same terms `whole` sets for
     throughput: an amend that gave up is less work, and a benchmark that took
@@ -637,28 +685,30 @@ def keys_once(ours: list[str], theirs: list[str], inp: Input) -> tuple[float, fl
     which owns that format - `stamp.outcome` owns the *parse* verdict, and these
     are two different sentences from two different verbs.
     """
+    none = Keys(0.0, 0.0, 0.0, 0.0)
     got = say(ours, ROOT)
     if got.returncode != 0:
-        return 0.0, 0.0, f"outliner amend: {tail(got.stderr)}"
+        return none, f"outliner amend: {tail(got.stderr)}"
     rows = [m for ln in got.stderr.splitlines()
             if (rest := behind(ln, inp.path)) and (m := ROW.match(rest))]
     if len(rows) < 2:
-        return 0.0, 0.0, f"outliner amend said nothing measurable: {tail(got.stderr)}"
+        return none, f"outliner amend said nothing measurable: {tail(got.stderr)}"
     # Judged against the `opened:` row rather than against the word "accepted".
     # These bytes already cleared `whole`, so the open is the ground truth for
     # them and an edit row saying anything *else* is a stop, whatever it says.
     # Spelling the verdict here would have been a second copy of a word `stamp`
     # owns, and the gate would have said so.
     if bad := [m["verdict"] for m in rows[1:] if m["verdict"] != rows[0]["verdict"]]:
-        return 0.0, 0.0, f"the edit changed the verdict from {rows[0]['verdict']} to {bad[0]}"
-    mine = statistics.mean(int(m["us"]) for m in rows[1:])
+        return none, f"the edit changed the verdict from {rows[0]['verdict']} to {bad[0]}"
+    edits = [float(m["us"]) for m in rows[1:]]
 
     their = say(theirs, WORK)
     if their.returncode != 0 or "Error:" in their.stderr:
-        return 0.0, 0.0, f"tree-sitter would not amend it: {tail(their.stderr)}"
+        return none, f"tree-sitter would not amend it: {tail(their.stderr)}"
     if not (m := EDIT_MS.search(their.stdout + their.stderr)):
-        return 0.0, 0.0, "tree-sitter printed no Edit: line to read its own clock off"
-    return mine, float(m[1]) * 1000 / (2 * KEYS), ""
+        return none, "tree-sitter printed no Edit: line to read its own clock off"
+    return Keys(statistics.median(edits), float(m[1]) * 1000 / (2 * KEYS[1]),
+                float(rows[0]["us"]), edits[0]), ""
 
 
 # ------------------------------------------------------------------- reporting

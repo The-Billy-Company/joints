@@ -32,8 +32,20 @@ A string is only a finding where it is *tested* - a `startswith`, an `==`, an
 `in`, a `re.compile`. Printing the word `mended` in a table is what a report is
 for; branching on it is a second copy.
 
+**Its corpus is `tool/*.py` and nothing else, which is a hole rather than a
+scope.** It globs this one directory and reads it with Python's `ast`, so the
+entire Zig product - every rule the parser itself implements - is outside what
+it can see. That is not a boundary anyone chose: the shape it polices is a
+property of code, not of a language, and it has already been paid for once. A
+containment rule spelled twice in Zig, live in one place and dead in a test,
+went straight past this gate, because there was never a pass over `src/` for it
+to be caught by. Extending the corpus needs a Zig reader and is its own piece of
+work; until then the gate says so on every run rather than presenting one green
+line for a reach it does not have.
+
   python3 tool/sole.py           the audit; exit 1 if a second copy exists
   python3 tool/sole.py --list    what each owner is understood to own
+  python3 tool/sole.py --probe   build the copies it claims to catch, and catch them
 """
 
 from __future__ import annotations
@@ -259,8 +271,14 @@ def audit(where: Path = TOOL) -> list[Copy]:
             if claim.roster:
                 for line, words in collections(tree):
                     if len(words & seen) >= ENOUGH:
+                        # Excused like every other rule. This branch used to be
+                        # the one that could not be answered, which made it the
+                        # one rule where a real distinction had no way to be
+                        # written down - and an inarguable finding is a finding
+                        # people learn to scroll past.
                         found.append(Copy(what, claim.owner, name, line,
-                                          f"{len(words & seen)} of the roster typed out"))
+                                          f"{len(words & seen)} of the roster typed out",
+                                          excuse(path, line)))
                 continue
             for word in sorted((here | mine) & seen):
                 at = whereabouts(tree, word)
@@ -319,8 +337,7 @@ def report(found: list[Copy]) -> int:
         print(f"\n{len(bad)} second cop{'y' if len(bad) == 1 else 'ies'}; "
               "the owner already answers this - call it")
     else:
-        print(f"{len(CLAIMS)} rules, one copy each, across "
-              f"{len(list(TOOL.glob('*.py'))) - 1} files in tool/")
+        print(f"{len(CLAIMS)} rules, one copy each")
     for c in found:
         if c.excused:
             print(f"  said out loud   {f'{c.file}.py:{c.line}':<24}{c.excused}")
@@ -330,6 +347,23 @@ def report(found: list[Copy]) -> int:
         for c in unseen:
             print(f"  {c.what:<32} {c.owner}.{'/'.join(c.where)} decides with "
                   "punctuation and slicing, not with strings a match can find")
+    # The corpus, said out loud on every run for the same reason `blind` is: a
+    # gate that reports only what it looked at reads as a gate that looked
+    # everywhere. This one has never opened a `.zig` file, and a rule the parser
+    # implements twice is exactly as much a second copy as one an instrument does.
+    zig = sum(1 for _ in (TOOL.parent / "src").rglob("*.zig"))
+    print(f"\ncorpus: {len(list(TOOL.glob('*.py'))) - 1} files, every one of them "
+          f"`tool/*.py`. The {zig} `.zig` files under `src/` are outside it, so a "
+          f"rule the product spells twice is not something this gate can fail on.")
+    # The Zig half now exists and is a *different question*, so it is named here
+    # rather than folded in. This gate polices a rule with an owner; that one asks
+    # whether an exported function already has one. The second is a similarity
+    # ranking and cannot be a pass/fail line beside these, which is exactly why
+    # merging them would have made this summary less true rather than more.
+    print("      `tool/incumbent.py` is the pass over `src/**/*.zig`: it ranks "
+          "exported functions that share a signature shape by how much body they "
+          "share, and `--probe` plants a copy of `press.retrace.back` to show the "
+          "ranking has power. It reports; it does not fail a build.")
     return 1 if bad else 0
 
 

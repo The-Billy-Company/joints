@@ -1,242 +1,277 @@
 {
   "recorded": {
-    "date": "2026-08-04 04:44:56-0700",
-    "commit": "35f3da5",
-    "dirty": true,
+    "date": "2026-08-04 14:42:47-0700",
+    "commit": "f6018936c",
+    "dirty": 28,
     "outliner": "0.0.0",
     "tree_sitter": "0.26.11",
     "build": "-Dcli-optimize=ReleaseFast",
     "binary": ".local/bench/build/bin/outliner",
     "machine": "macOS-26.5.1-arm64-arm-64bit arm64 x16",
-    "load": 5.27,
-    "python": "3.12.0"
+    "load": 14.5,
+    "python": "3.12.0",
+    "stamp": {
+      "binary": "/Users/griffinstrier/Billy-Company/outliner/.local/bench/build/bin/outliner",
+      "build": "b507c8f4b8b0",
+      "built": "2026-08-04T21:32:41Z",
+      "source": ".",
+      "tree": "6299a98a653d",
+      "live": "6299a98a653d",
+      "newest": "src/kernel/weave/weave.zig",
+      "commit": "f6018936c04a",
+      "dirty": 28,
+      "stale": false,
+      "drift": false,
+      "told": true,
+      "moved": false,
+      "moved_at": "",
+      "when": "2026-08-04T21:42:47Z"
+    }
   },
   "axis": {
     "artifact": {
       "bash": {
-        "ours": 846272,
+        "ours": 866456,
         "theirs": 1395464,
-        "ratio": 0.6064,
+        "ratio": 0.6209,
         "unit": "bytes"
       },
       "c": {
-        "ours": 313920,
+        "ours": 316928,
         "theirs": 645928,
-        "ratio": 0.486,
+        "ratio": 0.4907,
         "unit": "bytes"
       },
       "cpp": {
-        "ours": 776440,
+        "ours": 779024,
         "theirs": 5636440,
-        "ratio": 0.1378,
+        "ratio": 0.1382,
         "unit": "bytes"
       },
       "go": {
-        "ours": 168176,
+        "ours": 138584,
         "theirs": 249160,
-        "ratio": 0.675,
+        "ratio": 0.5562,
         "unit": "bytes"
       },
       "java": {
-        "ours": 209384,
+        "ours": 213472,
         "theirs": 447288,
-        "ratio": 0.4681,
+        "ratio": 0.4773,
         "unit": "bytes"
       },
       "javascript": {
-        "ours": 287944,
+        "ours": 292064,
         "theirs": 431520,
-        "ratio": 0.6673,
+        "ratio": 0.6768,
         "unit": "bytes"
       },
       "json": {
-        "ours": 10648,
+        "ours": 10768,
         "theirs": 33992,
-        "ratio": 0.3133,
+        "ratio": 0.3168,
         "unit": "bytes"
       },
       "python": {
-        "ours": 277320,
+        "ours": 231240,
         "theirs": 480752,
-        "ratio": 0.5768,
+        "ratio": 0.481,
         "unit": "bytes"
       },
       "ruby": {
-        "ours": 413320,
+        "ours": 416976,
         "theirs": 2150696,
-        "ratio": 0.1922,
+        "ratio": 0.1939,
         "unit": "bytes"
       },
       "rust": {
-        "ours": 650872,
+        "ours": 599448,
         "theirs": 1142232,
-        "ratio": 0.5698,
+        "ratio": 0.5248,
         "unit": "bytes"
       },
       "typescript": {
-        "ours": 990856,
+        "ours": 925824,
         "theirs": 1455344,
-        "ratio": 0.6808,
+        "ratio": 0.6362,
         "unit": "bytes"
       }
     },
     "install": {
       "runtime x11": {
-        "ours": 6496584,
+        "ours": 6422568,
         "theirs": 14283280,
-        "ratio": 0.4548,
+        "ratio": 0.4497,
         "unit": "bytes"
       },
       "tooling x11": {
-        "ours": 6496584,
+        "ours": 6422568,
         "theirs": 34276832,
-        "ratio": 0.1895,
+        "ratio": 0.1874,
         "unit": "bytes"
       }
     },
     "press": {
       "bash": {
-        "ours": 959.1006,
-        "theirs": 1851.6382,
-        "ratio": 0.518,
+        "ours": 992.8755,
+        "theirs": 1977.6236,
+        "ratio": 0.5021,
         "unit": "ms"
       },
       "c": {
-        "ours": 117.6299,
-        "theirs": 973.8227,
-        "ratio": 0.1208,
+        "ours": 119.8216,
+        "theirs": 998.8554,
+        "ratio": 0.12,
         "unit": "ms"
       },
       "cpp": {
-        "ours": 349.8033,
-        "theirs": 17750.2379,
-        "ratio": 0.0197,
+        "ours": 358.5174,
+        "theirs": 19762.1937,
+        "ratio": 0.0181,
         "unit": "ms"
       },
       "go": {
-        "ours": 52.379,
-        "theirs": 532.2424,
-        "ratio": 0.0984,
+        "ours": 61.8268,
+        "theirs": 609.8171,
+        "ratio": 0.1014,
         "unit": "ms"
       },
       "java": {
-        "ours": 86.2418,
-        "theirs": 877.1385,
-        "ratio": 0.0983,
+        "ours": 94.8417,
+        "theirs": 1107.6689,
+        "ratio": 0.0856,
         "unit": "ms"
       },
       "javascript": {
-        "ours": 115.9342,
-        "theirs": 1067.1623,
-        "ratio": 0.1086,
+        "ours": 140.7594,
+        "theirs": 1267.6198,
+        "ratio": 0.111,
         "unit": "ms"
       },
       "json": {
-        "ours": 6.1993,
-        "theirs": 218.3832,
-        "ratio": 0.0284,
+        "ours": 7.3303,
+        "theirs": 329.3786,
+        "ratio": 0.0223,
         "unit": "ms"
       },
       "python": {
-        "ours": 102.1338,
-        "theirs": 725.5945,
-        "ratio": 0.1408,
+        "ours": 81.3042,
+        "theirs": 724.7384,
+        "ratio": 0.1122,
         "unit": "ms"
       },
       "ruby": {
-        "ours": 146.5096,
-        "theirs": 11705.3215,
-        "ratio": 0.0125,
+        "ours": 148.2763,
+        "theirs": 12428.7742,
+        "ratio": 0.0119,
         "unit": "ms"
       },
       "rust": {
-        "ours": 278.8858,
-        "theirs": 2049.7232,
-        "ratio": 0.1361,
+        "ours": 212.1024,
+        "theirs": 2215.6707,
+        "ratio": 0.0957,
         "unit": "ms"
       },
       "typescript": {
-        "ours": 677.965,
-        "theirs": 4109.8689,
-        "ratio": 0.165,
+        "ours": 465.015,
+        "theirs": 4534.4144,
+        "ratio": 0.1026,
         "unit": "ms"
       }
     },
     "throughput": {
       "java 128 KB": {
-        "ours": 408.5634,
-        "theirs": 51.9075,
-        "ratio": 7.871,
+        "ours": 487.5784,
+        "theirs": 61.7844,
+        "ratio": 7.8916,
         "unit": "ns/byte"
       },
       "javascript 128 KB": {
-        "ours": 34311.5571,
-        "theirs": 58.5855,
-        "ratio": 585.6661,
+        "ours": 39759.677,
+        "theirs": 69.0024,
+        "ratio": 576.2075,
         "unit": "ns/byte"
       },
       "json 128 KB": {
-        "ours": 57.3853,
-        "theirs": 52.1041,
-        "ratio": 1.1014,
+        "ours": 114.7291,
+        "theirs": 100.2132,
+        "ratio": 1.1449,
+        "unit": "ns/byte"
+      },
+      "rust 128 KB": {
+        "ours": 3151.037,
+        "theirs": 67.3294,
+        "ratio": 46.8003,
         "unit": "ns/byte"
       },
       "typescript 128 KB": {
-        "ours": 47024.6386,
-        "theirs": 71.6947,
-        "ratio": 655.9014,
+        "ours": 52613.4788,
+        "theirs": 72.6846,
+        "ratio": 723.86,
         "unit": "ns/byte"
       }
     },
-    "startup": {
-      "java 128 KB": {
-        "ours": 6.2807,
-        "theirs": 6.2582,
-        "ratio": 1.0036,
-        "unit": "ms"
+    "incremental": {
+      "java @98%": {
+        "ours": 64313.5,
+        "theirs": 197.2,
+        "ratio": 326.1334,
+        "unit": "us"
       },
-      "javascript 128 KB": {
-        "ours": 3.927,
-        "theirs": 6.1391,
-        "ratio": 0.6397,
-        "unit": "ms"
+      "javascript @98%": {
+        "ours": 4706895.0,
+        "theirs": 467.6,
+        "ratio": 10066.0714,
+        "unit": "us"
       },
-      "json 128 KB": {
-        "ours": 3.9542,
-        "theirs": 5.8959,
-        "ratio": 0.6707,
-        "unit": "ms"
+      "json @98%": {
+        "ours": 83.0,
+        "theirs": 104.0,
+        "ratio": 0.7981,
+        "unit": "us"
       },
-      "typescript 128 KB": {
-        "ours": 48.8186,
-        "theirs": 5.4235,
-        "ratio": 9.0013,
-        "unit": "ms"
+      "rust @98%": {
+        "ours": 2445.5,
+        "theirs": 491.8,
+        "ratio": 4.9725,
+        "unit": "us"
+      },
+      "typescript @98%": {
+        "ours": 9210623.5,
+        "theirs": 624.6,
+        "ratio": 14746.4353,
+        "unit": "us"
       }
     },
     "memory": {
       "java 128 KB": {
-        "ours": 8110080,
-        "theirs": 12632064,
-        "ratio": 0.642,
+        "ours": 8093696,
+        "theirs": 12615680,
+        "ratio": 0.6416,
         "unit": "bytes"
       },
       "javascript 128 KB": {
-        "ours": 9469952,
-        "theirs": 13516800,
-        "ratio": 0.7006,
+        "ours": 9814016,
+        "theirs": 13484032,
+        "ratio": 0.7278,
         "unit": "bytes"
       },
       "json 128 KB": {
-        "ours": 7979008,
-        "theirs": 13139968,
-        "ratio": 0.6072,
+        "ours": 8110080,
+        "theirs": 13189120,
+        "ratio": 0.6149,
+        "unit": "bytes"
+      },
+      "rust 128 KB": {
+        "ours": 13729792,
+        "theirs": 14647296,
+        "ratio": 0.9374,
         "unit": "bytes"
       },
       "typescript 128 KB": {
-        "ours": 19202048,
-        "theirs": 14974976,
-        "ratio": 1.2823,
+        "ours": 17367040,
+        "theirs": 15024128,
+        "ratio": 1.1559,
         "unit": "bytes"
       }
     }

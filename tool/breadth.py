@@ -9,7 +9,10 @@ was pressed, never tuned against - and this is the instrument that asks it four
 questions, in the order they can fail:
 
   1. does it import           the front door, `outliner grammar`
-  2. does it press            states, residual conflicts, frayed cells, refusals
+  2. does it press            states, residual conflicts, frayed cells, and the
+                              refusals partitioned - `open` is the only bucket
+                              another unfolding round can reach, and bash's 329
+                              refusals are 14 of them
   3. is the folio smaller     against the `.so` tree-sitter builds from the same bytes
   4. does a real file parse   a genuine file from a real project, not a toy
 
@@ -151,6 +154,11 @@ SHAPE = {
     "cells": re.compile(r"lalr table\s+(\d+) cells"),
     "residual": re.compile(r"(\d+) RESIDUAL"),
     "frayed": re.compile(r"frayed\s+(\d+) cells.*?\((\d+) REFUSE"),
+    # The partition of those refusals, which is the interesting half: `agreed`
+    # is a cell canonical LR(1) builds too and `alone`/`stuck` are sealed under
+    # every arrival split, so only `open` is a cell another unfolding round
+    # could reach. Absent when nothing refuses, which is most grammars.
+    "floor": re.compile(r"(\d+) agreed, (\d+) alone, (\d+) stuck, (\d+) open"),
     "built": re.compile(r"built in\s+([\d.]+) (\w+)"),
 }
 MILLIS = {"ns": 1e-6, "us": 1e-3, "ms": 1.0, "s": 1000.0}
@@ -220,6 +228,8 @@ def shape_of(name: str) -> tuple[dict[str, Any], str]:
             out["literal"], out["regex"], out["external"] = map(int, m.groups())
         elif key == "frayed":
             out["frayed"], out["refuse"] = map(int, m.groups())
+        elif key == "floor":
+            out["agreed"], out["alone"], out["stuck"], out["open"] = map(int, m.groups())
         else:
             out[key] = int(m.group(1))
     # `built in` is only printed once the tables exist, so its absence is the
@@ -395,9 +405,12 @@ def show(rows: list[Row], as_json: bool, whole: bool = True) -> int:
         print(json.dumps({"oracle": d.oracle_ready(), "stamp": mark.as_dict(),
                           "row": [r.as_dict() for r in rows]}, indent=2))
     else:
+        # `refuse` beside `open`, never alone: a table with 329 refusals of which
+        # 14 are reachable by another round is not 329 defects, and printing the
+        # total by itself said it was.
         print(f"\n{'grammar':<18} {'step':<8} {'states':>7} {'resid':>6} {'frayed':>7} "
-              f"{'refuse':>7} {'press ms':>9} {'folio':>8} {'their .so':>10} {'x':>6} "
-              f"{'reach':>7}  differential")
+              f"{'refuse':>7} {'open':>6} {'press ms':>9} {'folio':>8} {'their .so':>10} "
+              f"{'x':>6} {'reach':>7}  differential")
         for r in rows:
             s = r.shape
             ratio = f"{r.folio / r.their_so:.2f}" if r.their_so else "-"
@@ -406,7 +419,7 @@ def show(rows: list[Row], as_json: bool, whole: bool = True) -> int:
                    + (f" {r.diff.get('unexplained', 0)}u" if r.diff.get("mode") not in
                       (None, "skipped") else ""))
             print(f"{r.name:<18} {r.step:<8} {s.get('states', 0):>7} {s.get('residual', 0):>6} "
-                  f"{s.get('frayed', 0):>7} {s.get('refuse', 0):>7} "
+                  f"{s.get('frayed', 0):>7} {s.get('refuse', 0):>7} {s.get('open', 0):>6} "
                   f"{s.get('built', 0):>9.1f} {r.folio:>8} {r.their_so:>10} {ratio:>6} "
                   f"{pct:>7}  {dif}")
         stuck = [r for r in rows if r.step in ("import", "press", "folio")]
