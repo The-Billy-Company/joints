@@ -1,0 +1,84 @@
+{
+  "_": [
+    "Leaf coverage against an external token yardstick, per grammar and per",
+    "source, as a share of the bytes that yardstick calls a non-blank token.",
+    "Checked by `python3 research/joinery/verilog/leaf.py --check`.",
+    "",
+    "A floor, not a record: it may be raised when a repair lands and it may not",
+    "be lowered to make a run green. Authority is isolated arm `leaflane`",
+    "(binary tree 0d4217867, 2026-08-06), which is one generation.",
+    "",
+    "Headroom is not uniform and the reason is on the record. The tree's own",
+    "zig-out binary was rebuilt three times while these were being set, by the",
+    "three lanes in gather.zig / bench.zig / plumb.py tonight. picosoc and",
+    "spimemio never moved. simpleuart read 86.7% on the arm and 87.6% on the",
+    "18:41 tree; picorv32 read 59.4% and 58.3%. So the picorv32 row carries a",
+    "point and a half and the rest carry half a point, and that asymmetry",
+    "retires the day gather.zig settles - raise it back then, in a commit that",
+    "says so. A 1.1-point swing on one file and a 0.9-point swing the other way",
+    "on another, from one binary, is the trade this file exists to show.",
+    "",
+    "Tree-sitter reads 98.8% on picorv32's bytes. That is what these are for:",
+    "no column on the board is computed from anything but our own tree, so a",
+    "token nobody stood on was invisible for the life of the project."
+  ],
+  "yardstick": "verible-verilog-syntax --export_json --printrawtokens",
+  "__floor": [
+    "`source` is repo-root-relative and may be absent from a given checkout \u2014",
+    "an absent source skips loudly rather than passing, since a check that goes",
+    "green when its input is missing is a check that reports on the machine.",
+    "A row with no `source` is the grammar's corpus specimen."
+  ],
+  "floor": {
+    "verilog": [
+      {
+        "share": 58.0,
+        "measured": 59.4,
+        "on": "2026-08-06",
+        "note": "corpus specimen picorv32.v - the mend-storm outlier; extra headroom while gather.zig is in flight, read 58.3 on the 18:41 tree"
+      },
+      {
+        "source": ".local/verilog-second/picosoc.v",
+        "share": 91.5,
+        "measured": 92.2,
+        "on": "2026-08-06",
+        "url": "https://raw.githubusercontent.com/YosysHQ/picorv32/main/picosoc/picosoc.v",
+        "sha256": "86a1693c4844a0d11353e7524f38303d86be7aaf6ee82be2769c87e21b7b7be8"
+      },
+      {
+        "source": ".local/verilog-second/simpleuart.v",
+        "share": 86.0,
+        "measured": 86.7,
+        "on": "2026-08-06",
+        "url": "https://raw.githubusercontent.com/YosysHQ/picorv32/main/picosoc/simpleuart.v",
+        "sha256": "6b970be4255ef5f951f80a3b0cb27f73844df94349f4e4460bc4dbc4bb49ca1b"
+      },
+      {
+        "source": ".local/verilog-second/spimemio.v",
+        "share": 94.5,
+        "measured": 95.0,
+        "on": "2026-08-06",
+        "url": "https://raw.githubusercontent.com/YosysHQ/picorv32/main/picosoc/spimemio.v",
+        "sha256": "3bbd69ef9d49ba82d0fb952a8ca68d0360f6ad4b0bb2aa55e5f1ce1744a7188e"
+      }
+    ]
+  },
+  "__witness": [
+    "Small sources with a verdict written beside them. `refused` is a defect",
+    "held in place so that repairing it fails this check loudly instead of",
+    "going quietly green; flip the row to `accepted` in the same commit as the",
+    "repair. See witness/README.md."
+  ],
+  "witness": {
+    "verilog": [
+      {
+        "file": "witness/lone-select.v",
+        "verdict": "refused"
+      },
+      {
+        "file": "witness/lone-select-parenthesised.v",
+        "verdict": "accepted"
+      }
+    ]
+  }
+}

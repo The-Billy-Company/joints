@@ -4,7 +4,11 @@
 `damage = size - built`: **63,937 bytes**, 32.5% standing, 2,109 mends. This
 folder is what those bytes turned out to be.
 
-Read [RESULT-2-witness.md](RESULT-2-witness.md) first - it is the answer.
+Read [RESULT-2-witness.md](RESULT-2-witness.md) first - it is the answer. Read
+[RESULT-7-leaf.md](RESULT-7-leaf.md) next if you want the competitive number
+rather than the anatomy: it is the only chapter measured against something other
+than our own tree, and it is the one that says which of the two defects below
+generalises past this file.
 [RESULT-1-wall.md](RESULT-1-wall.md) is how the file was fenced off;
 [PREDICTION-1-wall.md](PREDICTION-1-wall.md) was written before any of it ran
 and two of its five predictions failed.
@@ -54,6 +58,22 @@ by predicting the shipped `Step.spliced` would have moved B out from under
 RESULT-2's numbers — it reproduces them exactly — and by predicting all three
 arms would keep 17/17 controls on the strength of the older table, which is the
 row that turned out to be wrong.
+
+Then [RESULT-7-leaf.md](RESULT-7-leaf.md), which stopped asking our own tree and
+measured against **Verible's token stream** instead — the first number in this
+folder that is directly comparable to tree-sitter. We stand a leaf on **59.3%**
+of the bytes an outside lexer calls tokens; tree-sitter stands on 98.8%. It
+partitions that deficit and finds it is **98% reach**, spread over 4,693 runs
+with a **median of two bytes** — a mend trail, not a construct. Verilog declares
+**zero externals**, so it cannot be starved the way haskell was. And it takes the
+table below to **three further real verilog sources**, where the two rows invert:
+the concatenation row is the wall on two of them and worth **their entire
+deficit**, while the directive row — the larger here — is picorv32's own, worth
++6.0 points and nothing elsewhere. It also names the cell the earlier chapters
+hunted in 1701 and 1184: a split at **state 2979 on `]`**, `constant_primary`
+kept over `primary`, **rank 0 on both sides**. It ships a permanent leaf-coverage
+check rather than a parser change, because the seam is `Reading.beats` and a lane
+is in it.
 
 **The short version.** The whole file is **four grammar defects**, and two of
 them carry 98.4% of the bytes that refuse to stand:
@@ -106,6 +126,7 @@ row here can disagree with the board about what a root is.
 | `reach.py` | gap or conflict? off the grammar's own closure | two gaps, four conflicts - no parse, no oracle needed |
 | `witness.py` | how many distinct defects, and what does each cost? | 178/204 statements stand alone; 13 walls, 42,166B |
 | `smallest.py` | what *is* each one, authored beside a control? | 9 fail beside a standing control, 8 suspects innocent |
+| `leaf.py` | of the bytes an outside lexer calls tokens, how many do we leaf? | 59.3% to tree-sitter's 98.8%; 98% of the deficit is reach; `--check` is the permanent floor |
 
 ## Three method notes worth carrying to another grammar
 
