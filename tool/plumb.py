@@ -74,10 +74,21 @@ misreading. They are counted, named and excluded; `plumb.py show --frame`
 reports the interior comparison separately for anyone who wants it, flagged as
 the weaker half.
 
-**A byte under an oracle ERROR is unjudged, structurally.** A tree in recovery
-is not a contract. But a byte under a *named leaf* inside an error region is
-still judged, because tree-sitter's lexer named that token and the lexer is
-what this measures.
+**A byte whose innermost cover is an oracle ERROR is unjudged, structurally.**
+That node is not standing behind those bytes, so there is no contract to
+compare against. A byte under a *named* node inside an error region is still
+judged, because tree-sitter's recovery adopts every subtree it had already
+reduced and those subtrees are real parses - which is the whole reason
+`collate.survivors` exists.
+
+The distinction is not academic and it was got wrong here for the life of the
+column: this asked whether an ERROR was anywhere in the byte's *ancestry*.
+tree-sitter wraps `picorv32.v` in one `ERROR` spanning all 94,657 bytes, so
+every byte in the file inherited one node's verdict and 31,671 in-scope bytes
+came back "the oracle declines" from an oracle that had named all but 271 of
+them. `hurt` now asks the node covering the byte; `engulfed` still answers the
+ancestry question for a caller that wants a region, and `plumb.py decline`
+prints the gap on every row so it can never go quiet again.
 
 ## The tripwires
 
@@ -94,6 +105,7 @@ nothing:
   python3 tool/plumb.py run --grammar=swift one
   python3 tool/plumb.py board               the board's four buckets, `built` split
   python3 tool/plumb.py show --grammar=php  the askew regions, widest first
+  python3 tool/plumb.py decline             who is refused, and on whose authority
   python3 tool/plumb.py verify              prove it can say no
   python3 tool/plumb.py list                who has an oracle and who does not
 
@@ -316,17 +328,50 @@ def alias_pairs(grammar: Path) -> set[frozenset[str]]:
     return out
 
 
-def hurt(nodes: list[Node], size: int) -> list[bool]:
-    """Bytes whose oracle ancestry passes through a node in recovery.
+def hurt(nodes: list[Node], size: int, who: list[int] | None = None) -> list[bool]:
+    """Bytes the node ACTUALLY COVERING them is one the oracle disowns.
 
-    Painted over the whole span and never unset, because the taint is
-    inherited: a well-named token is still a well-named token inside an ERROR,
-    but the *structure* around it is not a contract, and this array is what the
-    interior comparison consults.
+    Asked of the innermost cover - the node `paint` already computed - and not
+    of the ancestry, which is what this used to ask and what made it wrong.
+    Recovery in tree-sitter is a property of a *bracket*, not of a region: it
+    adopts every subtree it had already reduced and hands the whole thing back
+    under one `ERROR`, so an ancestry test lets the widest bracket in the file
+    speak for every byte beneath it. On `picorv32.v` that bracket is the root
+    and it is 94,657 bytes wide, over 48,883 nodes and 17,290 leaves the same
+    parse built perfectly well; asked by ancestry the oracle refused all
+    31,671 in-scope bytes, and asked by cover it refuses 271.
+
+    The distance being measured is the whole content of the function. `ERROR`
+    over the byte is a verdict about the byte. `ERROR` 94,657 bytes away is a
+    verdict about the file, and reading one as the other converted the oracle's
+    *agreement* into the oracle's *silence* on the corpus's largest damage row
+    for as long as this column has existed - invisibly, because a column that
+    reads zero because nobody could adjudicate is indistinguishable from one
+    that reads zero because nobody asked.
+
+    `engulfed` still answers the ancestry question for the caller that wants a
+    region rather than a verdict. Nothing in this repository does; the two are
+    kept apart so that asking for one can no longer deliver the other, and
+    `decline` watches the gap between them on every row.
+    """
+    who = paint(nodes, size) if who is None else who
+    return [w >= 0 and nodes[w].name.startswith(HURT) for w in who]
+
+
+def engulfed(nodes: list[Node], size: int) -> list[bool]:
+    """Bytes with a node in recovery anywhere ABOVE them. A region, not a verdict.
+
+    The old `hurt`, kept under a name that says which question it answers, for
+    two reasons. It is the honest instrument for "how much of this file is
+    inside a recovery bracket" - `collate.refusals` asks exactly that and has
+    always painted extents for it. And `decline` needs both rules at once to
+    prove the one the board consumes is still the narrow one: where the two
+    agree there is nothing to be wrong about, and where they part company is
+    precisely the population this file spent its whole life mispricing.
     """
     bad = [False] * size
     for n in nodes:
-        if n.name == "ERROR" or n.name.startswith("MISSING "):
+        if n.name.startswith(HURT):
             a, b = max(n.start, 0), min(n.end, size)
             if b > a:
                 bad[a:b] = [True] * (b - a)
@@ -359,7 +404,7 @@ def judge(name: str, blob: bytes, mine: list[Node], theirs: list[Node],
     """
     size = len(blob)
     o_who, t_who = paint(mine, size), paint(theirs, size)
-    t_bad = hurt(theirs, size)
+    t_bad = hurt(theirs, size, t_who)
     tally = {"plumb": 0, "regrouped": 0, "relabelled": 0, "renamed": 0,
              "interstice": 0, "unjudged": 0}
     frame = [0, 0]
@@ -377,9 +422,13 @@ def judge(name: str, blob: bytes, mine: list[Node], theirs: list[Node],
         for i in range(lo, hi):
             t_at = t_who[i]
             them = theirs[t_at] if t_at >= 0 else None
-            if them is None or (not them.leaf and t_bad[i]):
-                # No oracle node at all, or an interior position inside a
-                # recovery region: nothing here is a contract.
+            if them is None or t_bad[i]:
+                # No oracle node at all, or the node covering the byte is one
+                # tree-sitter disowns: nothing here is a contract. One test
+                # where there were two, because `hurt` is now asked of the
+                # cover - so `t_bad[i]` and "the innermost node is named
+                # ERROR/MISSING" are the same sentence, and the second reading
+                # was the first one's ancestry clause wearing a leaf test.
                 tally["unjudged"] += 1
                 close()
                 continue
@@ -388,10 +437,6 @@ def judge(name: str, blob: bytes, mine: list[Node], theirs: list[Node],
             if not them.leaf:
                 tally["interstice"] += 1
                 frame[bool(us) and us.kind == them.kind] += 1
-                close()
-                continue
-            if t_bad[i] and them.name.startswith(HURT):
-                tally["unjudged"] += 1
                 close()
                 continue
             if us is not None and us.kind == them.kind:
@@ -751,6 +796,172 @@ def show(picked: list[Case]) -> int:
     return 0
 
 
+# ------------------------------------------------------- on whose authority
+#
+# The class of defect this section exists for: a refusal column reads zero the
+# same way an unasked question does, so an instrument can convert somebody
+# else's ANSWER into its own SILENCE and every board it feeds still totals.
+# It ran here for the life of `unjudged` and nothing caught it, because there
+# was no row on which "the oracle could not say" and "nobody asked the oracle"
+# printed differently.
+#
+# So the guard is not "verilog must read 271" - that pins the bug's address
+# rather than its shape, and the next instrument to make this mistake will make
+# it somewhere else. It is: no byte may be refused on the authority of a node
+# that is not covering it, asked of every row; and some row must still be able
+# to tell that rule apart from the one it replaced, or this proves nothing.
+
+class Authority(NamedTuple):
+    """One row's refusal, priced by the cover and by the ancestry at once."""
+
+    name: str
+    size: int
+    sick: int  # recovery nodes in the oracle's tree
+    widest: int  # the widest one's span — the bracket that speaks for everyone
+    rest: int  # union of every OTHER recovery extent — the recovery that is real
+    cover: int  # in-scope bytes the INNERMOST cover disowns — the rule we consume
+    region: int  # in-scope bytes with a recovery node anywhere above — the old rule
+    named: int  # of the bytes the two rules differ over, how many the oracle NAMES
+    token: int  # ...and how many of those it names with a leaf
+    sound: bool  # every refused byte's own cover is an ERROR/MISSING, or nothing
+    why: str
+
+    @property
+    def gap(self) -> int:
+        return self.region - self.cover
+
+    @property
+    def wide(self) -> bool:
+        """Does one bracket here speak for more than every other one together?
+
+        The shape, stated without a threshold and without a grammar's name in
+        it: the widest recovery node covers more than every OTHER recovery node
+        put together. On `picorv32.v` that is one root over 94,657 bytes
+        against 12,526 bytes of recovery that is actually local to something.
+        On a row whose errors are all local it is false, and there is
+        correspondingly little for two rules to disagree about.
+
+        `rest` excludes the widest node deliberately. The union WITH it is the
+        widest node on any row that has a root bracket - a recovery region
+        containing every other one - so a test against the union is a test that
+        can only ever say no, which is the shape of instrument this whole lane
+        is about.
+        """
+        return self.widest > self.rest
+
+
+def authority(case: Case) -> Authority | None:
+    """Both refusal rules over one row, and what the difference is made of.
+
+    One read and one walk. `sound` is computed here, against the node list,
+    rather than off `hurt` - a check that asks the implementation whether it
+    did what it says is a check that cannot go red.
+    """
+    saw = read(case)
+    if saw is None:
+        return None
+    size = len(saw.blob)
+    if saw.why:
+        return Authority(case.name, size, 0, 0, 0, 0, 0, 0, 0, True, saw.why)
+    who = paint(saw.theirs, size)
+    cover, region = hurt(saw.theirs, size, who), engulfed(saw.theirs, size)
+    sick = [n for n in saw.theirs if n.name.startswith(HURT)]
+    top = max(sick, key=lambda n: n.end - n.start, default=None)
+    rest = merge([(max(n.start, 0), min(n.end, size)) for n in sick if n is not top])
+    n_cover = n_region = n_named = n_token = 0
+    sound = True
+    for a, b in saw.scope:
+        for p in range(a, b):
+            if cover[p]:
+                n_cover += 1
+                sound &= who[p] >= 0 and saw.theirs[who[p]].name.startswith(HURT)
+            if region[p]:
+                n_region += 1
+                if not cover[p]:
+                    # The disputed bytes. `who[p] >= 0` here by construction —
+                    # a byte with no cover at all is refused under both rules —
+                    # so this counts what the oracle was saying about them
+                    # while they were being reported as its silence.
+                    n_named += 1
+                    n_token += saw.theirs[who[p]].leaf
+    return Authority(case.name, size, len(sick),
+                     (top.end - top.start) if top else 0,
+                     sum(b - a for a, b in rest),
+                     n_cover, n_region, n_named, n_token, sound, "")
+
+
+def decline(picked: list[Case], as_json: bool) -> int:
+    """Every row's refusal, and on whose authority it was refused.
+
+    Four assertions. The first two are the invariant; the last two are what
+    stop this being a check that cannot fail.
+
+      NESTS   the rule the board consumes must be a REFINEMENT of the region
+              rule on every row. If the two ever cross, `hurt` is not a
+              narrower version of the same question and nothing below is safe.
+      SOUND   every refused byte's own cover is a node named ERROR or MISSING,
+              or there is no node over it at all. The rule, restated over the
+              tree rather than over the implementation, so a re-introduced span
+              paint reddens on the first row carrying a wide bracket.
+      PARTS   at least one row must still be able to TELL THE TWO RULES APART.
+              The day the corpus holds no wide bracket, everything above is
+              true for free — so on that day this says so and exits 1 rather
+              than printing greens nobody earned. This is the assertion the
+              defect's own witness became: it went red for the whole life of
+              the bug and there was no one to read it.
+      SPOKEN  and on the rows that part, every disputed byte must be one the
+              oracle NAMES. If those bytes were genuinely unnameable the old
+              rule was right and this change is wrong; that is the falsifier
+              for the fix, and it is checked rather than asserted.
+    """
+    rows = [r for c in picked if (r := authority(c)) is not None]
+    if not rows:
+        return oops("no grammar resolved to a folio and a source")
+    print(f"\n{'grammar':<19}{'bytes':>8}{'Enode':>6}{'widest':>8}{'rest':>8}"
+          f"{'cover':>8}{'region':>8}{'gap':>8}{'named':>7}{'token':>7}  one bracket for all?")
+    print("-" * 112)
+    for r in sorted(rows, key=lambda r: (-r.gap, -r.widest)):
+        if not r.sick and not r.why:
+            continue
+        print(f"{r.name:<19}{r.size:>8}{r.sick:>6}{r.widest:>8}{r.rest:>8}"
+              f"{r.cover:>8}{r.region:>8}{r.gap:>8}{r.named:>7}{r.token:>7}"
+              f"  {'YES' if r.wide else '—':<5}{r.why[:28]}")
+    quiet = [r for r in rows if not r.sick and not r.why]
+    print(f"\n{len(quiet)} further row(s) carry no recovery node at all — both rules read 0,"
+          f" which is\nagreement and not evidence, and is why PARTS below asks a different"
+          f" question.")
+
+    parted = sorted((r for r in rows if r.gap), key=lambda r: -r.gap)
+    crossed = [r for r in rows if r.cover > r.region]
+    unsound = [r for r in rows if not r.sound]
+    out = [
+        (not crossed, f"NESTS   the consumed rule refines the region rule on all {len(rows)}"
+                      f" row(s)" + (f" — {crossed[0].name} crosses" if crossed else "")),
+        (not unsound, f"SOUND   every one of the {sum(r.cover for r in rows)} refused byte(s)"
+                      f" is covered by an ERROR/MISSING of its own"
+                      + (f" — {', '.join(r.name for r in unsound[:3])} is not" if unsound else "")),
+        (bool(parted), "PARTS   " + (
+            f"{len(parted)} row(s) still tell the two rules apart: "
+            + " · ".join(f"{r.name} {r.gap}" for r in parted[:4])
+            if parted else
+            "NO ROW can tell the two rules apart — this check is proving nothing."
+            " A corpus with no wide recovery bracket cannot witness this defect;"
+            " add one or retire the column.")),
+        (all(r.named == r.gap for r in parted),
+         f"SPOKEN  the oracle NAMES all {sum(r.named for r in parted)} disputed byte(s),"
+         f" {sum(r.token for r in parted)} with a token — the rule this replaced was"
+         f" reporting those answers as the oracle's silence"),
+    ]
+    for held, said in out:
+        print(f"{'ok  ' if held else 'FAIL':<8}{said}")
+    if as_json:
+        print(json.dumps({"row": [{**r._asdict(), "gap": r.gap, "wide": r.wide}
+                                  for r in rows]}, indent=2))
+    bad = sum(not held for held, _ in out)
+    print(f"\n{len(out) - bad} of {len(out)} held")
+    return 1 if bad else 0
+
+
 # -------------------------------------------------------------------- tripwire
 
 RED = SPECIMEN / "swift" / "multiline-comment.swift"
@@ -768,7 +979,19 @@ def verify() -> int:
     swift = next(c for c in slate() if c.name == "swift")
     js = next(c for c in slate() if c.name == "javascript")
 
-    # RED. The wrong tree is written out by hand in specimen/RESULT-1.
+    # The specimen this file's RED tripwire was built on, KEPT — and inverted,
+    # because a sibling lane fixed the parser underneath it. `/* c\n d */` came
+    # back as a `custom_operator` over a `multiplicative_expression` when this
+    # assertion was written; swift's `multiline_comment` is now seated on its
+    # own `marrow` vein and the two specimens went 2/4 -> 4/4 (see
+    # `changelog.d/+swifts-comment-was-arithmetic-and-the-board-called-it-built`).
+    # So "these bytes MUST come back askew" now encodes the defect rather than
+    # the contract, and the honest move is to keep the witness pointed at the
+    # same bytes and demand the CORRECT reading: this is the regression guard
+    # for that seating, and it reddens the day the comment is arithmetic again.
+    # The negative this used to supply is supplied below, off a tree written
+    # out here, so `judge`'s ability to say no no longer depends on the parser
+    # still being wrong about something.
     if not RED.exists():
         out.append((False, f"the red tripwire is missing from {RED}"))
     else:
@@ -777,23 +1000,51 @@ def verify() -> int:
         # A row that came back `None` is a row nothing measured, and it used to
         # arrive here as `askew == 0` - the shape that let a missing folio pass
         # for a correct parse. Absence is asserted against, not defaulted.
-        out.append((got is not None, "the red tripwire produced a row at all"
+        out.append((got is not None, "the specimen produced a row at all"
                                      + ("" if got is not None else
                                         f" — nothing measured {RED.name}")))
-        saw = got.misread if got and not got.why else 0
-        names = {r.ours for r in got.worst} if got else set()
-        out.append((saw > 0, f"a comment read as arithmetic is caught: {saw} misread byte(s)"
-                             f" in {RED.name}, outliner calling them "
-                             f"{', '.join(sorted(names)) or 'nothing'}"
-                             + (f" — {got.why}" if got and got.why else "")))
-        # And that it is the COMMENT bytes, not merely some bytes: the specimen
-        # is a comment and one `let`, so an askew run has to start inside the
-        # comment or this went red for the wrong reason.
+        saw = got.misread if got and not got.why else -1
+        out.append((saw == 0, f"a comment is no longer read as arithmetic: {saw} misread"
+                              f" byte(s) in {RED.name}"
+                              + (f" — {got.why}" if got and got.why else "")))
+        # And that the comment's own bytes are the ones being judged, not merely
+        # that nothing anywhere came back askew - a row that judged none of them
+        # would read identically to a row that judged all of them correctly,
+        # which is this lane's whole subject.
         a, b = blob.index(b"/*"), blob.index(b"*/") + 2
-        inside = [r for r in (got.worst if got else ()) if a <= r.start < b]
-        out.append((bool(inside), f"and they are the comment's own bytes: {len(inside)} of"
-                                  f" {len(got.worst) if got else 0} widest run(s) fall inside"
-                                  f" [{a}, {b})"))
+        names = {n.name for n in ours(stamp.ask(BIN, folio_for(swift.grammar.stem, WORK),
+                                                RED, tree=True, patience=PATIENCE).tree)
+                 if a <= n.start < b} if got and not got.why else set()
+        out.append(("multiline_comment" in names,
+                    f"and outliner names the comment's own bytes [{a}, {b}):"
+                    f" {', '.join(sorted(names)) or 'nothing'}"))
+
+    # RED, and it does not depend on the parser still being wrong about
+    # anything. Two trees over the same twelve bytes, one calling them a
+    # comment and one calling them arithmetic — the swift specimen's own shape,
+    # written out, so `judge` has to prove it can still say no on a day when
+    # every grammar in the corpus is right. `regrouped` rather than
+    # `relabelled` because the extents differ, which is the class this file was
+    # opened on.
+    text = b"/* c\n d */\n"
+    theirs = [Node("source_file", True, 0, 11, 0, False),
+              Node("multiline_comment", True, 0, 10, 1, True)]
+    mine = [Node("source_file", True, 0, 11, 0, False),
+            Node("custom_operator", True, 0, 2, 1, True),
+            Node("simple_identifier", True, 3, 4, 1, True),
+            Node("multiplicative_expression", True, 6, 10, 1, True)]
+    liar = judge("a-comment-read-as-arithmetic", text, mine, theirs, [(0, 11)], set())
+    out.append((liar.misread == 10 and liar.regrouped == 10,
+                f"a comment read as arithmetic is still caught: {liar.misread} misread"
+                f" byte(s) ({liar.regrouped} regrouped) over the 10 the two trees"
+                f" tokenise differently"))
+    # ...and that it is not simply calling everything wrong. The same walk over
+    # two trees that agree has to come back silent, or the assertion above is a
+    # function that returns a number rather than a test.
+    honest = judge("agreement", text, theirs, theirs, [(0, 11)], set())
+    out.append((honest.misread == 0 and honest.plumb == 10,
+                f"and agreement is not: {honest.misread} misread, {honest.plumb} plumb"
+                f" over the same bytes with the same tree on both sides"))
 
     # GREEN. differential.py builds its own span fixtures on javascript because
     # a difference there is the reader and never the parser.
@@ -813,6 +1064,32 @@ def verify() -> int:
                 f"a rename is a declared PAIR, not a name: scala declares {len(renames)}"
                 f" alias pair(s), some naming `identifier`, and none of them pairs it"
                 f" with `else`"))
+
+    # And that a refusal is the COVER's verdict and not an ancestor's. Asked of
+    # a tree written out here rather than of a corpus row, because the corpus
+    # sweep costs a minute and this has to be cheap enough to be in the tripwire
+    # everybody already runs; `plumb.py decline` makes the same claim against
+    # all thirty real trees. The shape is `picorv32.v`'s, ten thousand times
+    # smaller: one recovery bracket over everything, real structure underneath.
+    wide = [Node("ERROR", True, 0, 100, 0, False),
+            Node("identifier", True, 10, 20, 1, True),  # a token inside the ERROR
+            Node("call", True, 30, 45, 1, False),  # a construct it still built
+            Node("identifier", True, 30, 40, 2, True)]
+    cover, region = hurt(wide, 100), engulfed(wide, 100)
+    out.append((all(region), "the region rule taints every byte under a wide bracket:"
+                             f" {sum(region)} of 100"))
+    out.append((sum(cover) == 75 and not any(cover[10:20]) and not any(cover[30:45]),
+                f"a refusal is the COVER's verdict, not an ancestor's: {sum(cover)} of 100"
+                f" refused, and none of the 25 byte(s) under a node tree-sitter DID build"
+                f" inside that bracket"))
+    # The byte class the whole defect was: interior to a healthy construct, and
+    # inside a recovery bracket. Named separately because it is the one an
+    # ancestry rule and a cover rule answer differently, and a test that only
+    # checked the leaves would have gone green throughout the bug.
+    out.append((not cover[40] and region[40],
+                "and a byte interior to a construct built inside the bracket (40, under"
+                " `call` and no leaf) is judged, not refused — the exact class the"
+                " ancestry rule wrote off"))
 
     for held, said in out:
         print(f"{'ok  ' if held else 'FAIL'}  {said}")
@@ -854,8 +1131,8 @@ def main(argv: list[str]) -> int:
     if "-h" in argv or "--help" in argv or not verb:
         print(__doc__)
         return 0 if verb or "-h" in argv or "--help" in argv else 2
-    if verb not in ("run", "board", "show", "verify", "list"):
-        return oops(f"no such verb {verb!r}; try run, board, show, verify, list")
+    if verb not in ("run", "board", "show", "verify", "list", "decline"):
+        return oops(f"no such verb {verb!r}; try run, board, show, verify, list, decline")
     if not BIN.exists():
         return oops(f"no binary at {BIN}; run `zig build` first")
     known = {c.name for c in slate()}
@@ -874,6 +1151,8 @@ def main(argv: list[str]) -> int:
         return verify()
     if verb == "show":
         return show(picked)
+    if verb == "decline":
+        return decline(picked, as_json)
     mark = stamp.take(BIN)
     rows = sweep(picked)
     if not rows:

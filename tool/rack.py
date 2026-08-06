@@ -703,7 +703,8 @@ def survey(name: str, saw: plumb.Read, top: int = 6, price: str = "") -> Seen:
     import bisect  # noqa: PLC0415 - one call site, kept beside its reason
 
     size = len(saw.blob)
-    t_who, t_bad = plumb.paint(saw.theirs, size), plumb.hurt(saw.theirs, size)
+    t_who = plumb.paint(saw.theirs, size)
+    t_bad = plumb.hurt(saw.theirs, size, t_who)
     tally = dict.fromkeys(
         ("square", "renamed", "askew", "racked", "unframed", "engulf",
          "unjudged", "unwindowed", "shade", "shelter", "mute"), 0)
@@ -777,8 +778,11 @@ def survey(name: str, saw: plumb.Read, top: int = 6, price: str = "") -> Seen:
         for k, p in enumerate(cuts[:-1]):
             wide = cuts[k + 1] - p
             them = saw.theirs[t_who[p]] if t_who[p] >= 0 else None
-            blind = (them is None or (not them.leaf and t_bad[p])
-                     or (t_bad[p] and them.name.startswith(plumb.HURT)))
+            # `plumb`'s rule verbatim, and it is one test now rather than
+            # three: `hurt` is asked of the node covering the byte, so
+            # `t_bad[p]` already means "the innermost cover is disowned" and
+            # the leaf clause it used to carry was the ancestry rule's.
+            blind = them is None or t_bad[p]
             hole = bool(missing[p])
             kind = bucket(o_sp[k], t_sp[k], saw.renames, blind, hole, price)
             if kind == "unjudged":
@@ -844,6 +848,12 @@ def survey(name: str, saw: plumb.Read, top: int = 6, price: str = "") -> Seen:
     #   warp    tree-sitter stands a leaf here and we stand none: a token we owe
     #   slack   under no leaf on EITHER tree: both representations leave it bare
     #   veiled  the oracle declines - `plumb`'s own blind rule, not a fourth one
+    #
+    # `veiled` is a VERDICT and reads like an absence, which is what let it be
+    # wrong in silence: 4,586 of this arm's 4,615 were verilog, refused not by
+    # tree-sitter but by an ancestry test reading one 94,657-byte root. It is
+    # now the cover's own answer, and `plumb.py decline` is the tripwire that
+    # would have said so.
     t_leaf, t_ok = bytearray(size), bytearray(size)
     for n in saw.theirs:
         a0, b0 = max(n.start, 0), min(n.end, size)
@@ -865,7 +875,14 @@ def survey(name: str, saw: plumb.Read, top: int = 6, price: str = "") -> Seen:
             padding += who >= 0 and not tl
             if on:
                 continue
-            if who < 0 or (bad and not tk):
+            # `bad` is the cover's own verdict now, so the `not tk` guard that
+            # used to sit beside it is gone: nothing can be deeper than a leaf,
+            # so a byte whose innermost cover is disowned has no healthy leaf
+            # over it by construction. The guard was load-bearing only under
+            # the ancestry rule, where `bad` was true of every byte in the file
+            # and `tk` was the one thing rescuing verilog's 17,290 real tokens
+            # from being called unadjudicable along with the whitespace.
+            if who < 0 or bad:
                 veiled += 1
             elif tk:
                 warp += 1

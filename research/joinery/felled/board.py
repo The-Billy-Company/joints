@@ -28,6 +28,7 @@ import json
 import os
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -76,13 +77,19 @@ def sighted() -> str:
     return f"{name} — UNSIGHTED (`pin.py oracle {name}`), `square` is not a measurement"
 
 
-def sweep(cases: list[plumb.Case], how: str) -> dict[str, dict[str, dict[str, int]]]:
-    """Both arms of one policy, row by row."""
+def sweep(cases: list[plumb.Case], how: str,
+          both: bool = True) -> dict[str, dict[str, dict[str, int]]]:
+    """Both arms of one policy, row by row - or just the arm, to price a policy.
+
+    Pricing the default is a question about the arm alone across four policies,
+    and running the control for it would double a sweep that already costs
+    minutes to subtract a number nobody reads.
+    """
+    arms = (("control", (f"--mend={how}", "--no-supply")), ("arm", (f"--mend={how}",)))
     out: dict[str, dict[str, dict[str, int]]] = {}
     for case in cases:
         row: dict[str, dict[str, int]] = {}
-        for arm, extra in (("control", (f"--mend={how}", "--no-supply")),
-                           ("arm", (f"--mend={how}",))):
+        for arm, extra in (arms if both else arms[1:]):
             seen = rack.measure(case, top=0, extra=extra)
             if seen is None or seen.why:
                 row[arm] = {c: 0 for c in COLUMNS} | {"why": seen.why if seen else "no read"}
@@ -96,8 +103,38 @@ def delta(row: dict[str, dict[str, int]]) -> dict[str, int]:
     return {c: row["arm"].get(c, 0) - row["control"].get(c, 0) for c in COLUMNS}
 
 
+def price(all_of: dict[str, dict], stamp: str, arm: str) -> None:
+    """Every policy's absolute board, row by row - what changing the default costs.
+
+    Against `fell`, because `fell` is the default and the question is what moves
+    if it stops being one. `unbuilt` is `crooked + unframed`: a policy that
+    trades a frame it never built for one it built wrong has moved a byte
+    between two columns and repaired nothing, and only the sum sees that.
+    """
+    base = all_of["fell"]
+    for how, rows in all_of.items():
+        if how == "fell":
+            continue
+        moved, tot = {}, Counter()
+        for name, r in rows.items():
+            was, now = base[name]["arm"], r["arm"]
+            d = {c: now.get(c, 0) - was.get(c, 0) for c in COLUMNS}
+            d["unbuilt"] = d["crooked"] + d["unframed"]
+            moved[name] = d
+            for k, v in d.items():
+                tot[k] += v
+        live = {n: d for n, d in moved.items() if any(d.values())}
+        print(f"  --mend={how} against the default --mend=fell   "
+              f"{len(live)} of {len(moved)} rows move")
+        print(f"    {'grammar':<22}" + "".join(f"{c:>11}" for c in (*COLUMNS, "unbuilt")))
+        for name in sorted(live, key=lambda n: moved[n]["unbuilt"]):
+            d = moved[name]
+            print(f"    {name:<22}" + "".join(f"{d[c]:>+11}" for c in (*COLUMNS, "unbuilt")))
+        print(f"    {'CORPUS':<22}"
+              + "".join(f"{tot[c]:>+11}" for c in (*COLUMNS, "unbuilt")) + "\n")
+
+
 def render(all_of: dict[str, dict], stamp: str, arm: str) -> None:
-    print(f"\n  tree {stamp}   arm {arm}\n")
     for how, rows in all_of.items():
         moved = {n: delta(r) for n, r in rows.items()}
         live = {n: d for n, d in moved.items() if any(d.values())}
@@ -117,6 +154,8 @@ def main(argv: list[str]) -> int:
                     help="repeatable; default is every policy")
     ap.add_argument("--grammar", action="append", help="repeatable; default is every row")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--price", action="store_true",
+                    help="every policy against the default, arm only — what a new default costs")
     ap.add_argument("--out", type=Path, help="write the raw sweep here as well")
     args = ap.parse_args(argv)
 
@@ -130,7 +169,10 @@ def main(argv: list[str]) -> int:
 
     stamp, arm = tree(), sighted()
     rack.warm(cases)
-    out = {how: sweep(cases, how) for how in (args.mend or POLICIES)}
+    want = args.mend or POLICIES
+    if args.price and "fell" not in want:
+        want = ("fell", *want)
+    out = {how: sweep(cases, how, both=not args.price) for how in want}
     body = {"tree": stamp, "arm": arm, "policies": out}
 
     if args.out:
@@ -139,7 +181,8 @@ def main(argv: list[str]) -> int:
     if args.json:
         print(json.dumps(body, indent=1))
     else:
-        render(out, stamp, arm)
+        print(f"\n  tree {stamp}   arm {arm}\n")
+        (price if args.price else render)(out, stamp, arm)
     return 0
 
 

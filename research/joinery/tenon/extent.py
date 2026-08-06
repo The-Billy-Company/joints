@@ -109,8 +109,10 @@ def resort(saw: plumb.Read, xs: set[str]) -> tuple[dict[str, int], list[tuple[in
         for k, p in enumerate(cuts[:-1]):
             wide = cuts[k + 1] - p
             them = saw.theirs[t_who[p]] if t_who[p] >= 0 else None
-            if (them is None or (not them.leaf and t_bad[p])
-                    or (t_bad[p] and them.name.startswith(plumb.HURT))):
+            # `rack.survey`'s rule verbatim, and it is one test now: `hurt`
+            # is asked of the node covering the byte, so the leaf clause this
+            # used to carry was the ancestry rule's and nothing else.
+            if them is None or t_bad[p]:
                 continue
             if o_sp[k] == t_sp[k] or not t_sp[k]:
                 continue

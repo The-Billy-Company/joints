@@ -59,7 +59,10 @@ for case in plumb.slate():
             row["both_bare"] += not ours[p] and not theirs[p]
             if ours[p]:
                 continue
-            if t_who[p] < 0 or (t_bad[p] and not live[p]):
+            # `veiled`, and `t_bad` is the cover's own verdict now — nothing is
+            # deeper than a leaf, so `not live[p]` was only ever load-bearing
+            # under the ancestry rule that taints a whole file from one root.
+            if t_who[p] < 0 or t_bad[p]:
                 continue
             if live[p]:
                 row["warp"] += 1

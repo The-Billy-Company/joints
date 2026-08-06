@@ -69,8 +69,9 @@ def spines(saw: plumb.Read):
         for k, p in enumerate(cuts[:-1]):
             wide = cuts[k + 1] - p
             them = saw.theirs[t_who[p]] if t_who[p] >= 0 else None
-            blind = (them is None or (not them.leaf and t_bad[p])
-                     or (t_bad[p] and them.name.startswith(plumb.HURT)))
+            # `rack.survey`'s rule verbatim — one test since `hurt` began
+            # asking the node covering the byte rather than its ancestry.
+            blind = them is None or t_bad[p]
             hole = bool(missing[p])
             kind = rack.bucket(o_sp[k], t_sp[k], saw.renames, blind, hole)
             at = rack.parts(o_sp[k], t_sp[k])
