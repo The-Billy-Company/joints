@@ -1,0 +1,112 @@
+[
+ {
+  "grammar": "elixir",
+  "rows": [
+   6,
+   13
+  ],
+  "seat": [
+   "_quoted_content_double/.marrow/.elixir_quoted",
+   "_newline_before_do/.caesura/.elixir"
+  ],
+  "control": 8795,
+  "joint_damage": 21354,
+  "standing": 0.5367,
+  "solo": {
+   "6": 12702,
+   "13": 34
+  },
+  "joint": 12559,
+  "sum_solo": 12736,
+  "residual": -177,
+  "verdict": "additive"
+ },
+ {
+  "grammar": "julia",
+  "rows": [
+   7,
+   8
+  ],
+  "seat": [
+   "_content_str_1/.marrow/.julia_quoted/.",
+   "_immediate_paren/.abut/."
+  ],
+  "control": 1953,
+  "joint_damage": 16681,
+  "standing": 0.3903,
+  "solo": {
+   "7": 5471,
+   "8": 9094
+  },
+  "joint": 14728,
+  "sum_solo": 14565,
+  "residual": 163,
+  "verdict": "additive"
+ },
+ {
+  "grammar": "kotlin",
+  "rows": [
+   2,
+   12
+  ],
+  "seat": [
+   "_string_start/.fence/.kotlin/_string_start",
+   "_automatic_semicolon/.caesura/.kotlin"
+  ],
+  "control": 244,
+  "joint_damage": 19922,
+  "standing": 0.4438,
+  "solo": {
+   "2": 20737,
+   "12": 19229
+  },
+  "joint": 19678,
+  "sum_solo": 39966,
+  "residual": -20288,
+  "verdict": "cooperating"
+ },
+ {
+  "grammar": "scala",
+  "rows": [
+   0,
+   4
+  ],
+  "seat": [
+   "_indent/.offside/.slashes",
+   "block_comment/.marrow/.kotlin_block"
+  ],
+  "control": 16883,
+  "joint_damage": 7087,
+  "standing": 0.6475,
+  "solo": {
+   "0": -4970,
+   "4": -10326
+  },
+  "joint": -9796,
+  "sum_solo": -15296,
+  "residual": 5500,
+  "verdict": "cooperating"
+ },
+ {
+  "grammar": "swift",
+  "rows": [
+   3,
+   11
+  ],
+  "seat": [
+   "multiline_comment/.marrow/.swift_block",
+   "_implicit_semi/.caesura/.swift"
+  ],
+  "control": 5337,
+  "joint_damage": 16250,
+  "standing": 0.4292,
+  "solo": {
+   "3": 0,
+   "11": 10913
+  },
+  "joint": 10913,
+  "sum_solo": 10913,
+  "residual": 0,
+  "verdict": "additive"
+ }
+]

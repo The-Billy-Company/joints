@@ -1,0 +1,39 @@
+{
+ "grammar": "swift",
+ "states": 3416,
+ "blind": [
+  "_arrow_operator_custom",
+  "_dot_custom",
+  "_explicit_semi",
+  "_implicit_semi",
+  "multiline_comment",
+  "raw_str_continuing_indicator",
+  "raw_str_end_part",
+  "raw_str_part"
+ ],
+ "term": {
+  "_implicit_semi": {
+   "states": 20,
+   "rivals": {
+    "1": 16,
+    "2": 4
+   },
+   "alone_sighted": 14
+  },
+  "_explicit_semi": {
+   "states": 14,
+   "rivals": {
+    "1": 10,
+    "2": 4
+   },
+   "alone_sighted": 14
+  },
+  "multiline_comment": {
+   "states": 4,
+   "rivals": {
+    "2": 4
+   },
+   "alone_sighted": 4
+  }
+ }
+}

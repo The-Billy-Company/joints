@@ -1,0 +1,16 @@
+# `string_close` is declared external by rust's grammar and the coverage gate
+# called it witnessable. It is not, and this specimen is the evidence.
+#
+# tree-sitter builds this construct correctly and still never says the word:
+# the closing quote arrives as the anonymous token `"`, because rust's grammar
+# aliases the external away at every use site. No parse of any input can name
+# it, so "exercised" was never a reachable state for this row and the gate was
+# counting an unreachable denominator. The gate now excludes it.
+#
+# What is left is a real claim, and it is the one worth making: the literal
+# closes where the oracle says it closes.
+roots 1
+mends 0
+holds string_literal
+spans string_literal 17 20
+spans string_content 18 19

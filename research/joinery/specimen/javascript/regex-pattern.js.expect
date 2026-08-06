@@ -1,0 +1,8 @@
+# `_regex_pattern` is external: the scanner has to decide `/` opens a regex
+# rather than divides. The pattern body stops before the closing slash and
+# the flag sits outside it.
+roots 1
+mends 0
+holds regex_pattern
+spans regex_pattern 9 13
+spans regex_flags 14 15

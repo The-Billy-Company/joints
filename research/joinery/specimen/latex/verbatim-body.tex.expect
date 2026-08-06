@@ -1,0 +1,21 @@
+# latex closes a raw region on a STRING, where every family before it closed on
+# a byte, and this file is built so a byte cannot pass it.
+#
+# `find_verbatim(lexer, "\\end{verbatim}")` walks forward keeping the end marked
+# behind it and only stops on the whole keyword. The body here is `\end{x} $y`,
+# which contains `\end` and `{`, so a close that matched the first byte `\`
+# would stop at 17, a close that matched `\end` would stop at 17, and only a
+# close that compares all fourteen bytes reaches 28. The `$y` is in for the same
+# reason from the other side: latex's `$` is math mode outside a verbatim body,
+# so a run that was NOT raw would build a math node in the middle of it.
+#
+# tree-sitter frames the body as one `comment` covering [16, 28) - the newline
+# before it and the newline after are inside the run - and the two `\begin`/`\end`
+# heads as `curly_group_text`. Claims are its tree.
+roots 1
+mends 0
+holds verbatim_environment
+holds comment
+lacks ERROR
+spans verbatim_environment 0 42
+spans comment 16 28

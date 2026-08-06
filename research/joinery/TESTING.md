@@ -16,6 +16,179 @@ to use, if the tree was newer than it, or if the tree moved while it ran. Nine
 instruments have been wrong at some point in this document's life; eight of them
 flattered us and one did the opposite.
 
+Third house rule, and the newest: **two numbers are only a comparison if each
+arm owned its own binary, its own folio cache, and its own oracle seat.** One
+command sets all three, and a before/after pair that skips it has read one arm
+twice - always agreeing with itself, which is why nobody notices:
+
+```sh
+eval "$(python3 tool/pin.py arm before)"   # OUTLINER_BIN + OUTLINER_WORK + OUTLINER_LANE
+python3 tool/standing.py --json > before.json
+eval "$(python3 tool/pin.py arm after)"
+python3 tool/standing.py --against=before.json   # every cell, and what the runs differed in
+python3 tool/standing.py --twice=3               # is this row stable at all?
+```
+
+`--twice=N` re-runs the board as **N separate processes**. That is the whole
+point of it and the part people get wrong: a loop inside one interpreter keeps
+the folio cache decisions, the `accepts` memo and the oracle identity from the
+first pass, so it re-prints the first answer N times and calls the agreement
+stability. It cannot fail. Only a fresh process re-asks every question.
+
+`--against` prints what moved **and what the two runs differed in**, separately,
+so a column that moved because the oracle moved is never read as a board that
+wanders. Full recipe in [`tool/README.md`](../../tool/README.md#pinpy---a-path-is-not-a-version).
+
+Fourth house rule, and it is about the **clock** rather than the workspace:
+**pin the control after the arm.** An arm pinned first ages while you work, and
+it ages in the direction of whatever your siblings shipped meanwhile - so the
+gap between your two pins is not your change, it is your change plus theirs.
+
+A lane pinned its baseline, worked for eight minutes, pinned its arm, and read
+`latex -1,185`. The lex lane had landed a latex fix inside those eight minutes.
+Each arm had its own binary, its own `OUTLINER_WORK` and its own seat; the folio
+shas were checked and matched. **The third house rule is fully satisfied by that
+run and does not cover this**, because nothing wrote to anything being compared -
+the tree simply moved between the two pins, and a work directory per arm cannot
+see a tree it does not contain.
+
+```sh
+# ... make your change ...
+eval "$(python3 tool/pin.py arm after)"     # the ARM first, while the tree is yours
+python3 tool/standing.py --json > after.json
+# ... revert your change ...
+eval "$(python3 tool/pin.py arm before)"    # the CONTROL last, minutes younger
+python3 tool/standing.py --against=after.json
+python3 tool/still.py against after before --mine src/kernel/lex/latex.zig
+```
+
+That last line is the check, and it is the one that does not depend on you
+remembering the order. `pin.py build` records a **per-file manifest** of the tree
+it built from, so `still against` can say not merely *your two arms differ* -
+which is true of every before/after all day - but **in which files**, against the
+ones you claim. A file you did not name is somebody else's afternoon in your
+number.
+
+And the falsifier that found this one is worth stealing: **pin the reverted tree
+last and diff it against your own baseline.** The subject is byte-identical on
+both sides, so the board must come back inert; if it does not, the apparatus is
+indicting itself and no arm you have taken means anything yet. `still against A B
+--null` is that comparison - it inverts the binary rule, so two arms running one
+binary is the requirement rather than the defect.
+
+Fifth house rule, and it is about **which artifact you are looking at** rather
+than which world it came from: **folio identity clears a press change and nothing
+else. For lex, quire or runtime work the control is your own rows removed from
+today's tree.**
+
+A folio is the *pressed table*. A press change moves folios, so "these 12 moved
+and the other 18 held" is a real statement about collateral damage. A `Troupe`
+seating, a scanner fix, a parse-loop change - none of those can move a pressed
+table at all, so "all 30 folios byte-identical" is true, verifiable, mints
+correctly, passes every ticket, and means **nothing whatsoever**. A lane offered
+exactly that as proof its seating broke no other grammar, then noticed latex's
+folio is identical between the arm scoring 108 and the arm scoring 5,246. An
+earlier lane had already shipped the same clearance about a scanner fix.
+
+The control for those is an **isolation arm**: today's tree with *your rows
+deleted and the plumbing left in*. Not a scratch tree pinned at some moment -
+that is strictly worse, because it freezes out your siblings' edits too and you
+are back to attributing their afternoon to yourself. The isolation arm shares the
+whole world including the six files that landed while you worked, and differs
+from it by exactly the change under test.
+
+```sh
+eval "$(python3 tool/pin.py arm after)"     # today's tree, your rows in
+python3 tool/standing.py --json > after.json
+# ... delete ONLY your rows; leave every seam, signature and call site ...
+eval "$(python3 tool/pin.py arm alone)"     # today's tree, your rows out
+python3 tool/standing.py --against=after.json
+python3 tool/still.py against after alone --mine src/kernel/lex/troupe.zig
+```
+
+The lane that built the first one found nine grammars moving in its `before`/
+`after` pair and **none of them its own**; against the isolation arm exactly two
+moved and no third moved a byte.
+
+That last line is also how you know your isolation arm is one. The isolation arm
+is *defined* as the arm differing from today by only your rows, and `--mine` is
+exactly that predicate - so a botched isolation that took out a shared seam on
+the way past fails at the file, by name, before it prints a number. The rule that
+was folklore is now the thing the gate already checked.
+
+And `still against` now refuses the vacuous clearance directly, from the other
+side of the same shape as `--null`. If every folio is byte-identical across two
+arms whose **binaries differ**, that evidence never observed your change, and an
+instrument that did not respond to the treatment cannot clear it - so it reports
+`vacuous` and exits 1 rather than passing in a silence somebody will read as
+agreement. If identity genuinely is your result - a refactor claiming
+equivalence, not absence of collateral - say `--inert` and it holds.
+
+Sixth house rule, and it is the fourth one made **automatic**: **a board carries
+the tree it read, and two boards read from different trees are not a
+comparison.** Nothing to remember, and the refusal exits 4.
+
+`--twice` asks *is this binary's board reproducible*. It does not ask *is this
+board's tree the tree I think it is*, and those diverge here. A lane took two
+controls four minutes apart, ran `--twice` on each, got 930 numbers identical
+across three separate processes both times - and the two controls **disagreed by
+63 standing points on scala**. A third, ten minutes later, agreed with the
+first. All three passed every check this document had; any one quoted alone was
+a different claim about the corpus. The failure mode is not noise, it is
+**confident timestamping of a moment presented as a property of a change**.
+
+So `standing.py` now takes a `still` witness on every run and prints it, `--json`
+carries it, and `--against`/`--twice` compare the two trees before they compare
+the numbers. The three controls above are judged by the gate today:
+
+```sh
+python3 tool/standing.py --against=before.json --mine=src/press/,src/kernel/lex/x.zig
+```
+
+```
+before.json vs this tree: REFUSE - subject: the two arms were built from trees
+    differing in 1 file(s), 1 of which you have not claimed and could move the binary
+    src/kernel/quire/gather.zig  NOT YOURS
+```
+
+That one file is what separated the two controls' *trees*. **The board could not
+have said it and `pin.py`'s manifest always could** - the rule is just that the
+manifest now rides the measurement instead of waiting to be asked.
+
+And it is worth knowing what it did *not* say, because the difference is the
+whole point of recording four fields instead of one. Re-boarded today, each in
+its own folio cache and its own oracle seat, those two binaries agree on scala
+**to the byte** and differ in 3 of 930 numbers, none of them scala; all thirty
+folios are byte-identical. So the tree difference is real, the refusal is
+correct - and the 63 points came from somewhere else. The witness says where to
+look next: two of my own board runs eighteen seconds apart carry different
+`live` digests, because a lane landed something while I measured. A board that
+cannot name its inputs cannot tell those two stories apart, and neither could
+the lane that hit it.
+
+Three lines to know:
+
+- **`--mine` takes a file, a directory, or a glob.** A lane's change is
+  `src/press/`, not one path, and a flag that makes you enumerate fourteen files
+  is a flag whose list stays empty - after which everything is unclaimed and
+  everything refuses. Claiming a directory is the normal case.
+- **An unclaimed `*_test.zig` is a note, not a refusal.** No product binary is
+  built from one, and with ten lanes editing tests continuously a gate that fired
+  on those would fire most of the time. The refusal is for files that could have
+  moved a number.
+- **A board saved before this carries no witness and still diffs**, with a note
+  saying the tree question could not be asked. Nothing that already exists on
+  disk breaks; the gate switches itself on as boards are saved.
+
+And the same witness makes the *arms* judgeable without a board at all, which is
+the cheap check to run before you trust a pair of pins:
+
+```sh
+eval "$(python3 tool/pin.py arm before)"; python3 tool/still.py witness before
+eval "$(python3 tool/pin.py arm after)";  python3 tool/still.py witness after
+python3 tool/still.py against before after --mine src/kernel/lex/latex.zig
+```
+
 ## Where it stands
 
 | | | instrument |
@@ -28,11 +201,42 @@ flattered us and one did the opposite.
 | broken files where code after the break still gets nodes | **25 of 25** (was 0) | `recover.py` |
 | held-out findings nobody has explained | 669 | `breadth.py` |
 | of those, with a named cause and a lane | **669** | this document |
+| axes measured against real tree-sitter | 6 of 6 | `bench.py` |
+| of those, axes we win | **3** (artifact · install · press) | `bench.py` |
+| of those, axes we lose | 2 (throughput · incremental) | `bench.py` |
+| worst single row | **incremental typescript, 153.8x** (was 14,746x, pre-`torn`) | `bench.py` |
+| grammars whose parse is superlinear in what it has already read | **3 of 5** | `order.py` |
+| distinct walls behind every mending grammar, all thirty | **315** (was 24), of which 58 are the peel restarting -> **257** real | `walls.py` |
+| ...collapsed to distinct terminals, in five families | **120** | `walls.py board` |
+| walls whose family nothing on the board claims | **0**, gated | `walls.py gate` |
+| real-code javascript, after the scanner lane's mask, **on the folio path, which is what ships** | **407 ns/B**, was 42,917 | `bench.report.md` |
+| the two paths, priced side by side on five grammars | agree within noise; the folio is now the **faster** one | `bench.report.md` |
+| every incremental row, which needs **two** labels | folio path, and `@98%` **relative** to each file - never an absolute byte | `bench.report.md` |
+| the wall board on both paths, nine grammars | **identical, wall for wall** - and now gated | `walls/README.md` |
 
 Two of those moved because the parser got better, and two moved because an
 instrument stopped lying. The sections below keep the old number beside the new
 one in every case, because a reader who remembers 71.6% is owed the reason it
 moved and the fact that no parser code was involved.
+
+The head-to-head is new and it is not flattering. It has its own dossier at
+[`bench.report.md`](bench.report.md); the short version is below under
+[Against tree-sitter](#against-tree-sitter---six-axes-three-wins-two-losses-and-one-unmeasurable).
+
+**One number in that dossier has already been retracted, and it was mine.** The
+first draft blamed `_automatic_semicolon` on the strength of a newline ablation
+that held the byte count constant and did not notice it had turned 99.96% of the
+file into a line comment. A twelfth instrument, and the twelfth to flatter a
+story rather than test it. The real cause is a quadratic scan, attributed by
+profile and by a witness that holds bytes **and** nodes constant; the retraction
+is kept on the page beside it for the same reason the 71.6% is.
+
+That witness is no longer two files in `/tmp`. It is committed at
+[`research/joinery/order/`](order/README.md) with the construction that makes it,
+and `python3 tool/order.py` holds all five grammars to a **1.6x** ceiling on the
+ratio between the same bytes and the same nodes in a different order. It is red
+today at 2.8x to 4.1x, which is what a gate written before a fix is supposed to
+be.
 
 ---
 
@@ -388,6 +592,11 @@ bash's bare-regex external at `=~`, which is the same lane one row later.
 `offer()` is still behind that. Two walls turned out to be at least three, which
 is what "the first wall, not the only one" was warning about.
 
+**That warning has since been turned into a number**, and it is far smaller than
+this section feared: twenty grammars wall, and between all of them the tail
+holds **24 distinct walls**, eighteen of them exactly one deep. See
+[How deep is the tail](#how-deep-is-the-tail-twenty-four-walls-and-eighteen-grammars-are-one-wall-deep).
+
 **And a `stray byte` does not always mean a lexer.** It means no terminal was
 produced at that offset, which happens both when nothing *could* lex those bytes
 and when the terminal exists but the state never offered it. Those are opposite
@@ -513,6 +722,234 @@ this tree could not move the floor under a three-minute measurement. The corpus
 row was then re-taken an hour later on the tree's own `4d0d74316`, which reads
 13,653 of 13,656: **one byte apart on two binaries, both 100.0%**. Two tree
 states agreeing is the corroboration; one is an anecdote.
+
+### How deep is the tail? 315 walls, and the first answer I gave was wrong
+
+**Retracted: "24 distinct walls, eighteen grammars one wall deep."** That number
+was an artifact of my own instrument and it survived about two hours. The peel
+stepped past `reach` - where the parse *got to* - rather than past the byte the
+verdict *names*. For a mending parse those are opposite ends of the file:
+haskell says `unexpected . at 681 in state 7, 94 roots, mended 4940` over 34,240
+bytes, so the peel read `34,239`, stepped past the end, and terminated after one
+round having found exactly one wall. Every grammar whose wall was a refused
+token got the same treatment, which is why almost every row came back "1" and
+why the total looked so encouraging.
+
+The tell was there and I walked past it: the two lexical rows peeled properly -
+julia 5, markdown 79 - because `stray` returned the named byte while the state
+path returned reach. One code path in the same function using the right number
+and the other using the wrong one, producing a result that flattered. That is
+the thirteenth instrument in this document to do it, and the first one I built
+knowing the pattern.
+
+`stamp.Outcome` now carries `at` - the byte the verdict names - beside `reach`,
+with the distinction written down where the next caller will read it, because
+this is the third time these two have been confused in this project.
+
+**The corrected measurement.** `python3 tool/walls.py --depth 400`:
+
+| | |
+|---|---:|
+| grammars that hit a wall | 20 of 30 |
+| **distinct (terminal, state) walls** | **315** |
+| ...and those collapse to distinct terminals | **120** |
+| ...in five families | **5** |
+| deepest grammar | kotlin, at 52 |
+| still walled at the 400-round ceiling | 8 |
+
+So the tail is an order of magnitude larger than the retracted number, and it is
+**a floor**, not a total: eight grammars were still finding new walls when the
+depth ceiling stopped them.
+
+**What survives the retraction is the shape, and it is the part worth having.**
+Mends were still counting volume rather than depth - haskell's 4,940 mends are
+**10** distinct walls, verilog's 1,652 are **22**, julia's 4,749 are **44**. A
+94x-to-494x ratio between mends and distinct walls is the same finding the first
+pass made, with a denominator that is no longer fabricated.
+
+**And the families route.** Grouping the 315 by the shape of the terminal rather
+than by grammar gives five buckets and three lanes
+([the full board](walls/README.md), rendered by `walls.py board`):
+
+| family | lane | walls | shapes | grammars |
+|---|---|---:|---:|---:|
+| permissive body pattern | **scanner** | 105 | 22 | 16 |
+| bracket refused | **weave** | 63 | 8 | 14 |
+| named terminal / keyword | *unassigned* | 59 | 45 | 12 |
+| separator refused | **press** | 55 | 12 | 12 |
+| unrunnable external | **scanner** | 33 | 33 | 5 |
+
+The largest family is **the same defect as the largest cost**. A permissive body
+pattern is exactly the shape the scanner lane's voice analysis describes - a
+member that matches a run of anything-but-a-delimiter, survives to end-of-file,
+and drags its whole voice with it - and it accounts for 105 of the 315 walls
+across sixteen grammars. `(?:[^\\"\n]+)` alone stands in c, cpp, verilog and
+zig; scala's `xml_text` is 28 walls by itself. That the throughput defect and
+the correctness tail turn out to be one family was not visible from either side
+alone.
+
+**The brackets are weave's, and `offer()` now has three witnesses rather than
+one.** 63 walls across fourteen grammars are an opener or closer the state
+refused. Narrowing to the exact terminal zig was routed on:
+
+```
+go     { in state 188
+ocaml  { in state 239
+zig    { in state 715
+```
+
+A refused `{` in one grammar makes a predicate *plausible*; the same terminal
+refused at a block opener in three unrelated grammars makes it **testable** -
+a fix can be checked against two grammars it was not designed on. The wider
+family is `)` at 26 walls over eight grammars and `}` at 17 over ten, which is
+either the same predicate or its neighbour and is worth checking before the
+narrow fix is called done.
+
+**59 walls are unassigned and stay that way.** Keywords and named terminals -
+verilog's `begin`/`end`/`endcase`, sql's nine `keyword_*`, latex's
+`\documentclass` - have no shape that routes them, so the classifier prints them
+as residue rather than guessing. That is the honest size of what shape alone
+cannot answer.
+
+#### 315 is a floor, and the count is the wrong thing to quote
+
+The peel resumes from a clean start, so it begins each round in state 0 rather
+than in the state the loop had accumulated - which means a wall that only exists
+after four thousand lines cannot be reached at all. That biases in one
+direction, so the question is how far. `python3 tool/walls.py warm` answers it
+by never restarting: it parses the **whole file** every round and blanks the
+offending byte, so the prefix stays real and the state is the one the parser
+would actually be in.
+
+| grammar | rounds | cold | warm | **warm-only** | last new at | quiet since | per 100 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| haskell | 300 | 9 | 10 | **9** | 219 | 81 | 1.3 |
+| julia | 300 | 35 | 36 | **11** | 215 | 85 | 2.7 |
+| verilog | 300 | 19 | 13 | **11** | 171 | 129 | 2.0 |
+
+Both peels in that run are at depth 300, so the `cold` column sits below the
+survey's 400-round figures (haskell 10, julia 44, verilog 22). They have to be
+compared at the same depth or the diff measures the ceiling instead of the
+resume.
+
+**It is a floor, decisively.** 31 walls over three grammars exist only in
+accumulated context - nine of haskell's ten, and every one of them in states 7
+and 48; all eleven of julia's in a single state 45. So 315 undercounts, and it
+will keep undercounting for as long as anyone keeps peeling: new walls were
+still arriving at round 219 of 300.
+
+**But the arrival rate is low and falling**, 1.3 to 2.7 per hundred rounds in
+the back half, with 81 to 129 quiet rounds at the end of each run. That is not
+saturation and it is not an explosion either. It is the third world, which
+neither of the two we set out to distinguish quite describes:
+
+> **Every one of the 31 warm-only walls lands in a family that already existed.**
+> 16 named terminals, 8 separators, 4 permissive body patterns, 3 brackets. No
+> new family appeared, and the states repeat - one state refusing eleven
+> different terminals is one broken state, not eleven.
+
+So the honest instruction is: **quote the families and the rate, not the total.**
+The total is a floor that grows with how long you peel and will never be a
+number I can defend. The five families are closed under an extra 900 rounds of
+peeling in the hardest three grammars, which is the property that makes the
+board a work list rather than a running tally. If a sixth family ever appears,
+that is the finding - and `python3 tool/walls.py gate` is now what goes red when
+one does. Fixed roster of nine grammars chosen for family spread, fixed 40
+rounds, both peels, 44 seconds, in CI. It gates **closure, never the count**,
+because the count is a floor and a longer budget would fail it for nothing.
+
+The gate earned its place before it shipped. Its first run failed on three walls
+belonging to no family - `:=` in go and `@` in kotlin - which were not a sixth
+family at all but a hole in the classifier: separators were an *enumeration* of
+the operators someone had already seen. That is now a predicate ("made only of
+punctuation, and not a bracket or a quote"), which needs no new row when a
+grammar spells assignment differently. Four adverse shapes (`end task`, `0x`,
+`<<EOF>>`, `3quarters`) still return no family, so the check remains capable of
+failing - a total classifier could never have reported the surprise it exists to
+catch.
+
+#### 58 of the 315 are the peel restarting, not the parser failing
+
+Asked once more whether a number was a floor or a ceiling, and it was neither -
+it was inflated. **18% of the walls sit in state 0**, the start state, which the
+cold peel enters on every round after the first while holding the middle of a
+construct. A sql start state refusing `end`, `else` and `or` is correct
+behaviour, not a defect.
+
+Two independent checks agree: **no grammar's first wall is in state 0** - round
+one reads the whole file from byte 0 and is the only round that could honestly
+land there - and **the warm peel, which never restarts, produces none at all**,
+against nine of haskell's ten from the cold peel.
+
+So the defensible figure is **257**, and haskell really is one wall deep - which
+the retracted first pass said for entirely the wrong reason. sql loses 22 of its
+31. This is the third bias the floor-or-ceiling question has found, and the
+first that made the tree look *worse* than it is, which is the direction that
+never gets caught by suspicion alone.
+
+#### The retracted first pass, kept for the reason the 71.6% is
+
+The first pass reported **24 distinct walls, eighteen grammars one wall deep,
+deepest julia at 5**, and concluded the tail was bounded and nearly flat. It is
+kept on the page rather than deleted, for the same reason the 71.6% is: a reader
+who saw that number is owed the reason it moved, and the reason is not that the
+parser changed. Nothing in `src/` moved between the two measurements. What moved
+is that the peel started stepping past the right byte.
+
+The retracted table's per-grammar claims map onto the corrected ones directly -
+haskell 1 -> **10**, verilog 1 -> **22**, julia 5 -> **44**, kotlin 1 -> **52**,
+scala 1 -> **43**, elixir 1 -> **32**, go 1 -> **7**. Only the two lexical rows
+were right the first time, and they were right by accident.
+
+One claim from the first pass does survive intact, because it came from the
+grammar report rather than from the peel: zig's `{` in state 715 is corroborated
+by the tree's own suite, which prints `press on { in state 715` from
+`src/press/census_test.zig` on a full `zig build test` - a different instrument,
+a different code path, the same state number.
+
+### yaml is not a wall, it is a grammar that never starts
+
+yaml is the only grammar that reaches nothing, and printing it as a wall with
+a lower bound - which is what the survey does - undersells what it actually
+needs. The reason is categorical rather than positional, and
+`outliner grammar upstream/grammars/yaml.json` says it outright:
+
+```
+symbols      328  (113 terminal, 215 nonterminal)
+terminals    0 literal, 0 regex, 113 external
+lr(0) states 910  ...  0 RESIDUAL (0 s/r, 0 r/r)
+```
+
+**Every one of its 113 terminals is an external.** There is no first byte to
+name because there is no terminal producible at any byte, so "reach 0%" is not
+a parse that stopped early - it is a lexer that never starts. And the same
+report is the cleanest evidence in the project that the two halves are
+independent: the press builds yaml's table to **zero residual conflicts** over
+910 states while the scanner has nothing at all to hand it. The press is not
+what is missing here.
+
+It belongs to the scanner lane, as the extreme case of the blind-external
+stand-in machinery rather than as a thirtieth wall: every other grammar has some
+terminals to lex and loses a few to externals, and yaml is the limit point where
+the stand-in has nothing whatsoever to stand on. Whatever bounds the general
+case has to answer for this one, so it is worth keeping as the acceptance test
+rather than as a footnote - a stand-in that gets yaml to a non-zero reach has
+been proven to work without any real terminals to lean on.
+
+**What the peel is, and is not.** Resuming parses the remaining bytes from a
+clean start, so each round begins in state 0 rather than in the state the
+product loop had actually accumulated. A peeled wall is therefore a wall this
+grammar hits reading that text *cold* - real and reproducible, and not
+guaranteed to be the identical wall the mending loop met at that byte. It
+enumerates the tail's distinct *difficulties*, which is the question asked; it
+can name a wall the loop would have mended past. Doing better needs the loop to
+report its own stops, which is `src/`, which is another lane's. Every row says
+how it was obtained, and the one row that did not finish - yaml, which has no
+lexable terminal anywhere - is printed as a lower bound rather than a zero.
+
+Taken on `outliner 1e91ef9c8`, built from `95b3f4ee5` over a tree at
+`3d980e308+43`. The scanner lane rebuilt three times while this was being
+measured; nothing above is a duration, so none of it moved.
 
 ### The held-out nineteen: 669 findings, and not one of them is unattributed
 
@@ -784,6 +1221,181 @@ of the other six stops is one of three known-and-owned things:
 
 ---
 
+### Against tree-sitter - six axes, three wins, two losses, and one unmeasurable
+
+Full dossier: [`bench.report.md`](bench.report.md). Two sweeps, `bench.py`,
+tree-sitter 0.26.11, the same 128 KB files, both stamped.
+
+**Lead with the loss.** One space typed and deleted near the end of a 131,565 B
+typescript file costs us **66,224 us against tree-sitter's 430.6 us - 153.8x**.
+Our first keystroke costs 66,497 us and our own cold open of that file is
+75,206 us, so on this grammar **the edit costs 88% of reopening the file.**
+
+**And typescript is now alone in that.** This row read 14,746x, with javascript
+at 10,066x and java at 326x, until the weave lane's `torn` fix gave each live
+reading its own strand. Re-taken on a current binary at the same `@98%` relative
+cut, java is **1.6%** of a cold open and javascript **1.1%**, beside rust's 2.7%
+and json's 1.7%. A three-grammar defect became a one-grammar defect, which makes
+it a better bug: whatever typescript does differently is now the whole question.
+
+| axis | span | verdict |
+|---|---|---|
+| press | 0.01x - 0.50x | **ours**, and by the widest margin on the board |
+| artifact | 0.14x - 0.68x | **ours** - cpp 779,024 B of folio vs 5,636,440 B of `.so` |
+| install | 0.19x tooling | **ours** - one binary + N folios vs the CLI + N dylibs |
+| memory | 0.60x - 1.16x | **ours on 4 of 5**; typescript loses at 1.16x |
+| throughput | 1.14x - 724x | **theirs**, on all five, json nearly level - *see the collapse below* |
+| incremental | 0.89x - 153.8x | **theirs on 4 of 5**; json is the one row we take, and typescript is now the only bad row |
+| startup | - | **unmeasurable** while the parse swamps it; see below |
+
+**The throughput row is out of date in our favour, and only on one code path.**
+The scanner lane's reachability mask landed, and the prediction written down
+before it did - javascript and typescript collapsing toward a 700-900 ns/B band
+while rust and java barely move - was met: javascript went **42,917 -> 320
+ns/B** and typescript **50,818 -> 478**, while rust moved 1.5x and java 2.7x.
+The 60x-280x spread that made the two blind-external grammars outliers on real
+code is gone; all five now sit between 64 and 608 ns/B.
+
+**For 34 minutes it was live on only one of two code paths, and the product ships
+the other one.** The same binary parsed the same file in 0.14 s from a grammar
+and 15.40 s from a folio it minted itself, because the mask was derived at import
+and never written into the folio. The scanner lane closed the round-trip, and the
+folio is now the *faster* path - it skips the import the grammar path pays every
+time. `order.py` gates both paths separately and is flat on all ten rows;
+javascript's folio row went 15,654 ms to 45 ms.
+
+**Every number in `bench.report.md` now says which path it was taken on.** The
+performance axes were all folio already, which is luck rather than design; the
+exceptions were the prediction-collection numbers taken by hand through a
+grammar, and those were exactly the flattering ones. Re-taken on the folio path
+they agree within noise. On real corpus code through folios the whole eleven-
+grammar table now reads 109-777 ns/B, javascript at **407** and typescript at
+**565**. `research/joinery/bench.report.md` carries the audit.
+
+**The cause is attributed, and the first attribution was wrong.** The previous
+draft of this section led with a newline ablation - `\n` replaced by `' '` took
+javascript-122.js from 18,237 ms to 11.9 ms at an identical byte count - and
+named `_automatic_semicolon` from it. **That is retracted.** The file holds 244
+line comments, the first at byte 251, so replacing the newlines turned the rest
+of the file into one line comment: the tree goes from **39,407 lines to 17**. The
+fast run was not a cheaper parse of the same program, it was a parse of almost no
+program. Holding bytes constant is not holding work constant.
+
+Held properly - bytes **and** node count fixed, only the newline count varied -
+line terminators do not matter at all: 2,000 newlines costs 987 ms and 32
+newlines costs 942 ms over the same 24,890 bytes and 28,001 nodes. ASI is not the
+cause.
+
+**What is.** A sampling profile of one 18-second run puts **98.2% of 2,354
+samples** under `Scanner.read` at `scanner.zig:801` - which is `s.reach(...)`,
+the slate walk - and into `Munch.longestAmong`. The fold path takes **0.13%** and
+minting **0.04%**, so the scanner is the site and the parse loop is not.
+
+The defect is that **scanning a byte costs in proportion to how much has already
+been read**, which makes every parse quadratic. The witness holds bytes and nodes
+exactly constant and moves only the order of two halves:
+
+```
+4000 statements, then a 100 KB string literal    152,010 B   28,011 nodes   16,175 ms
+a 100 KB string literal, then 4000 statements    152,010 B   28,011 nodes    4,232 ms
+```
+
+**3.8x-4.7x from order alone** across four takes on three binaries, and
+isolated, that tail costs 12,877 ms read last against 116 ms read first -
+**111x for the same bytes**. Five hypotheses are tested and discarded in the
+report: ASI, mending (all five parse **whole, 0 mends, 1 root**), folio size
+(rust's folio is 2x javascript's and parses 40x faster), identifier vocabulary
+(6%) and sibling count (2.2x).
+
+That pair is now **committed**, at `research/joinery/order/`, alongside the
+construction in `tool/order.py` that makes it and the gate that holds it. It
+used to be two files in `/tmp`. The construction is the finding: **holding bytes
+constant is not holding work constant** - the retracted ASI ablation held bytes
+exactly and turned 99.96% of the file into a line comment - and this is the first
+pair here that pins bytes *and* nodes at once. So both axes are re-checked on
+every run, and a pair that stopped matching would report "this proves nothing"
+rather than a ratio.
+
+`python3 tool/order.py` is the gate: not a duration, which would be
+laptop-specific, but a **ratio between two parses on the same machine in the
+same process**, ceilinged at **1.6x**. The number comes from what the flat
+grammars already achieve - json 0.96 / 1.01 / 1.00, java 0.88 / 0.96 / 0.99 over
+three replicates, so 12% is the widest excursion without the defect - with about
+five times that in headroom against the 4.3x load swing measured below. Today
+three of five rows fail it at 2.8x to 4.1x, which is the point; a gate that
+passed before the fix would not be a gate. It is `continue-on-error` in CI for
+the reason rung 1 does not gate its thirty refusals, and that comes off the day
+all five rows are under the ceiling.
+
+The narrowing that goes with it is checkable rather than asserted, and all five
+grammars now carry the swing as a measured row rather than three rows and two
+dashes - because that column is what separated the groups, and it is the cheapest
+early warning if a fix only helps javascript:
+
+| grammar | blind externals | order swing |
+|---|---:|---:|
+| rust | 3 | **4.0x** |
+| typescript | 4 | **4.0x** |
+| javascript | 2 | **3.8x** |
+| json | 0 | 0.9x |
+| java | 0 | 0.8x |
+
+**Every grammar with zero blind externals is flat; all three with blind
+externals swing about 4x.** Presence separates the groups; count does not order
+them within one, so this names where to look first and is not proven to carry the
+whole magnitude.
+
+**`lex` is a false-negative surface for this class**, and it is the trap the next
+person would walk into. The same pair through the bare lexer costs **46 ms and
+47 ms** - flat in both orders, 350x cheaper, indistinguishable from health -
+because the defect lives in the per-position admitted set that the parse loop
+supplies and the lexer has none. A gate built on `lex` would pass forever while
+`parse` stayed quadratic. `order.py` goes through `stamp.ask`, which parses, and
+re-runs the lexer over the worst pair on every run so the trap is demonstrated
+rather than filed.
+
+Four things this section will not round up:
+
+- **`startup` is not an axis yet.** It is a fixed cost subtracted from a slope,
+  and the subtraction goes negative wherever the parse is slow - javascript
+  `-207 ms, +-809%`. Exactly one grammar survived, on one sweep. It becomes
+  measurable the day the quadratic is gone, and a published negative duration
+  would have been worse than three "skipped" lines carrying their arithmetic.
+- **The throughput table is the flattering subset.** Six grammars are absent
+  because outliner stops early on their 128 KB file.
+- **The double take is the weaker kind.** The census's two runs were one byte
+  apart; these two sweeps ran on *different binaries* because another lane's
+  `scanner.zig` landed between them, and both printed `MOVED` saying so. 35 of
+  39 guarded numbers still held across a **4.3x change in machine load**, and the
+  four that moved were all wall-clock. That is the argument for quoting the
+  ratios and not the absolute times.
+- **The incremental losses are two defects, not one** - and the argument is
+  confirmed by how they were fixed. java carried **zero blind externals** and was
+  nowhere near the quadratic, yet was 326x, so the two could not be one bug.
+  Fixing the mask did nothing for it; fixing strands took it to 1.6% and left the
+  throughput row untouched. What survives is typescript at **88.4%** of a cold
+  open, on a harness where four other grammars are under 3%. It reads as a
+  predicate rather than an algorithm, and it is carried as its own handoff row so
+  it cannot be absorbed into the
+  quadratic's story.
+
+A pathology found on the way that now shares a signature with the main defect: a
+file of nothing but whitespace is quadratic under the rust folio (`n^2.0`,
+409,600 B in 73 s) and linear under json's (102 ns/B) - **the same
+json-against-the-rest split as the order test**. It does not transfer to real
+files (collapsing whitespace in a real rust file moves 144 ms to 139 ms), so it
+was logged separately; it should now be retested against the same fix rather than
+chased alone.
+
+Hardware-independence, since two of these axes are byte counts and four are
+clocks: `artifact` and `install` are **exact anywhere**. All ratios are
+**near-independent** - both sweeps agree inside 8% across the 4.3x load swing.
+Every absolute duration and **the whole `memory` axis** are **laptop-specific**;
+peak RSS on 16 KB-page arm64 macOS is not a number to quote on a 4 KB-page Linux
+box.
+
+---
+
 ## Rung 2 - does the lexical monoid collapse?
 
 **Premise.** M1 elements are `|Q|`-entry tables, cheap only because real lexers
@@ -827,6 +1439,21 @@ win.
 99% of an editor's keystrokes. Losing on edit 2 means the central argument was
 wrong.
 
+**First measurement, and it is the kill condition.** `bench.py`'s `incremental`
+axis is edit 1 - one character typed and deleted at **98% of each file's own
+length**, relative and never an absolute byte - and we lose it on four grammars
+of five: typescript 153.8x, rust 7.1x, java 3.0x, javascript 1.2x, against a win
+on json at 0.89x. Two distinct defects sat behind that: the quadratic scan above,
+and three grammars **not engaging the incremental path at all**. The second is
+now one grammar - typescript, whose first keystroke is 88.4% of a cold open while
+java is 1.6%, javascript 1.1%, rust 2.7% and json 1.7%. java is what proved they
+were two defects: zero blind externals, nowhere near the quadratic, and 326x
+anyway. The
+rung is not dead - json shows the splice works where nothing obstructs it, and
+rust is 97x cheaper than reopening - but the premise is unproven until those two
+defects are cleared and it is re-measured across the size sweep this rung
+actually asks for. See [`bench.report.md`](bench.report.md).
+
 ---
 
 ## Rung 4 - is the quotient worth its build time?
@@ -842,6 +1469,16 @@ table needs >20 GB to build.
 
 **Kill condition.** Not materially below CSR on bits per production, or a press
 that cannot build the forty grammars inside a CI runner's memory.
+
+**First measurement, on the megabyte half only.** `bench.py`'s `artifact` and
+`press` axes cover eleven grammars against tree-sitter's own generated C, and
+both go our way: folio is **0.14x - 0.68x** of the compiled `.so` (cpp 779,024 B
+against 5,636,440 B, from 25,860,012 B of C we never emit), and press is
+**0.01x - 0.50x** of generate-plus-build (ruby 148 ms against 12,429 ms). Both
+are pure byte counts and wall-clock ratios, so both reproduce anywhere. This does
+**not** discharge the rung: it is eleven grammars not forty, megabytes not bits
+per production, and it has no CSR baseline in it. See
+[`bench.report.md`](bench.report.md).
 
 ---
 
@@ -879,6 +1516,32 @@ product regardless of how good the algebra is.
 **Kill condition.** Node-name divergence, because it silently breaks every
 downstream `.scm` file in the world. This one is pass/fail with no tolerance
 band.
+
+---
+
+## How to read `zig build test`, since three of us read it three ways
+
+The suite is a twelfth instrument that has been misread, and the misreading goes
+both directions - one lane calling a green run red, another calling a red run
+green. Three rules:
+
+- **Assert on the `Build Summary` line and the `FAIL` count.** A clean run says
+  `Build Summary: 73/73 steps succeeded` and prints no `FAIL`. The last run here
+  said `71/73 steps succeeded (1 failed)` with **exactly one** `FAIL`:
+  `kernel.weave.amend_test.test.weave: the same, on rust, which is the grammar
+  that forks`, in shard 15/32.
+- **Never assert on `$?`.** It reads **0** on a run that failed a shard. A
+  wrapper swallows it, so the exit code is not a verdict and never was.
+- **Never grep for `expected`.** The thirteen `expected .accepted, found
+  .unexpected` lines and the eleven off-by-ones under `weave: negative control`
+  are **the negative control's own printed diagnostics**, not failures. They
+  print on a passing run.
+
+The proof of the last two: rerunning the one failing shard alone gives
+`brigade 15/32: 10 passed, 0 skipped, 0 failed` three times in a row, while still
+printing the `expected .accepted` lines. That row is **parallel-load flake**, not
+a defect - which also means a `FAIL` count of one is not automatically a red run,
+and the shard has to be rerun alone before it is called either way.
 
 ---
 

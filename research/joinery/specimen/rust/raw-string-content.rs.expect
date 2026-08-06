@@ -1,0 +1,11 @@
+# The second of rust's two aliased externals. `raw_string_literal_content`
+# is emitted under the name `string_content`, so the external's own name
+# cannot appear in any tree either.
+#
+# The claim is that a raw string keeps its backslashes: `r"a\b"` holds three
+# content bytes, not two, and the `r` and both quotes stay outside them.
+roots 1
+mends 0
+holds raw_string_literal
+spans raw_string_literal 17 23
+spans string_content 19 22

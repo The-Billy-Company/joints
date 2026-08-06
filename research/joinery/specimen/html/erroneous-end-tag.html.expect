@@ -1,0 +1,48 @@
+# `<p>x</q>` - nine bytes, and the only instrument in this tree that sees the
+# defect in them is this one.
+#
+# html is the grammar the board calls genuinely clean: 72,288 bytes, 72,288
+# built, 100.0% standing, zero damage, and `rack` scores viewer.html 13,971
+# labeled brackets shared of 13,971 with zero askew and zero racked. That is a
+# real result and it stays true. It is also bounded by what viewer.html holds.
+#
+# tree-sitter over viewer.html builds 13,972 nodes, 531 `element`s and 506
+# `end_tag`s, and **zero** `erroneous_end_tag`. The corpus never presents a
+# mismatched close, so no corpus instrument can have an opinion about one.
+#
+# `_erroneous_end_tag_name` is declared external precisely so a mismatched
+# close is a named thing rather than damage. The oracle reads these nine bytes
+# as ONE element:
+#
+#   element [0, 8)
+#     start_tag [0, 3)
+#     text [3, 4)
+#     erroneous_end_tag [4, 8)
+#       erroneous_end_tag_name [6, 7)
+#
+# outliner produces three roots and no `element` at all - `start_tag`, `text`
+# and `erroneous_end_tag` side by side, then `truncated; input ended before the
+# start symbol closed`. Every leaf is identical to the oracle's, at identical
+# extents, including the external this specimen was written for. Only the
+# parent is missing.
+#
+# That is why four of these six claims hold. `holds erroneous_end_tag_name`,
+# `spans erroneous_end_tag_name 6 7`, `spans text 3 4` and `mends 0` all pass:
+# the lexing is right and nothing was repaired. `roots 1` and `holds element`
+# fail, and they are the whole defect.
+#
+# `rack` cannot see it either, and this is worth stating plainly because rack
+# is the most sensitive instrument here. Run against this specimen it reports
+# 7 built, 7 square, 0 askew, 0 racked, 6 of 6 brackets shared - clean. It
+# compares spines *inside built windows*, and a parent that was never built is
+# in no window. Its `frames` column notices there are 2 frames where the oracle
+# has 1, but `framed` only charges a frame whose NAME disagrees, so a parse
+# that fragments into more frames than the oracle costs nothing. A wrong shape
+# over right leaves was rack's founding example; a MISSING shape over right
+# leaves is the same blind spot one step further out.
+roots 1
+mends 0
+holds erroneous_end_tag_name
+spans erroneous_end_tag_name 6 7
+holds element
+spans text 3 4

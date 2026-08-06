@@ -1,0 +1,36 @@
+# A right leaf under a wrong parent, in 21 bytes, with every token agreed.
+#
+# `defp f(x) do x end` defines f. Outliner reads it as f being CALLED with a
+# do-block: it hangs the `do_block` inside `arguments`, and stretches the inner
+# `call` over it.
+#
+#   outliner                      tree-sitter
+#   call [0, 20)                  call [0, 20)
+#     identifier  "defp"            identifier  "defp"
+#     arguments [5, 20)  <-- 20     arguments [5, 9)   <-- 9
+#       call [5, 20)   <-- 20         call [5, 9)      <-- 9
+#         identifier "f"                identifier "f"
+#         arguments "(x)"               arguments "(x)"
+#         do_block [10, 20)         do_block [10, 20)  <-- sibling of arguments
+#
+# Elixir's `defp f(x) do ... end` is `defp(f(x), do: ...)`: the do-block is an
+# argument of `defp`, not of `f`. Outliner's reading says the block belongs to
+# the call being defined.
+#
+# EVERY LEAF IS IDENTICAL. Both parsers agree on all seven tokens and on all
+# of their extents. The entire disagreement is attachment, one level up.
+#
+# `plumb` scores this file **0 misread bytes** - there is no leaf whose name or
+# extent moves, so a byte-indexed comparison has nothing to index. `rack`
+# scores 15 of 21: 14 racked, 1 askew. That gap, in a file this size, is why
+# 9.24% was a floor.
+#
+# This is not php and it is not a lexer gap: elixir seats its externals and
+# builds 44,530 bytes with 39 unjudged. It is the corpus's largest single
+# source of racked bytes at 17,654 - more than every other grammar except php
+# contributes crooked in total - and 99.6% of it survives subtracting extras.
+roots 1
+mends 0
+holds do_block
+spans do_block 10 20
+spans arguments 5 9

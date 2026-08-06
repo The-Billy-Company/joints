@@ -1,0 +1,17 @@
+# `val t = """a""""` - four closing quotes, and the close is greedy.
+#
+# Kotlin terminates a raw string at the *last* `"""` in a run, so the content
+# is `a"` and the literal spans all eight bytes [8, 16). A first-match reader
+# closes at [8, 15) and leaves a stray `"` behind, which is why `roots 1` and
+# `mends 0` discriminate here even without the span: the leftover quote has
+# nowhere to go. The span pins which of the two readings produced the root.
+#
+# This is the strongest claim in the tier and the one with no oracle behind
+# it - there is no tree-sitter in this checkout, so it is derived from the
+# Kotlin grammar's own raw-string rule and the language reference, not
+# measured. Read RESULT-1 before trusting it.
+roots 1
+mends 0
+holds string_literal
+spans string_literal 8 16
+spans string_content 11 13

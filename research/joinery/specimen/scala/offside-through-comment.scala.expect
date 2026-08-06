@@ -1,0 +1,25 @@
+# A block comment sitting inside an indentation region, which is the one place
+# scala's two seated rows have to agree with each other.
+#
+# `_indent/.offside/.slashes` decides where the template body ends; a comment
+# is not code and must not close it. `block_comment/.marrow/.kotlin_block`
+# decides where the comment ends; get that wrong and the offside reader is
+# handed operator tokens at a column it has to rule on. The two claims below
+# are one claim each, and they fall together:
+#
+#   sc-base  both hold        template_body [8, 41)  block_comment [10, 17)
+#   sc-r0    comment survives, template_body gone
+#   sc-r4    comment gone,     template_body gone
+#
+# That last line is the whole reason this file exists. The comment row is not
+# merely co-located with the offside row in one corpus fixture - un-seating it
+# costs the offside construct as well, inside a file of 42 bytes where fixture
+# layout cannot be the explanation. `research/joinery/consort/RESULT-3-scala.md`
+# read a +5,500 corpus residual as those two rows "cooperating" off a tree that
+# had regressed; the corpus can no longer be the only evidence either way.
+roots 1
+mends 0
+holds template_body
+spans template_body 8 41
+holds block_comment
+spans block_comment 10 17

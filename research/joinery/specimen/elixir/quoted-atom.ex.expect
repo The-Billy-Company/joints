@@ -1,0 +1,24 @@
+# `_quoted_atom_start` is one byte with a look at the next one, and it is the
+# last thing standing between elixir and a whole parse.
+#
+# The scanner advances past `:`, calls `mark_end`, and then only *peeks*: it
+# returns true when the next byte is `"` or `'` and false otherwise. So the
+# token is the colon alone, the quote stays the grammar's own, and the whole
+# external is a spelling plus trailing context - `outside.Provision`, not a
+# hand. `: "a"` is a colon before a string and `:"a"` is an atom, and only the
+# byte after the colon tells them apart, which is the entire reason it is C.
+#
+# The interpolation is here on purpose. It is the shape the corpus actually
+# holds - `router.ex` has `:"__match_route_#{verb}__"` at byte 22,229 and
+# `:"__pipe_through#{...}"` at 24,175, and those two were where the parse stopped
+# once the newline seam was seated. A quoted atom with no `#{}` would pass on a
+# close that swallowed the body.
+#
+# Claims are tree-sitter's tree over these 17 bytes.
+roots 1
+mends 0
+holds quoted_atom
+holds interpolation
+lacks ERROR
+spans quoted_atom 7 16
+spans interpolation 10 14

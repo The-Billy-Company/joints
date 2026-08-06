@@ -1,0 +1,34 @@
+# The only defect in this lane that is not a wrong parent, and the reason the
+# instrument that reported it needed adjudicating.
+#
+# `rack` charges toml 29 bytes and files them as a derivation dispute. They are
+# not. Both parsers hang the comment under the SAME parent; outliner just
+# forgets to grow the parent over it.
+#
+#   outliner                      tree-sitter
+#   pair [0, 7)     <- 7           pair [0, 12)   <- 12
+#     bare_key [0, 1)                bare_key [0, 1)
+#     string [4, 7)                  string [4, 7)
+#     comment [9, 12)                comment [9, 12)
+#
+# Read the extents. `comment [9, 12)` is a child of `pair [0, 7)` - a child
+# that begins two bytes after its parent ends. `tool/standing.py` has been
+# saying so all along, on the same grammar it scores 100.0% standing:
+#
+#   sound  1 of 30 UNSOUND - toml: 1 loose, 0 disorder, 0 torn
+#     [child outside its parent: comment [47, 56) in pair [27, 45)]
+#
+# Nobody chose a different tree here. Every name and every nesting agrees. The
+# defect is one number on one node, and it is a worse claim than a misplaced
+# comment: a tree with a child outside its parent is not a tree, and anything
+# that walks it by extent - which is what `rack`'s own `cover()` does, and says
+# so in its docstring - is walking a shape that cannot exist.
+#
+# 18 of the 29 charged bytes are `v`, `=` and `"1"`, whose parent both parsers
+# agree on. They are charged because their PARENT's right edge moved.
+roots 1
+mends 0
+holds pair
+holds comment
+spans pair 0 12
+spans comment 9 12

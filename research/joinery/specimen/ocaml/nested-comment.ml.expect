@@ -1,0 +1,20 @@
+# `(* x (* y *) z *)` - OCaml's comments nest, and unlike Swift's and Scala's
+# they are the grammar's *only* comment form, so the row `comment/.marrow/
+# .ocaml_comment` is the whole of OCaml's comment handling.
+#
+# A non-nesting reader closes at the first `*)`, byte 22, and then meets
+# `z *)` as code. Only a hand carrying a depth counter reaches [10, 27), and
+# the name alone does not separate them - the extent does.
+#
+# Un-seated (`aud-r5`) the body does not come back as a short comment; `*` is
+# an operator in OCaml, so it comes back as `mult_operator` at 11, 16 and 25
+# with a `value_path` between them, and the first `let` loses its
+# `value_definition`. `lacks mult_operator` is that failure, stated as a claim.
+#
+# Written 2026-08-06. This was the third of the three rows
+# `research/joinery/consort/RESULT-4-clearance.md` found corpus-only, and all
+# three had negative measured worth - the corpus board's only opinion of this
+# row was that it does harm.
+holds comment
+spans comment 10 27
+lacks mult_operator

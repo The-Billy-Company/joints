@@ -1,0 +1,9 @@
+# `default_keyword` is external because swift lets `default` be an ordinary
+# identifier everywhere except here. In a switch entry it is the keyword, and
+# the entry runs to the end of its statements.
+roots 1
+mends 0
+holds default_keyword
+spans default_keyword 28 35
+holds switch_entry
+spans switch_entry 28 42

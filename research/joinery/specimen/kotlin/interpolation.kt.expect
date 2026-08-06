@@ -1,0 +1,18 @@
+# `val s = "a ${n + 1} b"` - the construct `Maps.kt` does not contain once.
+#
+# Extents are read off the source text, not off any parser: `"a ${n + 1} b"`
+# begins at byte 18 and `n + 1` at byte 23. `_string_start`, `_string_end` and
+# `_interpolation_expression_start` are hidden, so the visible shape the
+# grammar promises is string_literal > interpolated_expression.
+#
+# `lacks lambda_literal` is the discriminator against the shape this tree
+# builds today: a blind scanner hands `${` to the ordinary lexer, which reads
+# it as a brace and returns a lambda. That is a confidently wrong node, which
+# the troupe contract calls worse than an unanswered token.
+roots 1
+mends 0
+holds string_literal
+holds interpolated_expression
+lacks lambda_literal
+spans string_literal 18 32
+spans interpolated_expression 23 28

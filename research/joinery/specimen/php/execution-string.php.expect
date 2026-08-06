@@ -1,0 +1,22 @@
+# The second of `scan_encapsed_part_string`'s two live parameters:
+# `is_execution_string`, which is the difference between `"…"` and `` `…` ``.
+#
+# php's scanner serves both with one function and tells them apart only by
+# which terminal the parse state asked for, so this file is the control on
+# `double-quoted-string.php` rather than a copy of it: a seating that answered
+# only the double-quoted member would leave this one blind, and a walk that
+# hardcoded `"` as the close would run this backtick body to end of input and
+# refuse.
+#
+# The interpolation is here for a reason too. `$d` ends the content run and
+# resumes it, so the file exercises the boundary in the middle of a body and
+# not just at its ends: `ls ` is [12, 15) and the variable [15, 17).
+#
+# Claims are tree-sitter's tree over these bytes.
+roots 1
+mends 0
+holds shell_command_expression
+holds variable_name
+lacks text
+spans shell_command_expression 11 18
+spans string_content 12 15

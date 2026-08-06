@@ -1,0 +1,32 @@
+# A grammar the board calls PERFECT, reading a function call as a type cast.
+#
+# go is 1,189 bytes, 1,189 built, 0 orphan, 0 rubble, 0 spoil, 100.0%
+# standing, 0 damage. Every instrument in this repository scores it clean.
+#
+# `fmt.Print("x")` is a call. Outliner reads it as a conversion:
+#
+#   outliner                      tree-sitter
+#   type_conversion_expression    call_expression
+#     qualified_type                selector_expression
+#       package_identifier            operand: identifier
+#       type_identifier               field:   field_identifier
+#     interpreted_string_literal    argument_list
+#                                     interpreted_string_literal
+#
+# Same bytes, same cuts, opposite meaning: one says "call Print with x", the
+# other says "convert x to the type fmt.Print".
+#
+# Read this specimen beside the number. `plumb` scores this file at 5 misread
+# bytes out of 996 judged - the five of `Print`, which is the only LEAF whose
+# name moves. Every other byte here sits under a leaf both parsers agree on,
+# so a byte-indexed comparison files them plumb. The structure above the
+# leaves is where this defect lives, and 9.24% is a floor partly because of
+# cases exactly like this one.
+roots 1
+mends 0
+holds call_expression
+holds selector_expression
+holds field_identifier
+lacks type_conversion_expression
+lacks qualified_type
+spans field_identifier 47 52

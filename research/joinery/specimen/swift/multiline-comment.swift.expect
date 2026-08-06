@@ -1,0 +1,17 @@
+# `/* c\n   d */` spanning two lines - the wall a lane handed over as Swift's
+# own.
+#
+# `multiline_comment` is declared external and this tier's coverage gate
+# reports it blind, so this specimen is that handover written as a test
+# rather than as a sentence. The comment runs [10, 22) off the source text.
+#
+# It carries the whole falsifier, because the board cannot: `Chunked.swift`
+# contains no `/*` at all, so every corpus arm prices this row at zero. The
+# 3,997 orphan bytes this handover originally cited are **not** this
+# construct - split by node name they are 3,997 of `comment`, the `//` line
+# comment, and 0 of `multiline_comment`. Right construct, wrong motivation;
+# `research/joinery/consort/RESULT-2-swift.md`.
+roots 1
+mends 0
+holds multiline_comment
+spans multiline_comment 10 22

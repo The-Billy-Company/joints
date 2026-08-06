@@ -1,0 +1,15 @@
+# `s = "$("$n")"` - a string inside an interpolation inside a string.
+#
+# The case with no stateless reading: the `"` at byte 13 opens a new literal
+# rather than closing the one opened at 10, and only a hand carrying the
+# interpolation depth can tell those apart. A hand with no memory closes the
+# outer literal at 13 and reads `$n")` as code.
+#
+# Outer [10, 19), inner [13, 17), outer interpolation [11, 18).
+roots 1
+mends 0
+holds string_literal
+holds string_interpolation
+spans string_literal 10 19
+spans string_literal 13 17
+spans string_interpolation 11 18

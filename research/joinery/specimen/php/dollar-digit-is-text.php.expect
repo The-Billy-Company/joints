@@ -1,0 +1,26 @@
+# Two decisions in eight bytes, and both are places a plausible walk goes
+# wrong in the flattering direction - it still parses, just not into this.
+#
+# `\n` is an escape php's grammar owns, so the content run ENDS in front of
+# the backslash and `escape_sequence` is a sibling of `string_content`, not a
+# substring of it. A walk that treated a backslash as "skip two bytes and keep
+# going" would produce one 5-byte `string_content` here and a tree that still
+# has an `encapsed_string` in it - which is why `holds escape_sequence` and
+# the two spans are claimed and not just the outer node.
+#
+# `$1` is NOT a variable. php's `is_valid_name_char` admits digits, but the
+# scanner's `$` arm requires the byte after the dollar to be a name char that
+# is not a digit - so `$1x` is three bytes of ordinary content. This is the
+# rule that makes every `preg_replace` replacement string in the corpus text
+# rather than an interpolation, and getting it backwards costs a run per
+# occurrence.
+#
+# Claims are tree-sitter's tree over these bytes.
+roots 1
+mends 0
+holds encapsed_string
+holds escape_sequence
+lacks text
+lacks variable_name_in_string
+spans escape_sequence 12 14
+spans string_content 14 17

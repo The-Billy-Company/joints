@@ -1,0 +1,25 @@
+# The member of latex's twelve that needs a rule the other eleven do not, and
+# the only one worth measuring: in the corpus's `ltnews01.tex` a single
+# `\iffalse … \fi` block is 990 bytes, 18.9% of the file, where the two
+# verbatim bodies together are 127.
+#
+# So the string widening alone would have seated eleven members, collected the
+# 127 bytes, and reported a family done.
+#
+# `\fi` closes on `is_command_name`: the keyword must be followed by something
+# that cannot continue a control-word, which is why `\fixed` does not end an
+# `\iffalse`. `\undefined{x}` is in the body to hold the other half - it is a
+# control word latex has no rule for, so a run that was not raw would wall on
+# it, and the `\section{a}` after `\fi` proves the run ENDED rather than
+# swallowing the rest of the file.
+#
+# Claims are tree-sitter's tree: a `block_comment` over [0, 26) whose interior
+# is one `comment`, and a live `section` after it.
+roots 1
+mends 0
+holds block_comment
+holds section
+lacks ERROR
+spans block_comment 0 26
+spans comment 8 23
+spans section 27 38

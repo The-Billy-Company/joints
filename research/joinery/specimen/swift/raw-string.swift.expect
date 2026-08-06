@@ -1,0 +1,12 @@
+# `let s = #"a \(n) b"#` - a raw string, where `\(` does NOT interpolate.
+#
+# This is the specimen a byte measurement cannot see. Inside a `#`-delimited
+# raw string the interpolation sigil widens to `\#(`, so the `\(n)` here is
+# six literal bytes. A hand that reuses the ordinary string interior builds a
+# raw_str_interpolation over text that is not one - the right node in the
+# wrong place, which reads as full coverage on every board this repo keeps.
+roots 1
+mends 0
+holds raw_string_literal
+lacks raw_str_interpolation
+spans raw_string_literal 8 20

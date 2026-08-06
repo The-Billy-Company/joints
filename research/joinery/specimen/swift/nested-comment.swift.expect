@@ -1,0 +1,16 @@
+# `/* x /* y */ z */` - Swift block comments nest, and that is why the
+# construct needs a hand at all rather than a regex.
+#
+# A non-nesting reader closes at the first `*/`, byte 21, and then meets
+# `z */` as code. Only a hand carrying a depth counter reaches [10, 27),
+# which is exactly the state a stateless implementation does not keep.
+#
+# This and its sibling are the only falsifiers the row has: with the row
+# un-seated (`aud-r3`) both fall 4/4 -> 2/4 on `holds multiline_comment`,
+# while every corpus board arm reads the row at exactly zero because
+# `Chunked.swift` has no `/*`. A pair sweep once called it inert on that
+# evidence; `research/joinery/consort/RESULT-2-swift.md`.
+roots 1
+mends 0
+holds multiline_comment
+spans multiline_comment 10 27

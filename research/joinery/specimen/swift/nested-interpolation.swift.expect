@@ -1,0 +1,10 @@
+# `let s = "\("\(n)")"` - interpolation inside interpolation.
+#
+# The `"` at byte 21 opens a new literal rather than closing the one at 18,
+# and a hand with no memory across the body cannot tell those apart.
+# Outer [18, 29), inner [21, 27).
+roots 1
+mends 0
+holds line_string_literal
+spans line_string_literal 18 29
+spans line_string_literal 21 27

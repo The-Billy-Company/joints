@@ -1,0 +1,13 @@
+# `s = raw"a\b"` - a raw string, where `\b` is two literal bytes.
+#
+# `lacks escape_sequence` is the whole point of this specimen. julia.json
+# gives prefixed_string_literal its own content terminals - the `_raw`
+# variants - precisely because a prefixed literal does not take escapes, so a
+# hand that reuses the ordinary string interior here emits an escape_sequence
+# node over bytes that are not one. That is a wrong shape rather than a
+# missing one, and no byte measurement would notice it.
+roots 1
+mends 0
+holds prefixed_string_literal
+lacks escape_sequence
+spans prefixed_string_literal 4 12

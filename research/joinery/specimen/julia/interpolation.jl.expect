@@ -1,0 +1,13 @@
+# `s = "a $(n + 1) b"` - the parenthesised interpolation form.
+#
+# julia.json promises string_literal = delimiter, repeat(content |
+# string_interpolation | escape_sequence), delimiter; and
+# string_interpolation = "$" followed by an identifier or a parenthesised
+# bracket form. Extents are read off the source text: the literal opens at
+# byte 10, the `$(` at 13, and the literal closes after byte 23.
+roots 1
+mends 0
+holds string_literal
+holds string_interpolation
+spans string_literal 10 24
+spans string_interpolation 13 21

@@ -1,0 +1,11 @@
+# `let s = ##"a "# b"##` - the raw delimiter appearing inside its own body.
+#
+# The literal opens with two hashes, so only `"##` closes it and the `"#` at
+# byte 13 is ordinary text. A hand that closes on the shortest delimiter it
+# knows stops at byte 15 and reads ` b"##` as code. The extent [8, 20) is the
+# whole claim; no assertion about node *presence* can state it, because both
+# readings produce a raw_string_literal.
+roots 1
+mends 0
+holds raw_string_literal
+spans raw_string_literal 8 20

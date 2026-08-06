@@ -1,0 +1,11 @@
+# `escape_interpolation` is external: inside an f-string, `{{` is a literal
+# brace and `{n}` is code. Both spellings appear here and they must not be
+# confused - two escapes, one interpolation, and the interpolation holds an
+# identifier while the escapes hold nothing.
+roots 1
+mends 0
+holds escape_interpolation
+spans escape_interpolation 6 8
+spans escape_interpolation 13 15
+holds interpolation
+spans interpolation 16 19

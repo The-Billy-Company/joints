@@ -1,0 +1,11 @@
+# `c = `echo $n`` - a command literal, which interpolates like a string but
+# is delimited by backticks and carries its own content terminals.
+#
+# The bare-identifier interpolation form, as against the parenthesised one in
+# interpolation.jl: `$n` is [16, 18) and the literal [10, 19).
+roots 1
+mends 0
+holds command_literal
+holds string_interpolation
+spans command_literal 10 19
+spans string_interpolation 16 18

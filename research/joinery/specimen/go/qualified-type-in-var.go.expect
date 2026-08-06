@@ -1,0 +1,23 @@
+# CONTROL for selector-field.go. When `pkg.Name` really IS a qualified type,
+# outliner reads it as one.
+#
+#   var_spec [32, 46)
+#     name: identifier      "x"
+#     type: qualified_type [34, 46)
+#       package: package_identifier  "fmt"
+#       name: type_identifier        "Stringer"
+#
+# Both trees, identical. This matters because the guilty witness produces a
+# `qualified_type` too, and a reader could conclude outliner has some general
+# problem with `.` after a package name. It does not: in type position, where
+# the grammar admits nothing else, it is right.
+#
+# The defect needs BOTH readings live at once, which only happens where an
+# expression and a type are both admissible - go's declared
+# `['qualified_type', '_expression']` conflict, exactly.
+roots 1
+mends 0
+holds qualified_type
+lacks call_expression
+lacks type_conversion_expression
+spans qualified_type 34 46

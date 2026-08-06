@@ -1,0 +1,21 @@
+# `/* x /* y */ z */` - Scala block comments nest, the same shape Swift's do,
+# and the row that seats them is `block_comment/.marrow/.kotlin_block`.
+#
+# A non-nesting reader closes at the first `*/`, byte 22, and reads `z */` as
+# code. Only a hand carrying a depth counter reaches [10, 27). The extent is
+# the whole claim: the shallow reader emits a node of the right *name*.
+#
+# With the row un-seated the comment is not mis-extended, it is not a comment
+# at all - the body lexes as `operator_identifier` runs and the file comes back
+# as one `infix_expression` spanning [10, 27). That is why `lacks` is here: the
+# failure this row prevents is a confidently wrong shape, not an absence.
+#
+# Attribution is single-row on purpose. Un-seating the offside row shreds this
+# file's roots but leaves `block_comment [10, 27)` standing, so nothing here
+# claims a root count - only the comment. Written 2026-08-06 because
+# `research/joinery/consort/RESULT-4-clearance.md` found this row corpus-only
+# and measured at negative worth, i.e. the corpus board's only opinion of it
+# was that it does harm.
+holds block_comment
+spans block_comment 10 27
+lacks infix_expression

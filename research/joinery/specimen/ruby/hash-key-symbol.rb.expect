@@ -1,0 +1,9 @@
+# `_hash_key_symbol` is external: `name:` in a hash is a symbol key, and the
+# scanner distinguishes it from `name` followed by a ternary colon. The key
+# excludes its own colon.
+roots 1
+mends 0
+holds hash_key_symbol
+spans hash_key_symbol 6 10
+holds pair
+spans pair 6 13

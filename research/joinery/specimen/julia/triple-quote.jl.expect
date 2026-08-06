@@ -1,0 +1,13 @@
+# `s = """x "q" y"""` - single quotes inside a triple-quoted body.
+#
+# A reader that closes on any `"` stops at byte 9 and reads `q` as code. The
+# literal runs [4, 17) off the source text, and `spans` is what states that -
+# an earlier draft of this file wrote `lacks identifier` for the same idea and
+# it was wrong in a way worth recording: `s` on the left of the assignment is
+# an identifier too, so the claim could never hold no matter how the string
+# parsed. A claim that cannot pass is exactly as useless as one that cannot
+# fail, and this tier is supposed to catch both.
+roots 1
+mends 0
+holds string_literal
+spans string_literal 4 17

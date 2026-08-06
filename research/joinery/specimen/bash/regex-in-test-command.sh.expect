@@ -1,0 +1,33 @@
+# HANDOVER, not a falsifier. These claims fail today and cannot fall further,
+# which is the second hole the php lane left open and is said out loud here
+# rather than discovered later: this file cannot tell a break from a baseline.
+# It exists to price the seat and to name the mechanism.
+#
+# `=~` inside `[[ … ]]` takes `_regex_no_space`, aliased to `regex` - one of
+# three terminals bash's scanner serves from one function on `valid_symbols`,
+# which is php's family *surface* and not php's mechanism.
+#
+# What the C actually does, per byte, is keep THREE independent depth counters
+# (paren, bracket, brace) plus an in-single-quote flag, and stop on the first
+# closer that would go negative. `marrow` walks to a close the roster names;
+# there is no close here to name. The other half is a refusal on the matched
+# text rather than on what follows: a run of only `[A-Za-z0-9$_-]` is a word and
+# not a regex, so `found_non_alnumdollarunderdash` gates the return.
+#
+# It also does not fit `Provision`. A pattern can carry depth-1 nesting, but the
+# C refuses `$(` mid-run on purpose - `// do not parse a command substitution` -
+# so the grammar's own `command_substitution` can take it. A linear pattern has
+# no way to say "a `$` that is not followed by `(`", and eating it would build a
+# confidently wrong node where we currently build none. That is the whole reason
+# this is left blind rather than approximated.
+#
+# Priced on the corpus, so the next lane starts from a measurement: `ledger.sh`
+# holds one regex, `^-?[0-9]+$`, and the board's `unexpected [ at 565` is the
+# `[` of that `[0-9]` - NOT the `[[` of the test command, and not `_concat`.
+# bash's whole damage is 413 bytes and this is the wall inside it.
+roots 1
+mends 0
+holds test_command
+holds regex
+spans test_command 3 25
+spans regex 12 22

@@ -1,0 +1,25 @@
+# `val t = """x "q" y"""` - single quotes living inside a triple-quoted body.
+#
+# The gentler half of the greedy pair: a reader that closes on any `"` stops
+# at byte 13 and reads `q` as an identifier. Extent [8, 21) off the text.
+#
+# `lacks simple_identifier` used to stand here and NO tree could ever satisfy
+# it: the file's own `val t` binds a name, and a name is a `simple_identifier`.
+# The claim meant "`q` is not read as an identifier" and said "this file
+# contains no identifiers", which is false of the correct answer as well as the
+# wrong one - a claim that cannot pass is not a test, it is a permanent red.
+#
+# Fixed by DELETING it rather than editing the file, and it cost this specimen
+# nothing: `spans string_literal 8 21` was already standing on the next line
+# and already says the whole thing. A reader that closes on the `"` at byte 13
+# cannot also reach byte 21, so the span is false of the greedy reading and
+# true of the right one - which is what the deleted line was reaching for and
+# could not express. Checked both ways before removing it: against the tree
+# before kotlin's strings were seated this specimen scores 0/5 with the span
+# among the failures, and 5/5 after. Deleting an unsatisfiable claim is not
+# the same act as weakening a live one, and the difference is exactly that
+# demonstration.
+roots 1
+mends 0
+holds string_literal
+spans string_literal 8 21

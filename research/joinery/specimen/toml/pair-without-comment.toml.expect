@@ -1,0 +1,15 @@
+# CONTROL for comment-after-pair.toml. Drop the comment and the extent is
+# right.
+#
+#   pair [0, 7)
+#     bare_key [0, 1)
+#     string [4, 7)
+#
+# Both trees, identical, and `standing.py` reports the file sound. So `pair`
+# does not systematically stop short - it stops short of a trailing extra it
+# has already adopted as a child, which is a much narrower claim and the one a
+# fix has to satisfy.
+roots 1
+mends 0
+holds pair
+spans pair 0 7

@@ -1,0 +1,4327 @@
+[
+ {
+  "grammar": "bash",
+  "externals": 22,
+  "row": [
+   {
+    "name": "heredoc_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "file_descriptor"
+    ],
+    "why": "co-derivable with unspelled external(s): file_descriptor",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "simple_heredoc_body",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "heredoc_end"
+    ],
+    "why": "co-derivable with unspelled external(s): heredoc_end",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_heredoc_body_beginning",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "heredoc_content"
+    ],
+    "why": "co-derivable with unspelled external(s): heredoc_content",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "heredoc_content",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_heredoc_body_beginning"
+    ],
+    "why": "co-derivable with unspelled external(s): _heredoc_body_beginning",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "heredoc_end",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "simple_heredoc_body"
+    ],
+    "why": "co-derivable with unspelled external(s): simple_heredoc_body",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "file_descriptor",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "heredoc_start"
+    ],
+    "why": "co-derivable with unspelled external(s): heredoc_start",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_empty_value",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "variable_name"
+    ],
+    "why": "co-derivable with unspelled external(s): variable_name",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_concat",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_expansion_word",
+     "variable_name"
+    ],
+    "why": "co-derivable with unspelled external(s): _expansion_word variable_name",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "variable_name",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_concat",
+     "_empty_value",
+     "_expansion_word"
+    ],
+    "why": "co-derivable with unspelled external(s): _concat _empty_value _expansion_word",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "test_operator",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "regex",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_regex_no_slash",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_expansion_word"
+    ],
+    "why": "co-derivable with unspelled external(s): _expansion_word",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_regex_no_space",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_expansion_word",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_concat",
+     "_regex_no_slash",
+     "variable_name"
+    ],
+    "why": "co-derivable with unspelled external(s): _concat _regex_no_slash variable_name",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "extglob_pattern",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_bare_dollar",
+    "mechanism": "spelled",
+    "bytes": "$",
+    "span_kin": [
+     "_concat"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_brace_start",
+    "mechanism": "spelled",
+    "bytes": "{",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_immediate_double_hash",
+    "mechanism": "spelled",
+    "bytes": "##",
+    "span_kin": [
+     "regex"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_external_expansion_sym_hash",
+    "mechanism": "spelled",
+    "bytes": "#",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_external_expansion_sym_bang",
+    "mechanism": "spelled",
+    "bytes": "!",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_external_expansion_sym_equal",
+    "mechanism": "spelled",
+    "bytes": "=",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "__error_recovery",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "c",
+  "externals": 0,
+  "row": []
+ },
+ {
+  "grammar": "cpp",
+  "externals": 2,
+  "row": [
+   {
+    "name": "raw_string_delimiter",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "raw_string_content"
+    ],
+    "why": "co-derivable with unspelled external(s): raw_string_content",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "raw_string_content",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "raw_string_delimiter"
+    ],
+    "why": "co-derivable with unspelled external(s): raw_string_delimiter",
+    "seat": "hand + memory?"
+   }
+  ]
+ },
+ {
+  "grammar": "css",
+  "externals": 3,
+  "row": [
+   {
+    "name": "_descendant_operator",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_pseudo_class_selector_colon",
+    "mechanism": "spelled",
+    "bytes": ":",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "__error_recovery",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "elixir",
+  "externals": 26,
+  "row": [
+   {
+    "name": "_quoted_content_i_single",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_i_double",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_i_heredoc_single",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_i_heredoc_double",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_i_parenthesis",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_i_curly",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_i_square",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_i_angle",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_i_bar",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_i_slash",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_single",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_double",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_heredoc_single",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_heredoc_double",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_parenthesis",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_curly",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_square",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_angle",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_bar",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_quoted_content_slash",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_newline_before_do",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_newline_before_binary_operator",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_newline_before_comment",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_before_unary_op",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_not_in",
+    "mechanism": "spelled",
+    "bytes": "not in",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_quoted_atom_start",
+    "mechanism": "spelled",
+    "bytes": ":",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   }
+  ]
+ },
+ {
+  "grammar": "embedded-template",
+  "externals": 0,
+  "row": []
+ },
+ {
+  "grammar": "go",
+  "externals": 0,
+  "row": []
+ },
+ {
+  "grammar": "haskell",
+  "externals": 48,
+  "row": [
+   {
+    "name": "error_sentinel",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_layout_semicolon",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cmd_layout_start",
+     "_cmd_layout_start_case",
+     "_cmd_layout_start_do",
+     "_cmd_layout_start_let",
+     "_cmd_layout_start_quote"
+    ],
+    "why": "co-derivable with unspelled external(s): _cmd_layout_start _cmd_layout_start_case _cmd_layout_start_do _cmd_layout_start_let _cmd_layout_start_quote",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cmd_layout_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cond_layout_semicolon"
+    ],
+    "why": "co-derivable with unspelled external(s): _cond_layout_semicolon",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cmd_layout_start_do",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cond_layout_semicolon"
+    ],
+    "why": "co-derivable with unspelled external(s): _cond_layout_semicolon",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cmd_layout_start_case",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cond_layout_semicolon"
+    ],
+    "why": "co-derivable with unspelled external(s): _cond_layout_semicolon",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cmd_layout_start_if",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cond_layout_end"
+    ],
+    "why": "co-derivable with unspelled external(s): _cond_layout_end",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cmd_layout_start_let",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cond_layout_semicolon"
+    ],
+    "why": "co-derivable with unspelled external(s): _cond_layout_semicolon",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cmd_layout_start_quote",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cond_layout_semicolon"
+    ],
+    "why": "co-derivable with unspelled external(s): _cond_layout_semicolon",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cmd_layout_start_explicit",
+    "mechanism": "spelled",
+    "bytes": "{",
+    "span_kin": [
+     "_cond_layout_semicolon"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_cond_layout_end",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cmd_layout_start_if"
+    ],
+    "why": "co-derivable with unspelled external(s): _cmd_layout_start_if",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cond_layout_end_explicit",
+    "mechanism": "spelled",
+    "bytes": "}",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_cmd_brace_open",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cmd_brace_close"
+    ],
+    "why": "co-derivable with unspelled external(s): _cmd_brace_close",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cmd_brace_close",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cmd_brace_open"
+    ],
+    "why": "co-derivable with unspelled external(s): _cmd_brace_open",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cmd_texp_start",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cmd_texp_end",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_phantom_arrow"
+    ],
+    "why": "co-derivable with unspelled external(s): _phantom_arrow",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_phantom_where",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_phantom_in",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_phantom_arrow",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cmd_texp_end"
+    ],
+    "why": "co-derivable with unspelled external(s): _cmd_texp_end",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_phantom_bar",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_phantom_deriving",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "comment",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "haddock",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "cpp",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "pragma",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_quote_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "quasiquote_body"
+    ],
+    "why": "co-derivable with unspelled external(s): quasiquote_body",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "quasiquote_body",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cond_quote_start"
+    ],
+    "why": "co-derivable with unspelled external(s): _cond_quote_start",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cond_splice",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_qual_dot",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_varsym"
+    ],
+    "why": "co-derivable with unspelled external(s): _varsym",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cond_tight_dot",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_prefix_dot",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_varsym"
+    ],
+    "why": "co-derivable with unspelled external(s): _varsym",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cond_dotdot",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_tight_at",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_prefix_at",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_tight_bang",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_prefix_bang",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_tight_tilde",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_prefix_tilde",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_prefix_percent",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_qualified_op",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cond_no_section_op"
+    ],
+    "why": "co-derivable with unspelled external(s): _cond_no_section_op",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cond_left_section_op",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_no_section_op",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cond_minus",
+     "_cond_qualified_op"
+    ],
+    "why": "co-derivable with unspelled external(s): _cond_minus _cond_qualified_op",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cond_minus",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cond_no_section_op"
+    ],
+    "why": "co-derivable with unspelled external(s): _cond_no_section_op",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_cond_context",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_infix",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_data_infix",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_cond_assoc_tyinst",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_varsym",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_cond_prefix_dot",
+     "_cond_qual_dot"
+    ],
+    "why": "co-derivable with unspelled external(s): _cond_prefix_dot _cond_qual_dot",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_consym",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "html",
+  "externals": 8,
+  "row": [
+   {
+    "name": "_start_tag_name",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_script_start_tag_name",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_style_start_tag_name",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_end_tag_name",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "erroneous_end_tag_name",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_implicit_end_tag",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "raw_text",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "comment",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "java",
+  "externals": 0,
+  "row": []
+ },
+ {
+  "grammar": "javascript",
+  "externals": 7,
+  "row": [
+   {
+    "name": "_automatic_semicolon",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_template_chars",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_ternary_qmark",
+    "mechanism": "spelled",
+    "bytes": "?",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "html_comment",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "escape_sequence",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "regex_pattern",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "jsx_text",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "json",
+  "externals": 0,
+  "row": []
+ },
+ {
+  "grammar": "julia",
+  "externals": 16,
+  "row": [
+   {
+    "name": "_block_comment_rest",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_immediate_paren",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_immediate_bracket",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_immediate_brace",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_immediate_string_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_content_str_1_raw",
+     "_content_str_3_raw",
+     "_end_str"
+    ],
+    "why": "co-derivable with unspelled external(s): _content_str_1_raw _content_str_3_raw _end_str",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_immediate_command_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_content_cmd_1_raw",
+     "_content_cmd_3_raw",
+     "_end_cmd"
+    ],
+    "why": "co-derivable with unspelled external(s): _content_cmd_1_raw _content_cmd_3_raw _end_cmd",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_content_cmd_1",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_end_cmd"
+    ],
+    "why": "co-derivable with unspelled external(s): _end_cmd",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_content_cmd_1_raw",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_end_cmd",
+     "_immediate_command_start"
+    ],
+    "why": "co-derivable with unspelled external(s): _end_cmd _immediate_command_start",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_content_cmd_3",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_end_cmd"
+    ],
+    "why": "co-derivable with unspelled external(s): _end_cmd",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_content_cmd_3_raw",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_end_cmd",
+     "_immediate_command_start"
+    ],
+    "why": "co-derivable with unspelled external(s): _end_cmd _immediate_command_start",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_content_str_1",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_end_str"
+    ],
+    "why": "co-derivable with unspelled external(s): _end_str",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_content_str_1_raw",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_end_str",
+     "_immediate_string_start"
+    ],
+    "why": "co-derivable with unspelled external(s): _end_str _immediate_string_start",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_content_str_3",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_end_str"
+    ],
+    "why": "co-derivable with unspelled external(s): _end_str",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_content_str_3_raw",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_end_str",
+     "_immediate_string_start"
+    ],
+    "why": "co-derivable with unspelled external(s): _end_str _immediate_string_start",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_end_cmd",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_content_cmd_1",
+     "_content_cmd_1_raw",
+     "_content_cmd_3",
+     "_content_cmd_3_raw",
+     "_immediate_command_start"
+    ],
+    "why": "co-derivable with unspelled external(s): _content_cmd_1 _content_cmd_1_raw _content_cmd_3 _content_cmd_3_raw _immediate_command_start",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_end_str",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_content_str_1",
+     "_content_str_1_raw",
+     "_content_str_3",
+     "_content_str_3_raw",
+     "_immediate_string_start"
+    ],
+    "why": "co-derivable with unspelled external(s): _content_str_1 _content_str_1_raw _content_str_3 _content_str_3_raw _immediate_string_start",
+    "seat": "hand + memory?"
+   }
+  ]
+ },
+ {
+  "grammar": "kotlin",
+  "externals": 10,
+  "row": [
+   {
+    "name": "_automatic_semicolon",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "multiline_comment",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_string_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_string_end",
+     "string_content"
+    ],
+    "why": "co-derivable with unspelled external(s): _string_end string_content",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_string_end",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_string_start",
+     "string_content"
+    ],
+    "why": "co-derivable with unspelled external(s): _string_start string_content",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "string_content",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_string_end",
+     "_string_start"
+    ],
+    "why": "co-derivable with unspelled external(s): _string_end _string_start",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_primary_constructor_keyword",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_import_dot",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_interpolation_expression_start",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_interpolation_identifier_start",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_by_delegation_hint",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "latex",
+  "externals": 12,
+  "row": [
+   {
+    "name": "_trivia_raw_fi",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_trivia_raw_env_comment",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_trivia_raw_env_verbatim",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_trivia_raw_env_listing",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_trivia_raw_env_minted",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_trivia_raw_env_asy",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_trivia_raw_env_asydef",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_trivia_raw_env_pycode",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_trivia_raw_env_luacode",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_trivia_raw_env_luacode_star",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_trivia_raw_env_sagesilent",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_trivia_raw_env_sageblock",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "lua",
+  "externals": 6,
+  "row": [
+   {
+    "name": "_block_comment_start",
+    "mechanism": "spelled",
+    "bytes": "[[",
+    "span_kin": [
+     "_block_comment_content"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_block_comment_content",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_block_comment_end",
+    "mechanism": "spelled",
+    "bytes": "]]",
+    "span_kin": [
+     "_block_comment_content"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_block_string_start",
+    "mechanism": "spelled",
+    "bytes": "[[",
+    "span_kin": [
+     "_block_string_content"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_block_string_content",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_block_string_end",
+    "mechanism": "spelled",
+    "bytes": "]]",
+    "span_kin": [
+     "_block_string_content"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   }
+  ]
+ },
+ {
+  "grammar": "markdown",
+  "externals": 47,
+  "row": [
+   {
+    "name": "_line_ending",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): block_continuation",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_soft_line_ending",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): block_continuation",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_block_close",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_quote_start",
+     "_close_block",
+     "_fenced_code_block_end_backtick",
+     "_fenced_code_block_end_tilde",
+     "_fenced_code_block_start_backtick",
+     "_fenced_code_block_start_tilde",
+     "_html_block_1_end",
+     "_html_block_1_start",
+     "_html_block_2_start",
+     "_html_block_3_start",
+     "_html_block_4_start",
+     "_html_block_5_start",
+     "_html_block_6_start",
+     "_html_block_7_start",
+     "_indented_chunk_start",
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_quote_start _close_block _fenced_code_block_end_backtick _fenced_code_block_end_tilde _fenced_code_block_start_backtick _fenced_code_block_start_tilde _html_block_1_end _html_block_1_start _html_block_2_start _html_block_3_start _html_block_4_start _html_block_5_start _html_block_6_start _html_block_7_start _indented_chunk_start block_continuation",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "block_continuation",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "_block_quote_start",
+     "_close_block",
+     "_html_block_1_end",
+     "_html_block_1_start",
+     "_html_block_2_start",
+     "_html_block_3_start",
+     "_html_block_4_start",
+     "_html_block_5_start",
+     "_html_block_6_start",
+     "_html_block_7_start",
+     "_indented_chunk_start",
+     "_line_ending",
+     "_pipe_table_line_ending",
+     "_soft_line_ending"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close _block_quote_start _close_block _html_block_1_end _html_block_1_start _html_block_2_start _html_block_3_start _html_block_4_start _html_block_5_start _html_block_6_start _html_block_7_start _indented_chunk_start _line_ending _pipe_table_line_ending _soft_line_ending",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_block_quote_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close block_continuation",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_indented_chunk_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close block_continuation",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "atx_h1_marker",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "atx_h2_marker",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "atx_h3_marker",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "atx_h4_marker",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "atx_h5_marker",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "atx_h6_marker",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "setext_h1_underline",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_eof"
+    ],
+    "why": "co-derivable with unspelled external(s): _eof",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "setext_h2_underline",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_eof"
+    ],
+    "why": "co-derivable with unspelled external(s): _eof",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_thematic_break",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_eof"
+    ],
+    "why": "co-derivable with unspelled external(s): _eof",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_list_marker_minus",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_list_marker_plus",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_list_marker_star",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_list_marker_parenthesis",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_list_marker_dot",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_list_marker_minus_dont_interrupt",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_list_marker_plus_dont_interrupt",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_list_marker_star_dont_interrupt",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_list_marker_parenthesis_dont_interrupt",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_list_marker_dot_dont_interrupt",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_fenced_code_block_start_backtick",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "_close_block",
+     "_fenced_code_block_end_backtick"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close _close_block _fenced_code_block_end_backtick",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_fenced_code_block_start_tilde",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "_close_block",
+     "_fenced_code_block_end_tilde"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close _close_block _fenced_code_block_end_tilde",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_blank_line_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_eof"
+    ],
+    "why": "co-derivable with unspelled external(s): _eof",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_fenced_code_block_end_backtick",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "_close_block",
+     "_fenced_code_block_start_backtick"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close _close_block _fenced_code_block_start_backtick",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_fenced_code_block_end_tilde",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "_close_block",
+     "_fenced_code_block_start_tilde"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close _close_block _fenced_code_block_start_tilde",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_html_block_1_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "_close_block",
+     "_html_block_1_end",
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close _close_block _html_block_1_end block_continuation",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_html_block_1_end",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "_close_block",
+     "_html_block_1_start",
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close _close_block _html_block_1_start block_continuation",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_html_block_2_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "_close_block",
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close _close_block block_continuation",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_html_block_3_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "_close_block",
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close _close_block block_continuation",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_html_block_4_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "_close_block",
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close _close_block block_continuation",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_html_block_5_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "_close_block",
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close _close_block block_continuation",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_html_block_6_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "_close_block",
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close _close_block block_continuation",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_html_block_7_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "_close_block",
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close _close_block block_continuation",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_close_block",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_block_close",
+     "_fenced_code_block_end_backtick",
+     "_fenced_code_block_end_tilde",
+     "_fenced_code_block_start_backtick",
+     "_fenced_code_block_start_tilde",
+     "_html_block_1_end",
+     "_html_block_1_start",
+     "_html_block_2_start",
+     "_html_block_3_start",
+     "_html_block_4_start",
+     "_html_block_5_start",
+     "_html_block_6_start",
+     "_html_block_7_start",
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): _block_close _fenced_code_block_end_backtick _fenced_code_block_end_tilde _fenced_code_block_start_backtick _fenced_code_block_start_tilde _html_block_1_end _html_block_1_start _html_block_2_start _html_block_3_start _html_block_4_start _html_block_5_start _html_block_6_start _html_block_7_start block_continuation",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_no_indented_chunk",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_eof"
+    ],
+    "why": "co-derivable with unspelled external(s): _eof",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_error",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_trigger_error",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_eof",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_blank_line_start",
+     "_no_indented_chunk",
+     "_pipe_table_start",
+     "_thematic_break",
+     "setext_h1_underline",
+     "setext_h2_underline"
+    ],
+    "why": "co-derivable with unspelled external(s): _blank_line_start _no_indented_chunk _pipe_table_start _thematic_break setext_h1_underline setext_h2_underline",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "minus_metadata",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "plus_metadata",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_pipe_table_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_eof"
+    ],
+    "why": "co-derivable with unspelled external(s): _eof",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_pipe_table_line_ending",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "block_continuation"
+    ],
+    "why": "co-derivable with unspelled external(s): block_continuation",
+    "seat": "hand + memory?"
+   }
+  ]
+ },
+ {
+  "grammar": "ocaml",
+  "externals": 6,
+  "row": [
+   {
+    "name": "comment",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_left_quoted_string_delimiter",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_right_quoted_string_delimiter"
+    ],
+    "why": "co-derivable with unspelled external(s): _right_quoted_string_delimiter",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_right_quoted_string_delimiter",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_left_quoted_string_delimiter"
+    ],
+    "why": "co-derivable with unspelled external(s): _left_quoted_string_delimiter",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "line_number_directive",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_null",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_error_sentinel",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "php",
+  "externals": 12,
+  "row": [
+   {
+    "name": "_automatic_semicolon",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "encapsed_string_chars",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "encapsed_string_chars_after_variable",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "execution_string_chars",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "execution_string_chars_after_variable",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "encapsed_string_chars_heredoc",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "encapsed_string_chars_after_variable_heredoc",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_eof",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "heredoc_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "heredoc_end"
+    ],
+    "why": "co-derivable with unspelled external(s): heredoc_end",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "heredoc_end",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "heredoc_start"
+    ],
+    "why": "co-derivable with unspelled external(s): heredoc_start",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "nowdoc_string",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "sentinel_error",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "python",
+  "externals": 8,
+  "row": [
+   {
+    "name": "_newline",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_indent",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_dedent"
+    ],
+    "why": "co-derivable with unspelled external(s): _dedent",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_dedent",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_indent"
+    ],
+    "why": "co-derivable with unspelled external(s): _indent",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "string_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "string_end"
+    ],
+    "why": "co-derivable with unspelled external(s): string_end",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_string_content",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "escape_interpolation",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "string_end",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "string_start"
+    ],
+    "why": "co-derivable with unspelled external(s): string_start",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "comment",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "ruby",
+  "externals": 29,
+  "row": [
+   {
+    "name": "_line_break",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_no_line_break",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "hash_key_symbol"
+    ],
+    "why": "co-derivable with unspelled external(s): hash_key_symbol",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "simple_symbol",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_string_start",
+    "mechanism": "spelled",
+    "bytes": "\"",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_symbol_start",
+    "mechanism": "spelled",
+    "bytes": ":\"",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_subshell_start",
+    "mechanism": "spelled",
+    "bytes": "`",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_regex_start",
+    "mechanism": "spelled",
+    "bytes": "/",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_string_array_start",
+    "mechanism": "spelled",
+    "bytes": "%w(",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_symbol_array_start",
+    "mechanism": "spelled",
+    "bytes": "%i(",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_heredoc_body_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "heredoc_content",
+     "heredoc_end"
+    ],
+    "why": "co-derivable with unspelled external(s): heredoc_content heredoc_end",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "string_content",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "heredoc_content",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_heredoc_body_start",
+     "heredoc_end"
+    ],
+    "why": "co-derivable with unspelled external(s): _heredoc_body_start heredoc_end",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_string_end",
+    "mechanism": "spelled",
+    "bytes": "\" ) / `",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "heredoc_end",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_heredoc_body_start",
+     "heredoc_content"
+    ],
+    "why": "co-derivable with unspelled external(s): _heredoc_body_start heredoc_content",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "heredoc_beginning",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_block_ampersand",
+    "mechanism": "spelled",
+    "bytes": "&",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_splat_star",
+    "mechanism": "spelled",
+    "bytes": "*",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_unary_minus",
+    "mechanism": "spelled",
+    "bytes": "-",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_unary_minus_num",
+    "mechanism": "spelled",
+    "bytes": "-",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_binary_minus",
+    "mechanism": "spelled",
+    "bytes": "-",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_binary_star",
+    "mechanism": "spelled",
+    "bytes": "*",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_singleton_class_left_angle_left_langle",
+    "mechanism": "spelled",
+    "bytes": "<<",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "hash_key_symbol",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_no_line_break"
+    ],
+    "why": "co-derivable with unspelled external(s): _no_line_break",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_identifier_suffix",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_constant_suffix",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_hash_splat_star_star",
+    "mechanism": "spelled",
+    "bytes": "**",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_binary_star_star",
+    "mechanism": "spelled",
+    "bytes": "**",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_element_reference_bracket",
+    "mechanism": "spelled",
+    "bytes": "[",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_short_interpolation",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "rust",
+  "externals": 11,
+  "row": [
+   {
+    "name": "string_content",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "string_close",
+    "mechanism": "spelled",
+    "bytes": "\"",
+    "span_kin": [
+     "string_content"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_raw_string_literal_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_raw_string_literal_end",
+     "raw_string_literal_content"
+    ],
+    "why": "co-derivable with unspelled external(s): _raw_string_literal_end raw_string_literal_content",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "raw_string_literal_content",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_raw_string_literal_end",
+     "_raw_string_literal_start"
+    ],
+    "why": "co-derivable with unspelled external(s): _raw_string_literal_end _raw_string_literal_start",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_raw_string_literal_end",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_raw_string_literal_start",
+     "raw_string_literal_content"
+    ],
+    "why": "co-derivable with unspelled external(s): _raw_string_literal_start raw_string_literal_content",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "float_literal",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_outer_block_doc_comment_marker",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_inner_block_doc_comment_marker",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_block_comment_content",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_line_doc_content",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_error_sentinel",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "scala",
+  "externals": 25,
+  "row": [
+   {
+    "name": "_automatic_semicolon",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_control_tail_gate",
+     "_indent",
+     "_outdent"
+    ],
+    "why": "co-derivable with unspelled external(s): _control_tail_gate _indent _outdent",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_indent",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_automatic_semicolon",
+     "_comma_outdent",
+     "_outdent"
+    ],
+    "why": "co-derivable with unspelled external(s): _automatic_semicolon _comma_outdent _outdent",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_outdent",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_automatic_semicolon",
+     "_indent"
+    ],
+    "why": "co-derivable with unspelled external(s): _automatic_semicolon _indent",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_comma_outdent",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_indent"
+    ],
+    "why": "co-derivable with unspelled external(s): _indent",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_simple_string_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_raw_string_middle",
+     "_simple_string_middle",
+     "_single_line_string_end"
+    ],
+    "why": "co-derivable with unspelled external(s): _raw_string_middle _simple_string_middle _single_line_string_end",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_simple_string_middle",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_simple_string_start",
+     "_single_line_string_end"
+    ],
+    "why": "co-derivable with unspelled external(s): _simple_string_start _single_line_string_end",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_simple_multiline_string_start",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_multiline_string_end",
+     "_raw_string_multiline_middle"
+    ],
+    "why": "co-derivable with unspelled external(s): _multiline_string_end _raw_string_multiline_middle",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_interpolated_string_middle",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_single_line_string_end"
+    ],
+    "why": "co-derivable with unspelled external(s): _single_line_string_end",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_interpolated_multiline_string_middle",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_multiline_string_end"
+    ],
+    "why": "co-derivable with unspelled external(s): _multiline_string_end",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_raw_string_start",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_raw_string_middle",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_simple_string_start",
+     "_single_line_string_end"
+    ],
+    "why": "co-derivable with unspelled external(s): _simple_string_start _single_line_string_end",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_raw_string_multiline_middle",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_multiline_string_end",
+     "_simple_multiline_string_start"
+    ],
+    "why": "co-derivable with unspelled external(s): _multiline_string_end _simple_multiline_string_start",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_single_line_string_end",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_interpolated_string_middle",
+     "_raw_string_middle",
+     "_simple_string_middle",
+     "_simple_string_start"
+    ],
+    "why": "co-derivable with unspelled external(s): _interpolated_string_middle _raw_string_middle _simple_string_middle _simple_string_start",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_multiline_string_end",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_interpolated_multiline_string_middle",
+     "_raw_string_multiline_middle",
+     "_simple_multiline_string_start"
+    ],
+    "why": "co-derivable with unspelled external(s): _interpolated_multiline_string_middle _raw_string_multiline_middle _simple_multiline_string_start",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "block_comment",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_suppress_block_comment",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "error_sentinel",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_colon_eol",
+    "mechanism": "spelled",
+    "bytes": ":",
+    "span_kin": [
+     "_comma_outdent",
+     "_indent",
+     "_outdent"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_postfix_op",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_postfix_star",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_floating_point_with_separators",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_end_keyword",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_control_tail_gate",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_automatic_semicolon"
+    ],
+    "why": "co-derivable with unspelled external(s): _automatic_semicolon",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_xml_tag_start",
+    "mechanism": "spelled",
+    "bytes": "<",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_erased_modifier",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "sql",
+  "externals": 3,
+  "row": [
+   {
+    "name": "_dollar_quoted_string_start_tag",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_dollar_quoted_string_end_tag"
+    ],
+    "why": "co-derivable with unspelled external(s): _dollar_quoted_string_end_tag",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_dollar_quoted_string_end_tag",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_dollar_quoted_string_start_tag"
+    ],
+    "why": "co-derivable with unspelled external(s): _dollar_quoted_string_start_tag",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_dollar_quoted_string",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "swift",
+  "externals": 33,
+  "row": [
+   {
+    "name": "multiline_comment",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "raw_str_part",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "raw_str_continuing_indicator",
+     "raw_str_end_part"
+    ],
+    "why": "co-derivable with unspelled external(s): raw_str_continuing_indicator raw_str_end_part",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "raw_str_continuing_indicator",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "raw_str_end_part",
+     "raw_str_part"
+    ],
+    "why": "co-derivable with unspelled external(s): raw_str_end_part raw_str_part",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "raw_str_end_part",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "raw_str_continuing_indicator",
+     "raw_str_part"
+    ],
+    "why": "co-derivable with unspelled external(s): raw_str_continuing_indicator raw_str_part",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_implicit_semi",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_explicit_semi",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_arrow_operator_custom",
+    "mechanism": "spelled",
+    "bytes": "->",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_dot_custom",
+    "mechanism": "spelled",
+    "bytes": ".",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_conjunction_operator_custom",
+    "mechanism": "spelled",
+    "bytes": "&&",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_disjunction_operator_custom",
+    "mechanism": "spelled",
+    "bytes": "||",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_nil_coalescing_operator_custom",
+    "mechanism": "spelled",
+    "bytes": "??",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_eq_custom",
+    "mechanism": "spelled",
+    "bytes": "=",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_eq_eq_custom",
+    "mechanism": "spelled",
+    "bytes": "==",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_plus_then_ws",
+    "mechanism": "spelled",
+    "bytes": "+",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_minus_then_ws",
+    "mechanism": "spelled",
+    "bytes": "-",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_bang_custom",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_throws_keyword",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_rethrows_keyword",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "default_keyword",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "where_keyword",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "else",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "catch_keyword",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_as_custom",
+    "mechanism": "spelled",
+    "bytes": "as",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_as_quest_custom",
+    "mechanism": "spelled",
+    "bytes": "as?",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_as_bang_custom",
+    "mechanism": "spelled",
+    "bytes": "as!",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_async_keyword_custom",
+    "mechanism": "spelled",
+    "bytes": "async",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_custom_operator",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_hash_symbol_custom",
+    "mechanism": "spelled",
+    "bytes": "#",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_directive_if",
+    "mechanism": "spelled",
+    "bytes": "#if",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_directive_elseif",
+    "mechanism": "spelled",
+    "bytes": "#elseif",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_directive_else",
+    "mechanism": "spelled",
+    "bytes": "#else",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_directive_endif",
+    "mechanism": "spelled",
+    "bytes": "#endif",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_fake_try_bang",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "toml",
+  "externals": 5,
+  "row": [
+   {
+    "name": "_line_ending_or_eof",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_multiline_basic_string_content",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_multiline_basic_string_end"
+    ],
+    "why": "co-derivable with unspelled external(s): _multiline_basic_string_end",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_multiline_basic_string_end",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_multiline_basic_string_content"
+    ],
+    "why": "co-derivable with unspelled external(s): _multiline_basic_string_content",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_multiline_literal_string_content",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_multiline_literal_string_end"
+    ],
+    "why": "co-derivable with unspelled external(s): _multiline_literal_string_end",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_multiline_literal_string_end",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_multiline_literal_string_content"
+    ],
+    "why": "co-derivable with unspelled external(s): _multiline_literal_string_content",
+    "seat": "hand + memory?"
+   }
+  ]
+ },
+ {
+  "grammar": "typescript",
+  "externals": 9,
+  "row": [
+   {
+    "name": "_automatic_semicolon",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_template_chars",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_ternary_qmark",
+    "mechanism": "spelled",
+    "bytes": "?",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "html_comment",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "escape_sequence",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "regex_pattern",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "jsx_text",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_function_signature_automatic_semicolon",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "__error_recovery",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "verilog",
+  "externals": 0,
+  "row": []
+ },
+ {
+  "grammar": "yaml",
+  "externals": 113,
+  "row": [
+   {
+    "name": "_eof",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_s_dir_yml_bgn",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_r_dir_yml_ver"
+    ],
+    "why": "co-derivable with unspelled external(s): _r_dir_yml_ver",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_r_dir_yml_ver",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_s_dir_yml_bgn"
+    ],
+    "why": "co-derivable with unspelled external(s): _s_dir_yml_bgn",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_s_dir_tag_bgn",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_r_dir_tag_hdl",
+     "_r_dir_tag_pfx"
+    ],
+    "why": "co-derivable with unspelled external(s): _r_dir_tag_hdl _r_dir_tag_pfx",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_r_dir_tag_hdl",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_r_dir_tag_pfx",
+     "_s_dir_tag_bgn"
+    ],
+    "why": "co-derivable with unspelled external(s): _r_dir_tag_pfx _s_dir_tag_bgn",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_r_dir_tag_pfx",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_r_dir_tag_hdl",
+     "_s_dir_tag_bgn"
+    ],
+    "why": "co-derivable with unspelled external(s): _r_dir_tag_hdl _s_dir_tag_bgn",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_s_dir_rsv_bgn",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_r_dir_rsv_prm"
+    ],
+    "why": "co-derivable with unspelled external(s): _r_dir_rsv_prm",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_r_dir_rsv_prm",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_s_dir_rsv_bgn"
+    ],
+    "why": "co-derivable with unspelled external(s): _s_dir_rsv_bgn",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_s_drs_end",
+    "mechanism": "spelled",
+    "bytes": "---",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_s_doc_end",
+    "mechanism": "spelled",
+    "bytes": "...",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_blk_seq_bgn",
+    "mechanism": "spelled",
+    "bytes": "-",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_blk_seq_bgn",
+    "mechanism": "spelled",
+    "bytes": "-",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_b_blk_seq_bgn",
+    "mechanism": "spelled",
+    "bytes": "-",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_blk_key_bgn",
+    "mechanism": "spelled",
+    "bytes": "?",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_blk_key_bgn",
+    "mechanism": "spelled",
+    "bytes": "?",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_b_blk_key_bgn",
+    "mechanism": "spelled",
+    "bytes": "?",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_blk_val_bgn",
+    "mechanism": "spelled",
+    "bytes": ":",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_blk_val_bgn",
+    "mechanism": "spelled",
+    "bytes": ":",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_b_blk_val_bgn",
+    "mechanism": "spelled",
+    "bytes": ":",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_blk_imp_bgn",
+    "mechanism": "spelled",
+    "bytes": ":",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_blk_lit_bgn",
+    "mechanism": "spelled",
+    "bytes": "|",
+    "span_kin": [
+     "_bl",
+     "_br_blk_str_ctn"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_blk_lit_bgn",
+    "mechanism": "spelled",
+    "bytes": "|",
+    "span_kin": [
+     "_bl",
+     "_br_blk_str_ctn"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_blk_fld_bgn",
+    "mechanism": "spelled",
+    "bytes": ">",
+    "span_kin": [
+     "_bl",
+     "_br_blk_str_ctn"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_blk_fld_bgn",
+    "mechanism": "spelled",
+    "bytes": ">",
+    "span_kin": [
+     "_bl",
+     "_br_blk_str_ctn"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_blk_str_ctn",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_bl"
+    ],
+    "why": "co-derivable with unspelled external(s): _bl",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_r_flw_seq_bgn",
+    "mechanism": "spelled",
+    "bytes": "[",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_flw_seq_bgn",
+    "mechanism": "spelled",
+    "bytes": "[",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_b_flw_seq_bgn",
+    "mechanism": "spelled",
+    "bytes": "[",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_flw_seq_end",
+    "mechanism": "spelled",
+    "bytes": "]",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_flw_seq_end",
+    "mechanism": "spelled",
+    "bytes": "]",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_b_flw_seq_end",
+    "mechanism": "spelled",
+    "bytes": "]",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_flw_map_bgn",
+    "mechanism": "spelled",
+    "bytes": "{",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_flw_map_bgn",
+    "mechanism": "spelled",
+    "bytes": "{",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_b_flw_map_bgn",
+    "mechanism": "spelled",
+    "bytes": "{",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_flw_map_end",
+    "mechanism": "spelled",
+    "bytes": "}",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_flw_map_end",
+    "mechanism": "spelled",
+    "bytes": "}",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_b_flw_map_end",
+    "mechanism": "spelled",
+    "bytes": "}",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_flw_sep_bgn",
+    "mechanism": "spelled",
+    "bytes": ",",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_flw_sep_bgn",
+    "mechanism": "spelled",
+    "bytes": ",",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_flw_key_bgn",
+    "mechanism": "spelled",
+    "bytes": "?",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_flw_key_bgn",
+    "mechanism": "spelled",
+    "bytes": "?",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_flw_jsv_bgn",
+    "mechanism": "spelled",
+    "bytes": ":",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_flw_jsv_bgn",
+    "mechanism": "spelled",
+    "bytes": ":",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_flw_njv_bgn",
+    "mechanism": "spelled",
+    "bytes": ":",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_flw_njv_bgn",
+    "mechanism": "spelled",
+    "bytes": ":",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_dqt_str_bgn",
+    "mechanism": "spelled",
+    "bytes": "\"",
+    "span_kin": [
+     "_r_dqt_esc_nwl"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_dqt_str_bgn",
+    "mechanism": "spelled",
+    "bytes": "\"",
+    "span_kin": [
+     "_r_dqt_esc_nwl"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_b_dqt_str_bgn",
+    "mechanism": "spelled",
+    "bytes": "\"",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_dqt_str_ctn",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_br_dqt_esc_seq",
+     "_br_dqt_str_ctn",
+     "_r_dqt_esc_nwl"
+    ],
+    "why": "co-derivable with unspelled external(s): _br_dqt_esc_seq _br_dqt_str_ctn _r_dqt_esc_nwl",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_br_dqt_str_ctn",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_r_dqt_esc_nwl",
+     "_r_dqt_esc_seq",
+     "_r_dqt_str_ctn"
+    ],
+    "why": "co-derivable with unspelled external(s): _r_dqt_esc_nwl _r_dqt_esc_seq _r_dqt_str_ctn",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_r_dqt_esc_nwl",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_br_dqt_esc_seq",
+     "_br_dqt_str_ctn",
+     "_r_dqt_esc_seq",
+     "_r_dqt_str_ctn"
+    ],
+    "why": "co-derivable with unspelled external(s): _br_dqt_esc_seq _br_dqt_str_ctn _r_dqt_esc_seq _r_dqt_str_ctn",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_br_dqt_esc_nwl",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_dqt_esc_seq",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_br_dqt_esc_seq",
+     "_br_dqt_str_ctn",
+     "_r_dqt_esc_nwl"
+    ],
+    "why": "co-derivable with unspelled external(s): _br_dqt_esc_seq _br_dqt_str_ctn _r_dqt_esc_nwl",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_br_dqt_esc_seq",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_r_dqt_esc_nwl",
+     "_r_dqt_esc_seq",
+     "_r_dqt_str_ctn"
+    ],
+    "why": "co-derivable with unspelled external(s): _r_dqt_esc_nwl _r_dqt_esc_seq _r_dqt_str_ctn",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_r_dqt_str_end",
+    "mechanism": "spelled",
+    "bytes": "\"",
+    "span_kin": [
+     "_r_dqt_esc_nwl"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_dqt_str_end",
+    "mechanism": "spelled",
+    "bytes": "\"",
+    "span_kin": [
+     "_r_dqt_esc_nwl"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_sqt_str_bgn",
+    "mechanism": "spelled",
+    "bytes": "'",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_sqt_str_bgn",
+    "mechanism": "spelled",
+    "bytes": "'",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_b_sqt_str_bgn",
+    "mechanism": "spelled",
+    "bytes": "'",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_sqt_str_ctn",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_br_sqt_esc_sqt",
+     "_br_sqt_str_ctn"
+    ],
+    "why": "co-derivable with unspelled external(s): _br_sqt_esc_sqt _br_sqt_str_ctn",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_br_sqt_str_ctn",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_r_sqt_esc_sqt",
+     "_r_sqt_str_ctn"
+    ],
+    "why": "co-derivable with unspelled external(s): _r_sqt_esc_sqt _r_sqt_str_ctn",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_r_sqt_esc_sqt",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_br_sqt_esc_sqt",
+     "_br_sqt_str_ctn"
+    ],
+    "why": "co-derivable with unspelled external(s): _br_sqt_esc_sqt _br_sqt_str_ctn",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_br_sqt_esc_sqt",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_r_sqt_esc_sqt",
+     "_r_sqt_str_ctn"
+    ],
+    "why": "co-derivable with unspelled external(s): _r_sqt_esc_sqt _r_sqt_str_ctn",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "_r_sqt_str_end",
+    "mechanism": "spelled",
+    "bytes": "'",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_sqt_str_end",
+    "mechanism": "spelled",
+    "bytes": "'",
+    "span_kin": [],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_sgl_pln_nul_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_sgl_pln_nul_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_b_sgl_pln_nul_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_sgl_pln_nul_flw",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_sgl_pln_nul_flw",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_sgl_pln_bol_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_sgl_pln_bol_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_b_sgl_pln_bol_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_sgl_pln_bol_flw",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_sgl_pln_bol_flw",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_sgl_pln_int_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_sgl_pln_int_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_b_sgl_pln_int_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_sgl_pln_int_flw",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_sgl_pln_int_flw",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_sgl_pln_flt_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_sgl_pln_flt_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_b_sgl_pln_flt_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_sgl_pln_flt_flw",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_sgl_pln_flt_flw",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_sgl_pln_tms_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_sgl_pln_tms_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_b_sgl_pln_tms_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_sgl_pln_tms_flw",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_sgl_pln_tms_flw",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_sgl_pln_str_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_sgl_pln_str_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_b_sgl_pln_str_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_sgl_pln_str_flw",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_sgl_pln_str_flw",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_mtl_pln_str_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_mtl_pln_str_blk",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_mtl_pln_str_flw",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_mtl_pln_str_flw",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_tag",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_br_tag",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_b_tag",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_acr_bgn",
+    "mechanism": "spelled",
+    "bytes": "&",
+    "span_kin": [
+     "_r_acr_ctn"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_acr_bgn",
+    "mechanism": "spelled",
+    "bytes": "&",
+    "span_kin": [
+     "_r_acr_ctn"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_b_acr_bgn",
+    "mechanism": "spelled",
+    "bytes": "&",
+    "span_kin": [
+     "_r_acr_ctn"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_acr_ctn",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_r_als_bgn",
+    "mechanism": "spelled",
+    "bytes": "*",
+    "span_kin": [
+     "_r_als_ctn"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_br_als_bgn",
+    "mechanism": "spelled",
+    "bytes": "*",
+    "span_kin": [
+     "_r_als_ctn"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_b_als_bgn",
+    "mechanism": "spelled",
+    "bytes": "*",
+    "span_kin": [
+     "_r_als_ctn"
+    ],
+    "why": "the grammar states its bytes in an anonymous ALIAS",
+    "seat": "Provision row"
+   },
+   {
+    "name": "_r_als_ctn",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_bl",
+    "mechanism": "span?",
+    "bytes": "",
+    "span_kin": [
+     "_br_blk_str_ctn"
+    ],
+    "why": "co-derivable with unspelled external(s): _br_blk_str_ctn",
+    "seat": "hand + memory?"
+   },
+   {
+    "name": "comment",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   },
+   {
+    "name": "_err_rec",
+    "mechanism": "unspelled",
+    "bytes": "",
+    "span_kin": [],
+    "why": "no spelling, and excludes every unspelled kin - a position, not a run",
+    "seat": "hand, no memory"
+   }
+  ]
+ },
+ {
+  "grammar": "zig",
+  "externals": 0,
+  "row": []
+ }
+]

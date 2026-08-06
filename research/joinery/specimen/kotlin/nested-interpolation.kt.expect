@@ -1,0 +1,15 @@
+# `val s = "${"$n"}"` - a string inside an interpolation inside a string.
+#
+# This is the case a stateless hand cannot reach at all: closing correctly
+# requires remembering that the `"` at byte 21 opens a *new* string rather
+# than closing the one opened at 18. A hand with no memory across the body
+# closes the outer string at 21 and reads the rest as code.
+#
+# Outer [18, 27), inner [21, 25), both read off the source text.
+roots 1
+mends 0
+holds string_literal
+holds interpolated_expression
+lacks lambda_literal
+spans string_literal 18 27
+spans string_literal 21 25

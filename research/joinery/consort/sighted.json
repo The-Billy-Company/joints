@@ -1,0 +1,1086 @@
+[
+ {
+  "arm": "r0",
+  "rows": [
+   0
+  ],
+  "grammar": "scala",
+  "seat": [
+   "_indent/.offside/.slashes"
+  ],
+  "square": [
+   6739,
+   0
+  ],
+  "damage": [
+   4150,
+   11913
+  ],
+  "roots": [
+   26,
+   315
+  ],
+  "square_worth": 6739,
+  "damage_worth": 7763,
+  "crooked": [
+   1938,
+   897
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r1",
+  "rows": [
+   1
+  ],
+  "grammar": "haskell",
+  "seat": [
+   "_cmd_layout_start/.writ/_cmd_layout_start"
+  ],
+  "square": [
+   5,
+   0
+  ],
+  "damage": [
+   25072,
+   34240
+  ],
+  "roots": [
+   2582,
+   94
+  ],
+  "square_worth": 5,
+  "damage_worth": 9168,
+  "crooked": [
+   1375,
+   0
+  ],
+  "collateral": [],
+  "graded": "void"
+ },
+ {
+  "arm": "r2",
+  "rows": [
+   2
+  ],
+  "grammar": "kotlin",
+  "seat": [
+   "_string_start/.fence/.kotlin/_string_start"
+  ],
+  "square": [
+   35324,
+   8181
+  ],
+  "damage": [
+   244,
+   20981
+  ],
+  "roots": [
+   10,
+   424
+  ],
+  "square_worth": 27143,
+  "damage_worth": 20737,
+  "crooked": [
+   186,
+   989
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r3",
+  "rows": [
+   3
+  ],
+  "grammar": "swift",
+  "seat": [
+   "multiline_comment/.marrow/.swift_block"
+  ],
+  "square": [
+   14419,
+   14419
+  ],
+  "damage": [
+   3189,
+   3189
+  ],
+  "roots": [
+   128,
+   128
+  ],
+  "square_worth": 0,
+  "damage_worth": 0,
+  "crooked": [
+   8740,
+   8740
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r4",
+  "rows": [
+   4
+  ],
+  "grammar": "scala",
+  "seat": [
+   "block_comment/.marrow/.kotlin_block"
+  ],
+  "square": [
+   6739,
+   203
+  ],
+  "damage": [
+   4150,
+   6557
+  ],
+  "roots": [
+   26,
+   1273
+  ],
+  "square_worth": 6536,
+  "damage_worth": 2407,
+  "crooked": [
+   1938,
+   -8669
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r5",
+  "rows": [
+   5
+  ],
+  "grammar": "ocaml",
+  "seat": [
+   "comment/.marrow/.ocaml_comment"
+  ],
+  "square": [
+   12165,
+   11717
+  ],
+  "damage": [
+   2182,
+   1461
+  ],
+  "roots": [
+   167,
+   349
+  ],
+  "square_worth": 448,
+  "damage_worth": -721,
+  "crooked": [
+   2083,
+   1403
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r6",
+  "rows": [
+   6
+  ],
+  "grammar": "elixir",
+  "seat": [
+   "_quoted_content_double/.marrow/.elixir_quoted"
+  ],
+  "square": [
+   23879,
+   1
+  ],
+  "damage": [
+   0,
+   21525
+  ],
+  "roots": [
+   1,
+   3417
+  ],
+  "square_worth": 23878,
+  "damage_worth": 21525,
+  "crooked": [
+   22089,
+   16105
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r7",
+  "rows": [
+   7
+  ],
+  "grammar": "julia",
+  "seat": [
+   "_content_str_1/.marrow/.julia_quoted/."
+  ],
+  "square": [
+   24382,
+   15472
+  ],
+  "damage": [
+   1953,
+   7424
+  ],
+  "roots": [
+   138,
+   934
+  ],
+  "square_worth": 8910,
+  "damage_worth": 5471,
+  "crooked": [
+   157,
+   161
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r8",
+  "rows": [
+   8
+  ],
+  "grammar": "julia",
+  "seat": [
+   "_immediate_paren/.abut/."
+  ],
+  "square": [
+   24382,
+   8438
+  ],
+  "damage": [
+   1953,
+   11047
+  ],
+  "roots": [
+   138,
+   1591
+  ],
+  "square_worth": 15944,
+  "damage_worth": 9094,
+  "crooked": [
+   157,
+   621
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r9",
+  "rows": [
+   9
+  ],
+  "grammar": "php",
+  "seat": [
+   "encapsed_string_chars/.marrow/.php_encapsed"
+  ],
+  "square": [
+   67845,
+   662
+  ],
+  "damage": [
+   0,
+   8699
+  ],
+  "roots": [
+   1,
+   119
+  ],
+  "square_worth": 67183,
+  "damage_worth": 8699,
+  "crooked": [
+   0,
+   24539
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r10",
+  "rows": [
+   10
+  ],
+  "grammar": "latex",
+  "seat": [
+   "_trivia_raw_env_verbatim/.marrow/.latex_verbatim"
+  ],
+  "square": [
+   5246,
+   108
+  ],
+  "damage": [
+   0,
+   1185
+  ],
+  "roots": [
+   1,
+   72
+  ],
+  "square_worth": 5138,
+  "damage_worth": 1185,
+  "crooked": [
+   0,
+   1059
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r11",
+  "rows": [
+   11
+  ],
+  "grammar": "swift",
+  "seat": [
+   "_implicit_semi/.caesura/.swift"
+  ],
+  "square": [
+   14419,
+   545
+  ],
+  "damage": [
+   3189,
+   16290
+  ],
+  "roots": [
+   128,
+   1332
+  ],
+  "square_worth": 13874,
+  "damage_worth": 13101,
+  "crooked": [
+   8740,
+   3416
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r12",
+  "rows": [
+   12
+  ],
+  "grammar": "kotlin",
+  "seat": [
+   "_automatic_semicolon/.caesura/.kotlin"
+  ],
+  "square": [
+   35324,
+   4494
+  ],
+  "damage": [
+   244,
+   19473
+  ],
+  "roots": [
+   10,
+   1052
+  ],
+  "square_worth": 30830,
+  "damage_worth": 19229,
+  "crooked": [
+   186,
+   3666
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r13",
+  "rows": [
+   13
+  ],
+  "grammar": "elixir",
+  "seat": [
+   "_newline_before_do/.caesura/.elixir"
+  ],
+  "square": [
+   23879,
+   1
+  ],
+  "damage": [
+   0,
+   1329
+  ],
+  "roots": [
+   1,
+   217
+  ],
+  "square_worth": 23878,
+  "damage_worth": 1329,
+  "crooked": [
+   22089,
+   18406
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r0-4",
+  "rows": [
+   0,
+   4
+  ],
+  "grammar": "scala",
+  "seat": [
+   "_indent/.offside/.slashes",
+   "block_comment/.marrow/.kotlin_block"
+  ],
+  "square": [
+   6739,
+   11
+  ],
+  "damage": [
+   4150,
+   6948
+  ],
+  "roots": [
+   26,
+   1261
+  ],
+  "square_worth": 6728,
+  "damage_worth": 2798,
+  "crooked": [
+   1938,
+   -8279
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r2-12",
+  "rows": [
+   2,
+   12
+  ],
+  "grammar": "kotlin",
+  "seat": [
+   "_string_start/.fence/.kotlin/_string_start",
+   "_automatic_semicolon/.caesura/.kotlin"
+  ],
+  "square": [
+   35324,
+   4674
+  ],
+  "damage": [
+   244,
+   19922
+  ],
+  "roots": [
+   10,
+   1140
+  ],
+  "square_worth": 30650,
+  "damage_worth": 19678,
+  "crooked": [
+   186,
+   3803
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r3-11",
+  "rows": [
+   3,
+   11
+  ],
+  "grammar": "swift",
+  "seat": [
+   "multiline_comment/.marrow/.swift_block",
+   "_implicit_semi/.caesura/.swift"
+  ],
+  "square": [
+   14419,
+   545
+  ],
+  "damage": [
+   3189,
+   16290
+  ],
+  "roots": [
+   128,
+   1332
+  ],
+  "square_worth": 13874,
+  "damage_worth": 13101,
+  "crooked": [
+   8740,
+   3416
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r6-13",
+  "rows": [
+   6,
+   13
+  ],
+  "grammar": "elixir",
+  "seat": [
+   "_quoted_content_double/.marrow/.elixir_quoted",
+   "_newline_before_do/.caesura/.elixir"
+  ],
+  "square": [
+   23879,
+   1
+  ],
+  "damage": [
+   0,
+   21382
+  ],
+  "roots": [
+   1,
+   3376
+  ],
+  "square_worth": 23878,
+  "damage_worth": 21382,
+  "crooked": [
+   22089,
+   12841
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "r7-8",
+  "rows": [
+   7,
+   8
+  ],
+  "grammar": "julia",
+  "seat": [
+   "_content_str_1/.marrow/.julia_quoted/.",
+   "_immediate_paren/.abut/."
+  ],
+  "square": [
+   24382,
+   117
+  ],
+  "damage": [
+   1953,
+   16681
+  ],
+  "roots": [
+   138,
+   2477
+  ],
+  "square_worth": 24265,
+  "damage_worth": 14728,
+  "crooked": [
+   157,
+   621
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "union",
+  "rows": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13
+  ],
+  "grammar": "elixir",
+  "seat": [
+   "_indent/.offside/.slashes",
+   "_cmd_layout_start/.writ/_cmd_layout_start",
+   "_string_start/.fence/.kotlin/_string_start",
+   "multiline_comment/.marrow/.swift_block",
+   "block_comment/.marrow/.kotlin_block",
+   "comment/.marrow/.ocaml_comment",
+   "_quoted_content_double/.marrow/.elixir_quoted",
+   "_content_str_1/.marrow/.julia_quoted/.",
+   "_immediate_paren/.abut/.",
+   "encapsed_string_chars/.marrow/.php_encapsed",
+   "_trivia_raw_env_verbatim/.marrow/.latex_verbatim",
+   "_implicit_semi/.caesura/.swift",
+   "_automatic_semicolon/.caesura/.kotlin",
+   "_newline_before_do/.caesura/.elixir"
+  ],
+  "square": [
+   23879,
+   1
+  ],
+  "damage": [
+   0,
+   21382
+  ],
+  "roots": [
+   1,
+   3376
+  ],
+  "square_worth": 23878,
+  "damage_worth": 21382,
+  "crooked": [
+   22089,
+   12841
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "union",
+  "rows": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13
+  ],
+  "grammar": "haskell",
+  "seat": [
+   "_indent/.offside/.slashes",
+   "_cmd_layout_start/.writ/_cmd_layout_start",
+   "_string_start/.fence/.kotlin/_string_start",
+   "multiline_comment/.marrow/.swift_block",
+   "block_comment/.marrow/.kotlin_block",
+   "comment/.marrow/.ocaml_comment",
+   "_quoted_content_double/.marrow/.elixir_quoted",
+   "_content_str_1/.marrow/.julia_quoted/.",
+   "_immediate_paren/.abut/.",
+   "encapsed_string_chars/.marrow/.php_encapsed",
+   "_trivia_raw_env_verbatim/.marrow/.latex_verbatim",
+   "_implicit_semi/.caesura/.swift",
+   "_automatic_semicolon/.caesura/.kotlin",
+   "_newline_before_do/.caesura/.elixir"
+  ],
+  "square": [
+   5,
+   0
+  ],
+  "damage": [
+   25072,
+   34240
+  ],
+  "roots": [
+   2582,
+   94
+  ],
+  "square_worth": 5,
+  "damage_worth": 9168,
+  "crooked": [
+   1375,
+   0
+  ],
+  "collateral": [],
+  "graded": "void"
+ },
+ {
+  "arm": "union",
+  "rows": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13
+  ],
+  "grammar": "julia",
+  "seat": [
+   "_indent/.offside/.slashes",
+   "_cmd_layout_start/.writ/_cmd_layout_start",
+   "_string_start/.fence/.kotlin/_string_start",
+   "multiline_comment/.marrow/.swift_block",
+   "block_comment/.marrow/.kotlin_block",
+   "comment/.marrow/.ocaml_comment",
+   "_quoted_content_double/.marrow/.elixir_quoted",
+   "_content_str_1/.marrow/.julia_quoted/.",
+   "_immediate_paren/.abut/.",
+   "encapsed_string_chars/.marrow/.php_encapsed",
+   "_trivia_raw_env_verbatim/.marrow/.latex_verbatim",
+   "_implicit_semi/.caesura/.swift",
+   "_automatic_semicolon/.caesura/.kotlin",
+   "_newline_before_do/.caesura/.elixir"
+  ],
+  "square": [
+   24382,
+   117
+  ],
+  "damage": [
+   1953,
+   16681
+  ],
+  "roots": [
+   138,
+   2477
+  ],
+  "square_worth": 24265,
+  "damage_worth": 14728,
+  "crooked": [
+   157,
+   621
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "union",
+  "rows": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13
+  ],
+  "grammar": "kotlin",
+  "seat": [
+   "_indent/.offside/.slashes",
+   "_cmd_layout_start/.writ/_cmd_layout_start",
+   "_string_start/.fence/.kotlin/_string_start",
+   "multiline_comment/.marrow/.swift_block",
+   "block_comment/.marrow/.kotlin_block",
+   "comment/.marrow/.ocaml_comment",
+   "_quoted_content_double/.marrow/.elixir_quoted",
+   "_content_str_1/.marrow/.julia_quoted/.",
+   "_immediate_paren/.abut/.",
+   "encapsed_string_chars/.marrow/.php_encapsed",
+   "_trivia_raw_env_verbatim/.marrow/.latex_verbatim",
+   "_implicit_semi/.caesura/.swift",
+   "_automatic_semicolon/.caesura/.kotlin",
+   "_newline_before_do/.caesura/.elixir"
+  ],
+  "square": [
+   35324,
+   4674
+  ],
+  "damage": [
+   244,
+   19922
+  ],
+  "roots": [
+   10,
+   1140
+  ],
+  "square_worth": 30650,
+  "damage_worth": 19678,
+  "crooked": [
+   186,
+   3803
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "union",
+  "rows": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13
+  ],
+  "grammar": "latex",
+  "seat": [
+   "_indent/.offside/.slashes",
+   "_cmd_layout_start/.writ/_cmd_layout_start",
+   "_string_start/.fence/.kotlin/_string_start",
+   "multiline_comment/.marrow/.swift_block",
+   "block_comment/.marrow/.kotlin_block",
+   "comment/.marrow/.ocaml_comment",
+   "_quoted_content_double/.marrow/.elixir_quoted",
+   "_content_str_1/.marrow/.julia_quoted/.",
+   "_immediate_paren/.abut/.",
+   "encapsed_string_chars/.marrow/.php_encapsed",
+   "_trivia_raw_env_verbatim/.marrow/.latex_verbatim",
+   "_implicit_semi/.caesura/.swift",
+   "_automatic_semicolon/.caesura/.kotlin",
+   "_newline_before_do/.caesura/.elixir"
+  ],
+  "square": [
+   5246,
+   108
+  ],
+  "damage": [
+   0,
+   1185
+  ],
+  "roots": [
+   1,
+   72
+  ],
+  "square_worth": 5138,
+  "damage_worth": 1185,
+  "crooked": [
+   0,
+   1059
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "union",
+  "rows": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13
+  ],
+  "grammar": "ocaml",
+  "seat": [
+   "_indent/.offside/.slashes",
+   "_cmd_layout_start/.writ/_cmd_layout_start",
+   "_string_start/.fence/.kotlin/_string_start",
+   "multiline_comment/.marrow/.swift_block",
+   "block_comment/.marrow/.kotlin_block",
+   "comment/.marrow/.ocaml_comment",
+   "_quoted_content_double/.marrow/.elixir_quoted",
+   "_content_str_1/.marrow/.julia_quoted/.",
+   "_immediate_paren/.abut/.",
+   "encapsed_string_chars/.marrow/.php_encapsed",
+   "_trivia_raw_env_verbatim/.marrow/.latex_verbatim",
+   "_implicit_semi/.caesura/.swift",
+   "_automatic_semicolon/.caesura/.kotlin",
+   "_newline_before_do/.caesura/.elixir"
+  ],
+  "square": [
+   12165,
+   11717
+  ],
+  "damage": [
+   2182,
+   1461
+  ],
+  "roots": [
+   167,
+   349
+  ],
+  "square_worth": 448,
+  "damage_worth": -721,
+  "crooked": [
+   2083,
+   1403
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "union",
+  "rows": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13
+  ],
+  "grammar": "php",
+  "seat": [
+   "_indent/.offside/.slashes",
+   "_cmd_layout_start/.writ/_cmd_layout_start",
+   "_string_start/.fence/.kotlin/_string_start",
+   "multiline_comment/.marrow/.swift_block",
+   "block_comment/.marrow/.kotlin_block",
+   "comment/.marrow/.ocaml_comment",
+   "_quoted_content_double/.marrow/.elixir_quoted",
+   "_content_str_1/.marrow/.julia_quoted/.",
+   "_immediate_paren/.abut/.",
+   "encapsed_string_chars/.marrow/.php_encapsed",
+   "_trivia_raw_env_verbatim/.marrow/.latex_verbatim",
+   "_implicit_semi/.caesura/.swift",
+   "_automatic_semicolon/.caesura/.kotlin",
+   "_newline_before_do/.caesura/.elixir"
+  ],
+  "square": [
+   67845,
+   662
+  ],
+  "damage": [
+   0,
+   8699
+  ],
+  "roots": [
+   1,
+   119
+  ],
+  "square_worth": 67183,
+  "damage_worth": 8699,
+  "crooked": [
+   0,
+   24539
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "union",
+  "rows": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13
+  ],
+  "grammar": "scala",
+  "seat": [
+   "_indent/.offside/.slashes",
+   "_cmd_layout_start/.writ/_cmd_layout_start",
+   "_string_start/.fence/.kotlin/_string_start",
+   "multiline_comment/.marrow/.swift_block",
+   "block_comment/.marrow/.kotlin_block",
+   "comment/.marrow/.ocaml_comment",
+   "_quoted_content_double/.marrow/.elixir_quoted",
+   "_content_str_1/.marrow/.julia_quoted/.",
+   "_immediate_paren/.abut/.",
+   "encapsed_string_chars/.marrow/.php_encapsed",
+   "_trivia_raw_env_verbatim/.marrow/.latex_verbatim",
+   "_implicit_semi/.caesura/.swift",
+   "_automatic_semicolon/.caesura/.kotlin",
+   "_newline_before_do/.caesura/.elixir"
+  ],
+  "square": [
+   6739,
+   11
+  ],
+  "damage": [
+   4150,
+   6948
+  ],
+  "roots": [
+   26,
+   1261
+  ],
+  "square_worth": 6728,
+  "damage_worth": 2798,
+  "crooked": [
+   1938,
+   -8279
+  ],
+  "collateral": [],
+  "graded": "read"
+ },
+ {
+  "arm": "union",
+  "rows": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13
+  ],
+  "grammar": "swift",
+  "seat": [
+   "_indent/.offside/.slashes",
+   "_cmd_layout_start/.writ/_cmd_layout_start",
+   "_string_start/.fence/.kotlin/_string_start",
+   "multiline_comment/.marrow/.swift_block",
+   "block_comment/.marrow/.kotlin_block",
+   "comment/.marrow/.ocaml_comment",
+   "_quoted_content_double/.marrow/.elixir_quoted",
+   "_content_str_1/.marrow/.julia_quoted/.",
+   "_immediate_paren/.abut/.",
+   "encapsed_string_chars/.marrow/.php_encapsed",
+   "_trivia_raw_env_verbatim/.marrow/.latex_verbatim",
+   "_implicit_semi/.caesura/.swift",
+   "_automatic_semicolon/.caesura/.kotlin",
+   "_newline_before_do/.caesura/.elixir"
+  ],
+  "square": [
+   14419,
+   545
+  ],
+  "damage": [
+   3189,
+   16290
+  ],
+  "roots": [
+   128,
+   1332
+  ],
+  "square_worth": 13874,
+  "damage_worth": 13101,
+  "crooked": [
+   8740,
+   3416
+  ],
+  "collateral": [],
+  "graded": "read"
+ }
+]

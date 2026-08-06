@@ -1,0 +1,30 @@
+# Authored as a CONTROL and it came back GUILTY, which is the finding.
+#
+# In go, `fmt.Print("x", "y")` recovers: a conversion takes one operand, so a
+# second argument kills the wrong reading and the call survives. The same move
+# in python does not work.
+#
+#   outliner                      tree-sitter
+#   print_statement [0, 11)       call [0, 11)
+#     "print"                       function: identifier  "print"
+#     argument: tuple [5, 11)       arguments: argument_list [5, 11)
+#       "(" x "," y ")"               identifier x
+#                                     identifier y
+#
+# Python 2's print statement takes a tuple, so it accepts every arity a call
+# accepts. There is no input that starves the wrong reading to death. Where go
+# can be rescued by the shape of the input, python cannot be rescued at all -
+# the tie must be broken by rank, and `keyword_identifier`'s `prec -3` is
+# nowhere near enough against `print_statement`'s `prec 1`.
+#
+# That difference is why the three "declared conflict" defects in this lane are
+# not one fix. go's fork resolves itself on most real code; python's never
+# does, and every bare `print(...)` in a Python 3 file is misread.
+roots 1
+mends 0
+holds call
+holds argument_list
+lacks print_statement
+lacks tuple
+spans call 0 11
+spans argument_list 5 11

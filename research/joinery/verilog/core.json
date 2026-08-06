@@ -1,0 +1,612 @@
+[
+ {
+  "turn": 0,
+  "built": 20188,
+  "describes": 15019,
+  "leaves": 1654,
+  "mends": 1506,
+  "line": 209,
+  "kind": "blocking assign",
+  "verdict": "unexpected = at 6296 in state 2394, 2281 roots, mended 1506 over 27141B"
+ },
+ {
+  "turn": 1,
+  "built": 20177,
+  "describes": 15008,
+  "leaves": 1655,
+  "mends": 1504,
+  "line": 214,
+  "kind": "task/function",
+  "verdict": "unexpected macro_text at 6321 in state 1723, 2279 roots, mended 1504 over 27139B"
+ },
+ {
+  "turn": 2,
+  "built": 20168,
+  "describes": 15004,
+  "leaves": 1658,
+  "mends": 1504,
+  "line": 217,
+  "kind": "block keyword",
+  "verdict": "unexpected macro_text at 6491 in state 1723, 2283 roots, mended 1504 over 27121B"
+ },
+ {
+  "turn": 3,
+  "built": 20177,
+  "describes": 15008,
+  "leaves": 1655,
+  "mends": 1503,
+  "line": 218,
+  "kind": "task/function",
+  "verdict": "unexpected endtask at 6502 in state 1723, 2279 roots, mended 1503 over 27118B"
+ },
+ {
+  "turn": 4,
+  "built": 20149,
+  "describes": 14975,
+  "leaves": 1656,
+  "mends": 1503,
+  "line": 221,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 6529 in state 1723, 2279 roots, mended 1503 over 27139B"
+ },
+ {
+  "turn": 5,
+  "built": 20112,
+  "describes": 14935,
+  "leaves": 1657,
+  "mends": 1503,
+  "line": 222,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 6559 in state 1723, 2279 roots, mended 1503 over 27148B"
+ },
+ {
+  "turn": 6,
+  "built": 20075,
+  "describes": 14895,
+  "leaves": 1658,
+  "mends": 1503,
+  "line": 223,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 6598 in state 1723, 2279 roots, mended 1503 over 27148B"
+ },
+ {
+  "turn": 7,
+  "built": 20038,
+  "describes": 14855,
+  "leaves": 1659,
+  "mends": 1503,
+  "line": 224,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 6637 in state 1723, 2279 roots, mended 1503 over 27148B"
+ },
+ {
+  "turn": 8,
+  "built": 20001,
+  "describes": 14815,
+  "leaves": 1660,
+  "mends": 1503,
+  "line": 225,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 6676 in state 1723, 2279 roots, mended 1503 over 27148B"
+ },
+ {
+  "turn": 9,
+  "built": 19964,
+  "describes": 14775,
+  "leaves": 1661,
+  "mends": 1503,
+  "line": 226,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 6715 in state 1723, 2279 roots, mended 1503 over 27148B"
+ },
+ {
+  "turn": 10,
+  "built": 19927,
+  "describes": 14735,
+  "leaves": 1662,
+  "mends": 1503,
+  "line": 227,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 6754 in state 1723, 2279 roots, mended 1503 over 27148B"
+ },
+ {
+  "turn": 11,
+  "built": 19890,
+  "describes": 14695,
+  "leaves": 1663,
+  "mends": 1503,
+  "line": 228,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 6793 in state 1723, 2279 roots, mended 1503 over 27148B"
+ },
+ {
+  "turn": 12,
+  "built": 19853,
+  "describes": 14655,
+  "leaves": 1664,
+  "mends": 1503,
+  "line": 229,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 6832 in state 1723, 2279 roots, mended 1503 over 27148B"
+ },
+ {
+  "turn": 13,
+  "built": 19816,
+  "describes": 14615,
+  "leaves": 1665,
+  "mends": 1503,
+  "line": 230,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 6871 in state 1723, 2279 roots, mended 1503 over 27148B"
+ },
+ {
+  "turn": 14,
+  "built": 19778,
+  "describes": 14575,
+  "leaves": 1666,
+  "mends": 1503,
+  "line": 231,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 6910 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 15,
+  "built": 19740,
+  "describes": 14535,
+  "leaves": 1667,
+  "mends": 1503,
+  "line": 232,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 6950 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 16,
+  "built": 19702,
+  "describes": 14495,
+  "leaves": 1668,
+  "mends": 1503,
+  "line": 233,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 6990 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 17,
+  "built": 19664,
+  "describes": 14455,
+  "leaves": 1669,
+  "mends": 1503,
+  "line": 234,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7030 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 18,
+  "built": 19626,
+  "describes": 14415,
+  "leaves": 1670,
+  "mends": 1503,
+  "line": 235,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7070 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 19,
+  "built": 19588,
+  "describes": 14375,
+  "leaves": 1671,
+  "mends": 1503,
+  "line": 236,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7110 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 20,
+  "built": 19550,
+  "describes": 14335,
+  "leaves": 1672,
+  "mends": 1503,
+  "line": 237,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7150 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 21,
+  "built": 19512,
+  "describes": 14295,
+  "leaves": 1673,
+  "mends": 1503,
+  "line": 238,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7190 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 22,
+  "built": 19474,
+  "describes": 14255,
+  "leaves": 1674,
+  "mends": 1503,
+  "line": 239,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7230 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 23,
+  "built": 19436,
+  "describes": 14215,
+  "leaves": 1675,
+  "mends": 1503,
+  "line": 240,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7270 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 24,
+  "built": 19398,
+  "describes": 14175,
+  "leaves": 1676,
+  "mends": 1503,
+  "line": 241,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7310 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 25,
+  "built": 19360,
+  "describes": 14135,
+  "leaves": 1677,
+  "mends": 1503,
+  "line": 242,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7350 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 26,
+  "built": 19322,
+  "describes": 14095,
+  "leaves": 1678,
+  "mends": 1503,
+  "line": 243,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7390 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 27,
+  "built": 19284,
+  "describes": 14055,
+  "leaves": 1679,
+  "mends": 1503,
+  "line": 244,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7430 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 28,
+  "built": 19246,
+  "describes": 14015,
+  "leaves": 1680,
+  "mends": 1503,
+  "line": 245,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7470 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 29,
+  "built": 19208,
+  "describes": 13975,
+  "leaves": 1681,
+  "mends": 1503,
+  "line": 246,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7510 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 30,
+  "built": 19170,
+  "describes": 13935,
+  "leaves": 1682,
+  "mends": 1503,
+  "line": 247,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7550 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 31,
+  "built": 19132,
+  "describes": 13895,
+  "leaves": 1683,
+  "mends": 1503,
+  "line": 248,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7590 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 32,
+  "built": 19094,
+  "describes": 13855,
+  "leaves": 1684,
+  "mends": 1503,
+  "line": 249,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7630 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 33,
+  "built": 19056,
+  "describes": 13815,
+  "leaves": 1685,
+  "mends": 1503,
+  "line": 250,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7670 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 34,
+  "built": 19018,
+  "describes": 13775,
+  "leaves": 1686,
+  "mends": 1503,
+  "line": 251,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7710 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 35,
+  "built": 18980,
+  "describes": 13735,
+  "leaves": 1687,
+  "mends": 1503,
+  "line": 252,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7750 in state 1723, 2279 roots, mended 1503 over 27149B"
+ },
+ {
+  "turn": 36,
+  "built": 18956,
+  "describes": 13728,
+  "leaves": 1688,
+  "mends": 1503,
+  "line": 257,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7823 in state 1723, 2279 roots, mended 1503 over 27135B"
+ },
+ {
+  "turn": 37,
+  "built": 18932,
+  "describes": 13702,
+  "leaves": 1689,
+  "mends": 1503,
+  "line": 258,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7849 in state 1723, 2279 roots, mended 1503 over 27135B"
+ },
+ {
+  "turn": 38,
+  "built": 18906,
+  "describes": 13695,
+  "leaves": 1690,
+  "mends": 1503,
+  "line": 259,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7875 in state 1723, 2279 roots, mended 1503 over 27137B"
+ },
+ {
+  "turn": 39,
+  "built": 18879,
+  "describes": 13688,
+  "leaves": 1691,
+  "mends": 1503,
+  "line": 260,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7903 in state 1723, 2279 roots, mended 1503 over 27138B"
+ },
+ {
+  "turn": 40,
+  "built": 18855,
+  "describes": 13681,
+  "leaves": 1692,
+  "mends": 1503,
+  "line": 262,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7933 in state 1723, 2279 roots, mended 1503 over 27135B"
+ },
+ {
+  "turn": 41,
+  "built": 18831,
+  "describes": 13655,
+  "leaves": 1693,
+  "mends": 1503,
+  "line": 263,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7959 in state 1723, 2279 roots, mended 1503 over 27135B"
+ },
+ {
+  "turn": 42,
+  "built": 18805,
+  "describes": 13648,
+  "leaves": 1694,
+  "mends": 1503,
+  "line": 264,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 7985 in state 1723, 2279 roots, mended 1503 over 27137B"
+ },
+ {
+  "turn": 43,
+  "built": 18778,
+  "describes": 13641,
+  "leaves": 1695,
+  "mends": 1503,
+  "line": 265,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 8013 in state 1723, 2279 roots, mended 1503 over 27138B"
+ },
+ {
+  "turn": 44,
+  "built": 18755,
+  "describes": 13632,
+  "leaves": 1696,
+  "mends": 1503,
+  "line": 267,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 8043 in state 1723, 2279 roots, mended 1503 over 27134B"
+ },
+ {
+  "turn": 45,
+  "built": 18732,
+  "describes": 13606,
+  "leaves": 1697,
+  "mends": 1503,
+  "line": 268,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 8068 in state 1723, 2279 roots, mended 1503 over 27134B"
+ },
+ {
+  "turn": 46,
+  "built": 18707,
+  "describes": 13597,
+  "leaves": 1698,
+  "mends": 1503,
+  "line": 269,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 8093 in state 1723, 2279 roots, mended 1503 over 27136B"
+ },
+ {
+  "turn": 47,
+  "built": 18681,
+  "describes": 13588,
+  "leaves": 1699,
+  "mends": 1503,
+  "line": 270,
+  "kind": "declaration",
+  "verdict": "unexpected macro_text at 8120 in state 1723, 2279 roots, mended 1503 over 27137B"
+ },
+ {
+  "turn": 48,
+  "built": 18681,
+  "describes": 13587,
+  "leaves": 1698,
+  "mends": 1502,
+  "line": 272,
+  "kind": "generate",
+  "verdict": "unexpected macro_text at 8149 in state 1723, 2278 roots, mended 1502 over 27123B"
+ },
+ {
+  "turn": 49,
+  "built": 18681,
+  "describes": 13586,
+  "leaves": 1697,
+  "mends": 1501,
+  "line": 273,
+  "kind": "other",
+  "verdict": "unexpected macro_text at 8187 in state 1723, 2277 roots, mended 1501 over 27120B"
+ },
+ {
+  "turn": 50,
+  "built": 18681,
+  "describes": 13586,
+  "leaves": 1697,
+  "mends": 1499,
+  "line": 274,
+  "kind": "other",
+  "verdict": "unexpected macro_text at 8224 in state 1723, 2277 roots, mended 1499 over 27097B"
+ },
+ {
+  "turn": 51,
+  "built": 18681,
+  "describes": 13586,
+  "leaves": 1697,
+  "mends": 1497,
+  "line": 275,
+  "kind": "other",
+  "verdict": "unexpected macro_text at 8257 in state 1723, 2277 roots, mended 1497 over 27078B"
+ },
+ {
+  "turn": 52,
+  "built": 18681,
+  "describes": 13586,
+  "leaves": 1697,
+  "mends": 1495,
+  "line": 276,
+  "kind": "other",
+  "verdict": "unexpected macro_text at 8290 in state 1723, 2277 roots, mended 1495 over 27059B"
+ },
+ {
+  "turn": 53,
+  "built": 18681,
+  "describes": 13586,
+  "leaves": 1697,
+  "mends": 1493,
+  "line": 277,
+  "kind": "other",
+  "verdict": "unexpected macro_text at 8323 in state 1723, 2277 roots, mended 1493 over 27040B"
+ },
+ {
+  "turn": 54,
+  "built": 18681,
+  "describes": 13586,
+  "leaves": 1697,
+  "mends": 1491,
+  "line": 278,
+  "kind": "other",
+  "verdict": "unexpected macro_text at 8356 in state 1723, 2277 roots, mended 1491 over 27021B"
+ },
+ {
+  "turn": 55,
+  "built": 18681,
+  "describes": 13586,
+  "leaves": 1697,
+  "mends": 1489,
+  "line": 279,
+  "kind": "other",
+  "verdict": "unexpected macro_text at 8389 in state 1723, 2277 roots, mended 1489 over 27002B"
+ },
+ {
+  "turn": 56,
+  "built": 18681,
+  "describes": 13586,
+  "leaves": 1697,
+  "mends": 1487,
+  "line": 280,
+  "kind": "other",
+  "verdict": "unexpected macro_text at 8422 in state 1723, 2277 roots, mended 1487 over 26983B"
+ },
+ {
+  "turn": 57,
+  "built": 18681,
+  "describes": 13586,
+  "leaves": 1697,
+  "mends": 1485,
+  "line": 281,
+  "kind": "other",
+  "verdict": "unexpected macro_text at 8455 in state 1723, 2277 roots, mended 1485 over 26964B"
+ },
+ {
+  "turn": 58,
+  "built": 18681,
+  "describes": 13586,
+  "leaves": 1697,
+  "mends": 1483,
+  "line": 282,
+  "kind": "other",
+  "verdict": "unexpected macro_text at 8488 in state 1723, 2277 roots, mended 1483 over 26945B"
+ },
+ {
+  "turn": 59,
+  "built": 18681,
+  "describes": 13586,
+  "leaves": 1697,
+  "mends": 1481,
+  "line": 283,
+  "kind": "other",
+  "verdict": "unexpected macro_text at 8521 in state 1723, 2277 roots, mended 1481 over 26926B"
+ },
+ {
+  "turn": 60,
+  "built": 18680,
+  "describes": 13585,
+  "leaves": 1698,
+  "mends": 1480,
+  "line": 284,
+  "kind": "other",
+  "verdict": "unexpected macro_text at 8552 in state 1723, 2277 roots, mended 1480 over 26899B"
+ }
+]

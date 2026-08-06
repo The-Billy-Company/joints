@@ -1,0 +1,11 @@
+# `file_descriptor` is external: the `2` in `2>&1` is a descriptor and not the
+# word `2`, and only a scanner that sees the following `>` can tell. It is one
+# byte wide and the redirect is a sibling of the command, not part of it.
+roots 1
+mends 0
+holds file_descriptor
+spans file_descriptor 8 9
+holds file_redirect
+spans file_redirect 8 12
+holds command
+spans command 0 7

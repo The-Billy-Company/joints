@@ -1,0 +1,8 @@
+# `escape_sequence` is external and the corpus never presents one.
+# `"a\nb"` must cut into three: fragment, escape, fragment - the escape
+# is two bytes wide and does not swallow the `b`.
+roots 1
+mends 0
+holds escape_sequence
+spans escape_sequence 10 12
+spans string 8 14

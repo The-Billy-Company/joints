@@ -1,0 +1,10 @@
+# `val s = "abc` - an opener with no close, at end of file.
+#
+# The claim here is deliberately narrow, because what a sound hand should
+# hand back for a truncated file is a recovery question and not a lexing one.
+# What is *not* a judgement call: `abc` is string content. A blind scanner
+# reads those three bytes as an identifier, which is the whole difference
+# between a file that is unfinished and a file that means something else.
+#
+# This is the weakest specimen in the tier and is recorded as such.
+holds string_content

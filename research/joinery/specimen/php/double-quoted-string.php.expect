@@ -1,0 +1,25 @@
+# php cannot lex a double-quoted string, and this is the whole of it.
+#
+# `encapsed_string_chars` is one of the twelve externals php declares and the
+# coverage gate reports php seating NONE of them. So the body of `"x"` is a
+# token no lexer in this tree can make, and outliner says so itself:
+#
+#   unexpected (?:\\?[^'\\]+) at 12 in state 68
+#   [no stand-in for encapsed_string_chars, admitted by shift]
+#
+# The claims below are TREE-SITTER'S answer over these same bytes, not
+# outliner's. They fail today - 5 roots, 1 mend, no `encapsed_string`, and a
+# `text` node instead. That is the handover: this file passes when php can
+# lex a string, and until then it says exactly which token is missing.
+#
+# Why it matters far past one string: `text` is php's node for inline HTML
+# OUTSIDE `<?php`, so the recovery does not orphan the remainder - it CLAIMS
+# it. See `text-swallows-remainder.php`, and in the corpus `Str.php`, where
+# the first double-quoted string appears at byte 26,850 and the 40,995 bytes
+# after it become one `text` node counted `built`.
+roots 1
+mends 0
+holds encapsed_string
+lacks text
+spans encapsed_string 11 14
+spans string_content 12 13

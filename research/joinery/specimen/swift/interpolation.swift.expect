@@ -1,0 +1,9 @@
+# `let s = "a \(n + 1) b"` - Swift spells interpolation `\(`, not `${`.
+#
+# swift.json gives line_string_literal = `"`, repeat(text | _interpolation),
+# `"`, and _interpolation = `\(`, contents, `)`. The literal runs [18, 32)
+# off the source text.
+roots 1
+mends 0
+holds line_string_literal
+spans line_string_literal 18 32

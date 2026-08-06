@@ -1,0 +1,22 @@
+# Scala 3's optional braces: `object A:` opens a template body that indentation
+# closes, with no `{` or `}` anywhere. The row that seats it is
+# `_indent/.offside/.slashes`, and this file is the smallest thing that cannot
+# parse without it.
+#
+# The claim that matters is `spans template_body 8 33`: the body must start at
+# the colon's own byte and end at the last member's last byte, because the
+# indentation that closes it is invisible. A reader with no offside state does
+# not produce a short `template_body`, it produces no `object_definition` at
+# all - un-seated (`sc-r0`) this file comes back as loose `identifier` and
+# `assignment_expression` leaves with no compilation unit over them.
+#
+# Deliberately comment-free, so that it separates the two scala rows: with the
+# comment row un-seated (`sc-r4`) every claim below still holds. Written
+# 2026-08-06; `research/joinery/consort/RESULT-4-clearance.md` had this row
+# corpus-only and negative-worth.
+roots 1
+mends 0
+holds object_definition
+spans object_definition 0 33
+holds template_body
+spans template_body 8 33

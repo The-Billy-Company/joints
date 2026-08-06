@@ -1,0 +1,215 @@
+[
+ {
+  "row": 0,
+  "seat": "_indent/.offside/.slashes",
+  "moved": {
+   "scala": {
+    "damage": [
+     11913,
+     16883
+    ],
+    "standing": [
+     0.4075,
+     0.1603
+    ]
+   }
+  }
+ },
+ {
+  "row": 1,
+  "seat": "_cmd_layout_start/.writ/_cmd_layout_start",
+  "moved": {
+   "haskell": {
+    "damage": [
+     34240,
+     25086
+    ],
+    "standing": [
+     0.0,
+     0.2673
+    ]
+   }
+  }
+ },
+ {
+  "row": 2,
+  "seat": "_string_start/.fence/.kotlin/_string_start",
+  "moved": {
+   "kotlin": {
+    "damage": [
+     20981,
+     244
+    ],
+    "standing": [
+     0.4142,
+     0.9932
+    ]
+   }
+  }
+ },
+ {
+  "row": 3,
+  "seat": "multiline_comment/.marrow/.swift_block",
+  "moved": {}
+ },
+ {
+  "row": 4,
+  "seat": "block_comment/.marrow/.kotlin_block",
+  "moved": {
+   "scala": {
+    "damage": [
+     6557,
+     16883
+    ],
+    "standing": [
+     0.6739,
+     0.1603
+    ]
+   }
+  }
+ },
+ {
+  "row": 5,
+  "seat": "comment/.marrow/.ocaml_comment",
+  "moved": {
+   "ocaml": {
+    "damage": [
+     1461,
+     2182
+    ],
+    "standing": [
+     0.9134,
+     0.8707
+    ]
+   }
+  }
+ },
+ {
+  "row": 6,
+  "seat": "_quoted_content_double/.marrow/.elixir_quoted",
+  "moved": {
+   "elixir": {
+    "damage": [
+     21497,
+     8795
+    ],
+    "standing": [
+     0.5336,
+     0.8092
+    ]
+   }
+  }
+ },
+ {
+  "row": 7,
+  "seat": "_content_str_1/.marrow/.julia_quoted/.",
+  "moved": {
+   "julia": {
+    "damage": [
+     7424,
+     1953
+    ],
+    "standing": [
+     0.7287,
+     0.9286
+    ]
+   }
+  }
+ },
+ {
+  "row": 8,
+  "seat": "_immediate_paren/.abut/.",
+  "moved": {
+   "julia": {
+    "damage": [
+     11047,
+     1953
+    ],
+    "standing": [
+     0.5962,
+     0.9286
+    ]
+   }
+  }
+ },
+ {
+  "row": 9,
+  "seat": "encapsed_string_chars/.marrow/.php_encapsed",
+  "moved": {
+   "php": {
+    "damage": [
+     8699,
+     0
+    ],
+    "standing": [
+     0.8718,
+     1.0
+    ]
+   }
+  }
+ },
+ {
+  "row": 10,
+  "seat": "_trivia_raw_env_verbatim/.marrow/.latex_verbatim",
+  "moved": {
+   "latex": {
+    "damage": [
+     1185,
+     0
+    ],
+    "standing": [
+     0.7741,
+     1.0
+    ]
+   }
+  }
+ },
+ {
+  "row": 11,
+  "seat": "_implicit_semi/.caesura/.swift",
+  "moved": {
+   "swift": {
+    "damage": [
+     16250,
+     5337
+    ],
+    "standing": [
+     0.4292,
+     0.8125
+    ]
+   }
+  }
+ },
+ {
+  "row": 12,
+  "seat": "_automatic_semicolon/.caesura/.kotlin",
+  "moved": {
+   "kotlin": {
+    "damage": [
+     19473,
+     244
+    ],
+    "standing": [
+     0.4563,
+     0.9932
+    ]
+   }
+  }
+ },
+ {
+  "row": 13,
+  "seat": "_newline_before_do/.caesura/.elixir",
+  "moved": {
+   "elixir": {
+    "damage": [
+     8829,
+     8795
+    ],
+    "standing": [
+     0.8084,
+     0.8092
+    ]
+   }
+  }
+ }
+]

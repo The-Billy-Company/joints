@@ -1,0 +1,26 @@
+# CONTROL for do-block-on-inner-call.ex. The same meaning, spelled the way the
+# language desugars it, and outliner gets it right.
+#
+# `defp f(x) do x end` IS `defp(f(x), do: x)` - elixir's do-block is sugar for
+# a `do:` keyword argument on the outer call. This file writes the desugared
+# form, and it contains the same inner call `f(x)` in the same position:
+#
+#   call [0, 17)
+#     target: identifier  "defp"
+#     arguments [4, 17)
+#       call [5, 9)        <- the inner call, present here too
+#       keywords [11, 16)  <- what the do-block means
+#
+# So the inner call is not what confuses the press. What confuses it is the
+# token `do`: with a comma and a keyword there is nothing to shift into `f(x)`,
+# the outer argument list simply continues, and both parsers agree.
+#
+# Read this beside the guilty witness and the pair says exactly where the
+# defect lives - not in the construct, not in the nesting, but in one shift
+# decision on one terminal.
+roots 1
+mends 0
+holds keywords
+lacks do_block
+spans arguments 4 17
+spans call 5 9

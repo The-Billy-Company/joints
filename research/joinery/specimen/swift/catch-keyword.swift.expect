@@ -1,0 +1,10 @@
+# `catch_keyword` is external for the same reason `default` is: swift permits
+# `catch` as an identifier and the scanner decides. The catch block is a
+# sibling of the do body, not a child of it.
+roots 1
+mends 0
+holds catch_keyword
+spans catch_keyword 26 31
+holds catch_block
+spans catch_block 26 35
+holds do_statement

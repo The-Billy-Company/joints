@@ -1,0 +1,25 @@
+# CONTROL for selector-field.go, and it fails in the entertaining direction.
+#
+# `int(x)` is a genuine type conversion - the one construct
+# `type_conversion_expression` exists for. Both parsers call it a
+# `call_expression`:
+#
+#   call_expression [41, 47)
+#     function: identifier   "int"
+#     arguments: argument_list [44, 47)
+#
+# tree-sitter-go does this on purpose. Without a selector there is nothing to
+# tell `int(x)` from a call of a function named `int`, so the grammar does not
+# try, and the conversion rule is reserved for the shapes where a type is
+# syntactically forced.
+#
+# Which pins the guilty witness precisely. Outliner does not over-eagerly reach
+# for `type_conversion_expression`: on the one input that really is a
+# conversion it does not reach for it at all. It reaches for it only when a
+# `.` is in play, because that is the only place the rival derivation exists.
+roots 1
+mends 0
+holds call_expression
+lacks type_conversion_expression
+lacks qualified_type
+spans call_expression 41 47

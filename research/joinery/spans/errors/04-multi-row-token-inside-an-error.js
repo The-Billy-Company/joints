@@ -1,0 +1,2 @@
+log(`row
+two` z);

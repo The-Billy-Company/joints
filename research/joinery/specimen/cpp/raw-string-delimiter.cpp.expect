@@ -1,0 +1,16 @@
+# `raw_string_delimiter` is external and it is the whole point of a C++ raw
+# string: the closer is not `)"` but `)tag"`, chosen per literal. The content
+# here contains `)b`, which is a closer for the empty delimiter and not for
+# this one.
+#
+# The first draft of this specimen was `R"tag(a)b"tag"`, which has no closer
+# at all; tree-sitter ERRORed on it and that is how I learned my authored
+# input was wrong rather than outliner. An oracle that refuses is worth more
+# than an oracle that agrees.
+roots 1
+mends 0
+holds raw_string_delimiter
+spans raw_string_delimiter 18 21
+spans raw_string_delimiter 26 29
+holds raw_string_content
+spans raw_string_content 22 25

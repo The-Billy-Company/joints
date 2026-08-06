@@ -1,0 +1,22 @@
+# The operator seam, which is the largest of elixir's three and the reason the
+# caesura row exists.
+#
+# `scan_newline` marks its end immediately after the newline and its inline
+# whitespace, then only looks at what follows to decide *which* terminal it is:
+# a comment, a `do`, or a binary operator. Three names, one function, no memory
+# - and the claim is the opposite of an automatic semicolon's. ecma's seam says
+# a statement ENDED here; elixir's says it did NOT, and the next line resumes
+# it. That is why this row has no `body`: a break followed by none of the three
+# is not a token at all, the extras eat it, and nothing is owed.
+#
+# These bytes are the falsifier for the operator arm specifically. Without it
+# `x =` ends at the newline and `a` and `|> f()` become their own roots; with it
+# the whole thing is one right-nested `binary_operator`, which is what
+# tree-sitter builds and what these claims are taken from.
+roots 1
+mends 0
+holds binary_operator
+holds call
+lacks ERROR
+spans binary_operator 0 16
+spans call 13 16

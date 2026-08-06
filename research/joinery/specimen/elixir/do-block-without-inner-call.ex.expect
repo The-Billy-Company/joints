@@ -1,0 +1,25 @@
+# CONTROL for do-block-on-inner-call.ex. Take the parentheses away and the
+# defect goes away with them.
+#
+# `defp f do x end` is the same construct as `defp f(x) do x end` minus one
+# thing: there is no inner CALL for the do-block to be hung on. `f` here is a
+# bare identifier in `arguments`, not a call of its own, so when `do` arrives
+# there is exactly one node that can take it and outliner takes it.
+#
+# Both trees, leaf for leaf and extent for extent:
+#
+#   call [0, 15)
+#     target: identifier  "defp"
+#     arguments [5, 6)
+#       identifier  "f"
+#     do_block [7, 15)    <- sibling of arguments, on both sides
+#
+# This is what makes the guilty witness credible. The failure is not "outliner
+# cannot attach a do_block to a definition" - it attaches this one correctly.
+# It is specifically the choice between two nodes that could both take it, and
+# with only one candidate present there is no choice to get wrong.
+roots 1
+mends 0
+holds do_block
+spans do_block 7 15
+spans arguments 5 6

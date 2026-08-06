@@ -1,0 +1,9 @@
+# `val s = "a\"b"` - an escape at the boundary.
+#
+# The `"` at byte 11 is escaped and must not close the string, so the literal
+# runs [8, 14). A hand that does not carry the backslash closes at [8, 12)
+# and then meets `b"` as code.
+roots 1
+mends 0
+holds string_literal
+spans string_literal 8 14

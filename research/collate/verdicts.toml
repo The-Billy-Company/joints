@@ -1,0 +1,401 @@
+# Hand adjudication — who is actually right where the two parsers disagree
+#
+# `plumb` scores every disagreement against outliner, because the oracle is
+# assumed correct. On the two files where tree-sitter's own tree is in recovery
+# it goes silent instead, and silence over the corpus's #1 damage row was read
+# as a win. This file is the other half: each row is one span, what both trees
+# said there, and **which of them is right**, decided by reading the language's
+# own grammar rather than by trusting either parser.
+#
+# `side` is one of:
+#   ours     outliner is right
+#   theirs   tree-sitter is right
+#   neither  both are wrong
+#   agree    both say the same thing (kept as controls and regression guards)
+#   neutral  a declared difference in node shaping that misreads nothing
+#
+# `ours` and `theirs` are what each tree said **at the moment of adjudication** -
+# every node whose extent is exactly `[start, end)`, outermost first, `—` for
+# none. `collate.py adjudicated` re-derives both from the live binary and the
+# live oracle and reports any row that no longer matches as `DRIFTED`, excluded
+# from every total. A hand verdict about a tree that has since changed is not a
+# weaker verdict; it is not a verdict.
+#
+# A drifted row is brought back by **re-judging** it - re-reading the bytes and
+# re-deciding `side` - never by pasting today's two names in and leaving `side`
+# alone. That shortcut leaves the file asserting one parser is right about a span
+# where both now say the same thing, and `collate.py prove` refuses it: on every
+# live row, `ours == theirs` must be exactly `side in {agree, neutral}`.
+#
+# Adjudicated 2026-08-05 on pin `collate` (tree 735a2c2ee2e8, binary
+# a01fcb3448c4) against tree-sitter 0.26.11 generated from the same pinned
+# `grammar.json` the press reads.
+#
+# Three rows re-judged 2026-08-06 on pin `driftlane` (tree b08566533455) - go
+# [43,57) and both php rows, each `theirs` because outliner was wrong there and
+# each now `agree` because a sibling fixed it. The dissolved witness is kept as
+# the regression guard for the fix that dissolved it. **Two verilog rows are left
+# drifted on purpose**: [89368,89412) lost a `parameter_declaration` we were right
+# about and is a live regression (see below), and [50526,50629) grew an ancestor
+# nobody has claimed.
+
+# --------------------------------------------------------------------- verilog
+# `picorv32.v` — 94,657 bytes, the corpus's largest damage row, and the file the
+# brief singled out: tree-sitter's ERROR is the root, so `plumb` has no verdict
+# on any of outliner's 30,720 built bytes here.
+
+[[verdict]]  # '#(\n\tparameter [ 0:0] ENABLE_COUNTERS = 1, ...'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 80092
+end = 81099
+ours = "parameter_port_list"
+theirs = "—"
+side = "ours"
+why = """
+The parameter port list of `module picorv32_axi`. A1.4 of the language spells it
+`parameter_port_list ::= # ( list_of_param_assignments ... )`, which is exactly
+these bytes, and outliner fills it out - parameter_port_declaration,
+parameter_declaration, packed_dimension, constant_range, integral_number.
+tree-sitter has no node over any of it: the deepest thing covering byte 80092 is
+the root `ERROR [0,94657)`. Consumer: an editor folding the parameter list, or
+expanding a selection outward from one parameter, gets a 1,007-byte region from
+outliner and the whole file from tree-sitter."""
+
+[[verdict]]  # 'module picorv32_axi'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 80072
+end = 80091
+ours = "module_header"
+theirs = "—"
+side = "ours"
+why = """
+tree-sitter's deepest node here is `ERROR [79903,80128)`, so the second module in
+the file has no header node at all. Consumer: an outline view or a symbol index
+lists `picorv32_axi` from outliner's tree and cannot see it in tree-sitter's."""
+
+[[verdict]]  # '`define FORMAL_KEEP\n'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 1418
+end = 1438
+ours = "text_macro_definition"
+theirs = "—"
+side = "ours"
+why = """
+A `define body ends at the end of its line unless the line is continued with a
+backslash; this one is not. Outliner cuts at 1438, the newline, and names the
+following `endif` a `zero_directive` at [1440,1446). tree-sitter's
+`text_macro_definition` runs to 1447 and swallows the `endif` into the macro
+body. Consumer: a refactoring tool that renames or deletes the macro takes the
+`endif` with it on tree-sitter's tree and leaves the conditional unbalanced."""
+
+[[verdict]]  # 'output        mem_axi_awvalid'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 81177
+end = 81206
+ours = "ansi_port_declaration"
+theirs = "—"
+side = "ours"
+why = """
+A port, in an ANSI-style port list. tree-sitter's enclosing node is
+`list_of_param_assignments [81071,81254)` - it is reading the module's ports as
+parameter assignments, twenty-nine of them. Consumer: any tool that lists a
+module's ports, which is most of what a Verilog editor does."""
+
+[[verdict]]  # "parameter [31:0] MASKED_IRQ = 32'h 0000_0000"
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 89368
+end = 89412
+ours = "parameter_declaration"
+theirs = "—"
+side = "ours"
+why = """
+tree-sitter's enclosing node is `operator_assignment [88423,89412)`, a 989-byte
+procedural assignment that ends exactly where this declaration ends. Outliner
+names the declaration.
+
+**DRIFTED, and left drifted because it is a regression rather than a stale line.**
+The bytes are `parameter [31:0] MASKED_IRQ = 32'h 0000_0000`, which A.2.1.1 spells
+`parameter_declaration ::= parameter data_type_or_implicit
+list_of_param_assignments`. On pin `driftlane` outliner builds no node over the
+span at all; what it builds instead is `simple_identifier [89368,89377)` over the
+word `parameter`, a bare `[`/`constant_range`/`]`, and a
+`variable_decl_assignment` over the tail. **That is the keyword read as an
+identifier - the exact defect the [80096,80105) row below adjudicates as
+tree-sitter's, and that row has not drifted.** Same word, same file, 9 KB apart,
+two readings, so this is an inconsistency and not a policy anybody chose.
+
+Attributed: deterministic (six fresh processes, one binary, same answer), so this
+is not the press-nondeterminism class. Across thirteen pins the reading tracks
+`src/press/bench.zig` - it holds on that file's pre-lane and `unjudged`/`crowdonly`
+/`alone2` revisions and is lost on the `bh`/`bonly`/`bhc`/`skeinsonly`/`ship`
+revision, which is what shipped - and `src/kernel/quire/gather.zig` can rescue it
+at one fuse setting (`crowd64`). The first pin to lose it is `bh`, whose manifest
+differs from `heft`'s in `src/press/bench.zig` and `src/press/ladder.zig` only.
+That is the `unwritten` change, whose own claim is "costing nothing … no row
+moves", measured in `built`/`nodes`/`standing` - counts a node replaced by three
+loose siblings over the same bytes cannot move - and whose supporting fuse census
+is byte-identical across four corners "without verilog". This row is the verilog
+the census left out. Not this lane's file to fix: `bench.zig` is under another
+lane right now."""
+
+[[verdict]]  # 'task empty_statement; ... endtask'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 6321
+end = 6509
+ours = "package_or_generate_item_declaration/task_declaration"
+theirs = "—"
+side = "ours"
+why = """
+`task_declaration` is a declared member of `package_or_generate_item_declaration`
+in this grammar, so outliner's two-node chain is what the grammar says. In
+tree-sitter's tree these bytes are loose inside `seq_block [6233,9085)`, with no
+node of their own. Consumer: go-to-definition for `empty_statement`."""
+
+[[verdict]]  # '`ifdef PICORV32_TESTBUG_001'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 46429
+end = 46456
+ours = "id_directive"
+theirs = "—"
+side = "ours"
+why = """
+A compiler directive. tree-sitter has absorbed it into
+`conditional_statement [46386,46502)` - it is reading the preprocessor's `ifdef
+as if it were the language's `if`. This is the same confusion that makes the
+whole file an ERROR, showing up locally."""
+
+[[verdict]]  # 'parameter'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 80096
+end = 80105
+ours = "\"parameter\""
+theirs = "simple_identifier"
+side = "ours"
+why = """
+`parameter` is a keyword. tree-sitter's recovery has lexed it as
+`simple_identifier`, which the grammar defines as the PATTERN
+`[a-zA-Z_][a-zA-Z0-9_$]*` - a real reading, not a hidden wrapper node, so the
+two trees genuinely disagree about what this token is. 27 sites and 243 bytes on
+this file, and the same shape covers `wire` (53), `output` (17), `input` (11),
+`reg` (5) and `endtask` (1): 610 bytes of keyword read as identifier.
+Consumer: a highlighter. Outliner paints these as keywords; tree-sitter paints
+them the colour of a variable name."""
+
+[[verdict]]  # 'mem_rdata_q[31:25]'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 14341
+end = 14359
+ours = "variable_decl_assignment"
+theirs = "variable_lvalue"
+side = "theirs"
+why = """
+The line is `{mem_rdata_q[31:25], mem_rdata_q[11:7]} <= {...};` inside an always
+block. This is the left-hand side of a nonblocking assignment - an lvalue, which
+is what tree-sitter calls it. Outliner calls it a declaration with an
+initialiser, which nothing here declares. Consumer: "find every write to this
+signal" reads tree-sitter's tree correctly and reads outliner's as a
+declaration site."""
+
+[[verdict]]  # '[6:5]'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 16323
+end = 16328
+ours = "unpacked_dimension"
+theirs = "select1"
+side = "theirs"
+why = """
+`if (mem_rdata_latched[6:5] == 2'b10)` - a part-select inside an expression.
+`unpacked_dimension` is an array bound in a *declaration*, and there is no
+declaration on this line. tree-sitter is right. Outliner does get this right
+elsewhere in the same file (`constant_range` over `14:12` at [17707,17712)), so
+this is an inconsistency rather than a missing rule."""
+
+[[verdict]]  # 'assign mem_rdata_latched_noshuffle = (mem_xfer ...'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 12060
+end = 12155
+ours = "package_or_generate_item_declaration/net_declaration"
+theirs = "—"
+side = "theirs"
+why = """
+tree-sitter's node is `continuous_assign [11928,12155)`, which starts at the
+`assign` keyword and is what the grammar calls this. `continuous_assign` is not
+reachable from `package_or_generate_item_declaration` - its members are
+net_declaration, data_declaration, task/function/class declarations and the
+parameter forms, none of which can derive `assign`. Outliner is wrong twice
+over: wrong name, and an extent that drops the keyword."""
+
+[[verdict]]  # 'assign pcpi_mul_rd = 32\'bx;'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 8996
+end = 9023
+ours = "package_or_generate_item_declaration/net_declaration"
+theirs = "statement_or_null/statement/statement_item"
+side = "neither"
+why = """
+Inside `generate if (ENABLE_PCPI) ... else begin ... end endgenerate`, so this is
+a continuous assignment at module scope: `module_or_generate_item ->
+continuous_assign`. Outliner calls it a declaration, which the grammar cannot
+derive from `assign`. tree-sitter calls it a procedural statement, which is
+illegal at this scope. Both are confidently wrong, and 123 of outliner's roots
+on this file sit in exactly this pairing."""
+
+[[verdict]]  # 'picorv32 #(\n\t\t.ENABLE_COUNTERS (...)) core (...)'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 83841
+end = 85029
+ours = "data_type_or_implicit1/data_type/class_type"
+theirs = "class_type"
+side = "neither"
+why = """
+A module instantiation - `module_instantiation ::= module_identifier
+[parameter_value_assignment] hierarchical_instance ...`. Both parsers call it a
+class type, 1,188 bytes of it, twice in the file. This is the single widest
+built root outliner has on this file and it is wrong; that it is *equally* wrong
+in tree-sitter is why it belongs in `neither` and not in a win column."""
+
+[[verdict]]  # 'vfi_csr_minstret_wmask'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 4654
+end = 4676
+ours = "variable_decl_assignment/simple_identifier"
+theirs = "—"
+side = "theirs"
+why = """
+The identifier in the source is `rvfi_csr_minstret_wmask`; outliner's node starts
+at 4654 and cuts the leading `r` off. tree-sitter's `simple_identifier` runs
+[4653,4676) and has the whole name. Consumer: a rename refactor driven by
+outliner's extents corrupts the identifier."""
+
+[[verdict]]  # '$display("ST_RD: %2d 0x%08x, BRANCH 0x%08x", ...)'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 50526
+end = 50629
+ours = "expression/primary/function_subroutine_call/subroutine_call/system_tf_call"
+theirs = "system_tf_call"
+side = "agree"
+why = """
+Same innermost name over the same bytes; outliner spells the four ancestor rules
+the grammar puts above it and tree-sitter collapses them. Kept as a control: a
+byte comparison over deepest nodes must score this as agreement, and one that
+scores it a disagreement is measuring node shaping.
+
+**DRIFTED `deeper`, and left drifted because no change has been named for it.**
+Outliner now spells a fifth ancestor, `list_of_actual_arguments`, over the same
+extent. The control's claim is untouched - same innermost `system_tf_call`, same
+bytes, tree-sitter still collapses - so what moved is this row's *transcript* of
+the chain and not its verdict, which is why `prove` reports it `deeper` rather
+than `renamed` or `lost`. It flips between pins `swift-raw` (23:51) and
+`g-control` (00:09), a window whose manifests differ in
+`src/kernel/quire/{gather,quire}.zig` and `src/surface/face/outliner/parse.zig`,
+with no pin in between and no changelog fragment naming it. Three files is not a
+named change, so the row is not re-transcribed: whoever owns that window should
+re-read these bytes and re-sign the chain."""
+
+[[verdict]]  # '#(\n\tparameter [ 0:0] ENABLE_COUNTERS = 1, ...'
+grammar = "verilog"
+source = "upstream/sources/picorv32.v"
+start = 1879
+end = 2927
+ours = "parameter_port_list"
+theirs = "parameter_port_list"
+side = "agree"
+why = """
+The first module's parameter port list, which tree-sitter *does* recover inside
+its ERROR root. The control for row one: the same construct, same two parsers,
+same names - the difference at 80092 is tree-sitter's recovery giving out, not a
+rule it lacks."""
+
+# ----------------------------------------------------------------- the specimens
+# Cases whose answer is known independently of any instrument here.
+
+[[verdict]]  # 'fmt.Print("x")'
+grammar = "go"
+source = "research/joinery/specimen/go/selector-field.go"
+start = 43
+end = 57
+ours = "expression_statement/call_expression"
+theirs = "expression_statement/call_expression"
+side = "agree"
+why = """
+**This was the file's red tripwire, and the parser outgrew it.** `fmt.Print("x")`
+is a call. Outliner used to read it as a `type_conversion_expression` over a
+qualified type - a cast, not a call - while go reported 100.0% standing, zero
+damage and zero mends, so every coverage-shaped number here called the file
+perfect. The row said in as many words that adjudicating `agree` without somebody
+fixing the parser meant the instrument was broken. Somebody fixed the parser.
+Bisected over the pins, this span flips between `aud-live` (tree 9d26ca82e78b)
+and `heft` (tree 7c07931f6a0b), whose source manifests differ in exactly one
+file - `src/kernel/quire/gather.zig`, the `collapse` merge that stopped the fork
+budget being spent on several spellings of one derivation. `rack.py` carried the
+same tripwire on this same specimen and was re-asked of the corpus for the same
+reason. Kept as the regression guard for the fix that dissolved it, not as a win:
+the day go reads a call as a conversion again, this row drifts and says so.
+Consumer: a call-graph index, or "find all callers of Print"."""
+
+[[verdict]]  # '"x"'
+grammar = "php"
+source = "research/joinery/specimen/php/double-quoted-string.php"
+start = 11
+end = 14
+ours = "encapsed_string"
+theirs = "encapsed_string"
+side = "agree"
+why = """
+php could not lex a double-quoted string. Outliner had no node over these three
+bytes at all - not a wrong node, no node - and on the corpus file that was 40,995
+bytes collapsing into one `text` node while the board reported 87.2% standing.
+Seating four of the six terminals `scan_encapsed_part_string` serves fixed it, and
+took php's row from 67.8% crooked to 0.0%. The span flips between the lane's own
+`php-before` (tree 986eb8ece142) and `php-after` (tree c34fdd082e5a). Kept as the
+regression guard for that fix: the day this reads `—` again, the external is
+unseated and this row is where it says so."""
+
+[[verdict]]  # '$a = "x";'
+grammar = "php"
+source = "research/joinery/specimen/php/double-quoted-string.php"
+start = 6
+end = 15
+ours = "expression_statement"
+theirs = "expression_statement"
+side = "agree"
+why = """
+The whole nine-byte statement, over which outliner used to produce nothing at all.
+Same unseated `encapsed_string_chars` external as the row above, one rung up, and
+it stays a separate row because a statement can come back without its string
+doing. Same window: `php-before` (tree 986eb8ece142) to `php-after`
+(tree c34fdd082e5a). Kept as the regression guard.
+Consumer: everything."""
+
+[[verdict]]  # '/* c\n   d */'
+grammar = "swift"
+source = "research/joinery/specimen/swift/multiline-comment.swift"
+start = 10
+end = 22
+ours = "multiline_comment"
+theirs = "multiline_comment"
+side = "agree"
+why = """
+**This was the amendment's central exhibit and it is no longer true.** Outliner
+read this comment as a `prefix_expression` over a `multiplicative_expression` -
+a comment parsed as arithmetic, one root, zero mends, scored `built` by every
+instrument here. On pin `collate` (tree 735a2c2ee2e8) it reads
+`multiline_comment`, the same node tree-sitter gives it: the lane that owns
+`src/kernel/lex/` seated swift's blind external while this lane was running.
+Kept as a regression guard, not as a win. If it ever drifts back to
+`prefix_expression`, this file fails and says so."""

@@ -1,0 +1,29 @@
+# `is_after_variable`, the parameter that is not carried - and the reason this
+# seating is a `marrow` and not a `fence`.
+#
+# `"$b[0]-$c->d!"` reads the same bytes two ways depending only on which
+# terminal the parse state named. Immediately behind `$b`, a `[` opens a
+# subscript and a `->` opens a member access; three bytes later, behind
+# nothing, the `-` of `-$c` is ordinary content. Nothing in the scanner
+# remembers that a variable just ended: the parser asks for
+# `encapsed_string_chars_after_variable` in one state and
+# `encapsed_string_chars` in the other, and the distinction arrives with the
+# question.
+#
+# So this file fails in BOTH directions of the obvious mistake. A walk that
+# always stopped at `[` would cut `!` wrong and never produce the `-` content
+# run; a walk that never stopped would swallow `[0]` into the body and lose
+# `subscript_expression` and `member_access_expression` entirely - while still
+# producing an `encapsed_string` and still parsing whole. Checking for a tree
+# would pass it. The spans are what catch it.
+#
+# Claims are tree-sitter's tree over these bytes.
+roots 1
+mends 0
+holds encapsed_string
+holds subscript_expression
+holds member_access_expression
+lacks text
+spans subscript_expression 12 17
+spans member_access_expression 18 23
+spans string_content 17 18

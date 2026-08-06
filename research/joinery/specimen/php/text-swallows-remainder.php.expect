@@ -1,0 +1,29 @@
+# The reason a blind external costs far more than its own bytes.
+#
+# `double-quoted-string.php` shows php cannot lex `"x"`. This shows what
+# happens NEXT, and it is the finding this lane exists for. Outliner's forest
+# over these 70 bytes:
+#
+#   php_tag       [0, 5)
+#   variable_name [6, 8)
+#   name          [7, 8)
+#   program      [13, 70)
+#   text         [13, 70)
+#
+# `text` is php's node for inline HTML outside `<?php`. Both function
+# definitions - 57 of the file's 70 bytes - are read as raw HTML text. And
+# because `program [13, 70)` is a top-level node WITH a child, the board's
+# `built` counts every one of those 57 bytes as read.
+#
+# So the recovery does not orphan the remainder, it claims it. A blind
+# external costs its own bytes plus everything downstream of it, and the
+# downstream bytes score as a WIN. In `Str.php` the same route turns the
+# 40,995 bytes after byte 26,850 into one `text` node, which is 32,615 of the
+# corpus's 33,634 regrouped bytes - 97% of the whole finding, from one
+# unlexable token.
+#
+# The claims are tree-sitter's answer. They fail today.
+roots 1
+mends 0
+lacks text
+holds function_definition

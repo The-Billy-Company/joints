@@ -1,0 +1,28 @@
+# CONTROL for selector-field.go, and the one that proves the press DOES fork.
+#
+# `fmt.Print("x")` reads as a type conversion. `fmt.Print("x", "y")` - the same
+# bytes plus one argument - reads as a call, correctly, on both sides:
+#
+#   call_expression [43, 62)
+#     function: selector_expression [43, 52)
+#     arguments: argument_list [52, 62)   <- two literals
+#
+# A conversion takes exactly one operand. Add a second and the conversion
+# reading has nowhere to put it, so that limb dies and the call limb is the
+# only one left standing. `fmt.Print()` does the same thing from the other
+# side: a conversion needs an operand and there is none.
+#
+# That is the whole argument that the one-argument case is a RESOLVED CONTEST
+# and not a lost production. Both readings are alive in the table, both are
+# carried, and the loser is picked at the end. On one argument neither dies, so
+# something has to break the tie - and outliner breaks it the other way from
+# tree-sitter, which spends `type_conversion_expression`'s declared
+# `prec.dynamic(-1)` over the finished subtrees.
+roots 1
+mends 0
+holds call_expression
+holds selector_expression
+lacks type_conversion_expression
+lacks qualified_type
+spans call_expression 43 62
+spans argument_list 52 62

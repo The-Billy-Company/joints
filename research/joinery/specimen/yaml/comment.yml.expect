@@ -1,0 +1,14 @@
+# yaml is one of the three grammars where `rack --square` prints THE GUARD
+# CANNOT RUN HERE: there is no tree-sitter verdict for this language in this
+# tree, so nothing else can adjudicate it. Every other claim in this tier was
+# derived from the oracle. This one could not be, and is authored from the
+# spec: a `#` at column 0 opens a comment that ends at the newline, and the
+# mapping after it is unaffected.
+#
+# yaml also declares 41 externals and spells zero literals in its grammar -
+# the whole language is scanner. It is the grammar where this tier is the
+# only instrument there is.
+roots 1
+mends 0
+holds comment
+spans comment 0 19

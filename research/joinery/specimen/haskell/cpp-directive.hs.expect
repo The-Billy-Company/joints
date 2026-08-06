@@ -1,0 +1,10 @@
+# `cpp` is external: haskell source can carry C preprocessor lines, and the
+# scanner has to hand a whole line to a node that the layout algorithm then
+# has to ignore. The directive is one node ending at the newline, and the
+# binding after it is unaffected - `main` still starts a declaration.
+roots 1
+mends 0
+holds cpp
+spans cpp 0 15
+holds bind
+spans bind 16 34

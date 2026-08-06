@@ -1,0 +1,40 @@
+# The boundary of the fix, seated so that crossing it has to be deliberate.
+#
+# `scan_encapsed_part_string` serves SIX terminals and this tree now seats
+# four. The two it does not are the heredoc pair, and the line is not a matter
+# of taste: with `is_heredoc` true the first statement of the function reads
+# `scanner->heredocs`, a stack of tags that one token pushes and another
+# spends. That is carried state, which is `fence`'s animal and not `marrow`'s,
+# and seating it here would be the kotlin defect again - one shape's walk
+# quietly answering another shape's terminals.
+#
+# **So this specimen is expected to FAIL today, and that is its whole job.**
+# It is the handover the way `double-quoted-string.php` was one an hour ago:
+# the claims below are tree-sitter's tree, and php will hold them when the
+# heredoc pair is seated on a fence. Until then the failure is the honest
+# report that four of six is what landed.
+#
+# **It is NOT the guard on the seating, and the first draft of this comment
+# said it was.** That draft claimed a later hand widening the marrow roster
+# onto the heredoc pair "would make THIS file's `heredoc_body` come out wrong
+# rather than absent". It was written as an argument, then run as a falsifier -
+# roster widened, binary rebuilt - and it is false. These bytes stop at
+# `heredoc_start`, a THIRD unseated external, before either content terminal is
+# ever asked for, so the widened build's forest over this file is byte-
+# identical to the correct one and this specimen reads 0/7 on both. A red
+# specimen cannot report a regression: there is no number below zero for it to
+# fall to.
+#
+# The guard that does hold is `scanner: a row claims the terminals it is
+# pinned to and no others` in `scanner_test.zig`, which pins this row's four
+# member names and fails naming the two that arrived. It exists because this
+# comment was wrong.
+#
+# Claims are tree-sitter's tree over these bytes.
+roots 1
+mends 0
+holds heredoc
+holds heredoc_body
+lacks text
+spans heredoc 11 23
+spans heredoc_body 17 19
