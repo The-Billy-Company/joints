@@ -2548,7 +2548,29 @@ pub const Gather = struct {
         each: for (x.next.items) |v| {
             for (x.next.items[0..kept]) |*k| {
                 if (!x.twinned(v.top, k.top)) continue;
-                const won = if (v.beats(k.*)) v else k.*;
+                // Neither authored key separates these two. `heft` is the
+                // one number the grammar wrote for this comparison and it
+                // tied; `rank` is birth order and it tied as well, which means
+                // the fork was cast and folded back inside one token and the
+                // limbs are the same age. So the pick was being made by
+                // position in `next` - the driver's own enqueue order, a
+                // property of neither reading - and it always kept the
+                // incumbent, which is the action the table would have taken
+                // had it never forked at all.
+                //
+                // Keeping the challenger is the other face of the same coin,
+                // and it is the one that pays: it hands elixir's `do` to the
+                // enclosing call instead of to the inner call's argument list.
+                // Both faces were measured over the whole board, because the
+                // control arm *is* the other face -
+                // `research/joinery/elixir/RESULT-2-do-block.md`.
+                //
+                // This is not the third rung `Reading.beats` declines. That
+                // rung reordered readings wherever `heft` alone tied; this
+                // fires only where `heft` and `rank` are both equal, a case
+                // `beats` resolves with `<` and therefore never separates.
+                const tied = v.heft == k.heft and v.rank == k.rank;
+                const won = if (v.beats(k.*) or tied) v else k.*;
                 assay.trace(.quire, "merged: rank {d} heft {d} and rank {d} heft {d} stand on the same states; rank {d} heft {d} keeps the nodes\n", .{
                     k.rank, k.heft, v.rank, v.heft, won.rank, won.heft,
                 });

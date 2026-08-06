@@ -57,7 +57,11 @@ pub const Forks = struct {
     splits: []const Split,
     width: u32,
 
-    pub const Split = struct { cell: u32, other: Action };
+    /// `sided` marks the reading as one an authored associativity ordered
+    /// second rather than one nobody ordered at all. The parse forks on both;
+    /// the bit is what lets it tell a speculation with no instruction behind
+    /// it from one with an instruction that only ordered it.
+    pub const Split = struct { cell: u32, other: Action, sided: bool = false };
 
     pub fn of(
         gpa: std.mem.Allocator,
@@ -68,13 +72,20 @@ pub const Forks = struct {
         var splits: std.ArrayList(Split) = .empty;
         errdefer splits.deinit(gpa);
         for (conflicts) |k| {
-            if ((k.class != .declared and k.class != .unwritten) or k.other.none()) continue;
+            // Exhaustive rather than a negated pair, so a class appended later
+            // has to say here whether it forks instead of defaulting to one.
+            switch (k.class) {
+                .declared, .unwritten, .sided => {},
+                .repetition, .residual => continue,
+            }
+            if (k.other.none()) continue;
             const cell = k.state * width + k.terminal;
-            try splits.append(gpa, .{ .cell = cell, .other = k.other });
+            const sided = k.class == .sided;
+            try splits.append(gpa, .{ .cell = cell, .other = k.other, .sided = sided });
             // `other` first, always: it is the reading a parse prefers when it
             // explores the cell, and the order these arrive in is the order the
             // strands are born in.
-            for (k.rest) |also| try splits.append(gpa, .{ .cell = cell, .other = also });
+            for (k.rest) |also| try splits.append(gpa, .{ .cell = cell, .other = also, .sided = sided });
         }
         // Stable, so the rivals of one cell stay in the order they were offered
         // in. An unstable sort is free to put `rest` ahead of `other`, and which

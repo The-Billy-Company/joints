@@ -354,7 +354,7 @@ pub const ConflictKind = enum(u32) { shift_reduce, reduce_reduce };
 /// binary meeting a class it has no name for refuses the file at `audit.tag`
 /// rather than folding it into a neighbour, which is why appending is safe and
 /// reordering is not.
-pub const ConflictClass = enum(u32) { repetition, declared, residual, unwritten };
+pub const ConflictClass = enum(u32) { repetition, declared, residual, unwritten, sided };
 
 /// Which way a merged answer went in a frayed cell.
 pub const Harm = enum(u32) { read_dropped, fold_dropped };

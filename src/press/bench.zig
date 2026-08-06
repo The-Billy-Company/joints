@@ -42,6 +42,10 @@ pub const Bench = struct {
     frayed: std.ArrayList(Frayed) = .empty,
     /// Columns that need the second pass. Reused across states.
     contested: std.ArrayList(u32) = .empty,
+    /// Scratch for `strands`: the fold chain being walked, and every state it
+    /// has already stood on. Owned here so a per-cell walk allocates once.
+    chain: std.ArrayList(u32) = .empty,
+    walked: std.ArrayList(u32) = .empty,
     /// Every recorded conflict's party, end to end, and where each one sits.
     roll: std.ArrayList(g.Symbol) = .empty,
     cuts: std.ArrayList(struct { at: u32, len: u32 }) = .empty,
@@ -70,6 +74,8 @@ pub const Bench = struct {
         b.conflicts.deinit(b.gpa);
         b.frayed.deinit(b.gpa);
         b.contested.deinit(b.gpa);
+        b.chain.deinit(b.gpa);
+        b.walked.deinit(b.gpa);
         b.roll.deinit(b.gpa);
         b.cuts.deinit(b.gpa);
         b.rest.deinit(b.gpa);
@@ -156,7 +162,9 @@ pub const Bench = struct {
         // in this column: `frays` is true exactly when the lookahead admits the
         // terminal under the union over arrivals and not under the intersection,
         // so the permission is the merge's invention rather than the grammar's.
-        survey.continues = survey.continues and frayed;
+        //
+        // And only where folding actually *loses* the tail. See `strands`.
+        survey.continues = survey.continues and frayed and b.strands(state, t);
 
         if (reading) {
             // One synthesized rule arguing with itself is a list deciding
@@ -199,9 +207,15 @@ pub const Bench = struct {
         // precedence declined, and a side declared over the whole rule ordered
         // them. Ordering is all it may do - so that cell is recorded too, and
         // the read it lost is left for the parse to fork on.
-        const spared = !keep_read and reading and
-            ((survey.unwritten and !survey.grounded and !survey.above) or
-                Ladder.sided(survey, f));
+        //
+        // The two arms are kept apart rather than or-ed into one flag. They
+        // spare for opposite reasons - one because nobody instructed the cell,
+        // one in spite of an instruction that only ordered it - and a consumer
+        // that cannot tell them apart cannot treat them differently. Read
+        // before the re-poll below, which deliberately cannot see either.
+        const nobody_ranked = survey.unwritten and !survey.grounded and !survey.above;
+        const by_side = Ladder.sided(survey, f);
+        const spared = !keep_read and reading and (nobody_ranked or by_side);
 
         // With the read eliminated, the in-progress readings are no longer party
         // to anything: what is left is a disagreement among completed
@@ -250,11 +264,15 @@ pub const Bench = struct {
             // already attributed, and overwriting that would trade a real
             // provenance for a redundant one.
             const found = try b.who.of(state);
+            // `nobody_ranked` first where both arms fired: a cell nobody
+            // instructed is the weaker claim of the two, and naming it that
+            // keeps every fork that had no authored side behaving as it did.
+            const why: Conflict.Class = if (nobody_ranked) .unwritten else .sided;
             try b.record(
                 state,
                 t,
                 .shift_reduce,
-                if (found == .residual) .unwritten else found,
+                if (found == .residual) why else found,
                 r[t],
                 read,
                 &alive,
@@ -451,6 +469,58 @@ pub const Bench = struct {
             try b.who.note(p.lhs, p.rhs[0..item.dot]);
         }
         return out;
+    }
+
+    /// Whether folding this cell would leave the terminal with nowhere to go.
+    ///
+    /// `continues` reads on because an optional tail written as two productions
+    /// stands the short one complete beside the long one's dot, and answering
+    /// that tie by associativity denies the tail outright. That is the right
+    /// answer wherever the fold *strands* the token — nothing above was waiting
+    /// for it, so refusing the tail refuses the sentence, which is elixir's
+    /// `defmodule Foo do`. It is the wrong answer wherever the token is exactly
+    /// what an enclosing rule is holding a dot in front of: `defp f(x) do` folds
+    /// the inner call and hands the `do` to the outer one, and the tail rung
+    /// takes it for the inner call instead, which is the whole of elixir's
+    /// `arguments`-where-the-oracle-says-`do_block`.
+    ///
+    /// So the walk: pop the handle, take the goto, and ask whether the state it
+    /// lands in has an edge on `t` — chaining while the answer is another fold,
+    /// because a unit rule pops straight into a second one. An *edge* is the
+    /// question and not a row, because the row that would answer it belongs to a
+    /// state this build has not judged yet; over-answering only says a reading
+    /// exists somewhere above, which is exactly the claim being made.
+    fn strands(b: *Bench, state: u32, t: u32) bool {
+        b.chain.clearRetainingCapacity();
+        b.walked.clearRetainingCapacity();
+        // Out of memory answers the way the rung already behaved: strand it and
+        // read on. A table that failed to allocate is not the place to change
+        // what a language means.
+        b.chain.append(b.gpa, state) catch return true;
+        var head: usize = 0;
+        while (head < b.chain.items.len) : (head += 1) {
+            const s = b.chain.items[head];
+            for (b.x.c.states[s].complete, 0..) |prod, k| {
+                if (prod == 0) continue;
+                if (!b.x.la.isSet(b.x.reduction_base[s] + k, t)) continue;
+                const p = b.x.gr.productions[prod];
+                const from = b.who.rev.back(b.gpa, s, p.rhs) catch return true;
+                // `back` reuses one frontier, so the gotos are taken off it
+                // before anything else is asked to unwind.
+                const room = b.walked.items.len;
+                for (from) |u| {
+                    const q = b.x.c.goto(u, p.lhs) orelse continue;
+                    if (std.mem.indexOfScalar(u32, b.walked.items, q) == null) {
+                        b.walked.append(b.gpa, q) catch return true;
+                    }
+                }
+                for (b.walked.items[room..]) |q| {
+                    if (b.x.c.goto(q, t) != null) return false;
+                    b.chain.append(b.gpa, q) catch return true;
+                }
+            }
+        }
+        return true;
     }
 
     /// Whether this reading is a surviving fold's own production, continuing past

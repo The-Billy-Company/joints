@@ -486,6 +486,7 @@ const Plan = struct {
                         .declared => leaf.ConflictClass.declared,
                         .residual => leaf.ConflictClass.residual,
                         .unwritten => leaf.ConflictClass.unwritten,
+                        .sided => leaf.ConflictClass.sided,
                     }));
                     w.put(cell(x.chosen));
                     w.put(cell(x.other));

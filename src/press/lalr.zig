@@ -233,6 +233,7 @@ pub const Tables = struct {
             .repetition => out.repetition += 1,
             .declared => out.declared += 1,
             .unwritten => out.unwritten += 1,
+            .sided => out.sided += 1,
             .residual => switch (k.kind) {
                 .shift_reduce => out.residual.shift_reduce += 1,
                 .reduce_reduce => out.residual.reduce_reduce += 1,

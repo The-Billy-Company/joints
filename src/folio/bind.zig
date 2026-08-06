@@ -281,6 +281,7 @@ fn tabulation(a: std.mem.Allocator, f: *const collate.Folio, dense: []const lalr
             .declared => .declared,
             .residual => .residual,
             .unwritten => .unwritten,
+            .sided => .sided,
         },
         .chosen = @bitCast(rec.chosen),
         .other = @bitCast(rec.other),

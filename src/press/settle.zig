@@ -152,6 +152,23 @@ pub const Conflict = struct {
         /// by ordinal, so the two orders are the same order and a class may
         /// only ever be appended.
         unwritten,
+        /// Precedence declined in both directions and a side the author
+        /// declared over the *whole rule* ordered the pair. Like `unwritten` a
+        /// real resolution the table keeps, and like `unwritten` not a
+        /// statement that the reading it ordered second is wrong — so it forks
+        /// too. See `Ladder.sided`.
+        ///
+        /// Split out of `unwritten` because the two are spared for opposite
+        /// reasons and a consumer has to be able to tell them apart. Under
+        /// `unwritten` nobody wrote the other half of the comparison, so the
+        /// parse has no authored guidance and the spared reading is all it
+        /// has. Under `sided` the author *did* speak about these rules; what
+        /// they wrote orders the pair and stops there. Recording both as
+        /// `unwritten` made a reading kept for want of any instruction
+        /// indistinguishable from one kept in spite of an instruction, and
+        /// verilog's `parameter` is what that cost: see the changelog fragment
+        /// naming `[89368,89412)`.
+        sided,
     };
 };
 
@@ -194,6 +211,11 @@ pub const Tally = struct {
     /// `declared` because nobody declared it: the number here is how often the
     /// press had to order two readings on an authority neither side wrote.
     unwritten: u32 = 0,
+    /// The other spared class, counted apart for the same reason: how often an
+    /// authored side was the only thing that ordered a pair. Not a defect
+    /// either, but a cell where an instruction exists — which is what makes it
+    /// answerable differently from `unwritten`.
+    sided: u32 = 0,
     /// Split by which decision was left open, because the two have different
     /// cures. Precedence orders a fold against a read; it also orders two folds
     /// against each other, but only when the author ranked them.
