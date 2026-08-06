@@ -51,6 +51,35 @@ pub const Expected = struct {
     /// the same admissions are also recorded flat, which is the `valid_symbols`
     /// array tree-sitter hands its external scanners - and the whole reason
     /// those scanners are written in C is that they need to read it.
+    ///
+    /// # Which half of the row this is, which depends on who filled it
+    ///
+    /// An LR row has two halves - shifts, where the state consumes the token,
+    /// and reduce-lookaheads, where it only folds - and **the two walks fill
+    /// this field with different ones**:
+    ///
+    ///   * `drive.offer` admits every terminal with any non-error action, so
+    ///     `wanted` is the **union**. That is tree-sitter's `valid_symbols`
+    ///     exactly, and it is what an oracle run hands a hand.
+    ///   * `Gather.offer` admits `shiftable(top, sym)`: it *runs* the folds the
+    ///     table names, down the stack actually standing, and asks whether a
+    ///     shift is on the other side. So `wanted` is the **shift-reachable**
+    ///     set - narrower than the union, and computed against this reading
+    ///     rather than against the state in the abstract.
+    ///
+    /// Neither is wrong and the difference is not cosmetic. `_immediate_paren`
+    /// is a shift in 20 of julia's states and a reduce-lookahead in 239, so a
+    /// hand reading this field sees a set that differs by an order of magnitude
+    /// depending on which walk asked it. The product parse is `Gather`'s, and
+    /// the narrower answer is why julia's zero-width markers can read `wanted`
+    /// at all without firing in the 239: by the time the hand is asked, the
+    /// folds have already been run and the admission means a shift really is
+    /// reachable.
+    ///
+    /// So a hand may rely on `wanted` being shift-reachable **in the product**
+    /// and must not rely on it under `drive`, where it is the union. A hand
+    /// that needs the strict shift half in either walk wants `named`, and one
+    /// that needs the union wants this under `drive`.
     wanted: std.DynamicBitSetUnmanaged,
     /// The subset of `wanted` the state named for itself, extras excluded.
     ///

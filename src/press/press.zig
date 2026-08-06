@@ -50,6 +50,7 @@
 //! automaton.
 
 const std = @import("std");
+const assay = @import("irregex").assay;
 const g = @import("grammar.zig");
 const lalr = @import("lalr.zig");
 const lr0 = @import("lr0.zig");
@@ -79,13 +80,20 @@ pub fn setGrowth(n: u32) void {
     growth = n;
 }
 
-/// Say what each round cost and bought, on stderr. Off unless a caller asks:
-/// the loop is the part of the press whose behaviour is least obvious from its
-/// output, and "why did this grammar not unfold" has no other answer.
-var trace = false;
+/// Say what each round cost and bought. Off unless someone asks — and there are
+/// two ways to ask, because there are two people asking: `--trace` for whoever
+/// is running the verb, `OUTLINER_TRACE=press` for whoever is debugging a press
+/// buried under one. The loop is the part of the press whose behaviour is least
+/// obvious from its output, and "why did this grammar not unfold" has no other
+/// answer.
+var asked = false;
 
 pub fn setTrace(on: bool) void {
-    trace = on;
+    asked = on;
+}
+
+fn tracing() bool {
+    return asked or assay.lit(.press);
 }
 
 pub const Result = struct {
@@ -109,8 +117,18 @@ pub const Result = struct {
     /// Here rather than exported beside `tables` because every caller already has
     /// the `Result` - the question is about a table, and asking it should not need
     /// a second import.
-    pub fn whose(r: *const Result, wall: inquest.Wall) inquest.Finding {
-        return inquest.over(&r.tables, wall);
+    /// `blind` is the scanner's list of externals it has no stand-in for, or
+    /// `null` from a caller with no scanner to ask. It is argument 5 and it is
+    /// the only input here press cannot derive: a table cannot know which
+    /// terminals the lexer failed to make, which is exactly why every wall of
+    /// that kind used to come back `weave`.
+    pub fn whose(
+        r: *const Result,
+        gr: *const g.Grammar,
+        wall: inquest.Wall,
+        blind: inquest.Blind,
+    ) inquest.Finding {
+        return inquest.over(&r.tables, gr, wall, blind);
     }
 
     /// Re-exported so a caller that can ask the question can also name it. A
@@ -146,8 +164,8 @@ pub fn tables(gpa: std.mem.Allocator, gr: *const g.Grammar) !Result {
                 .ceiling = ceiling,
             }) catch |e| switch (e) {
                 error.Unsplittable => {
-                    if (trace) {
-                        std.debug.print("round {d}: {d} unfolded is past {d} states\n", .{
+                    if (tracing()) {
+                        assay.diag("round {d}: {d} unfolded is past {d} states\n", .{
                             round, dare, ceiling,
                         });
                     }
@@ -167,10 +185,22 @@ pub fn tables(gpa: std.mem.Allocator, gr: *const g.Grammar) !Result {
             ceiling = @max(4096, growth * @as(u32, @intCast(round_result.collection.states.len)));
         }
         const now = try defects(gpa, &round_result);
-        if (trace) {
-            std.debug.print("round {d}: {d} states, {d} unfolded, residual {d}, contested {d}\n", .{
-                round, round_result.collection.states.len, dare, now.residual, now.contested,
+        if (tracing()) {
+            assay.diag("round {d}: {d} states, {d} unfolded, residual {d}, contested {d} ({d} refusing)\n", .{
+                round,        round_result.collection.states.len, dare,
+                now.residual, now.contested,                      now.refusing,
             });
+            // By kernel hash, because a state id is only an address as of one
+            // press: unfolding renumbers everything downstream of a cut, so the
+            // only way to ask whether the next round refused the *same* cell is
+            // to name it by what it is rather than where it landed.
+            for (round_result.tables.frayed) |f| {
+                if (f.harm != .read_dropped) continue;
+                const kernel = round_result.collection.states[f.state].kernel;
+                assay.diag("  refusing {d} on terminal {d}, kernel {x}\n", .{
+                    f.state, f.terminal, std.hash.Wyhash.hash(0, std.mem.sliceAsBytes(kernel)),
+                });
+            }
         }
         const better = best == null or now.betterThan(try defects(gpa, &best.?));
 
@@ -264,10 +294,10 @@ const Plan = struct {
             });
         }
         const owned = try p.a.dupe(lr0.Lane, out.items);
-        if (trace) {
+        if (tracing()) {
             var copies: u32 = 0;
             for (owned) |l| copies = @max(copies, l.lane + 1);
-            std.debug.print("  cut {d} items, {d} arrivals -> {d} copies\n", .{
+            assay.diag("  cut {d} items, {d} arrivals -> {d} copies\n", .{
                 mine.len, owned.len, copies,
             });
         }
@@ -316,6 +346,7 @@ fn defects(gpa: std.mem.Allocator, r: *const Result) !Defects {
         const key = .{ std.hash.Wyhash.hash(0, std.mem.sliceAsBytes(kernel)), f.terminal };
         if ((try seen.getOrPut(gpa, key)).found_existing) continue;
         out.contested += 1;
+        if (f.harm == .read_dropped) out.refusing += 1;
     }
     return out;
 }
@@ -338,6 +369,13 @@ fn defects(gpa: std.mem.Allocator, r: *const Result) !Defects {
 const Defects = struct {
     residual: u32 = 0,
     contested: u32 = 0,
+    /// Of the contested, the ones that cost a read. Reported, never ranked on:
+    /// ordering it above the bulk count was tried on thirty grammars and moved
+    /// one automaton and no grammar's reach. It is here because a round the
+    /// search discards for gaining nothing still has to be *asked* whether it
+    /// removed the refusal, and zig's 208 is exactly that question - see the
+    /// `open` bucket in `lalr.Floor`.
+    refusing: u32 = 0,
 
     fn betterThan(a: Defects, b: Defects) bool {
         if (a.residual != b.residual) return a.residual < b.residual;
@@ -604,10 +642,11 @@ test "a genuine ambiguity is left alone rather than unfolded forever" {
 /// `e -> asn` puts `asn` in the closure under the `*` as well, both arrivals
 /// reach the same kernel and LR(0) makes them one state.
 ///
-/// Merged, the fold is legal on `=` and outranks the read, whose step carries
-/// the negative rank an assignment carries in every C-family grammar. The read
-/// is deleted from a state that both contexts share, and the statement is no
-/// longer a sentence of the language.
+/// Merged, the fold is legal on `=` and the read's step carries the negative
+/// rank an assignment carries in every C-family grammar. The rank the merge
+/// would settle the cell with is one the statement context never asserted, so
+/// precedence declines the cell instead of emptying it: the read stays, and the
+/// press reports the contest rather than resolving it away.
 fn assignsThroughAPointer(gpa: std.mem.Allocator) !g.Grammar {
     var b = g.Builder.init(gpa);
     defer b.deinit();
@@ -635,41 +674,83 @@ fn assignsThroughAPointer(gpa: std.mem.Allocator) !g.Grammar {
     return b.finish("assign", start, &.{}, &.{});
 }
 
-test "a read that precedence deleted from a context that never contested it" {
+test "a read precedence may not delete, because one arrival never ranked it" {
     var gr = try assignsThroughAPointer(testing.allocator);
     defer gr.deinit();
 
-    // Plain LALR: the merged state answers `=` with a fold, and says nothing
-    // about it — precedence resolved the cell, so it is not a conflict. The one
-    // record of the damage is that the fold's lookahead is context-dependent.
+    // Plain LALR: the merged state carries both answers on `=`. An unranked fold
+    // does not outrank the read here, because the level it would win with is the
+    // default that stands in for silence, and one of the two arrivals is exactly
+    // that — silent. So the cell keeps the read, and the press states the contest
+    // instead of settling it: one read-vs-fold per shared state.
+    //
+    // Which class it states it in is the whole of what this cell is worth. It was
+    // counted `residual`, and `residual` is the class `forks.zig` declines to
+    // offer a fork for — so the surviving reading was recorded and then thrown
+    // away by its own label. `unwritten` is the true name for it, and the comment
+    // above says why in the sentence it was already written in: silence is not a
+    // decision. The number below is deliberately not a bucket total; a count is
+    // satisfiable by an unrelated cell moving into the bucket, and what has to
+    // hold is that *these* cells carry that class and get a fork.
     var flat = try lr0.build(testing.allocator, &gr, .{});
     defer flat.deinit();
     var merged = try lalr.build(testing.allocator, &gr, &flat);
     defer merged.deinit();
-    try testing.expectEqual(@as(u32, 0), merged.tally().residual.total());
 
-    var refused: u32 = 0;
-    for (merged.frayed) |x| {
-        if (x.harm == .read_dropped) refused += 1;
-    }
-    try testing.expect(refused > 0);
-    // Every state that can read `=` has had that read taken away.
+    // Every state that can read `=` still answers `=` with that read, which is
+    // what makes `id = id ;` a sentence without any state being split.
+    var shared: u32 = 0;
     for (flat.states, 0..) |st, q| {
         for (st.edges) |edge| {
             if (edge.symbol != eqOf(&gr)) continue;
-            try testing.expect(merged.at(@intCast(q), eqOf(&gr)).kind != .shift);
+            try testing.expect(merged.at(@intCast(q), eqOf(&gr)).kind == .shift);
+            shared += 1;
         }
     }
+    try testing.expect(shared > 0);
+    // Every contested cell the grammar leaves is one of these, still — the press
+    // states as many contests as there are shared states, no more and no fewer.
+    try testing.expectEqual(shared, merged.tally().total());
+    try testing.expectEqual(@as(u32, 0), merged.tally().residual.total());
 
-    // Unfolded: the contexts are separated, and `id = id ;` is a sentence again.
+    // And each one is at a state that reads `=`, carries the read as `chosen`,
+    // and is offered as a fork. That last clause is what the class buys and what
+    // no count could have said: `residual` recorded the loser and refused it a
+    // strand, so the reading survived the ladder and died at the label.
+    var forks = try settle.Forks.of(
+        testing.allocator,
+        merged.conflicts,
+        flat.states.len,
+        merged.width,
+    );
+    defer forks.deinit(testing.allocator);
+    var offered: u32 = 0;
+    for (merged.conflicts) |k| {
+        try testing.expectEqual(eqOf(&gr), k.terminal);
+        try testing.expectEqual(settle.Conflict.Class.unwritten, k.class);
+        try testing.expectEqual(merged.at(k.state, eqOf(&gr)), k.chosen);
+        try testing.expect(k.chosen.kind == .shift);
+        try testing.expect(forks.at(k.state, eqOf(&gr)).len == 1);
+        offered += 1;
+    }
+    try testing.expectEqual(shared, offered);
+
+    // A declined cell is a reported cell, never a damaged one: the harm this
+    // shape used to carry was the read going missing, and no cell carries it.
+    for (merged.frayed) |x| try testing.expect(x.harm != .read_dropped);
+
+    // So the press has nothing to separate. The cure moved off the round that
+    // splits the shared state and onto never emptying it in the first place,
+    // which is the same table for less automaton.
     var out = try tables(testing.allocator, &gr);
     defer out.deinit();
-    try testing.expect(out.unfolded > 0);
+    try testing.expectEqual(@as(u32, 0), out.unfolded);
+    try testing.expectEqual(flat.states.len, out.collection.states.len);
     var reads: u32 = 0;
     for (0..out.collection.states.len) |q| {
         if (out.tables.at(@intCast(q), eqOf(&gr)).kind == .shift) reads += 1;
     }
-    try testing.expect(reads > 0);
+    try testing.expectEqual(shared, reads);
     for (out.tables.frayed) |x| try testing.expect(x.harm != .read_dropped);
 }
 
@@ -720,7 +801,14 @@ test "a reading the author ranked below the fold stops being the primary" {
 /// `parenthesized_declarator` inside a declaration, or a call inside an
 /// expression statement, and the two bodies are the same four tokens. The rank is
 /// a parameter because the proof is the *flip* - see the test.
-fn twoReadingsOfACall(gpa: std.mem.Allocator, rank: i16) !g.Grammar {
+///
+/// Public because the flip has two halves in two files and they must press the
+/// same bytes: this one stops at `Forks`, and `carry_test`'s carries on through
+/// the artifact, which `press` cannot reach from here without importing the
+/// package that imports it. Written as tree-sitter JSON on purpose - the front
+/// end reading `PREC_DYNAMIC` off a rule and reconciling it over a body is a rung
+/// no `Builder` fixture exercises, so `folio_test`'s twin is not this test.
+pub fn twoReadingsOfACall(gpa: std.mem.Allocator, rank: i16) !g.Grammar {
     const src = try std.fmt.allocPrint(gpa,
         \\{{"name":"decl","rules":{{
         \\ "statement":{{"type":"CHOICE","members":[
@@ -793,11 +881,10 @@ test "a dynamic rank crosses the whole press and is still there for the fork" {
         try testing.expect(seen);
 
         // And what a parse is handed at that cell: the reading the table dropped,
-        // as a production index. The rank that ordered the two is *not* in there,
-        // and cannot be recovered from a loaded grammar either - `ProductionRecord`
-        // carries no rank, which `carry_test.zig` holds as the one pending loss.
-        // Until it does, a fork that re-ranks its own versions reads 0 for every
-        // production of every grammar.
+        // as a production index. The rank that ordered the two is not in there,
+        // but it is recoverable from a loaded grammar - `ProductionRecord.rank`
+        // carries it, and `folio_test`'s flip test presses this same fixture both
+        // ways and re-derives the order from the file alone.
         var forks = try settle.Forks.of(
             testing.allocator,
             out.tables.conflicts,
@@ -808,8 +895,14 @@ test "a dynamic rank crosses the whole press and is still there for the fork" {
         try testing.expect(forks.count() > 0);
         for (out.tables.conflicts) |k| {
             if (k.terminal != semi) continue;
-            const other = forks.at(k.state, semi) orelse return error.ForkNotOffered;
-            try testing.expectEqual(k.other, other);
+            const split = forks.at(k.state, semi);
+            if (split.len == 0) return error.ForkNotOffered;
+            // The recorded loser leads, and every reading behind it is offered
+            // too — a cell that carried three readings and forked twice is the
+            // claim, not a cell that forked once and rounded down.
+            try testing.expectEqual(k.other, split[0].other);
+            try testing.expectEqual(k.rest.len + 1, split.len);
+            for (k.rest, split[1..]) |also, s| try testing.expectEqual(also, s.other);
         }
     }
 }

@@ -20,6 +20,39 @@
 //! the shape above is what that measurement needs, not a finished design.
 
 const std = @import("std");
+const irregex = @import("irregex");
+
+/// Who outliner is when it speaks. The engine underneath is embeddable and four
+/// programs already ride it, so a diagnostic used to open with the name of the
+/// binary that happened to be first — `gist:` — and its knobs lived in `GIST_*`.
+/// Declaring this here is how the whole package signs its own name instead, and
+/// it is read at comptime, so a knob is still a string literal by the time
+/// `getenv` sees it.
+pub const irgx_brand: irregex.Brand = .{
+    .name = "outliner",
+    .env_prefix = "OUTLINER_",
+    .artifact_dir = ".outliner",
+};
+
+/// What outliner has to say through `OUTLINER_TRACE`, one lens per subsystem
+/// above — so the vocabulary is the package's own shape rather than a list that
+/// drifts from it. Dark by default; `OUTLINER_TRACE=press,joint` lights two, and
+/// `all` adds the engine's own lenses underneath for a question that turns out
+/// to be irregex's.
+///
+/// This is the half of the identity a brand alone could not give us: the engine
+/// names its phases (`warm`, `reconcile`, `walk`), and none of those are ours.
+/// The two sets are welded into one enum on the way in, which is why a call site
+/// writes `assay.trace(.press, …)` without knowing which half it named — and why
+/// re-spelling an engine lens here is a compile error rather than a lens that
+/// silently never lights.
+pub const irgx_lenses = enum { press, lex, joint, weave, folio, quire };
+
+/// Time, counters, and the one diagnostic channel, re-exported so the face
+/// reaches instrumentation through the package it already imports. Every emit
+/// routes through a thread-local sink, which is what will let `libotl` hold its
+/// never-writes-your-stderr contract by construction rather than by audit.
+pub const assay = irregex.assay;
 
 /// Build time: a grammar becomes tables.
 pub const press = struct {
@@ -48,6 +81,11 @@ pub const press = struct {
     /// Which reading wins a cell two of them want: precedence, associativity,
     /// and the attribution of whatever neither settles.
     pub const settle = @import("press/settle.zig");
+    /// Whose wall a stopped parse is, decided from the artifact. Exported
+    /// because the answer is for a person: it was computed, acted on, and
+    /// reachable from nothing outside `press` for long enough that a lane
+    /// wrote a second instrument to guess at what it already knew.
+    pub const inquest = @import("press/inquest.zig");
     /// The LR(0) canonical collection — the automaton's shape, no lookahead.
     pub const lr0 = @import("press/lr0.zig");
     /// The automaton read backwards, for the questions about a fold's origin

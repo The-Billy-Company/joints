@@ -27,7 +27,23 @@
 const std = @import("std");
 
 /// A member: a state id, or — in a ledger claim's symbol half — a grammar symbol.
+///
+/// `Pool.Hash` below hashes a roster as `sliceAsBytes` of these and compares
+/// two rosters with `std.mem.eql`, which consults
+/// `std.meta.hasUniqueRepresentation` before it will `memcmp`. So a member type
+/// with bytes no field owns would leave the two halves reading different
+/// things, and a pool whose whole purpose is "equal sets are one id" would mint
+/// two ids for one set — silently, and as a function of the allocator. The
+/// assertion is trivial for an integer and is here for the edit that stops it
+/// being one.
 pub const State = u32;
+
+comptime {
+    if (!std.meta.hasUniqueRepresentation(State)) @compileError(
+        "roster.State is hashed by its bytes and compared by its fields, so" ++
+            " every byte of it has to belong to a field.",
+    );
+}
 
 /// A set of states. `nowhere` is the empty set — a scenario nothing supports,
 /// which is what a refused composition produces.

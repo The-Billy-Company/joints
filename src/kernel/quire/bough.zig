@@ -162,6 +162,25 @@ pub const Bough = struct {
         perched: u32,
         ref: u32,
         refed: u32,
+        /// How many roots had been carried off the stack by the time this ring
+        /// was taken. Zero while a parse runs clean, because a root only leaves
+        /// the chain at a mend or at the end - which is exactly why a ring past
+        /// a mend used not to be taken at all: the chain is no longer the whole
+        /// tree, and a resume that restores only the chain drops everything the
+        /// break already closed over. With the watermark the resume can adopt
+        /// them from the old parse the same way it adopts its nodes.
+        roots: u32 = 0,
+        /// How many times the parse had mended when this ring was taken, so a
+        /// resume picks up the count rather than reporting a recovered file as
+        /// a clean one. `Quire.mends` is read by every consumer that has to
+        /// tell "stopped here" from "stopped here and kept reading".
+        mends: u32 = 0,
+        /// And the bytes those mends walked past. Rides the ring for the same
+        /// reason `mends` does, and for one more: the recovery fuse is
+        /// denominated in this, so a resume that restarted the budget at zero
+        /// would let a warm parse mend where a cold parse of the same bytes
+        /// gave up. The fuzz compares the two every edit.
+        skipped: u32 = 0,
     };
 
     pub fn deinit(b: *Bough) void {
@@ -271,6 +290,83 @@ pub const Bough = struct {
         b.held.shrinkRetainingCapacity(refs);
         if (b.marks.items.len > refs) b.marks.shrinkRetainingCapacity(refs);
         b.since = 0;
+    }
+
+    /// Whether every ring is a snapshot the quire beside it could be resumed
+    /// from. The falsifier a tree comparison structurally cannot be.
+    ///
+    /// A ring is not in the tree. It is a set of high-water marks plus a chain,
+    /// and a resume reads it back as *the whole of what the parse was holding*
+    /// below `at`: the roots a break already closed over, then each perch's
+    /// lead extras and the nodes it owns. That sequence has to be a tiling -
+    /// left to right, no node in it twice - because the next parse appends to
+    /// it and hands the result out as a tree. A ring that carries one node in
+    /// two of those places is a ring that resumes into a tree with the node
+    /// twice, and *nothing about the parse that took the ring is wrong yet*:
+    /// its own tree is fine, its own roots are fine, and it will compare equal
+    /// to a cold parse. The damage is a generation later, in whatever stands
+    /// back up here - which is why round 20 spent an edit stream looking for a
+    /// defect two hundred edits downstream of the edit that shipped it.
+    ///
+    /// Spans come from `held` for the stack, because the arena is
+    /// append-and-backpatch and those nodes were snapshotted before the writes
+    /// that came after. Roots come from the arena, whose starts and lengths
+    /// nothing past a mend rewrites.
+    pub fn verify(b: *const Bough, gpa: std.mem.Allocator, q: *const quire.Quire) !void {
+        var seen = try std.DynamicBitSet.initEmpty(gpa, q.nodes.len);
+        defer seen.deinit();
+
+        for (b.rings.items, 0..) |r, i| {
+            if (r.nodes > q.nodes.len or r.kids > q.kids.len or r.roots > q.roots.len) {
+                return fault(i, r, quire.none, "watermark past the end of the quire");
+            }
+            seen.setRangeValue(.{ .start = 0, .end = q.nodes.len }, false);
+            const stack = b.run(@intCast(i));
+            const held = b.borne(@intCast(i));
+            if (stack.ref.len != held.len) return fault(i, r, quire.none, "held is not parallel to the run");
+
+            var at: u32 = 0;
+            // The roots first: a mend carried them off the chain, so they are
+            // the left of everything the chain is still standing on.
+            for (q.roots[0..r.roots]) |ref| {
+                if (ref >= r.nodes) return fault(i, r, ref, "root above the ring's own arena");
+                try step(&seen, &at, i, r, ref, q.nodes[ref]);
+            }
+            for (b.chain(@intCast(i))) |p| {
+                for ([_][2]u32{ .{ p.lead, p.leads }, .{ p.own, p.owns } }) |span| {
+                    if (span[0] + span[1] > stack.ref.len) return fault(i, r, quire.none, "perch run outside the kept stack");
+                    for (stack.ref[span[0]..][0..span[1]], held[span[0]..][0..span[1]]) |ref, n| {
+                        if (ref >= r.nodes) return fault(i, r, ref, "held node above the ring's own arena");
+                        try step(&seen, &at, i, r, ref, n);
+                    }
+                }
+            }
+            if (at > r.at) return fault(i, r, quire.none, "the carry reaches past where the ring stands");
+        }
+    }
+
+    /// One node of a ring's carry: it comes after everything before it, and it
+    /// is not something the ring is already carrying somewhere else.
+    fn step(
+        seen: *std.DynamicBitSet,
+        at: *u32,
+        i: usize,
+        r: Ring,
+        ref: quire.Ref,
+        n: quire.Node,
+    ) !void {
+        if (seen.isSet(ref)) return fault(i, r, ref, "carried twice by one ring");
+        seen.set(ref);
+        if (n.start < at.*) return fault(i, r, ref, "carried out of order");
+        at.* = n.end();
+    }
+
+    fn fault(i: usize, r: Ring, ref: quire.Ref, why: []const u8) error{BoughCorrupt} {
+        std.debug.print(
+            "bough: {s} - ring {d} at byte {d} (token {d}, {d} nodes, {d} roots, {d} mends), node {d}\n",
+            .{ why, i, r.at, r.token, r.nodes, r.roots, r.mends, ref },
+        );
+        return error.BoughCorrupt;
     }
 
     /// Halve the rings and double the stride, compacting the storage behind

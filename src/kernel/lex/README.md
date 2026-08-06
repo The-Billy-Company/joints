@@ -86,9 +86,11 @@ than a cleverer table, and three properties are why:
 - **It runs before the slate.** The whitespace in front of a Python line *is*
   its indentation, so an extra must not eat it before the offside rule sees it.
 - **It may answer zero-width.** The slate must refuse a zero-length match -
-  nothing in a regex promises the next call differs - but every `_dedent` pops
-  a column, so the memory is the proof of progress. `Carry.pinned` checks that
-  proof rather than trusting it.
+  nothing in a regex promises the next call differs - but a hand need not, and
+  `outside.Spent` is why: zero-width answers are counted per offset under a hard
+  ceiling, so the walk terminates whatever a hand does. Some of them move memory
+  (every `_dedent` pops a column) and some move none (julia's five
+  `_immediate_*` markers), so "the memory moved" was never the whole proof.
 - **It is asked at end of input.** A file ending inside three open blocks still
   owes three dedents.
 

@@ -31,7 +31,7 @@ pub const magic = "OTLFOLIO";
 /// refuses a new folio rather than reading the prefix it recognizes and
 /// inventing the rest. That refusal is what lets `press` keep growing its IR:
 /// every field it grows is a version here instead of a break.
-pub const version: u16 = 3;
+pub const version: u16 = 4;
 
 pub const header_len = 96;
 pub const entry_len = 16;
@@ -110,6 +110,10 @@ pub const Error = error{
 /// What is deliberately absent is everything the press *consumed* on the way in
 /// - step precedence and associativity, declared ambiguity groups, precedence
 /// orderings. A folio is the table, not the argument that made it.
+///
+/// `prec.dynamic` is not one of them and is carried: it is the rank the press
+/// could not spend, because the cell it orders keeps both actions and the
+/// choice is still open when a parse reaches it. See `ProductionRecord.rank`.
 ///
 /// Also absent, and this one was here once: the kernel items that identify each
 /// state. They are the automaton's construction identity, and no parse and no
@@ -216,6 +220,15 @@ pub const Kind = enum(u16) {
     /// does not recognize - still loads and still parses. It is here because
     /// working it out again is the whole of startup.
     lexicon,
+    /// The readings each conflict dropped *past* the first, run together; a
+    /// `ConflictRecord` names its own slice. Empty for every grammar whose
+    /// declared ambiguities are all two-way, and the whole difference between a
+    /// binary fork and a ternary one where they are not.
+    ///
+    /// Last because this list is the file format: a section is addressed by its
+    /// ordinal, so appending is safe and inserting renames every folio already
+    /// written.
+    rival,
 };
 
 pub const kind_count = std.enums.values(Kind).len;
@@ -265,6 +278,19 @@ pub const ProductionRecord = extern struct {
     lhs: u32,
     rhs_off: u32,
     rhs_len: u32,
+    /// What `prec.dynamic` declared, and the only rank that survives the press.
+    ///
+    /// A static rank resolves a cell while the table is built, so the loser is
+    /// gone before a parse begins and there is nothing to carry. A dynamic one
+    /// resolves nothing: the cell keeps both actions, the parse forks, and this
+    /// is the tie-break between readings that are all still alive at the end.
+    /// So it is the one precedence a *loaded* grammar still needs, and without
+    /// it a fork re-ranking its own versions compares zeros.
+    ///
+    /// Widened from the IR's `i16` rather than packed beside another field,
+    /// because a record whose fields are all one word is a view into mapped
+    /// bytes and not a decode.
+    rank: i32,
 };
 
 pub const StepRecord = extern struct {
@@ -316,11 +342,19 @@ pub const Action = packed struct(u32) {
 /// Which two readings collided. Same two cases as the press.
 pub const ConflictKind = enum(u32) { shift_reduce, reduce_reduce };
 
-/// Whose ambiguity a contested cell is. Only `declared` changes what a parse
-/// does - it is the cell a reading is allowed to fork at - but all three are
-/// written, because a folio that carried only the forkable ones could no longer
-/// answer how much residue the grammar left.
-pub const ConflictClass = enum(u32) { repetition, declared, residual };
+/// Whose ambiguity a contested cell is. Only `declared` and `unwritten` change
+/// what a parse does - those are the cells a reading is allowed to fork at -
+/// but all four are written, because a folio that carried only the forkable
+/// ones could no longer answer how much residue the grammar left.
+///
+/// **Append only, and the ordinals are the file format.** A class is stored as
+/// its ordinal, so inserting one renames every class after it in every folio
+/// already on disk. `settle.Conflict.Class` is kept in the same order for the
+/// same reason, and `impose` asserts at comptime that the two agree. An older
+/// binary meeting a class it has no name for refuses the file at `audit.tag`
+/// rather than folding it into a neighbour, which is why appending is safe and
+/// reordering is not.
+pub const ConflictClass = enum(u32) { repetition, declared, residual, unwritten };
 
 /// Which way a merged answer went in a frayed cell.
 pub const Harm = enum(u32) { read_dropped, fold_dropped };
@@ -337,6 +371,10 @@ pub const ConflictRecord = extern struct {
     other: u32,
     party_off: u32,
     party_len: u32,
+    /// `rival_off .. rival_off + rival_len` locates the readings this cell
+    /// dropped behind `other`, in `rival`. Appended, never inserted.
+    rival_off: u32,
+    rival_len: u32,
 };
 
 pub const FrayedRecord = extern struct {
@@ -348,7 +386,7 @@ pub const FrayedRecord = extern struct {
 pub fn Record(comptime k: Kind) type {
     return switch (k) {
         .text, .lexicon => u8,
-        .owner, .supertype, .extra, .rhs, .row, .row_span, .set_span, .complete_span, .complete, .party => u32,
+        .owner, .supertype, .extra, .rhs, .row, .row_span, .set_span, .complete_span, .complete, .party, .rival => u32,
         .groupref, .setsym, .stepref => u32,
         .shape => ShapeKind,
         .name, .field => Span,
@@ -379,6 +417,45 @@ pub fn narrow(k: Kind) bool {
         .groupref, .setsym, .stepref => true,
         else => false,
     };
+}
+
+/// Refuse, at compile time, a record type whose bytes are not all owned by a
+/// field.
+///
+/// `impose.fill` writes a section as a run of fields into a zeroed buffer;
+/// `collate.view` reads it back as `[]Record(k)` straight out of the mapping.
+/// Those two agree only while a record's fields tile it exactly. Give one a
+/// `u64` after an odd number of `u32`s and `@sizeOf` opens an alignment hole
+/// the writer's next `put` does not skip, so every row after it is read from
+/// four bytes to the left - a silent misread of the whole section rather than
+/// a refusal, and one the schema digest cannot see, because the digest spells
+/// the fields and the hole is what the fields are not.
+///
+/// The other way in is the one that already happened. A section written with
+/// `sliceAsBytes` instead of field by field hands `@sizeOf(T)` per record to
+/// the file, and the bytes past the last field are whatever the allocation
+/// held: `kernel/lex/lexicon.zig` did exactly that and put four bytes of this
+/// process into every folio on disk. `flat` is the repair on that side; this is
+/// the repair on the side where there is no writer to route through, because
+/// the reader casts the mapping directly.
+///
+/// The predicate is `std.meta.hasUniqueRepresentation` - the same one
+/// `std.mem.eql` consults before it will `memcmp` a type, and the same one
+/// `flat` holds each of its fields to.
+pub fn seamless(comptime T: type) void {
+    comptime if (!std.meta.hasUniqueRepresentation(T)) @compileError(
+        @typeName(T) ++ " spans " ++ std.fmt.comptimePrint("{d}", .{@sizeOf(T)}) ++
+            " bytes and its fields do not, so a section of them has bytes no" ++
+            " writer assigns and no reader means. Widen the short field, or" ++
+            " spell the slack as one.",
+    );
+}
+
+comptime {
+    // Exhaustive by construction: a section added tomorrow is checked without
+    // anyone remembering this exists, which is the only kind of roster that
+    // survives. The test below proves the loop is not empty.
+    for (std.enums.values(Kind)) |k| seamless(Record(k));
 }
 
 const strides = blk: {
@@ -541,6 +618,35 @@ pub fn align8(n: u64) u64 {
 
 const testing = std.testing;
 
+test "every section's record is seamless, and the check looked at a real set" {
+    // The comptime block above is the gate; this is its anti-vacuity, because a
+    // `for` over an empty roster passes and a predicate that says yes to
+    // everything passes, and both would read exactly like a clean bill.
+    //
+    // Three things, in the order they could go wrong:
+    comptime var counted: usize = 0;
+    comptime var structs: usize = 0;
+    inline for (std.enums.values(Kind)) |k| {
+        counted += 1;
+        // Re-asserted here rather than trusted from the comptime block, so the
+        // count and the claim come from the same walk.
+        try testing.expect(std.meta.hasUniqueRepresentation(Record(k)));
+        if (@typeInfo(Record(k)) == .@"struct") structs += 1;
+    }
+    // One: the set is the whole directory, not a leftover subset.
+    try testing.expectEqual(@as(usize, kind_count), counted);
+    // Two: it is not all `u8` and `u32`, which own their bytes for free and
+    // would make the gate true of a format that never had a record at all.
+    try testing.expect(structs >= 8);
+    // Three: the predicate can still say no. The control is the shape that put
+    // four bytes of this process into every folio - `Dfa.PatRun`, whose `u64`
+    // Zig seats first and whose `u32` leaves four bytes past the end.
+    try testing.expect(!std.meta.hasUniqueRepresentation(struct { hi: u32, mask: u64 }));
+    // And the near miss that has no visible gap: an `i32` after three `u32`s is
+    // seamless, but make one of them a `u64` and the hole opens mid-record.
+    try testing.expect(!std.meta.hasUniqueRepresentation(extern struct { a: u32, b: u64 }));
+}
+
 test "the schema digest is a function of the layout and names every section" {
     try testing.expect(schema().eql(schema()));
     for (std.enums.values(Kind)) |k| {
@@ -548,6 +654,8 @@ test "the schema digest is a function of the layout and names every section" {
     }
     // And of the fields inside a record, not just the section roster.
     try testing.expect(std.mem.indexOf(u8, schema_preimage, "rhs_off:u32") != null);
+    // Signedness too, since a rank read as unsigned is a rank read backwards.
+    try testing.expect(std.mem.indexOf(u8, schema_preimage, "rank:i32") != null);
 }
 
 test "a directory row round-trips, and a wild kind is refused rather than folded" {
@@ -606,7 +714,7 @@ test "every section's stride is the width of the record it carries" {
     try testing.expectEqual(@as(u16, 1), strideOf(.text));
     try testing.expectEqual(@as(u16, 8), strideOf(.group));
     try testing.expectEqual(@as(u16, 12), strideOf(.odd));
-    try testing.expectEqual(@as(u16, 12), strideOf(.production));
+    try testing.expectEqual(@as(u16, 16), strideOf(.production));
     // Nothing is padded, or the on-disk size would depend on the host's ABI.
     try testing.expectEqual(@as(usize, 12), @sizeOf(PatternRecord));
     try testing.expectEqual(@as(usize, 8), @sizeOf(LexisRecord));

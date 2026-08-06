@@ -33,7 +33,9 @@ pub const Token = lex.Token;
 /// "failed" is a parser you cannot debug a grammar with.
 pub const Ending = union(enum) {
     accepted,
-    /// No terminal this state would accept begins at this offset.
+    /// No terminal *in this grammar* begins at this offset. A byte some state
+    /// merely has no action for is `unexpected`, and the two are different
+    /// walls: one is the lexer's and one is the table's.
     stray: u32,
     /// A token the state has no action for. It lexed; it just cannot go here.
     /// The state comes with it: "`=` is unexpected" is a complaint, "state 803
@@ -128,7 +130,19 @@ pub const Drive = struct {
             const here = d.states.getLast();
             switch (d.scanner.next(bytes, at, &d.expected)) {
                 .end => return d.stop(&tokens, &enter, if (try d.close()) .accepted else .truncated),
-                .stray => |off| return d.stop(&tokens, &enter, .{ .stray = off }),
+                .stray => |off| if (d.blame(bytes, off)) |tok| {
+                    if (!try d.absorb(tok.symbol)) {
+                        const stuck = d.states.getLast();
+                        return d.stop(&tokens, &enter, .{ .unexpected = .{
+                            .tok = tok,
+                            .state = stuck,
+                            .folded = d.folded.items,
+                        } });
+                    }
+                    try tokens.append(d.gpa, tok);
+                    try enter.append(d.gpa, here);
+                    at = tok.end();
+                } else return d.stop(&tokens, &enter, .{ .stray = off }),
                 .token => |tok| {
                     if (!try d.absorb(tok.symbol)) {
                         // The state that refused it, which is where the folds
@@ -171,6 +185,23 @@ pub const Drive = struct {
         for (0..d.gr.terminal_count) |sym| {
             if (d.t.at(here, @intCast(sym)).kind != .err) d.expected.admit(d.scanner, @intCast(sym));
         }
+    }
+
+    /// Ask again with the narrowing stood down: a byte no *state* admits a
+    /// terminal for is not the same thing as a byte the *grammar* cannot read,
+    /// and only the second is a stray one. Null is the genuine article.
+    ///
+    /// Asked at the offset the narrowed attempt failed at, not at the parse's
+    /// own: the scanner passes over the layout between them, and a wide slate
+    /// handed the earlier offset lets whichever terminal reaches furthest name
+    /// the layout rather than the token that is really there.
+    fn blame(d: *Drive, bytes: []const u8, at: u32) ?Token {
+        d.expected.clear(d.scanner);
+        for (0..d.gr.terminal_count) |sym| d.expected.admit(d.scanner, @intCast(sym));
+        return switch (d.scanner.next(bytes, at, &d.expected)) {
+            .token => |tok| tok,
+            else => null,
+        };
     }
 
     /// Fold until the token can be shifted, then shift it. False means no
@@ -337,20 +368,24 @@ test "an unconditional lex of the same bytes is not the same token stream" {
     try testing.expectEqualStrings("{ \" text \" text \" text \" }", got);
 }
 
-test "lexing from the state turns a wrong token into a byte that will not lex" {
+test "lexing from the state is sharp about where, and asks again about what" {
     var d = try Doc.init(testing.allocator);
     defer d.deinit();
 
-    // A second string where a `:` belongs. A parser with a context-free lexer
-    // reports "unexpected `\"`"; here the state never offered `\"` in the first
-    // place, so nothing matches and the failure arrives as a stray byte at the
-    // exact offset. Sharper about *where*, blunter about *what* — recovery will
-    // want a second, unconditional lex at that offset to name the token, and
-    // that is a recovery feature rather than something the walk should guess.
+    // A second string where a `:` belongs. Narrowing the scanner to what the
+    // state offers means nothing matches at all, so the failure arrives at the
+    // exact offset rather than several states later - sharper about *where*.
+    // This test used to end there, and named the second unconditional lex as
+    // the thing recovery would want; recovery has since landed, so the walk
+    // asks it, and the byte is named instead of being called unreadable.
+    //
+    // Both walls are still reported, and the difference is load-bearing: a
+    // grammar that cannot lex a byte and a table that cannot shift a token
+    // are different faults with different repairs.
     var trace = try d.f.drive.run("{\"a\" \"b\"}");
     defer trace.deinit(testing.allocator);
-    try testing.expectEqual(@as(u32, 5), trace.ending.stray);
-    // The prefix is kept: `{ " text "` parsed before the offending byte.
+    try testing.expectEqual(@as(u32, 5), trace.ending.unexpected.tok.start);
+    // The prefix is kept: `{ " text "` parsed before the offending token.
     try testing.expectEqual(@as(usize, 4), trace.tokens.len);
 }
 

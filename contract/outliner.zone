@@ -23,7 +23,11 @@ zones {
 
 // Outside modules, and who carries them.
 use build_options by face_outliner
-use irregex by tangle
+// The lexer's engine, and — through `irregex.assay` — the instrumentation floor
+// this package times, counts, and reports on. Two different reasons to reach for
+// the same module: `tangle` needs the regex engine, `joint` needs only the
+// diagnostic channel. Widen this the day another zone starts tracing.
+use irregex by tangle joint
 use outliner by face_outliner
 
 // Structural laws. The reach ceiling is what the tree needs today — lower it

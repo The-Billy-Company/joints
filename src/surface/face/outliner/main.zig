@@ -14,13 +14,23 @@
 
 const std = @import("std");
 const outliner = @import("outliner");
+const assay = outliner.assay;
 const import = outliner.press.import;
 const scanner = outliner.kernel.lex.scanner;
 const joints = @import("joints.zig");
+const state = @import("state.zig");
 const parse = @import("parse.zig");
 const mint = @import("mint.zig");
 const amend = @import("amend.zig");
 const intake = @import("intake.zig");
+
+/// Who this binary is, and what it can be asked to trace. Both are declared on
+/// the package and re-exported here because the engine reads them off the ROOT
+/// module of whatever compilation it lands in, and there are two: this face is
+/// the executable's root, `src/root.zig` is the library's and the test build's.
+/// Restating them would be two copies of one identity, free to disagree.
+pub const irgx_brand = outliner.irgx_brand;
+pub const irgx_lenses = outliner.irgx_lenses;
 
 const usage =
     \\outliner - parsing as algebra
@@ -30,6 +40,9 @@ const usage =
     \\  outliner lex <grammar.json> <file>       tokenize a file, print the stream
     \\  outliner joints <grammar.json> <file>... measure segment effects (rung 1)
     \\  outliner state <grammar.json> <n>        print one LR state: its items and its row
+    \\  outliner state <grammar.json> --census <terminal>...  count those terminals over every state
+    \\  outliner state <grammar.json> --holding <item>  name the states holding a reading
+    \\  outliner state <grammar.json> --chain <n>  how a parse reaches n, and where a fold there goes
     \\  outliner parse <grammar.json> <file>...  parse a file, print the tree
     \\  outliner amend <grammar.json> <file> FROM..TO=TEXT...  re-parse across edits
     \\  outliner mint <grammar.json|folio> [-o P]  press a grammar into a folio, or read one back
@@ -48,11 +61,21 @@ const usage =
     \\  --fan N     admit at most N floors when a fold outruns the segment
     \\  --churn N   sprout at most N limbs while reading one token
     \\
+    \\environment:
+    \\  OUTLINER_TRACE=press,lex,joint,weave,folio,quire  light one or more phase traces
+    \\                 (or `all`, which adds the search engine's own beneath them)
+    \\
 ;
 
 pub fn main(init: std.process.Init) !u8 {
     const gpa = init.gpa;
     const args = try init.minimal.args.toSlice(init.arena.allocator());
+
+    // Before dispatch, because a verb that traces its own setup would otherwise
+    // run with the lens mask still zero. This is also the only read of
+    // `OUTLINER_TRACE`: a phase asks `assay.trace(.press, …)` and never the
+    // environment, so lighting one is a decision made in one place.
+    assay.install(.{});
 
     var out_buf: [4096]u8 = undefined;
     var stdout = std.Io.File.stdout().writer(init.io, &out_buf);
@@ -93,14 +116,41 @@ pub fn main(init: std.process.Init) !u8 {
     }
     if (std.mem.eql(u8, verb, "state")) {
         if (args.len < 4) {
-            try w.writeAll("outliner: state needs a grammar.json and a state number\n");
+            try w.writeAll("outliner: state needs a grammar.json and a state number" ++
+                " (or --census and a terminal)\n");
             return 2;
+        }
+        if (std.mem.eql(u8, args[3], "--census")) {
+            if (args.len < 5) {
+                try w.writeAll("outliner: --census needs at least one terminal name\n");
+                return 2;
+            }
+            return state.run(gpa, init.io, w, args[2], .{ .census = args[4..] });
+        }
+        if (std.mem.eql(u8, args[3], "--holding")) {
+            if (args.len < 5) {
+                try w.writeAll("outliner: --holding needs an item to look for," ++
+                    " like 'variable_lvalue -> _identifier .' or '-> _identifier .'\n");
+                return 2;
+            }
+            return state.run(gpa, init.io, w, args[2], .{ .holding = args[4] });
+        }
+        if (std.mem.eql(u8, args[3], "--chain")) {
+            if (args.len < 5) {
+                try w.writeAll("outliner: --chain needs a state number\n");
+                return 2;
+            }
+            const from = std.fmt.parseInt(u32, args[4], 10) catch {
+                try w.print("outliner: {s} is not a state number\n", .{args[4]});
+                return 2;
+            };
+            return state.run(gpa, init.io, w, args[2], .{ .chain = from });
         }
         const at = std.fmt.parseInt(u32, args[3], 10) catch {
             try w.print("outliner: {s} is not a state number\n", .{args[3]});
             return 2;
         };
-        return inspect(gpa, init.io, w, args[2], at);
+        return state.run(gpa, init.io, w, args[2], .{ .at = at });
     }
     if (std.mem.eql(u8, verb, "lex")) {
         if (args.len < 4) {
@@ -176,13 +226,19 @@ fn lex(
     };
     defer sc.deinit();
 
-    const started = std.Io.Clock.awake.now(io);
+    const lexing = assay.Span.open(io);
+    // `null` and not a parse's `Expected`: this verb is the scanner asked what
+    // it *can* match, not what the parse lets it. The two differ by more than a
+    // little - with no state naming its terminals, every contextual one is live
+    // everywhere, so an `immediate` body pattern (a string's interior, a JSX
+    // fragment, a shebang tail) is admitted at offsets no parse would offer it
+    // and, being a negated class, usually wins longest-match and swallows the
+    // line. Reading this run as the parse's token stream reads a whole file as
+    // one `string_fragment`; the tree from `parse` on the same bytes is fully
+    // built. The footer below says so, because nothing else here does.
     var run = try scanner.tokenize(&sc, gpa, text, null);
     defer run.deinit(gpa);
-    const us: i64 = @intCast(@divTrunc(
-        started.durationTo(std.Io.Clock.awake.now(io)).nanoseconds,
-        std.time.ns_per_us,
-    ));
+    const us = lexing.read(io).us();
 
     for (run.tokens) |tok| {
         try w.print("{d:>7} {d:>4}  {s: <24}", .{ tok.start, tok.len, gr.nameOf(tok.symbol) });
@@ -195,11 +251,30 @@ fn lex(
     try w.print("\n{s}: {d} tokens over {d} bytes ({d} covered) in {d} us\n", .{
         gr.name, run.tokens.len, text.len, covered, us,
     });
+    try w.writeAll("  admitted context-free: no parse state gates these, so a" ++
+        " contextual\n  terminal fires where the parse would refuse it — use" ++
+        " `parse` for the real stream\n");
     if (sc.blind.len > 0) {
         try w.print("  blind to {d} terminal(s):", .{sc.blind.len});
         for (sc.blind, 0..) |s, i| {
             if (i == 8) {
                 try w.print(" +{d} more", .{sc.blind.len - i});
+                break;
+            }
+            try w.print(" {s}", .{gr.nameOf(s)});
+        }
+        try w.writeAll("\n");
+    }
+    if (sc.declined.len > 0) {
+        // Ours rather than someone else's C, which is why it reads differently
+        // from `blind`: a declined pattern is the engine refusing a spelling we
+        // could support, and it is invisible in the token stream above - the
+        // terminal simply never wins, so the row it should have owned is either
+        // a wider neighbour's or a stray.
+        try w.print("  {d} pattern(s) the engine would not build:", .{sc.declined.len});
+        for (sc.declined, 0..) |s, i| {
+            if (i == 8) {
+                try w.print(" +{d} more", .{sc.declined.len - i});
                 break;
             }
             try w.print(" {s}", .{gr.nameOf(s)});
@@ -226,110 +301,9 @@ fn writeClipped(w: *std.Io.Writer, text: []const u8) !void {
     if (text.len > clip) try w.print("… +{d}", .{text.len - clip});
 }
 
-/// One state, whole: what it has read, and what it will do with every terminal.
-///
-/// The question a wrong table raises is never "how many conflicts" — it is
-/// "why did *this* cell say that", and answering it needs the state's items
-/// beside its row. A reduce on a terminal that cannot follow the folded rule is
-/// a lookahead bug; the same reduce beside a shift the ladder passed over is a
-/// resolution bug; and the two are indistinguishable from a count.
-fn inspect(
-    gpa: std.mem.Allocator,
-    io: std.Io,
-    w: *std.Io.Writer,
-    grammar_path: []const u8,
-    at: u32,
-) !u8 {
-    const source = intake.slurp(gpa, io, w, grammar_path) orelse return 2;
-    defer gpa.free(source);
-    var gr = import.treeSitter(gpa, source) catch |e| {
-        try w.print("outliner: cannot import {s}: {s}\n", .{ grammar_path, @errorName(e) });
-        return 2;
-    };
-    defer gr.deinit();
-
-    var built = outliner.press.tables(gpa, &gr) catch |e| {
-        try w.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
-        return 2;
-    };
-    defer built.deinit();
-    if (at >= built.collection.states.len) {
-        try w.print("outliner: {s} has {d} states\n", .{ gr.name, built.collection.states.len });
-        return 2;
-    }
-
-    try w.print("state {d} of {s}\n\n  items:\n", .{ at, gr.name });
-    for (built.collection.states[at].kernel) |item| {
-        const p = gr.productions[item.prod];
-        try w.print("    {s} ->", .{gr.nameOf(p.lhs)});
-        for (p.rhs, 0..) |sym, k| {
-            if (k == item.dot) try w.writeAll(" .");
-            try w.print(" {s}", .{gr.nameOf(sym)});
-        }
-        if (item.dot == p.rhs.len) try w.writeAll(" .");
-        try w.writeAll("\n");
-    }
-
-    try w.writeAll("\n  row:\n");
-    var rows: u32 = 0;
-    for (0..gr.terminal_count) |sym| {
-        const act = built.tables.at(at, @intCast(sym));
-        if (act.kind == .err) continue;
-        rows += 1;
-        try w.print("    {s: <28} ", .{gr.nameOf(@intCast(sym))});
-        try verdict(w, &gr, act);
-        for (built.tables.conflicts) |k| {
-            if (k.state != at or k.terminal != sym) continue;
-            try w.print("   [{s} {s}, over ", .{ @tagName(k.class), @tagName(k.kind) });
-            try verdict(w, &gr, k.other);
-            try w.writeAll("]");
-            break;
-        }
-        try w.writeAll("\n");
-    }
-    try w.print("\n  {d} terminal(s) accepted of {d}\n", .{ rows, gr.terminal_count });
-    return 0;
-}
-
 const Show = struct { rules: bool = false, conflicts: bool = false };
 
-const Grammar = outliner.press.grammar.Grammar;
 const Symbol = outliner.press.grammar.Symbol;
-
-/// One production, with the precedence and side each step carries — because in
-/// a conflict report those two are usually the whole answer to "why didn't this
-/// resolve". Printed against the final step, which is the one a completed
-/// reading is judged on.
-fn rule(w: *std.Io.Writer, gr: *const Grammar, prod: u32) !void {
-    const p = gr.productions[prod];
-    try w.print("{s} ->", .{gr.nameOf(p.lhs)});
-    if (p.rhs.len == 0) try w.writeAll(" ε");
-    for (p.rhs) |s| try w.print(" {s}", .{gr.nameOf(s)});
-    const last = p.consumed(p.rhs.len);
-    if (last.prec != .none or last.assoc != .none) {
-        try w.writeAll("   [prec ");
-        switch (last.prec) {
-            .none => try w.writeAll("-"),
-            .level => |v| try w.print("{d}", .{v}),
-            .name => |n| try w.print("'{s}'", .{gr.prec_names[n]}),
-        }
-        try w.print(" {s}]", .{@tagName(last.assoc)});
-    }
-}
-
-/// What a cell decided, in the vocabulary of the grammar rather than of the
-/// table: a shift names the token read, a reduce names the rule folded.
-fn verdict(w: *std.Io.Writer, gr: *const Grammar, a: outliner.press.lalr.Action) !void {
-    switch (a.kind) {
-        .shift => try w.writeAll("read on"),
-        .accept => try w.writeAll("accept"),
-        .err => try w.writeAll("nothing"),
-        .reduce => {
-            try w.writeAll("fold  ");
-            try rule(w, gr, a.value);
-        },
-    }
-}
 
 /// Contested cells grouped by *whose* ambiguity they are, commonest first.
 ///
@@ -388,9 +362,9 @@ fn parties(
         const k = grp.witness;
         const on = if (k.terminal >= gr.terminal_count) "$end" else gr.nameOf(k.terminal);
         try w.print("                 state {d} on {s}:  ", .{ k.state, on });
-        try verdict(w, gr, k.chosen);
+        try state.verdict(w, gr, k.chosen);
         try w.writeAll("\n                 versus            ");
-        try verdict(w, gr, k.other);
+        try state.verdict(w, gr, k.other);
         try w.writeByte('\n');
     }
 }
@@ -405,16 +379,15 @@ fn describe(
     const source = intake.slurp(gpa, io, w, path) orelse return 2;
     defer gpa.free(source);
 
-    const started = std.Io.Clock.awake.now(io);
+    // Two spans rather than one span lapped twice: the reporting between the
+    // phases is not either phase, and lapping would fold it into the second.
+    const importing = assay.Span.open(io);
     var gr = import.treeSitter(gpa, source) catch |e| {
         try w.print("outliner: cannot import {s}: {s}\n", .{ path, @errorName(e) });
         return 2;
     };
     defer gr.deinit();
-    const elapsed_us: i64 = @intCast(@divTrunc(
-        started.durationTo(std.Io.Clock.awake.now(io)).nanoseconds,
-        std.time.ns_per_us,
-    ));
+    const elapsed_us = importing.read(io).us();
 
     var rhs_total: usize = 0;
     var epsilons: usize = 0;
@@ -454,17 +427,14 @@ fn describe(
     try w.print("  conflicts      {d} declared\n", .{gr.declared_conflicts.len});
     try w.print("  imported in    {d} us\n", .{elapsed_us});
 
-    const lr_started = std.Io.Clock.awake.now(io);
+    const pressing = assay.Span.open(io);
     var built = outliner.press.tables(gpa, &gr) catch |e| {
         try w.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
         return 2;
     };
     defer built.deinit();
     const c = &built.collection;
-    const built_us: i64 = @intCast(@divTrunc(
-        lr_started.durationTo(std.Io.Clock.awake.now(io)).nanoseconds,
-        std.time.ns_per_us,
-    ));
+    const built_us = pressing.read(io).us();
     var kernel_items: usize = 0;
     var edge_count: usize = 0;
     var widest: usize = 0;
@@ -506,13 +476,25 @@ fn describe(
         tally.repetition,            tally.declared,               tally.residual.total(),
         tally.residual.shift_reduce, tally.residual.reduce_reduce,
     });
-    var refused: usize = 0;
-    for (t.frayed) |f| {
-        if (f.harm == .read_dropped) refused += 1;
-    }
+    // `floor()` is the same population this line used to count with a loop of
+    // its own — every frayed cell whose harm is `read_dropped` — so the count
+    // comes off the partition rather than beside it.
+    const stand = t.floor();
     try w.print("  frayed         {d} cells contested only by state merging ({d} REFUSE a token)\n", .{
-        t.frayed.len, refused,
+        t.frayed.len, stand.total(),
     });
+    // The count is the least interesting fact about a refusal, and printing it
+    // alone reads as N defects on a table that has far fewer. `agreed` is a cell
+    // canonical LR(1) builds too, so the press has nothing to answer for there;
+    // `alone` and `stuck` are inventions no partition of this state's arrivals
+    // can undo; only `open` is a cell another unfolding round could reach. See
+    // `lalr.Floor`.
+    if (stand.total() > 0) {
+        try w.print("                 {d} agreed, {d} alone, {d} stuck, {d} open" ++
+            " — {d} SEALED under any split\n", .{
+            stand.agreed, stand.alone, stand.stuck, stand.open, stand.sealed(),
+        });
+    }
     try w.print("  built in       {d} us\n", .{built_us});
     if (show.conflicts and t.conflicts.len > 0) try parties(gpa, w, &gr, t.conflicts);
     if (barren.len > 0) {
@@ -534,7 +516,7 @@ fn describe(
         try w.writeAll("\n");
         for (0..gr.productions.len) |i| {
             try w.print("{d:>5}  ", .{i});
-            try rule(w, &gr, @intCast(i));
+            try state.rule(w, &gr, @intCast(i));
             try w.writeAll("\n");
         }
     }
@@ -544,4 +526,10 @@ fn describe(
 test {
     std.testing.refAllDecls(@This());
     _ = outliner;
+    // Named rather than left to `refAllDecls`, which reaches public decls: the
+    // face's siblings are private consts here, so `parse.zig`'s tests were only
+    // ever collected if something else happened to analyse the file. The one
+    // asserting the verdict still says `surveyed` is the wiring gate under
+    // `tool/sound.py`, and a gate collected by accident is not collected.
+    _ = @import("parse.zig");
 }

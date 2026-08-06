@@ -118,6 +118,8 @@ pub fn treeSitter(gpa: std.mem.Allocator, source: []const u8) Error!g.Grammar {
         .symbols = std.StringHashMap(u32).init(gpa),
         .supertypes = std.StringHashMap(void).init(gpa),
         .wrapping = std.StringHashMap(void).init(gpa),
+        .lexical = std.StringHashMap(void).init(gpa),
+        .dead = std.StringHashMap(void).init(gpa),
     };
     defer imp.deinit();
 
@@ -127,6 +129,9 @@ pub fn treeSitter(gpa: std.mem.Allocator, source: []const u8) Error!g.Grammar {
     try muster.readPrecedences(&imp, root.get("precedences"));
     // Before the rules, because it decides which of them is a token at all.
     try muster.census(&imp, root.get("extras"), root.get("externals"));
+    // Before the rules too, and after the census because it asks the census's
+    // question about a body: which rules is nothing going to read?
+    try muster.condemn(&imp, root);
     // Before anything else interns a symbol, because a terminal's number is
     // the last rung of the lexical tie-break rather than bookkeeping. The two
     // passes below keep their own order and find their symbols already made.
@@ -144,7 +149,10 @@ pub fn treeSitter(gpa: std.mem.Allocator, source: []const u8) Error!g.Grammar {
     try imp.b.addProduction(start, &.{first}, &.{});
 
     for (rules.keys(), rules.values()) |rule_name, body| {
-        const sym = imp.symbols.get(rule_name).?;
+        // `condemn` declined to intern a rule nothing reaches whose body was one
+        // token, so there is no symbol to hang a production on and nothing that
+        // could have referenced one.
+        const sym = imp.symbols.get(rule_name) orelse continue;
         // A rule that resolved to a terminal contributes a token, not
         // structure; its body was already folded into the pattern.
         if (g.Builder.isTerminalRaw(sym)) continue;

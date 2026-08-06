@@ -182,19 +182,101 @@ pub fn census(self: *Import, extras: ?json.Value, externals: ?json.Value) Error!
     var claims = std.StringHashMap(u16).init(self.gpa);
     defer claims.deinit();
 
+    // First, because every pass below asks what a rule spells and one of them
+    // has to know that an extra reaching nothing spells a token. A declared
+    // extra naming a rule that names no other rule is lexical however the author
+    // spelled it; anything else stays structure it is not this pass's business
+    // to flatten. See `spelling.bodyPattern`.
+    if (arr(extras)) |list| for (list.items) |entry| {
+        const o = obj(entry) orelse continue;
+        if (!std.mem.eql(u8, str(o.get("type")) orelse continue, "SYMBOL")) continue;
+        const n = str(o.get("name")) orelse continue;
+        const body = self.rules.get(n) orelse continue;
+        if (spelling.bare(body)) try self.lexical.put(n, {});
+    };
+
     const into: Sink = .{ .count = &claims };
-    for (self.rules.values()) |body| try walkAtoms(self, body, true, into);
-    if (arr(extras)) |list| for (list.items) |entry| try walkAtoms(self, entry, true, into);
+    for (self.rules.keys(), self.rules.values()) |name, body| {
+        try walkAtoms(self, body, name, true, into);
+    }
+    if (arr(extras)) |list| for (list.items) |entry| try walkAtoms(self, entry, null, true, into);
     // A spelled-out external claims its token like any other sighting. The
     // probe grammar proves it: `term: /\n/` beside an external `PATTERN \n`
     // leaves tree-sitter reducing `sym_term` off an `aux_sym_term_token1`
     // no rule is named after, exactly as a second inline spelling would.
-    if (arr(externals)) |list| for (list.items) |entry| try walkAtoms(self, entry, true, into);
+    if (arr(externals)) |list| for (list.items) |entry| try walkAtoms(self, entry, null, true, into);
 
     for (self.rules.keys(), self.rules.values()) |name, body| {
-        const pattern = (try spelling.atomPattern(self, body)) orelse continue;
+        const pattern = (try spelling.bodyPattern(self, name, body)) orelse continue;
         const key = try spelling.terminalKey(self, pattern, spelling.lexis(self, body));
         if ((claims.get(key) orelse 0) > 1) try self.wrapping.put(name, {});
+    }
+}
+
+/// Rules nothing reaches, which spell a token nothing can read.
+///
+/// A grammar may carry a rule no other rule names and no block declares - an
+/// author's leftover, and upstream markdown, cpp, sql, verilog and haskell each
+/// ship one or more. Structure is already handled: `fold.sweep` deletes the
+/// productions of a nonterminal no root reaches. A rule whose whole body is one
+/// lexical atom is the case the sweep cannot reach, because it is not a
+/// production at all by then - it is a *terminal in the slate*, and the lexer
+/// offers it at every byte.
+///
+/// That is not a harmless extra column. markdown's `_newline_token` spells
+/// `\n|\r\n?` and competes with the external `_line_ending` for the same bytes;
+/// win or lose, no state reads it, so a parse that is handed one is over. The
+/// terminal must not exist rather than not be read - which is why this runs
+/// before `internRules` instead of pruning after the tables.
+///
+/// The condition is *mentioned nowhere*, not *unreachable*, and the difference
+/// is load-bearing. Transitive reachability was tried first and it is too wide:
+/// cpp's `variadic_parameter` and two verilog rules are named only by other dead
+/// rules, so a transitive sweep condemns them - and then `spread` walks one of
+/// those dead bodies anyway, finds no symbol, and the whole grammar stops
+/// importing with `MalformedGrammar`. Death by reachability is only sound if
+/// nothing walks the dead; here something does.
+///
+/// A rule whose name appears in no body and no block cannot be walked by
+/// anything, so declining to intern it is safe by construction rather than by
+/// argument. It also leaves upstream's own leftovers alone unless they are truly
+/// orphaned, which is the conservative direction: the cost of keeping one is a
+/// spurious slate entry, and the cost of removing one wrongly is a grammar that
+/// will not load.
+pub fn condemn(self: *Import, root: json.ObjectMap) Error!void {
+    const s = self.scratch.allocator();
+    var mentioned = std.StringHashMap(void).init(s);
+    for (self.rules.values()) |body| try referenced(body, &mentioned);
+    for ([_][]const u8{ "extras", "externals", "inline", "supertypes", "conflicts" }) |block| {
+        if (root.get(block)) |b| try referenced(b, &mentioned);
+    }
+    if (str(root.get("word"))) |w| try mentioned.put(w, {});
+
+    for (self.rules.keys(), self.rules.values()) |name, body| {
+        if (mentioned.contains(name)) continue;
+        if (self.rules.count() > 0 and std.mem.eql(u8, name, self.rules.keys()[0])) continue;
+        // Structure nothing mentions is the sweep's, and leaving it there is what
+        // keeps this pass from having an opinion about folding.
+        if ((try spelling.bodyPattern(self, name, body)) == null) continue;
+        try self.dead.put(name, {});
+    }
+}
+
+/// Every rule name this subtree could reach a rule by: a `SYMBOL` reference, and
+/// a bare string, since `conflicts`, `inline` and `supertypes` spell names
+/// without wrapping them in a node.
+fn referenced(node: json.Value, into: *std.StringHashMap(void)) Error!void {
+    switch (node) {
+        .object => |o| {
+            if (str(o.get("type"))) |kind| if (std.mem.eql(u8, kind, "SYMBOL")) {
+                if (str(o.get("name"))) |name| try into.put(name, {});
+            };
+            var it = o.iterator();
+            while (it.next()) |kv| try referenced(kv.value_ptr.*, into);
+        },
+        .array => |a| for (a.items) |item| try referenced(item, into),
+        .string => |v| try into.put(v, {}),
+        else => {},
     }
 }
 
@@ -213,7 +295,16 @@ const Sink = union(enum) { count: *std.StringHashMap(u16), number };
 /// `prec` *outside* a `token`, which `lexis` declines to read as a rank at
 /// all, so ruby's `prec(-1, ';')` and python's `prec.left(0, 'pass')` both
 /// settle where a bare literal already is.
-pub fn walkAtoms(self: *Import, node: json.Value, whole: bool, into: Sink) Error!void {
+pub fn walkAtoms(
+    self: *Import,
+    node: json.Value,
+    /// The rule this body belongs to, when it is one. Null for an inline node
+    /// and for an `extras`/`externals` entry, neither of which is a rule that
+    /// could be declared lexical.
+    named: ?[]const u8,
+    whole: bool,
+    into: Sink,
+) Error!void {
     const o = obj(node) orelse return;
     const kind = str(o.get("type")) orelse return;
 
@@ -223,7 +314,13 @@ pub fn walkAtoms(self: *Import, node: json.Value, whole: bool, into: Sink) Error
         std.mem.eql(u8, kind, "PATTERN") or std.mem.eql(u8, kind, "TOKEN") or
         std.mem.eql(u8, kind, "IMMEDIATE_TOKEN");
     if (spelled) {
-        if (try spelling.atomPattern(self, node)) |pattern| {
+        // A body is asked the wider question, because a rule reaching no other
+        // rule is a token however it is spelled; an inline `seq` is not.
+        const found = if (whole and named != null)
+            try spelling.bodyPattern(self, named.?, node)
+        else
+            try spelling.atomPattern(self, node);
+        if (found) |pattern| {
             const key = try spelling.terminalKey(self, pattern, spelling.lexis(self, node));
             switch (into) {
                 .count => |claims| {
@@ -236,9 +333,9 @@ pub fn walkAtoms(self: *Import, node: json.Value, whole: bool, into: Sink) Error
         }
     }
     if (arr(o.get("members"))) |list| {
-        for (list.items) |item| try walkAtoms(self, item, false, into);
+        for (list.items) |item| try walkAtoms(self, item, null, false, into);
     }
-    if (o.get("content")) |content| try walkAtoms(self, content, false, into);
+    if (o.get("content")) |content| try walkAtoms(self, content, null, false, into);
 }
 
 /// Number the terminals the way tree-sitter numbers them, before any other
@@ -284,22 +381,27 @@ pub fn numberRule(
     claimed: *const std.StringHashMap(void),
 ) Error!void {
     if (claimed.contains(name)) return;
+    // The numbering pass is where a rule that spells a token gets its number, so
+    // it is also where a token nothing can read has to be declined; skipping only
+    // `internRules` would number it here and leave it in the slate anyway.
+    if (self.dead.contains(name)) return;
     if (!self.wrapping.contains(name)) {
-        if (try spelling.atomPattern(self, body)) |pattern| {
+        if (try spelling.bodyPattern(self, name, body)) |pattern| {
             _ = try self.b.intern(name, name, pattern);
             return;
         }
     }
-    try walkAtoms(self, body, true, .number);
+    try walkAtoms(self, body, name, true, .number);
 }
 
 pub fn internRules(self: *Import) Error!void {
     for (self.rules.keys(), self.rules.values()) |name, body| {
         if (self.symbols.get(name) != null) continue; // an external already claimed it
+        if (self.dead.contains(name)) continue; // a token no state could read
         // A rule the census found sharing its spelling derives that token
         // rather than being it, so it is interned with no pattern and the
         // body walk gives it the one-symbol production tree-sitter reduces.
-        const pattern = if (self.wrapping.contains(name)) null else try spelling.atomPattern(self, body);
+        const pattern = if (self.wrapping.contains(name)) null else try spelling.bodyPattern(self, name, body);
         // Both spaces share the rule-name key: a `SYMBOL` reference has to
         // find the rule under the name it used, whichever space it landed
         // in. Anonymous terminals are namespaced away under `str:`/`rx:`.

@@ -88,6 +88,44 @@ const Munch = irregex.Munch;
 /// string, or a template body is.
 const how: Munch.Options = .{ .unicode = true, .multiline = true };
 
+/// What building a scanner can fail on, and it is worth saying what is *not*
+/// here: "this grammar has nothing to lex" and "the format will not carry this
+/// automaton". Both are real, both are common, and both are spelled `null` by
+/// the functions below rather than raised. So every member of these two sets is
+/// a fault, which is the fact a caller deciding whether to degrade needs and
+/// could not get while the sets were inferred.
+///
+/// Named rather than inferred for the same reason `Decline` is named next door:
+/// an inferred set is one a caller can only handle with an `else`, and an `else`
+/// silently adopts whatever a callee grows into later. Spelled here, a new
+/// failure mode breaks every switch that has to have an opinion about it, at the
+/// moment it is introduced. `impose.slate` is the switch that wanted this.
+pub const CompileError = error{
+    /// A terminal the IR carries no pattern for. Not a grammar the author can
+    /// have written - every terminal is a regex or a literal - so it means the
+    /// press dropped one, and the scanner refuses by name rather than panicking
+    /// because this is a library whose job is to accept grammars nobody has
+    /// looked at.
+    TerminalWithoutPattern,
+    /// A lexicon section that does not read back. The bytes arrived under a
+    /// seal that already matched, so this is not disk corruption; it is the
+    /// writer and the reader disagreeing, which is a logic fault in one of them.
+    LexiconUnreadable,
+    /// irregex cannot parse a pattern on the slate. Distinct from a pattern it
+    /// merely cannot *run*: that one is declined per pattern and lands in
+    /// `blind`, leaving the rest of the slate intact. This one is the whole
+    /// compile refusing, so there is no partial scanner to fall back to.
+    BadPattern,
+} || std.mem.Allocator.Error;
+
+/// What writing a slate down can fail on. `WriteFailed` is the allocating
+/// writer's name for running out of memory - it has no other failure mode, and
+/// no file is involved - so both members are the machine rather than the
+/// grammar. Kept as two because narrowing it to `OutOfMemory` here would be
+/// this file asserting something about `std.Io.Writer.Allocating` that only
+/// happens to be true today.
+pub const FreezeError = error{WriteFailed} || std.mem.Allocator.Error;
+
 test {
     _ = outside;
 }
@@ -129,6 +167,20 @@ pub const Scanner = struct {
     owners: []const g.Symbol,
     /// Terminal -> is it skipped between tokens (whitespace, comments)?
     skipped: std.DynamicBitSetUnmanaged,
+    /// Terminal -> is it an extra the grammar also spells inside a rule?
+    ///
+    /// Almost never. Whitespace and comments are declared once, in `extras`,
+    /// and appear in no production, so they can only ever be bytes to step
+    /// over. The exception carries real weight: elixir declares `\r?\n` as an
+    /// extra and builds `_terminator` out of the same pattern, so one symbol is
+    /// both the whitespace between two tokens and the boundary between two
+    /// statements, and only the state standing there knows which.
+    ///
+    /// Consulted only where `skipped` is set, and it is what keeps a caller
+    /// that admits the whole slate - `blame`, and the tests - from resurrecting
+    /// a pure extra as a token. Admitting everything is the absence of a
+    /// narrowing rather than a claim that whitespace was meant.
+    meant: std.DynamicBitSetUnmanaged,
     /// Terminal -> is it a skipped one the tree still keeps? Whitespace
     /// interns as a symbol the author never wrote and emits nothing; a
     /// `comment` rule emits a node. Consulted only where `skipped` is set.
@@ -231,7 +283,7 @@ pub const Scanner = struct {
     /// difference between two milliseconds of startup and eighty. Everything
     /// else about the scanner is derived here either way, because everything
     /// else is cheap; only the automata are worth carrying.
-    pub fn compile(gpa: std.mem.Allocator, gr: *const g.Grammar) !?Scanner {
+    pub fn compile(gpa: std.mem.Allocator, gr: *const g.Grammar) CompileError!?Scanner {
         var arena_state = std.heap.ArenaAllocator.init(gpa);
         defer arena_state.deinit();
         const arena = arena_state.allocator();
@@ -381,6 +433,72 @@ pub const Scanner = struct {
             if (gr.shapeOf(e).visible()) kept.set(e);
         }
 
+        // An extra that some rule also spells. One pass over every right-hand
+        // side rather than a lookup per skip, because the answer is a fact
+        // about the grammar and the skip runs per token.
+        var meant: std.DynamicBitSetUnmanaged = try .initEmpty(gpa, gr.terminal_count);
+        errdefer meant.deinit(gpa);
+        if (skipped.count() > 0) for (gr.productions) |p| {
+            for (p.rhs) |sym| if (sym < gr.terminal_count and skipped.isSet(sym)) meant.set(sym);
+        };
+
+        // Terminals that live only inside an extra the parser never reduces, and
+        // which therefore no parse state can ever name.
+        //
+        // `unskippable` says a nonterminal extra has no seat to step over it.
+        // This is the other end of the same fact: the automaton builds no items
+        // for that extra's productions either, so every terminal reachable only
+        // through them is absent from every state's permission set. On the
+        // state-directed path that costs nothing, because the set they are
+        // absent from is the set being consulted. On the state-free path there
+        // is no set, the whole slate is offered, and they win - rust's
+        // `line_comment` carries a bare `.*`, so `outliner lex` hands back the
+        // first line of any rust file as one token and never sees `fn`.
+        //
+        // Excluded from the two unconditional cuts below and nowhere else. It is
+        // the one narrowing available to a path whose whole problem is having
+        // nothing to narrow with, and it is available because it is not a guess:
+        // these are not terminals a state is unlikely to want, they are
+        // terminals no state can express wanting.
+        //
+        // Conservative on purpose. A terminal reachable from an ordinary rule
+        // *as well* stays, because then some state does name it, and the fix for
+        // that one is a state rather than a filter. So this strictly removes
+        // answers that are always wrong and never removes one that is sometimes
+        // right; what it cannot do is make the path honest, which is a property
+        // of asking without a state and is what the module header warns about.
+        var orphan: std.DynamicBitSetUnmanaged = try .initEmpty(arena, gr.terminal_count);
+        if (unskippable.items.len > 0) {
+            var within: std.DynamicBitSetUnmanaged = try .initEmpty(arena, gr.symbolCount());
+            var stack: std.ArrayList(g.Symbol) = .empty;
+            for (unskippable.items) |e| {
+                within.set(e);
+                try stack.append(arena, e);
+            }
+            while (stack.pop()) |lhs| for (gr.productionsOf(lhs)) |pi| {
+                for (gr.productions[pi].rhs) |sym| {
+                    if (sym < gr.terminal_count or within.isSet(sym)) continue;
+                    within.set(sym);
+                    try stack.append(arena, sym);
+                }
+            };
+            var elsewhere: std.DynamicBitSetUnmanaged = try .initEmpty(arena, gr.terminal_count);
+            for (gr.productions) |p| {
+                const inside = within.isSet(p.lhs);
+                for (p.rhs) |sym| {
+                    if (sym >= gr.terminal_count) continue;
+                    if (inside) orphan.set(sym) else elsewhere.set(sym);
+                }
+            }
+            // Reachable from an ordinary rule too, so some state names it.
+            var out = elsewhere.iterator(.{});
+            while (out.next()) |i| orphan.unset(i);
+            // And an extra is admitted by every state without being named by
+            // any, so orphaning one would leave the skip nothing to step with.
+            var extra = skipped.iterator(.{});
+            while (extra.next()) |i| orphan.unset(i);
+        }
+
         const seat = try gpa.alloc(u32, gr.terminal_count);
         errdefer gpa.free(seat);
         @memset(seat, no_seat);
@@ -438,6 +556,11 @@ pub const Scanner = struct {
             std.debug.assert(found != null); // every seated prec was levelled
             const at: u8 = @intCast(found.?);
             tier[i] = at;
+            // `tier` is set either way: it is the state-directed path's index,
+            // and that path is narrowed by a real permission set rather than by
+            // this. Only the two unconditional cuts skip an orphan - see where
+            // it is built.
+            if (orphan.isSet(i)) continue;
             ranks[at].all.admit(&munch, seat[i]);
             if (!lx.immediate) ranks[at].after.admit(&munch, seat[i]);
             whole.admit(&munch, seat[i]);
@@ -451,6 +574,7 @@ pub const Scanner = struct {
             .stamp = stamp,
             .owners = try owners.toOwnedSlice(gpa),
             .skipped = skipped,
+            .meant = meant,
             .kept = kept,
             .literal = literal,
             .immediate = immediate,
@@ -501,7 +625,7 @@ pub const Scanner = struct {
     /// The bytes are opaque: nothing outside `lexicon.zig` reads them, and the
     /// only thing a caller has to know is that `compile` will find them again
     /// on `Grammar.lexicon`.
-    pub fn freeze(s: *const Scanner, gpa: std.mem.Allocator) !?[]u8 {
+    pub fn freeze(s: *const Scanner, gpa: std.mem.Allocator) FreezeError!?[]u8 {
         if (s.image.len != 0) return null;
         return lexicon.freeze(gpa, &s.munch, s.stamp);
     }
@@ -512,6 +636,7 @@ pub const Scanner = struct {
         s.gpa.free(s.owners);
         s.gpa.free(s.casts);
         s.skipped.deinit(s.gpa);
+        s.meant.deinit(s.gpa);
         s.kept.deinit(s.gpa);
         s.literal.deinit(s.gpa);
         s.immediate.deinit(s.gpa);
@@ -604,10 +729,17 @@ pub const Scanner = struct {
     /// a shift-extra action is emitted for a state only where that state has no
     /// action of its own for the symbol, so a real action always wins.
     ///
+    /// `meant` gates the question rather than decorating it. An extra no rule
+    /// spells has no reading but whitespace, so it is stepped over whatever a
+    /// caller admitted - and callers that admit the whole slate are real, both
+    /// in `blame` and in every fixture here, where admitting everything means
+    /// "no narrowing" rather than "the state named whitespace".
+    ///
     /// With no state to consult every extra is stepped over, which is the only
     /// honest reading of the whole slate.
     fn stepping(s: *const Scanner, sym: g.Symbol, expected: ?*const Expected) bool {
         if (!s.skipped.isSet(sym)) return false;
+        if (!s.meant.isSet(sym)) return true;
         return if (expected) |e| !e.named.isSet(sym) else true;
     }
 
@@ -710,9 +842,17 @@ pub const Scanner = struct {
     /// before the offside rule sees it, and end of input still owes a dedent
     /// for every block left open. `fresh` goes through rather than gating the
     /// call, because only the layout hand needs it - see `outside.step`.
+    ///
+    /// Asked only when there is a state to ask on behalf of. A hand answers out
+    /// of the permission set and has no reading of "everything is admitted": a
+    /// synthesized full set would have python's layout hand and ruby's opener
+    /// both claiming every offset they can reach. So `expected` of null is the
+    /// slate alone, which is the same silence `next`'s header already warns a
+    /// context-dependent grammar to expect - a grammar with hands is exactly
+    /// one of those.
     fn read(s: *Scanner, bytes: []const u8, i: u32, fresh: bool, expected: ?*const Expected) Step {
         if (s.casts.len > 0) if (expected) |e| {
-            if (outside.step(s.casts, &s.carry, bytes, i, fresh, &e.wanted)) |h| {
+            if (outside.step(s.casts, &s.carry, bytes, i, fresh, &e.wanted, &e.named)) |h| {
                 return .{ .token = .{ .symbol = h.symbol, .start = i + h.skip, .len = h.len } };
             }
         };
@@ -720,7 +860,19 @@ pub const Scanner = struct {
         if (s.guarded) |*allow| if (expected) |e| {
             if (s.refusing(allow, bytes, i, e)) |tok| return .{ .token = tok };
         };
-        const hit = s.reach(bytes, i, fresh, expected) orelse return .{ .stray = i };
+        const hit = s.reach(bytes, i, fresh, expected) orelse {
+            // The slate has nothing for these bytes, which is exactly the
+            // position a commanded layout open answers: a `.writ` order is
+            // licensed by the parse having no other move, so it is asked here
+            // rather than above and never competes with a token that would have
+            // lexed. See `outside.ordered`.
+            if (s.casts.len > 0) if (expected) |e| {
+                if (outside.ordered(s.casts, &s.carry, bytes, i, &e.wanted)) |h| {
+                    return .{ .token = .{ .symbol = h.symbol, .start = i + h.skip, .len = h.len } };
+                }
+            };
+            return .{ .stray = i };
+        };
         return .{ .token = .{
             .symbol = s.choose(hit.patterns, expected),
             .start = i,
@@ -881,10 +1033,33 @@ pub const Scanner = struct {
     /// can reach the same byte with only one of them meant - elixir's `\r?\n`
     /// beside its `[ \t]|\r?\n|\\\r?\n` - and without this the coin flip
     /// between them decides whether the file has statement boundaries.
+    ///
+    /// **Immediacy refines each class, and never crosses one.** `terminalKey`
+    /// keeps `(` and `token.immediate('(')` apart as two terminals wearing one
+    /// name, so a state that admits both hands the walk two patterns that reach
+    /// the same byte. They tie on length and on class, and before this the
+    /// tie fell through to declaration order - which is a coincidence, not an
+    /// answer, and it picked wrong: elixir's plain `(` is declared inside
+    /// `block` well before `_call_arguments_with_parentheses_immediate`, so
+    /// every `b(c, d)` was read as a paren-*less* call whose one argument is a
+    /// parenthesised block, and a block has no comma form. Immediacy is a
+    /// restriction rather than a rank, so the spelling legal only *here* is the
+    /// narrower claim and wins it - the same reason a literal beats a pattern.
+    /// It sits under the class so a literal never loses to an immediate
+    /// pattern, which is tree-sitter's ordering and not ours to move.
+    ///
+    /// Measured 2026-08-05, one build apart with nothing else changed: corpus
+    /// rubble 37,023 -> 30,374, of which elixir is 6,984 -> 452. Twenty-four of
+    /// thirty grammars byte-identical; the six that move all improve, and none
+    /// regress. Confining the refinement to the literal class scores the same
+    /// (30,377), so the pattern half is carried on the argument rather than on
+    /// the corpus - julia is the only grammar that reads it, at three bytes.
     fn standing(s: *const Scanner, sym: g.Symbol, expected: ?*const Expected) u3 {
         if (s.skipped.isSet(sym) and s.stepping(sym, expected)) return 0;
-        if (s.provided.isSet(sym)) return 1;
-        return if (s.literal.isSet(sym)) 3 else 2;
+        const narrow: u3 = @intFromBool(s.immediate.isSet(sym));
+        if (s.provided.isSet(sym)) return 1 + narrow;
+        const class: u3 = if (s.literal.isSet(sym)) 5 else 3;
+        return class + narrow;
     }
 
     /// How many terminals this scanner can actually recognize.

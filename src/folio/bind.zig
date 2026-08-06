@@ -12,7 +12,9 @@
 //! on the way in come back empty: step precedence and associativity, the
 //! precedence orderings, the declared ambiguity groups, and the kernel items
 //! that named each state while it was being built. Everything a parse or a tree
-//! build reads is exact. Saying so here rather than leaving it to be discovered
+//! build reads is exact - including `Production.dynamic`, which reads as a rank
+//! and not as a zero, because a rank the press could not spend is not an input
+//! it consumed. Saying so here rather than leaving it to be discovered
 //! by somebody whose second pressing came out different.
 //!
 //! Most of it is not copied - the bodies, the per-state completions and the
@@ -129,7 +131,15 @@ fn vocabulary(a: std.mem.Allocator, f: *const collate.Folio) Error!g.Grammar {
                 .field = if (st.field == leaf.none) null else st.field,
             };
         }
-        slot.* = .{ .lhs = rec.lhs, .rhs = f.rhsOf(@intCast(i)), .steps = mine };
+        slot.* = .{
+            .lhs = rec.lhs,
+            .rhs = f.rhsOf(@intCast(i)),
+            .steps = mine,
+            // The one precedence that outlives the press. `audit` has already
+            // held the record to the IR's width, so this narrows without a
+            // question at bind time.
+            .dynamic = @intCast(rec.rank),
+        };
     }
 
     return .{
@@ -270,9 +280,13 @@ fn tabulation(a: std.mem.Allocator, f: *const collate.Folio, dense: []const lalr
             .repetition => .repetition,
             .declared => .declared,
             .residual => .residual,
+            .unwritten => .unwritten,
         },
         .chosen = @bitCast(rec.chosen),
         .other = @bitCast(rec.other),
+        // Same 32 bits either way: the file writes an action as its cell and a
+        // reader hands the slice straight back rather than copying it.
+        .rest = @ptrCast(f.rivalsOf(rec)),
         .party = f.partyOf(rec),
     };
     const frayed = try a.alloc(settle.Frayed, f.frayed().len);

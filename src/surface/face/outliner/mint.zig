@@ -321,10 +321,20 @@ fn disagrees(
     for (built.tables.conflicts, b.tables.conflicts) |want, back| {
         if (want.state != back.state or want.terminal != back.terminal) return "a conflict cell";
         if (want.kind != back.kind or want.class != back.class) return "a conflict's kind";
-        if (want.chosen.value != back.chosen.value) return "a conflict's verdict";
-        if (want.party.len != back.party.len) return "a conflict's party";
+        // Both actions, both halves of each. `other` is the reading the table
+        // dropped and the only thing `Forks` reads out of this record, so a
+        // conflict that round-trips its verdict and loses its rival is a cell
+        // that stops forking without any count moving.
+        if (!alike(want.chosen, back.chosen) or !alike(want.other, back.other)) {
+            return "a conflict's verdict";
+        }
+        if (!std.mem.eql(g.Symbol, want.party, back.party)) return "a conflict's party";
     }
     return null;
+}
+
+fn alike(a: outliner.press.lalr.Action, b: outliner.press.lalr.Action) bool {
+    return a.kind == b.kind and a.value == b.value;
 }
 
 fn swapExtension(gpa: std.mem.Allocator, path: []const u8) ![]const u8 {

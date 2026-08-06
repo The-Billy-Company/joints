@@ -8,6 +8,7 @@ const std = @import("std");
 const t = std.testing;
 const scanner = @import("scanner.zig");
 const outside = @import("outside.zig");
+const marrow = @import("marrow.zig");
 const import = @import("../../press/import.zig");
 const g = @import("../../press/grammar.zig");
 
@@ -382,16 +383,28 @@ test "scanner: an external scanner's terminal is named blind, not guessed at" {
 }
 
 test "scanner: an extra spelled as a rule is named, not passed over" {
-    // lua's shape, reduced. `comment` is an extra and a SEQ around `--`, so it
-    // is a nonterminal; the skip loop can only seat terminals. Passing over it
-    // silently is what left lua and julia straying on the first comment byte of
-    // every file, at byte zero, with `blind` empty and nothing to read.
+    // lua's shape, reduced. `comment` is an extra and a nonterminal; the skip
+    // loop can only seat terminals. Passing over it silently is what left lua
+    // and julia straying on the first comment byte of every file, at byte zero,
+    // with `blind` empty and nothing to read.
+    //
+    // The body names `tail` rather than spelling the pattern inline, and that
+    // is the fixture rather than a flourish. `muster.census` now promotes a
+    // declared extra whose body reaches no other rule into a terminal outright
+    // - `spelling.bare`, on the ground that nothing in the automaton hosts a
+    // structural extra and a rule deriving nothing has no structure to host.
+    // Under that rule the inline spelling this fixture used to carry is no
+    // longer a nonterminal at all, so it stopped exercising the seam it was
+    // written for and the guard went quiet rather than red. An extra that
+    // reaches a rule is still structure, which is the case that still needs
+    // reporting.
     const src =
         \\{"name":"t","rules":{
         \\ "doc":{"type":"REPEAT1","content":{"type":"SYMBOL","name":"word"}},
         \\ "word":{"type":"PATTERN","value":"[a-z]+"},
         \\ "comment":{"type":"SEQ","members":[
-        \\   {"type":"STRING","value":"--"},{"type":"PATTERN","value":"[^\n]*"}]},
+        \\   {"type":"STRING","value":"--"},{"type":"SYMBOL","name":"tail"}]},
+        \\ "tail":{"type":"PATTERN","value":"[^\n]*"},
         \\ "space":{"type":"PATTERN","value":"\\s"}},
         \\ "extras":[{"type":"SYMBOL","name":"comment"},{"type":"SYMBOL","name":"space"}]}
     ;
@@ -405,16 +418,50 @@ test "scanner: an extra spelled as a rule is named, not passed over" {
     try t.expectEqualStrings("comment", f.gr.nameOf(f.sc.unskippable[0]));
 
     // The terminal extra beside it is unaffected - one rule extra does not cost
-    // the grammar its whitespace skip.
-    //
-    // Read off the scanner rather than through a lex, and the reason is worth
-    // keeping: `names` tokenizes with no expected set, so it offers the whole
-    // slate, and the slate contains `[^\n]*`. That terminal exists only as a
-    // member of the `comment` rule the parser can never enter, and it
-    // out-matches `word` at every offset - "aa bb" comes back as one token. The
-    // shadowing is real and is its own finding; it is not what this test pins,
-    // and a lex here would fail for a reason that has nothing to do with extras.
+    // the grammar its whitespace skip. Read off the scanner rather than through
+    // a lex, which keeps this test about extras; the lex is the next one.
     try t.expect(f.sc.skipped.isSet(f.symbolOf("space")));
+}
+
+test "scanner: a terminal only an unreachable extra spells is not offered without a state" {
+    // The other end of the fact above, and it used to be a caveat in it. The
+    // automaton builds no items for `comment`, so no state's permission set can
+    // ever hold `[^\n]*`; the state-directed path is therefore already right
+    // about it for free. The state-free path has no set to be right with, so it
+    // offered the whole slate - and `[^\n]*` out-matches `word` at every offset,
+    // which made "aa bb" one token and made `outliner lex` on a rust file hand
+    // back its first line whole, never seeing `fn`.
+    //
+    // The narrowing is worth having because it is not a guess. A terminal no
+    // production outside the extra mentions is not one a state is *unlikely* to
+    // name, it is one no state can express naming, so withholding it can only
+    // remove answers that were always wrong. What it cannot do is make this path
+    // honest - rust still hands back the whole file as one `[^+*?]+`, because
+    // that terminal really is reachable from a rule and without a state there
+    // are no grounds to refuse it. See the module header.
+    const src =
+        \\{"name":"t","rules":{
+        \\ "doc":{"type":"REPEAT1","content":{"type":"SYMBOL","name":"word"}},
+        \\ "word":{"type":"PATTERN","value":"[a-z]+"},
+        \\ "comment":{"type":"SEQ","members":[
+        \\   {"type":"STRING","value":"--"},{"type":"SYMBOL","name":"tail"}]},
+        \\ "tail":{"type":"PATTERN","value":"[^\n]*"},
+        \\ "space":{"type":"PATTERN","value":"\\s"}},
+        \\ "extras":[{"type":"SYMBOL","name":"comment"},{"type":"SYMBOL","name":"space"}]}
+    ;
+    var f = try Fixture.init(src);
+    defer f.deinit();
+
+    // `tail` still lexes and is still seated - it is withheld from one cut, not
+    // dropped from the slate, and a state that named it would still get it.
+    const tail = f.symbolOf("tail");
+    try t.expect(f.sc.seat[tail] != scanner.Scanner.no_seat);
+
+    var run = try scanner.tokenize(&f.sc, t.allocator, "aa bb", null);
+    defer run.deinit(t.allocator);
+    try t.expectEqual(@as(?u32, null), run.stray);
+    try t.expectEqual(@as(usize, 2), run.tokens.len);
+    for (run.tokens) |tok| try t.expectEqualStrings("word", f.gr.nameOf(tok.symbol));
 }
 
 test "scanner: a refused pattern leaves a hole, it does not renumber its neighbors" {
@@ -976,53 +1023,166 @@ test "scanner: a grammar spelling one of a marrow cast's names gets silence" {
 /// external. Adding a language to this list is a claim that the language
 /// follows that convention, and it belongs in the same change as the row.
 const seats = [_]struct { troupe: []const u8, grammars: []const []const u8 }{
-    .{ .troupe = "offside", .grammars = &.{"python"} },
-    .{ .troupe = "fence/python", .grammars = &.{"python"} },
-    .{ .troupe = "fence/ruby", .grammars = &.{"ruby"} },
-    .{ .troupe = "fence/rust_raw", .grammars = &.{"rust"} },
-    .{ .troupe = "fence/heredoc", .grammars = &.{"bash"} },
-    .{ .troupe = "marrow/rust_block", .grammars = &.{"rust"} },
-    .{ .troupe = "marrow/cpp_raw", .grammars = &.{"cpp"} },
-    .{ .troupe = "marrow/kotlin_block", .grammars = &.{"kotlin"} },
-    .{ .troupe = "marrow/html_comment", .grammars = &.{"html"} },
-    .{ .troupe = "marrow/rust_string", .grammars = &.{"rust"} },
-    .{ .troupe = "marrow/julia_block", .grammars = &.{"julia"} },
-    .{ .troupe = "marrow/lua_string", .grammars = &.{"lua"} },
-    .{ .troupe = "marrow/lua_comment", .grammars = &.{"lua"} },
-    .{ .troupe = "caesura", .grammars = &.{ "javascript", "typescript" } },
-    .{ .troupe = "scry/css", .grammars = &.{"css"} },
-    .{ .troupe = "scry/toml", .grammars = &.{"toml"} },
+    .{ .troupe = "offside/hash#_indent", .grammars = &.{"python"} },
+    // Scala 3's optional braces. The claim this row makes is that scala infers
+    // its statement boundaries and its regions from a measured column against a
+    // stack the scanner owns, which is python's convention and not haskell's -
+    // evidenced at the push site, where `INDENT` needs `newline_count > 0` and
+    // a width greater than the frame's, never the parser's say-so alone.
+    .{ .troupe = "offside/slashes#_indent", .grammars = &.{"scala"} },
+    .{ .troupe = "fence/python#string_start", .grammars = &.{"python"} },
+    .{ .troupe = "fence/ruby#_string_start", .grammars = &.{"ruby"} },
+    .{ .troupe = "fence/rust_raw#_raw_string_literal_start", .grammars = &.{"rust"} },
+    .{ .troupe = "fence/heredoc#heredoc_start", .grammars = &.{"bash"} },
+    // Shares its anchor with ruby's row and is kept off ruby by
+    // `_by_delegation_hint`, which is kotlin's alone across the thirty. This
+    // pin is the standing check on that: the collision it guards against is
+    // the one written up in `seated`'s header.
+    .{ .troupe = "fence/kotlin#_string_start", .grammars = &.{"kotlin"} },
+    .{ .troupe = "marrow/rust_block#_block_comment_content", .grammars = &.{"rust"} },
+    .{ .troupe = "marrow/cpp_raw#raw_string_content", .grammars = &.{"cpp"} },
+    // Two grammars, one shape, and now two permissions. scala's `block_comment`
+    // and kotlin's `multiline_comment` are the same nesting `/* */` read by
+    // different spellings, so scala reuses the vein rather than getting a copy
+    // of it. Until the key carried the anchor those two rows shared a single
+    // pin reading `{kotlin, scala}`, and the claim that each seats only on its
+    // own cohort (`_suppress_block_comment`, `_by_delegation_hint`) lived in
+    // this comment where nothing could check it. Two rows, two keys, one
+    // grammar each: now the widening the prose ruled out is the thing that
+    // turns this red.
+    .{ .troupe = "marrow/kotlin_block#multiline_comment", .grammars = &.{"kotlin"} },
+    .{ .troupe = "marrow/kotlin_block#block_comment", .grammars = &.{"scala"} },
+    // Same anchor as kotlin's row and a vein of its own, which is what keeps
+    // the two permissions apart. Held off kotlin by `_fake_try_bang`.
+    .{ .troupe = "marrow/swift_block#multiline_comment", .grammars = &.{"swift"} },
+    // Swift's raw strings. All three of its terminals are swift's alone across
+    // the thirty, so this pin is not guarding a collision the way the two rows
+    // above it are - it is guarding the width. The row answers `close` and no
+    // `body`, and a later hand that reached for `raw_str_part` as well would
+    // have to come back here and say so.
+    .{ .troupe = "marrow/swift_raw#raw_str_end_part", .grammars = &.{"swift"} },
+    .{ .troupe = "marrow/ocaml_comment#comment", .grammars = &.{"ocaml"} },
+    .{ .troupe = "marrow/html_comment#comment", .grammars = &.{"html"} },
+    .{ .troupe = "marrow/rust_string#string_content", .grammars = &.{"rust"} },
+    .{ .troupe = "marrow/julia_block#_block_comment_rest", .grammars = &.{"julia"} },
+    .{ .troupe = "marrow/lua_string#_block_string_start", .grammars = &.{"lua"} },
+    .{ .troupe = "marrow/lua_comment#_block_comment_start", .grammars = &.{"lua"} },
+    .{ .troupe = "marrow/elixir_quoted#_quoted_content_double", .grammars = &.{"elixir"} },
+    // Julia's eight string and command interiors. Its `serialize` writes zero
+    // bytes, so the family is stateless and the walk is a function of the mark
+    // and the bytes alone. `_content_str_1` is julia's alone across the thirty;
+    // the other seven and both closes must resolve with it for the cast to
+    // seat, which is nine names arriving together.
+    .{ .troupe = "marrow/julia_quoted#_content_str_1", .grammars = &.{"julia"} },
+    // php's four non-heredoc string interiors. The row's own claim is a
+    // refusal as much as a seating: `scan_encapsed_part_string` serves six
+    // terminals and this seats four, because the two `_heredoc` members read a
+    // tag stack and are a fence. So this pin holds the line at php AND at four
+    // of php's six - a widening onto the heredoc pair would have to come here
+    // first, and the roster is what this test resolves.
+    .{ .troupe = "marrow/php_encapsed#encapsed_string_chars", .grammars = &.{"php"} },
+    // latex's twelve raw regions, and the whole roster is latex's alone across
+    // the thirty - no other grammar declares a `_trivia_raw_*` at all. This one
+    // seats all twelve where php's seats four of six, and the roster pin below is
+    // where that difference is stated.
+    .{ .troupe = "marrow/latex_verbatim#_trivia_raw_env_verbatim", .grammars = &.{"latex"} },
+    .{ .troupe = "caesura/ecma#_automatic_semicolon", .grammars = &.{ "javascript", "typescript" } },
+    // Three rows share the `.caesura` kind and two of them share an anchor:
+    // javascript, kotlin, php and scala all declare `_automatic_semicolon`, so
+    // the kin is doing all the work here. `_template_chars` is ecma's,
+    // `_by_delegation_hint` kotlin's, `_fake_try_bang` swift's, and php and
+    // scala match none of the three - which is the refusal this row pins.
+    .{ .troupe = "caesura/swift#_implicit_semi", .grammars = &.{"swift"} },
+    .{ .troupe = "caesura/kotlin#_automatic_semicolon", .grammars = &.{"kotlin"} },
+    // elixir's is the one caesura anchored on a name no other grammar declares
+    // at all - all three of its seams are elixir's alone across the thirty - so
+    // the kin is belt to that brace rather than the whole argument it is for the
+    // three rows above.
+    .{ .troupe = "caesura/elixir#_newline_before_do", .grammars = &.{"elixir"} },
+    .{ .troupe = "scry/css#_pseudo_class_selector_colon", .grammars = &.{"css"} },
+    .{ .troupe = "scry/toml#_line_ending_or_eof", .grammars = &.{"toml"} },
     // Three of these four spellings are among the commonest external names in
     // the population, so this row is the one whose exclusivity is least
     // self-evident and most worth pinning. `kin` is what buys it.
-    .{ .troupe = "scry/haskell", .grammars = &.{"haskell"} },
+    .{ .troupe = "scry/haskell#haddock", .grammars = &.{"haskell"} },
     // Anchored on `_implicit_end_tag`, which is the one spelling in html's
     // cohort no other grammar in the thirty declares - `comment` is declared by
     // half of them and `raw_text` by four.
-    .{ .troupe = "lineage/html", .grammars = &.{"html"} },
+    .{ .troupe = "lineage/html#_implicit_end_tag", .grammars = &.{"html"} },
+    // Haskell's commanded layout. Ten names, and every one of the ten is
+    // haskell's alone across the thirty - no other grammar declares even a
+    // single `_cmd_*` or `_cond_layout_*`, which is a wider margin than any
+    // other row here has. The exclusivity is still pinned rather than trusted,
+    // because the kotlin defect was a name that looked unmistakable too.
+    .{ .troupe = "writ#_cmd_layout_start", .grammars = &.{"haskell"} },
+    // Julia's glued markers. `_immediate_paren` is julia's alone across the
+    // thirty, and so are its four siblings - no other grammar declares an
+    // `_immediate_*` at all. Pinned anyway, on the same argument the writ row
+    // above states: the kotlin defect was a name that looked unmistakable too.
+    .{ .troupe = "abut#_immediate_paren", .grammars = &.{"julia"} },
 };
 
 /// A troupe's place in the pinned list, by the same key the list spells.
-fn troupeKey(t_: *const outside.Troupe) []const u8 {
+///
+/// The key is the mechanism **and the anchor**, because the mechanism alone
+/// was one permission for two rows and the list could not tell them apart.
+/// `marrow/kotlin_block` was held by kotlin's `multiline_comment` row and
+/// scala's `block_comment` row at once, so its pin read `{kotlin, scala}` and
+/// either row widening onto the other's grammar left this test green. The
+/// prose beside that pin asserted they could never be handed each other's -
+/// which was true, and was an argument in a comment rather than a check.
+///
+/// Keying on the anchor too splits that permission in two without weakening
+/// anything: a row that genuinely seats several grammars still has one anchor
+/// and one key, which is why `caesura/ecma#_automatic_semicolon` still names
+/// both javascript and typescript. `keys are one per row` below is the
+/// invariant this buys, and it is checked rather than described.
+fn troupeKey(gpa: std.mem.Allocator, t_: *const outside.Troupe) ![]const u8 {
+    return std.fmt.allocPrint(gpa, "{s}#{s}", .{ mechanism(t_), t_.anchor });
+}
+
+fn mechanism(t_: *const outside.Troupe) []const u8 {
     return switch (t_.kind) {
-        .offside => "offside",
+        // Keyed on the comment rule now that there are two offside rows, so the
+        // pin stays as sharp as every other kind's: with a bare "offside" key
+        // python and scala would share one permission, and either row could
+        // widen onto the other's grammar without turning this red.
+        .offside => switch (t_.note) {
+            .hash => "offside/hash",
+            .slashes => "offside/slashes",
+        },
         .fence => switch (t_.dialect) {
             .python => "fence/python",
             .ruby => "fence/ruby",
             .rust_raw => "fence/rust_raw",
             .heredoc => "fence/heredoc",
+            .kotlin => "fence/kotlin",
         },
-        .marrow => switch (t_.vein) {
-            .rust_block => "marrow/rust_block",
-            .cpp_raw => "marrow/cpp_raw",
-            .kotlin_block => "marrow/kotlin_block",
-            .html_comment => "marrow/html_comment",
-            .rust_string => "marrow/rust_string",
-            .julia_block => "marrow/julia_block",
-            .lua_string => "marrow/lua_string",
-            .lua_comment => "marrow/lua_comment",
+        .marrow => switch (t_.family) {
+            .elixir_quoted => "marrow/elixir_quoted",
+            .julia_quoted => "marrow/julia_quoted",
+            .php_encapsed => "marrow/php_encapsed",
+            .latex_verbatim => "marrow/latex_verbatim",
+            .none => switch (t_.vein) {
+                .rust_block => "marrow/rust_block",
+                .cpp_raw => "marrow/cpp_raw",
+                .kotlin_block => "marrow/kotlin_block",
+                .swift_block => "marrow/swift_block",
+                .ocaml_comment => "marrow/ocaml_comment",
+                .html_comment => "marrow/html_comment",
+                .rust_string => "marrow/rust_string",
+                .julia_block => "marrow/julia_block",
+                .lua_string => "marrow/lua_string",
+                .lua_comment => "marrow/lua_comment",
+                .swift_raw => "marrow/swift_raw",
+            },
         },
-        .caesura => "caesura",
+        .caesura => switch (t_.tongue) {
+            .ecma => "caesura/ecma",
+            .swift => "caesura/swift",
+            .kotlin => "caesura/kotlin",
+            .elixir => "caesura/elixir",
+        },
         .scry => switch (t_.sight) {
             .css => "scry/css",
             .toml => "scry/toml",
@@ -1031,6 +1191,8 @@ fn troupeKey(t_: *const outside.Troupe) []const u8 {
         .lineage => switch (t_.line) {
             .html => "lineage/html",
         },
+        .writ => "writ",
+        .abut => "abut",
     };
 }
 
@@ -1089,7 +1251,7 @@ test "scanner: every troupe seats exactly the grammars its convention names" {
         const declared: Declared = .{ .names = names.items };
         for (&outside.troupes) |*row| {
             if (outside.provision(row, declared) == null) continue;
-            const key = troupeKey(row);
+            const key = try troupeKey(gpa, row);
             const note = try std.fmt.allocPrint(gpa, "{s} <- {s}", .{ key, lang });
             try seen.append(gpa, note);
             const allowed = for (seats) |s| {
@@ -1120,6 +1282,208 @@ test "scanner: every troupe seats exactly the grammars its convention names" {
     try t.expectEqual(@as(usize, 30), files);
 }
 
+/// Every terminal a row claims, in the order the row spells them.
+///
+/// `provision` answers for one anchor and the pin above reads it as a yes/no,
+/// so between them they say *which grammars* a row seats and never *how much
+/// of one*. That gap was found by a falsifier rather than by review: php's
+/// marrow roster was widened from four members onto the two `_heredoc` ones -
+/// a seating that gives a tag-stack scanner a stateless walk - and rebuilt,
+/// and nothing in the tree turned red. Not the corpus row (`Str.php` holds no
+/// heredoc and no backtick, so it accepted 1 root either way), not the
+/// specimen tier (41/51 both, byte-identical), and not the pin above, whose
+/// key and grammar set are untouched by roster membership.
+/// A mark rendered so a pin can hold it, because a name alone could not.
+///
+/// The second hole the php lane left open. Its own list caught a roster widened
+/// by two members and would not have caught `_quoted_content_heredoc_single`
+/// keeping its name and losing its `wide = 3` - which is the same walk reading
+/// one quote where three end the heredoc, and a wrong tree rather than a missing
+/// one. So every field of `marrow.Mark` is spelled here, and a pin that omits one
+/// is a pin that permits it to change.
+///
+/// The shape is `shut`, `xN` for a close wider than one byte, then a letter per
+/// flag - `i` interpolates, `a` after a variable, `c` a command name. A close the
+/// terminal cannot print goes out as `\xNN` rather than as itself, so a pin stays
+/// a diffable line.
+fn spell(gpa: std.mem.Allocator, name: []const u8, mark: marrow.Mark) ![]const u8 {
+    var out: std.ArrayList(u8) = .empty;
+    try out.appendSlice(gpa, name);
+    try out.appendSlice(gpa, " ");
+    if (std.ascii.isPrint(mark.shut))
+        try out.append(gpa, mark.shut)
+    else
+        try out.print(gpa, "\\x{x:0>2}", .{mark.shut});
+    if (mark.tail.len > 0) try out.print(gpa, "{s}", .{mark.tail});
+    if (mark.wide != 1) try out.print(gpa, "x{d}", .{mark.wide});
+    if (mark.interpolates) try out.appendSlice(gpa, " i");
+    if (mark.after) try out.appendSlice(gpa, " a");
+    if (mark.command) try out.appendSlice(gpa, " c");
+    return out.items;
+}
+
+fn claimed(gpa: std.mem.Allocator, t_: *const outside.Troupe) ![]const []const u8 {
+    var out: std.ArrayList([]const u8) = .empty;
+    for (t_.roster) |p| try out.append(gpa, try spell(gpa, p.name, p.mark));
+    for (t_.opens) |n| try out.append(gpa, n);
+    for (t_.shuts) |s| try out.append(gpa, s.name);
+    for (t_.glued) |s| try out.append(gpa, s.name);
+    for (t_.seams) |n| if (n.len != 0) try out.append(gpa, n);
+    for ([_][]const u8{ t_.body, t_.close }) |n| if (n.len != 0) try out.append(gpa, n);
+    return out.items;
+}
+
+test "scanner: a row claims the terminals it is pinned to and no others" {
+    var arena: std.heap.ArenaAllocator = .init(t.allocator);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
+    // Pinned for the rows whose claim is a *roster* - a list a hand can extend
+    // by one line - because that is the edit the gate above cannot see. A row
+    // whose whole surface is its anchor has nothing here to widen.
+    const rosters = [_]struct { troupe: []const u8, claims: []const []const u8 }{
+        .{
+            // Four of the six terminals `scan_encapsed_part_string` serves.
+            // The two absent ones are `encapsed_string_chars_heredoc` and
+            // `encapsed_string_chars_after_variable_heredoc`, which read a tag
+            // stack and belong to a fence; this list is the only thing in the
+            // tree that notices if they arrive.
+            .troupe = "marrow/php_encapsed#encapsed_string_chars",
+            .claims = &.{
+                "encapsed_string_chars_after_variable \" a",
+                "encapsed_string_chars \"",
+                "execution_string_chars_after_variable ` a",
+                "execution_string_chars `",
+            },
+        },
+        .{
+            .troupe = "marrow/julia_quoted#_content_str_1",
+            .claims = &.{
+                "_content_str_1 \" i",   "_content_str_3 \"x3 i", "_content_cmd_1 ` i",
+                "_content_cmd_3 `x3 i",  "_content_str_1_raw \"", "_content_str_3_raw \"x3",
+                "_content_cmd_1_raw `",  "_content_cmd_3_raw `x3", "_end_str",
+                "_end_cmd",
+            },
+        },
+        .{
+            // Twenty members whose only difference *is* the mark, which makes it
+            // the row a name-only pin protected least. Two of the twenty differ
+            // from a sibling by nothing but `wide = 3`.
+            .troupe = "marrow/elixir_quoted#_quoted_content_double",
+            .claims = &.{
+                "_quoted_content_i_single ' i",         "_quoted_content_i_double \" i",
+                "_quoted_content_i_heredoc_single 'x3 i", "_quoted_content_i_heredoc_double \"x3 i",
+                "_quoted_content_i_parenthesis ) i",    "_quoted_content_i_curly } i",
+                "_quoted_content_i_square ] i",         "_quoted_content_i_angle > i",
+                "_quoted_content_i_bar | i",            "_quoted_content_i_slash / i",
+                "_quoted_content_single '",             "_quoted_content_double \"",
+                "_quoted_content_heredoc_single 'x3",   "_quoted_content_heredoc_double \"x3",
+                "_quoted_content_parenthesis )",        "_quoted_content_curly }",
+                "_quoted_content_square ]",             "_quoted_content_angle >",
+                "_quoted_content_bar |",                "_quoted_content_slash /",
+            },
+        },
+        .{
+            // The row the widened `Mark` was for, so it is pinned on the tail as
+            // well as the name. Eleven of the twelve differ from each other by
+            // nothing but that string, and `_trivia_raw_fi` differs by the flag.
+            .troupe = "marrow/latex_verbatim#_trivia_raw_env_verbatim",
+            .claims = &.{
+                "_trivia_raw_fi \\fi c",
+                "_trivia_raw_env_comment \\end{comment}",
+                "_trivia_raw_env_verbatim \\end{verbatim}",
+                "_trivia_raw_env_listing \\end{lstlisting}",
+                "_trivia_raw_env_minted \\end{minted}",
+                "_trivia_raw_env_asy \\end{asy}",
+                "_trivia_raw_env_asydef \\end{asydef}",
+                "_trivia_raw_env_pycode \\end{pycode}",
+                "_trivia_raw_env_luacode \\end{luacode}",
+                "_trivia_raw_env_luacode_star \\end{luacode*}",
+                "_trivia_raw_env_sagesilent \\end{sagesilent}",
+                "_trivia_raw_env_sageblock \\end{sageblock}",
+            },
+        },
+        .{
+            .troupe = "abut#_immediate_paren",
+            .claims = &.{
+                "_immediate_paren",        "_immediate_bracket",       "_immediate_brace",
+                "_immediate_string_start", "_immediate_command_start",
+            },
+        },
+        .{
+            // A caesura's seams are a roster by the same argument: three names a
+            // hand can extend by one line, and the order is the enum's rather
+            // than the row's, so a seam moved between arms shows up here as two
+            // changed lines and not as a reordering.
+            .troupe = "caesura/elixir#_newline_before_do",
+            .claims = &.{
+                "_newline_before_comment",
+                "_newline_before_do",
+                "_newline_before_binary_operator",
+            },
+        },
+    };
+
+    var checked: usize = 0;
+    for (&outside.troupes) |*row| {
+        const key = try troupeKey(gpa, row);
+        const want = for (rosters) |r| {
+            if (std.mem.eql(u8, r.troupe, key)) break r.claims;
+        } else continue;
+        checked += 1;
+        const got = try claimed(gpa, row);
+        if (got.len != want.len) {
+            std.debug.print("\n{s}: claims {d} terminal(s), pinned at {d}", .{ key, got.len, want.len });
+            for (got) |n| std.debug.print("\n  claims {s}", .{n});
+        }
+        try t.expectEqual(want.len, got.len);
+        for (want, got) |w, name| try t.expectEqualStrings(w, name);
+    }
+    // A renamed key would silently check nothing, which is the failure mode
+    // this whole test exists to stop happening one level down.
+    try t.expectEqual(rosters.len, checked);
+}
+
+test "scanner: one permission per troupe, so no two rows can widen onto each other" {
+    var arena: std.heap.ArenaAllocator = .init(t.allocator);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
+    // What the pin above cannot see on its own. A key held by two rows makes
+    // their pinned grammar sets a union, and a union is a permission neither
+    // row is held to: kotlin's `multiline_comment` row could have started
+    // seating scala, or scala's `block_comment` row kotlin, and the roster
+    // test would have found the note it expected either way.
+    //
+    // This is the check the old key could not pass. Run against `mechanism`
+    // instead of `troupeKey` it fails today on `marrow/kotlin_block`, which is
+    // the whole reason the anchor is in the key.
+    var keys: std.ArrayList([]const u8) = .empty;
+    var doubled: std.ArrayList([]const u8) = .empty;
+    for (&outside.troupes) |*row| {
+        const key = try troupeKey(gpa, row);
+        for (keys.items) |seen| {
+            if (std.mem.eql(u8, seen, key)) try doubled.append(gpa, key);
+        }
+        try keys.append(gpa, key);
+    }
+    for (doubled.items) |d| std.debug.print("\ntwo troupes share one permission: {s}", .{d});
+    try t.expectEqual(@as(usize, 0), doubled.items.len);
+
+    // And in the other direction: a pinned key nothing spells is a permission
+    // granted to no row, which is how a stale entry keeps a retired row's
+    // grammars alive on paper.
+    var orphaned: std.ArrayList([]const u8) = .empty;
+    for (seats) |s| {
+        for (keys.items) |key| {
+            if (std.mem.eql(u8, s.troupe, key)) break;
+        } else try orphaned.append(gpa, s.troupe);
+    }
+    for (orphaned.items) |o| std.debug.print("\npinned key no troupe spells: {s}", .{o});
+    try t.expectEqual(@as(usize, 0), orphaned.items.len);
+    try t.expectEqual(keys.items.len, seats.len);
+}
+
 test "scanner: a save is a value, and comparing one structurally is a trap" {
     var f = try Fixture.init(layout_grammar);
     defer f.deinit();
@@ -1144,6 +1508,74 @@ test "scanner: a save is a value, and comparing one structurally is a trap" {
     f.sc.restore(first);
     try t.expect(first.same(&f.sc.save()));
 }
+
+test "scanner: an extra a rule also spells is whitespace or a token, and the state says which" {
+    // elixir, reduced. `\r?\n` is extras[0] *and* the whole of `_terminator`,
+    // one symbol wearing both roles, so `x = 1\ny = 2` has a newline that is
+    // the boundary between two statements and `f(\n)` has one that is nothing.
+    // Skip it wherever it matches and every statement in the file runs into the
+    // next; take it wherever it matches and no expression may span a line.
+    const src =
+        \\{"name":"t","rules":{
+        \\ "doc":{"type":"REPEAT1","content":{"type":"SYMBOL","name":"stmt"}},
+        \\ "stmt":{"type":"SEQ","members":[{"type":"SYMBOL","name":"word"},
+        \\   {"type":"SYMBOL","name":"_terminator"}]},
+        \\ "_terminator":{"type":"PATTERN","value":"\\r?\\n"},
+        \\ "word":{"type":"PATTERN","value":"[a-z]+"}},
+        \\ "extras":[{"type":"PATTERN","value":"\\r?\\n"},{"type":"PATTERN","value":"[ \\t]"}]}
+    ;
+    var f = try Fixture.init(src);
+    defer f.deinit();
+    // One symbol, reached from the extras side; that it is also `_terminator`
+    // is exactly what `meant` reports and what the rest of this test turns on.
+    const nl = f.gr.extras[0];
+    try t.expect(f.sc.skipped.isSet(nl));
+    try t.expect(f.sc.meant.isSet(nl));
+
+    // Named: the state is mid-statement and the newline ends it.
+    var ending = try f.sc.expecting(t.allocator);
+    defer ending.deinit(t.allocator);
+    ending.admit(&f.sc, nl);
+    const tok = f.sc.next("a\nb", 1, &ending).token;
+    try t.expectEqual(nl, tok.symbol);
+    try t.expectEqual(@as(u32, 1), tok.len);
+
+    // Unnamed: the same byte, the same offset, a state that wants a word. The
+    // newline is whitespace again and the token past it is `b`.
+    var inside = try f.sc.expecting(t.allocator);
+    defer inside.deinit(t.allocator);
+    inside.admit(&f.sc, f.symbolOf("word"));
+    const after = f.sc.next("a\nb", 1, &inside).token;
+    try t.expectEqualStrings("word", f.gr.nameOf(after.symbol));
+    try t.expectEqual(@as(u32, 2), after.start);
+}
+
+test "scanner: an extra no rule spells stays whitespace however wide the slate" {
+    // The other half, and the one that keeps the first honest. Admitting every
+    // terminal is how `blame` asks what could possibly lex here, and it must
+    // not be read as a state naming whitespace - or the widest possible
+    // question comes back answered with a space.
+    const src =
+        \\{"name":"t","rules":{
+        \\ "doc":{"type":"REPEAT1","content":{"type":"SYMBOL","name":"word"}},
+        \\ "word":{"type":"PATTERN","value":"[a-z]+"}},
+        \\ "extras":[{"type":"PATTERN","value":"\\s"}]}
+    ;
+    var f = try Fixture.init(src);
+    defer f.deinit();
+
+    var wide = try f.sc.expecting(t.allocator);
+    defer wide.deinit(t.allocator);
+    for (0..f.gr.terminal_count) |i| wide.admit(&f.sc, @intCast(i));
+    for (0..f.gr.terminal_count) |i| {
+        const sym: g.Symbol = @intCast(i);
+        if (f.sc.skipped.isSet(sym)) try t.expect(!f.sc.meant.isSet(sym));
+    }
+    const tok = f.sc.next(" a", 0, &wide).token;
+    try t.expectEqualStrings("word", f.gr.nameOf(tok.symbol));
+    try t.expectEqual(@as(u32, 1), tok.start);
+}
+
 /// A grammar shaped like every real one: a body pattern that runs until a
 /// delimiter, and the delimiters it stops at. Sixteen of the corpus's grammars
 /// hold this shape, which is why the reading below was not a scala problem.

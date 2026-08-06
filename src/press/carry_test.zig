@@ -36,6 +36,7 @@ const g = @import("grammar.zig");
 const lalr = @import("lalr.zig");
 const lr0 = @import("lr0.zig");
 const press = @import("press.zig");
+const settle = @import("settle.zig");
 
 /// A field the round trip drops, and why.
 const Loss = struct { at: []const u8, why: []const u8 };
@@ -44,6 +45,7 @@ const Loss = struct { at: []const u8, why: []const u8 };
 const consumed = [_]Loss{
     .{ .at = "Step.prec", .why = "resolved the cell while the table was built" },
     .{ .at = "Step.assoc", .why = "the same, for the side it resolved to" },
+    .{ .at = "Step.spliced", .why = "whether those two were absorbed through a fold, which only they need to know" },
     .{ .at = "Grammar.prec_names", .why = "the names a resolved Prec.name indexed" },
     .{ .at = "Grammar.orderings", .why = "the partial order those names compared in" },
     .{ .at = "Grammar.declared_conflicts", .why = "which cells the press was allowed to leave contested" },
@@ -54,12 +56,7 @@ const consumed = [_]Loss{
 /// A loss with a contract to fix it rather than a reason to keep it: a field the
 /// parse would read if it were there. When one lands, this test goes red with
 /// "declared lost but crossed", which is the reminder to delete the entry.
-const pending = [_]Loss{
-    .{
-        .at = "Production.dynamic",
-        .why = "ProductionRecord carries no rank; the fork cannot order branches it cannot see",
-    },
-};
+const pending = [_]Loss{};
 
 /// Fields the artifact answers *more* about than the IR it was pressed from -
 /// the other direction, and not a loss. Declared for the same reason the losses
@@ -76,7 +73,7 @@ comptime {
     // these types and come back here.
     assertWidth(g.Grammar, 21);
     assertWidth(g.Production, 4);
-    assertWidth(g.Step, 4);
+    assertWidth(g.Step, 5);
     assertWidth(lr0.State, 3);
     assertWidth(lalr.Tables, 7);
 }
@@ -87,6 +84,85 @@ fn assertWidth(comptime T: type, comptime want: usize) void {
             "`sample`, then either carry it through the folio or declare the loss in " ++
             "`consumed`/`pending` and update the count here",
     );
+}
+
+test "the fork a rank ordered still flips when it is read back off the file" {
+    // Reflection says the rank crosses. This says the *decision it made* crosses,
+    // which is a different claim: a field can be written, read, and never
+    // consulted, and a fork re-ranking its own versions off that file would be
+    // comparing numbers nothing acted on.
+    //
+    // So nothing here reads the IR after the pack. Everything asserted is either
+    // in the file or bound out of it, and the proof is the flip: press the same
+    // grammar twice with only the sign of the rank different, and the reading the
+    // loaded table leads with has to change sides. If it does not, the order came
+    // from production indices and the file is carrying decoration. c writes -10 on
+    // its parenthesized declarators, so the negative run is the real grammar.
+    //
+    // The fixture comes from `press` rather than a `Builder` here, so the rung
+    // under test is the whole front end: `PREC_DYNAMIC` read off a rule,
+    // reconciled over a body by `spread`, carried through `fold`'s substitutions,
+    // keyed by `dedup`, ordered by `settle.keener`, written, and read.
+    const gpa = testing.allocator;
+    var led: [2]u32 = undefined;
+    for ([_]i16{ -10, 10 }, 0..) |rank, run| {
+        var gr = try press.twoReadingsOfACall(gpa, rank);
+        defer gr.deinit();
+        var pressed = try press.tables(gpa, &gr);
+        defer pressed.deinit();
+
+        const bytes = try folio.pack(gpa, &gr, &pressed);
+        defer gpa.free(bytes);
+        const f = try folio.open(bytes);
+        var back = try folio.bind(gpa, &f);
+        defer back.deinit();
+
+        // The cell is contested in the file, and both readings are still there:
+        // a rank orders a fork, it never removes a side.
+        var forks = try settle.Forks.of(
+            gpa,
+            back.tables.conflicts,
+            back.collection.states.len,
+            back.tables.width,
+        );
+        defer forks.deinit(gpa);
+
+        const semi = spelt(&back.grammar, ";");
+        var seen = false;
+        for (back.tables.conflicts) |k| {
+            if (k.terminal != semi) continue;
+            seen = true;
+            const split = forks.at(k.state, semi);
+            if (split.len == 0) return error.ForkNotOffered;
+            // Every reading the cell dropped survives the round trip, not just
+            // the first: `rest` is written to the folio and read back, so a
+            // ternary ambiguity that arrives binary is a format defect here.
+            try testing.expectEqual(k.rest.len + 1, split.len);
+            const other = split[0].other;
+            try testing.expect(k.chosen.value != other.value);
+            // Re-derived from the loaded ranks alone, which is the only question a
+            // fork can ask: of the two live readings, which did the author rank
+            // above the other?
+            const ahead = back.grammar.productions[k.chosen.value].dynamic;
+            const behind = back.grammar.productions[other.value].dynamic;
+            try testing.expect(ahead > behind);
+            // And the table agrees with the record it was written beside.
+            try testing.expectEqual(k.chosen, back.tables.at(k.state, semi));
+            led[run] = k.chosen.value;
+        }
+        try testing.expect(seen);
+
+        // The limit worth stating where it is provable: what crossed is the
+        // *decided* fork, not the argument for it. `Grammar.declared_conflicts`
+        // is a consumed press input, so this cell reads as undeclared on the far
+        // side even though it is the reason the cell was allowed to stay
+        // contested. A loaded grammar therefore cannot be re-pressed into these
+        // tables; it can only be asked what they decided.
+        try testing.expectEqual(@as(usize, 1), gr.declared_conflicts.len);
+        try testing.expectEqual(@as(usize, 0), back.grammar.declared_conflicts.len);
+    }
+    // The flip.
+    try testing.expect(led[0] != led[1]);
 }
 
 test "every field of the IR either crosses the artifact or is a declared loss" {
@@ -224,7 +300,13 @@ fn sample(gpa: std.mem.Allocator) !g.Grammar {
 
     try b.addProduction(start, &.{stmt}, &.{});
     try b.addProduction(stmt, &.{ kw, id, eq, expr, semi }, &.{
-        .{}, .{ .field = name_field, .alias = rename }, .{}, .{ .prec = .{ .level = 2 }, .assoc = .left }, .{},
+        .{},                                                           .{ .field = name_field, .alias = rename }, .{},
+        // A rank marked as absorbed rather than written. `sample` builds its
+        // bodies by hand, so nothing here has actually been through `fold` -
+        // the value is set directly for the same reason every other one is,
+        // which is that a field left at its default agrees with a default on
+        // the far side however badly the writer lost it.
+        .{ .prec = .{ .level = 2 }, .assoc = .left, .spliced = true }, .{},
     });
     try b.addProduction(stmt, &.{helper}, &.{.{ .alias = punct }});
     try b.addProduction(helper, &.{id}, &.{});
@@ -333,6 +415,15 @@ fn survey(
             if (!said) blind.note(label ++ "." ++ field.name, .loses);
         }
     }
+}
+
+/// The symbol a bound grammar spells with this name. Asked of the far side only,
+/// so a lookup that moved would be a finding rather than a convenience.
+fn spelt(gr: *const g.Grammar, name: []const u8) g.Symbol {
+    for (0..gr.symbolCount()) |s| {
+        if (std.mem.eql(u8, gr.nameOf(@intCast(s)), name)) return @intCast(s);
+    }
+    unreachable;
 }
 
 fn named(comptime list: []const []const u8, comptime want: []const u8) bool {

@@ -127,6 +127,16 @@ const Said = extern struct {
     cell: u32,
 };
 
+comptime {
+    // The sentence above, as a gate. `intern` keys a row on `sliceAsBytes` of a
+    // run of these, so a field that left the type with slack would hash and
+    // compare bytes the allocation supplied - and two states saying the same
+    // thing would intern as two rows, which is a bigger table for no reason and
+    // a table that is a function of the allocator. Same law the folio's
+    // sections are held to, so there is one of it.
+    leaf.seamless(Said);
+}
+
 const Locker = struct {
     gpa: std.mem.Allocator,
     /// Where the result's arrays go.

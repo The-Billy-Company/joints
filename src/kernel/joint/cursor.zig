@@ -46,6 +46,7 @@
 //! makes the effect a monoid element.
 
 const std = @import("std");
+const assay = @import("irregex").assay;
 const g = @import("../../press/grammar.zig");
 const lr0 = @import("../../press/lr0.zig");
 const press = @import("../../press/press.zig");
@@ -105,6 +106,18 @@ pub const Fork = struct {
 /// costs the whole survey — raising it to 4096 turned an 800-state grammar's
 /// segment from a second into ninety.
 ///
+/// **That ninety was one knob's reading of a two-knob cost, and it understates
+/// the corner by an order of magnitude.** This ceiling and `spawns` are in
+/// series: `spawns × limb_ceiling` is the birth budget, so raising either alone
+/// leaves the other holding the run down. Go's survey, timed per corner:
+/// 256 limbs is 1.1 s at any churn from 4096 to 262144; 1024 limbs is 3.4 s at
+/// churn 1024 and **99.5 s** at churn 65536; 4096 limbs is 251.6 s at churn
+/// 4096 and was **killed unfinished at forty minutes** at churn 65536. Every
+/// one of those corners reports the identical survey — worst p99 rank 18, one
+/// residue, 4 of 8 chains held, 4 refused — so the whole curve is cost with no
+/// answer behind it. `--fan` is a third axis and not in series with these two:
+/// 256 costs 3x and moves worst rank 18 → 43 whatever the other two are.
+///
 /// The default rather than the law, because "the run gave up" and "the algebra
 /// diverges" are different findings and only raising the ceiling tells them
 /// apart. `Cursor.limbs_max` is the one in force.
@@ -135,6 +148,15 @@ const tidemark = 16;
 /// 49 s; every other grammar's number is already final at 1024. So this buys the
 /// last of the answer at the last point where it is cheap, and the flag is there
 /// because a bound nobody can move is a bound nobody can check.
+///
+/// **Read that cost column as "at 256 limbs", because that is where it was
+/// taken.** `--churn` was swept with `limb_ceiling` held, and this pair is in
+/// series, so the seconds it quotes are the cheaper fuse's. Held at 256 limbs,
+/// churn is nearly inert on go — 1.1 s at 4096, 1.32 s at 65536, 1.35 s at
+/// 262144. Let the ceiling up first and the same knob bites: 1024 limbs is
+/// 3.4 s at churn 1024 and 99.5 s at churn 65536, a 29x swing the one-knob
+/// sweep could not see. Sixteen is still right, and now for a second reason —
+/// the corner it keeps the survey out of is 90x, not 5x.
 const spawns = 16;
 
 pub const Cursor = struct {
@@ -154,7 +176,8 @@ pub const Cursor = struct {
     fusion: Fusion = .depth,
     /// Print the standing limbs when a run hits the ceiling. Off, because a
     /// grammar that fans does it thousands of times and the interesting one is
-    /// the first.
+    /// the first. `OUTLINER_TRACE=joint` asks the same question without a field
+    /// to set; `confess` resolves the two.
     confessing: bool = false,
     /// How many limbs this cursor will carry. `limb_ceiling` unless a caller is
     /// measuring where the ceiling actually binds.
@@ -404,7 +427,7 @@ pub const Cursor = struct {
                                 continue;
                             }
                         }
-                        if (x.confessing) try x.confess(sym);
+                        try x.confess(sym);
                         return .{ .fanned = .{
                             .at = @intCast(i),
                             .limbs = @intCast(x.alive),
@@ -424,7 +447,7 @@ pub const Cursor = struct {
             // what they already folded reach identical configurations — and a
             // ceiling that counts copies is measuring its own bookkeeping.
             if (try x.merge(null) > x.limbs_max) {
-                if (x.confessing) try x.confess(sym);
+                try x.confess(sym);
                 return .{ .fanned = .{
                     .at = @intCast(i),
                     .limbs = @intCast(x.alive),
@@ -572,17 +595,25 @@ pub const Cursor = struct {
 
     /// Every surviving limb, spelled out. Only a debug aid, and only worth
     /// having because "256 ways" is not a diagnosis.
+    ///
+    /// Two ways to ask, one gate, and it lives here rather than at the call
+    /// sites so the two of them cannot come to disagree about what turns this
+    /// on: `--confess` is a caller who wants it for this run, `OUTLINER_TRACE=
+    /// joint` is the ambient way in for an embedder with no argv to set. The
+    /// lines go through assay's channel rather than straight to stderr, so a
+    /// host that scoped a dark sink stays quiet even here.
     fn confess(x: *Cursor, sym: g.Symbol) !void {
-        std.debug.print("  ceiling on {s}, {d} limbs:\n", .{ x.gr.nameOf(sym), x.used });
+        if (!x.confessing and !assay.lit(.joint)) return;
+        assay.diag("  ceiling on {s}, {d} limbs:\n", .{ x.gr.nameOf(sym), x.used });
         for (0..x.used) |j| {
             if (x.limbs.items[j].dead) continue;
             const l = &x.limbs.items[j];
-            std.debug.print("    floor x{d}  -{d} +[", .{ x.width(j), x.guards.depth(l.owed) });
+            assay.diag("    floor x{d}  -{d} +[", .{ x.width(j), x.guards.depth(l.owed) });
             for (l.above.items, 0..) |s, n| {
-                if (n != 0) std.debug.print(" ", .{});
-                std.debug.print("{s}", .{x.gr.nameOf(s)});
+                if (n != 0) assay.diag(" ", .{});
+                assay.diag("{s}", .{x.gr.nameOf(s)});
             }
-            std.debug.print("]\n", .{});
+            assay.diag("]\n", .{});
         }
     }
 

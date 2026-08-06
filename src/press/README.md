@@ -38,8 +38,24 @@ that one of these looks at a rule body and the rest look at the grammar.
 | `lr0.zig` | The canonical collection - the automaton's shape, before any question of lookahead. |
 | `lalr.zig` | LALR(1) lookaheads by DeRemer-Pennello, and the action table they decide. |
 | `sets.zig` | A flat matrix of equal-width bit sets, because LALR spends nearly all of its time taking unions along a relation. |
-| `settle.zig` | Deciding a contested cell: what a state does when it could both read on and fold up. |
+| `settle.zig` | Deciding a contested cell: what a state does when it could both read on and fold up. Six files - see below. |
 | `retrace.zig` | Walking the automaton backwards, for the questions that need to know what could have been on the stack. |
+| `inquest.zig` | Why a parse stopped where it did, in one sentence per verdict. Reads the wall state's row and items and names the cause; nothing here presses. |
+
+## Settling a contested cell
+
+`settle.zig`'s doc comment lays out a ladder of four rungs, consulted in the
+order the author's declarations were meant to be. That list is also the file
+seam: one rung per file, so a reader who has the ladder has the folder.
+
+| File | Rung |
+|---|---|
+| `settle.zig` | The record and the entry point. `Action`, `Conflict`, `Frayed`, `Tally`, the `Case` that goes in and the `Verdict` that comes out - which is what the rest of the press, the folio, and `impose`'s comptime ledger see. |
+| `column.zig` | **Rung 1** - reduction against reduction, inside one column of one state. `Folds` is the column; `keener` orders a tie the author ranked. |
+| `ladder.zig` | **Rungs 2 and 3** - read against fold, by precedence and then by associativity. `Survey` is what the state's readings said; `Ladder.step` is the verdict, including the exception on rung 2 that looks like a bug and is not. |
+| `attribution.zig` | **Rung 4** - whose ambiguity is left, once precedence and associativity have both declined to say. Traces a synthesized reading back to the rules that were expecting it. |
+| `bench.zig` | The fixture the rungs are walked on: one state's row at a time, and the scratch that makes doing it thirty thousand times affordable. |
+| `forks.zig` | Not settling at all - the index a parse loop reads off a finished verdict to know which cells it may split at. |
 
 ## Why the front end is shaped this way
 

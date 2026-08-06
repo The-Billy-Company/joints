@@ -36,6 +36,15 @@ pub const Import = struct {
     /// Rules that spell a token some other place in the grammar also spells,
     /// so the rule derives that token rather than being it. See `census`.
     wrapping: std.StringHashMap(void),
+    /// Declared extras whose body reaches no other rule, so they are tokens
+    /// spelled in pieces rather than structure. See `spelling.bodyPattern`:
+    /// nothing in the automaton hosts a structural extra, and a rule that
+    /// derives nothing has no structure to host in the first place.
+    lexical: std.StringHashMap(void),
+    /// Rules no root reaches whose body is a single lexical atom, so interning
+    /// them would put a token in the slate that no state can ever read. See
+    /// `muster.condemn`.
+    dead: std.StringHashMap(void),
     aux: u32 = 0,
 
     /// A rule an ordering named before rules were interned.
@@ -48,6 +57,8 @@ pub const Import = struct {
         self.symbols.deinit();
         self.supertypes.deinit();
         self.wrapping.deinit();
+        self.lexical.deinit();
+        self.dead.deinit();
     }
 };
 

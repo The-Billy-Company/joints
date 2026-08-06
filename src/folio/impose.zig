@@ -18,12 +18,125 @@ const std = @import("std");
 const forme = @import("forme.zig");
 const leaf = @import("leaf.zig");
 const g = @import("../press/grammar.zig");
+const lalr = @import("../press/lalr.zig");
 const lr0 = @import("../press/lr0.zig");
 const press = @import("../press/press.zig");
+const settle = @import("../press/settle.zig");
 const lex = @import("../kernel/lex/scanner.zig");
 
 const cell = forme.cell;
 
+// ── the ledger: which press-side fields this writer is answerable for ──
+//
+// A `switch` stops here as a compile error when the press *renames* something.
+// It says nothing when the press *adds* something, and the added field is the
+// worse failure of the two, because it is silent on both sides. The new field
+// is simply not written; `bind` fills it with its default; every check anyone
+// owns still passes, and a measurement across the corpus comes back "30
+// grammars byte-identical, 0 moved". That is a lie in the direction of "your
+// change did nothing", and the correct response to it is to abandon a change
+// that works. It cost this fix a day and very nearly cost it entirely.
+//
+// So the roster is written down, and every field of a carried record must
+// appear on it. Adding `merged: bool` to `Conflict` now fails the build with
+// the name of the field and the two things that may be done about it, which is
+// the whole intent: not to forbid a field, but to make its absence from the
+// file a decision somebody made rather than one nobody noticed.
+const ledger = struct {
+    const conflict: []const []const u8 = &.{
+        "state",  "terminal", "kind", "class",
+        "chosen", "other",    "rest", "party",
+    };
+    const frayed: []const []const u8 = &.{ "state", "terminal", "harm" };
+    /// `alias` and `field` are written; `prec`, `assoc` and `spliced` are not,
+    /// and that is the answer rather than an omission.
+    ///
+    /// A folio carries the table and not the argument that produced it. Static
+    /// precedence is spent while the cells are being decided — the loser is
+    /// gone before a parse begins — so there is nothing left for a reader to
+    /// do with it, and `bind` says so where it rebuilds a step. `spliced` is a
+    /// fact *about* those two: whether the rank on this step was absorbed from
+    /// a rule the press folded away or written where it sits. It reaches
+    /// exactly one reader, `Ladder.purely`, which runs during the press, so it
+    /// travels no further than they do.
+    ///
+    /// Named here anyway, and this is the whole point of the roster: the
+    /// previous lane read `Step` as `leaf.StepRecord` and stopped at a format
+    /// change that does not exist. Nothing on either side of the build could
+    /// have corrected it, because `accounts` was never called on this type -
+    /// so a fourth press-only field could have been added tomorrow with the
+    /// same silence that once reported "30 grammars byte-identical, 0 moved".
+    /// Now it cannot: the question gets asked, and the answer is on the record.
+    const step: []const []const u8 = &.{ "prec", "assoc", "spliced", "alias", "field" };
+    /// `arena` is who owns the memory rather than part of the table, and
+    /// `seams` is the unfolding search's *input* - a folio carries the cells
+    /// the search decided, not the search. Both are deliberate, and a folio is
+    /// still expected to reproduce them as empty rather than as wrong.
+    const tables: []const []const u8 = &.{
+        "arena", "seams", "end", "width", "action", "conflicts", "frayed",
+    };
+};
+
+comptime {
+    accounts(lalr.Conflict, ledger.conflict);
+    accounts(settle.Frayed, ledger.frayed);
+    accounts(lalr.Tables, ledger.tables);
+    accounts(g.Step, ledger.step);
+    // The stored tag is an ordinal, so these three enums *are* the file format
+    // for their column. Same names in the same order on both sides, or a folio
+    // written today says something else to a reader built tomorrow.
+    concurs(settle.Conflict.Class, leaf.ConflictClass);
+    concurs(settle.Conflict.Kind, leaf.ConflictKind);
+    concurs(settle.Frayed.Harm, leaf.Harm);
+}
+
+/// Every field of `T` is named in `roll`, and every name in `roll` is a field
+/// of `T`. The second half matters as much as the first: a roll that outlives
+/// the field it names is a roll nobody is reading.
+fn accounts(comptime T: type, comptime roll: []const []const u8) void {
+    const fields = std.meta.fields(T);
+    for (fields) |f| {
+        for (roll) |name| {
+            if (std.mem.eql(u8, name, f.name)) break;
+        } else @compileError(@typeName(T) ++ "." ++ f.name ++
+            " is new to the press and unaccounted for in the folio. Give it a" ++
+            " slot in its `leaf` record and write it below, or name it in" ++
+            " `ledger` with a comment saying why the file does not need it." ++
+            " Silence here reads downstream as `your change did nothing`.");
+    }
+    for (roll) |name| {
+        for (fields) |f| {
+            if (std.mem.eql(u8, name, f.name)) break;
+        } else @compileError(@typeName(T) ++ " has no field `" ++ name ++
+            "`; `ledger` is stale, delete the entry.");
+    }
+}
+
+/// Two enums with the same names on the same ordinals.
+fn concurs(comptime Press: type, comptime Leaf: type) void {
+    const here = std.meta.fields(Press);
+    const disk = std.meta.fields(Leaf);
+    if (here.len != disk.len) @compileError(@typeName(Press) ++ " and " ++
+        @typeName(Leaf) ++ " differ in length; a class the press can produce" ++
+        " and the format cannot spell is a class that round-trips as another one." ++
+        " Append the missing member - never insert one.");
+    for (here, disk) |a, b| {
+        if (!std.mem.eql(u8, a.name, b.name) or a.value != b.value) {
+            @compileError(@typeName(Press) ++ "." ++ a.name ++ " sits where " ++
+                @typeName(Leaf) ++ "." ++ b.name ++ " does. The ordinal is what" ++
+                " is on disk, so reordering renames every folio already written.");
+        }
+    }
+}
+
+/// What packing can refuse on. Two of them are this file's own; the rest are
+/// the scanner's, unioned rather than translated because building the lexicon
+/// section is the one place the writer does work of its own and the work can
+/// fail on its own terms. Naming them here rather than folding them into a
+/// `CannotWriteThisDown` is deliberate: a caller that sees
+/// `TerminalWithoutPattern` is looking at a press bug, and one that sees
+/// `OutOfMemory` is looking at a machine, and a single name for both is how
+/// `slate` came to swallow three faults for a year. See `slate`.
 pub const Error = error{
     /// Some count does not fit in the `u32` the format spends on it. A grammar
     /// that size is not a problem to solve quietly.
@@ -32,7 +145,7 @@ pub const Error = error{
     /// press promises they are. Loud, because the alternative is writing a
     /// rename onto the wrong child.
     StepsNotParallel,
-} || std.mem.Allocator.Error;
+} || std.mem.Allocator.Error || lex.CompileError || lex.FreezeError;
 
 /// The bytes of a folio for this grammar and this pressing.
 ///
@@ -51,29 +164,43 @@ pub fn pack(
 
 /// This grammar's terminal slate, determinized here so that nobody has to do it
 /// at load. Empty for a grammar with nothing lexable, and empty rather than
-/// fatal for anything the format cannot write down: the section is an answer we
-/// can always work out again, so refusing to publish one is a slower folio and
-/// never a wrong one.
+/// fatal for an automaton the format cannot write down: that section is an
+/// answer we can always work out again, so declining to publish one is a slower
+/// folio and never a wrong one.
+///
+/// Empty for those two and nothing else. Both arrive as `null` from the
+/// scanner, which is what lets everything on the error path be a fault and be
+/// raised; see the note in the body for what that arm used to do instead.
 ///
 /// This is the one place the writer does real work rather than laying out work
 /// already done. It is worth it here for the same reason it is not worth it at
 /// load: a folio is written once and read every time a parse starts.
 fn slate(gpa: std.mem.Allocator, gr: *const g.Grammar) Error![]const u8 {
-    // Two facts wore one answer here. A grammar with nothing lexable is real and
-    // common - yaml declares 113 externals and not one pattern - and publishing
-    // an empty section for it is right. Running out of memory is not that, and
-    // collapsing the two meant a folio written under pressure came back merely
-    // slower, with the writer reporting success. A machine failure fails; a
-    // property of the grammar degrades.
-    var sc = lex.Scanner.compile(gpa, gr) catch |e| switch (e) {
-        error.OutOfMemory => return error.OutOfMemory,
-        else => return &.{},
-    } orelse return &.{};
+    // Both degradations this function exists to make are on the `orelse`s, and
+    // that is the whole finding. A grammar with nothing lexable is real and
+    // common - yaml declares 113 externals and not one pattern - and `compile`
+    // spells it `null`. An automaton the format will not carry is real too, and
+    // `freeze` spells that `null` as well. So the error path never once meant
+    // "degrade", and the arm that read it that way was catching four faults and
+    // three of them by accident.
+    //
+    // What made it invisible was the width rather than the intent: both callees
+    // inferred their error sets, so `else` absorbed whatever they grew into, and
+    // a logic fault added downstream would have arrived here dressed as "this
+    // grammar has nothing lexable". Nothing catches that at mint, because an
+    // empty slate is a valid folio and the writer reports success. It was never
+    // silent outright - the refusal is not cached, so load compiles the scanner
+    // again and fails there - but a deferred report attributed to the wrong
+    // cause is most of the way to a lost one.
+    //
+    // Now the sets are named, so this is a `try` and the enumeration lives in
+    // `Error`. The property worth keeping is not that these five propagate; it
+    // is that a sixth cannot arrive quietly. `CompileError` and `FreezeError`
+    // are closed, so growing one breaks this file at the moment it grows, which
+    // is when somebody still knows what the new failure means.
+    var sc = try lex.Scanner.compile(gpa, gr) orelse return &.{};
     defer sc.deinit();
-    return sc.freeze(gpa) catch |e| switch (e) {
-        error.OutOfMemory => return error.OutOfMemory,
-        else => return &.{},
-    } orelse &.{};
+    return try sc.freeze(gpa) orelse &.{};
 }
 
 /// Everything the layout needs before a single section byte is written: where
@@ -93,6 +220,7 @@ const Plan = struct {
     body_len: u32 = 0,
     complete_len: u32 = 0,
     party_len: u32 = 0,
+    rival_len: u32 = 0,
     /// The table, already interned. Built here rather than while filling,
     /// because the directory has to know how many groups there are before a
     /// group is written.
@@ -144,7 +272,10 @@ const Plan = struct {
         for (result.collection.states) |st| {
             p.complete_len = try add(p.complete_len, st.complete.len);
         }
-        for (result.tables.conflicts) |k| p.party_len = try add(p.party_len, k.party.len);
+        for (result.tables.conflicts) |k| {
+            p.party_len = try add(p.party_len, k.party.len);
+            p.rival_len = try add(p.rival_len, k.rest.len);
+        }
         return p;
     }
 
@@ -153,8 +284,7 @@ const Plan = struct {
     /// to be able to refuse over it.
     fn pattern(p: *Plan, gpa: std.mem.Allocator, pat: ?g.Pattern) Error!leaf.PatternRecord {
         const spelling: []const u8, const kind: leaf.PatternKind = switch (pat orelse
-            return .{ .kind = @intFromEnum(leaf.PatternKind.none), .off = 0, .len = 0 })
-        {
+            return .{ .kind = @intFromEnum(leaf.PatternKind.none), .off = 0, .len = 0 }) {
             .literal => |s| .{ s, .literal },
             .regex => |s| .{ s, .regex },
             .external => return .{ .kind = @intFromEnum(leaf.PatternKind.external), .off = 0, .len = 0 },
@@ -207,6 +337,7 @@ const Plan = struct {
             .party => p.party_len,
             .frayed => @intCast(result.tables.frayed.len),
             .lexicon => @intCast(p.lexicon.len),
+            .rival => p.rival_len,
         };
     }
 
@@ -310,6 +441,7 @@ const Plan = struct {
                     w.put(prod.lhs);
                     w.put(off);
                     w.put(@intCast(prod.rhs.len));
+                    w.putSigned(prod.dynamic);
                     off += @intCast(prod.rhs.len);
                 }
             },
@@ -341,6 +473,7 @@ const Plan = struct {
             },
             .conflict => {
                 var off: u32 = 0;
+                var rest: u32 = 0;
                 for (result.tables.conflicts) |x| {
                     w.put(x.state);
                     w.put(x.terminal);
@@ -352,16 +485,23 @@ const Plan = struct {
                         .repetition => leaf.ConflictClass.repetition,
                         .declared => leaf.ConflictClass.declared,
                         .residual => leaf.ConflictClass.residual,
+                        .unwritten => leaf.ConflictClass.unwritten,
                     }));
                     w.put(cell(x.chosen));
                     w.put(cell(x.other));
                     w.put(off);
                     w.put(@intCast(x.party.len));
+                    w.put(rest);
+                    w.put(@intCast(x.rest.len));
                     off += @intCast(x.party.len);
+                    rest += @intCast(x.rest.len);
                 }
             },
             .party => for (result.tables.conflicts) |x| {
                 for (x.party) |s| w.put(s);
+            },
+            .rival => for (result.tables.conflicts) |x| {
+                for (x.rest) |a| w.put(cell(a));
             },
             .frayed => for (result.tables.frayed) |x| {
                 w.put(x.state);

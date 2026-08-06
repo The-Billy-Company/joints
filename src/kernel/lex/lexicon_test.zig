@@ -139,6 +139,24 @@ fn unexercised(name: []const u8) ?Loss {
     return null;
 }
 
+/// Did this slice survive the block? Field by field when the element is a
+/// record, and byte for byte otherwise.
+///
+/// The distinction is the point rather than a nicety. `sliceAsBytes` on both
+/// sides was the original comparison, and for `pat_runs` - `struct { hi: u32,
+/// mask: u64 }`, twelve bytes of fields in a type `@sizeOf` rounds to sixteen -
+/// it asserted that the four bytes **no field owns** cross the block too. They
+/// did, which is how it passed: the writer handed the slice to `sliceAsBytes`,
+/// so whatever the allocation held was copied verbatim and read back verbatim.
+/// That is the defect, not the contract. The writer now zeroes those bytes, and
+/// a test demanding they still match would be demanding the bug back.
+fn crossed(comptime E: type, mine: []const E, theirs: []const E) bool {
+    if (@typeInfo(E) != .@"struct")
+        return std.mem.eql(u8, std.mem.sliceAsBytes(mine), std.mem.sliceAsBytes(theirs));
+    for (mine, theirs) |a, b| if (!std.meta.eql(a, b)) return false;
+    return true;
+}
+
 test "every field of an automaton either crosses the lexicon block or is a declared loss" {
     const gpa = testing.allocator;
     var m = try sample(gpa);
@@ -168,7 +186,7 @@ test "every field of an automaton either crosses the lexicon block or is a decla
             const loss = comptime declared(f.name);
             const same = switch (@typeInfo(f.type)) {
                 .pointer => |p| p.size == .slice and mv.len == tv.len and
-                    std.mem.eql(u8, std.mem.sliceAsBytes(mv), std.mem.sliceAsBytes(tv)),
+                    crossed(p.child, mv, tv),
                 .optional => (mv == null) == (tv == null),
                 .@"struct" => true, // allocator: nothing to compare
                 else => std.meta.eql(mv, tv),

@@ -37,6 +37,55 @@ pub const Action = settle.Action;
 pub const Conflict = settle.Conflict;
 pub const Tally = settle.Tally;
 
+/// What a state does on a terminal, in the one distinction every instrument
+/// here has to make and three of them had stopped making.
+///
+/// **A shift consumes a byte and a fold does not.** So "the terminals of this
+/// state" has two answers, and they are not close: swift's `_implicit_semi` is
+/// a shift in 20 states and a lookahead in 1,712, an 85x spread. When the
+/// question is lexical - what must a scanner compete with here - the shifts are
+/// the whole answer, because a reduce puts no token in anyone's hand. When it
+/// is a table question - what may follow this state at all - the union is, and
+/// that union is what `drive.offer` hands an external scanner as its permission
+/// set.
+///
+/// This lives here, beside the action it classifies, because a census of a
+/// mechanism and the mechanism itself are two implementations of one fact and
+/// this repo has been bitten by them disagreeing twice: `state --census`
+/// reduced a cohort to co-admission by shift alone and printed a wall of zeros
+/// under a header that read like a clearance, and `lex`'s blind count called
+/// swift blind to a terminal the parser was emitting. **One function, one
+/// answer** - so `state --census`, `inquest`'s stand-in and `joints`'s legal
+/// set all split on this and none of them re-derives it.
+///
+/// Total over the accepted cells and disjoint, which is what lets a footer add
+/// the two counts and call the sum the accepted set. `accept` is filed with the
+/// shifts because it ends the parse by taking a token rather than by folding
+/// one, and because a reader asking "what can a scanner be asked for here"
+/// wants it on that side.
+pub const Half = enum {
+    shift,
+    fold,
+
+    pub fn of(verb: @FieldType(Action, "kind")) ?Half {
+        return switch (verb) {
+            .shift, .accept => .shift,
+            .reduce => .fold,
+            .err => null,
+        };
+    }
+
+    /// What the half means for whoever is reading, in the terms the reading is
+    /// about: a shift is a token this state was waiting for, a fold is one it
+    /// merely tolerates on the way to somewhere else.
+    pub fn word(h: Half) []const u8 {
+        return switch (h) {
+            .shift => "shift",
+            .fold => "lookahead",
+        };
+    }
+};
+
 /// A state that admits a token no context of it can hold, and how to take itself
 /// apart so it stops.
 ///
@@ -112,10 +161,21 @@ pub const Floor = struct {
     /// Invented through several arrivals that cannot be told apart here; see
     /// `Seam.stubborn`.
     stuck: u32 = 0,
-    /// A partition of this state's arrivals exists that removes this cell, and
-    /// the search did not take it - because the round it would have belonged to
-    /// gained nothing overall, or because the plan was cut back to fit under the
-    /// state ceiling. This is the only bucket worth another round.
+    /// The arrivals draw lookaheads that can be told apart here, so a partition
+    /// of them exists and the search did not take it - because the round it
+    /// would have belonged to gained nothing overall, or because the plan was
+    /// cut back to fit under the state ceiling.
+    ///
+    /// Read that as *the arrivals differ*, not as *a partition removes the
+    /// cell*: the partition this bucket sees is finer than the one `Plan.cut`
+    /// can express, since arrivals sharing a predecessor kernel share a lane
+    /// there however differently they read. Zig's `{` is the worked example, and
+    /// it says the difference costs a round to find. Its cell is `open`; the
+    /// round that separated its kernel was built, 1834 states against 1720, and
+    /// the cell survived with the same kernel hash under a new id. Three
+    /// ceilings - 4, 16, 64 - give byte-identical automata, so the plan was not
+    /// truncated either. `open` is the only bucket another round *can* reach;
+    /// it is not a promise that one will.
     open: u32 = 0,
 
     pub fn total(f: Floor) u32 {
@@ -172,6 +232,7 @@ pub const Tables = struct {
         for (t.conflicts) |k| switch (k.class) {
             .repetition => out.repetition += 1,
             .declared => out.declared += 1,
+            .unwritten => out.unwritten += 1,
             .residual => switch (k.kind) {
                 .shift_reduce => out.residual.shift_reduce += 1,
                 .reduce_reduce => out.residual.reduce_reduce += 1,
@@ -897,7 +958,7 @@ test "lookahead is exactly what can follow the nonterminal, not every terminal" 
     }
 }
 
-test "precedence settles a shift-reduce silently and leaves no conflict behind" {
+test "precedence settles a shift-reduce silently and associativity settles one aloud" {
     var x = try Expr.init(testing.allocator, 1, 2, .left);
     defer x.deinit();
     var c = try lr0.build(testing.allocator, &x.gr, .{});
@@ -914,7 +975,27 @@ test "precedence settles a shift-reduce silently and leaves no conflict behind" 
     const star_state = c.walk(0, &.{ x.e, x.star, x.e }).?;
     try testing.expectEqual(Action.Kind.reduce, t.at(star_state, x.plus).kind);
 
-    try testing.expectEqual(@as(usize, 0), t.conflicts.len);
+    // Four contested cells, settled on two different rungs, and the table is
+    // the same either way — every action above is what it always was. What
+    // separates them is *what did the settling*. Two were ordered by a rank the
+    // author wrote about this very pair, and a rank that speaks deletes the
+    // reading it outranks: those stay silent, because there is nothing left to
+    // fork on. The other two are each operator against itself, where the ranks
+    // tie and only a side declared over the whole rule breaks it. A side orders
+    // the pair; it never said the other reading was wrong. So those two are
+    // recorded and their read is left standing.
+    //
+    // Asserted by address rather than by count. `conflicts.len == 2` is also
+    // true when the recorder fires on the precedence pair and skips the
+    // associativity pair — the exact over-reach this distinction exists to
+    // prevent — so the count is checked last and the four addresses first.
+    try testing.expect(t.conflictAt(plus_state, x.star) == null);
+    try testing.expect(t.conflictAt(star_state, x.plus) == null);
+    for ([_]struct { u32, u32 }{ .{ plus_state, x.plus }, .{ star_state, x.star } }) |cell| {
+        const k = t.conflictAt(cell[0], cell[1]) orelse return error.TestExpectedEqual;
+        try testing.expectEqual(Conflict.Kind.shift_reduce, k.kind);
+    }
+    try testing.expectEqual(@as(usize, 2), t.conflicts.len);
 }
 
 test "without precedence the same grammar reports its ambiguity instead of hiding it" {
@@ -958,6 +1039,53 @@ test "ranking one operator above the default settles the pair it outranks" {
     // The two cells left are each operator against itself, where the ranks tie
     // and no side was declared.
     for (t.conflicts) |k| try testing.expect(k.terminal == x.plus or k.terminal == x.star);
+}
+
+test "the halves partition the verbs, and a real table has rows where they differ" {
+    // Two assertions, and the second is the one that keeps the first honest.
+    //
+    // **Total and disjoint.** Every action a cell can hold lands in exactly one
+    // half, or a footer that adds the two counts and calls the sum "accepted"
+    // is lying. Written as an exhaustive walk of the verb enum so that a fifth
+    // verb added later reddens here rather than silently vanishing from one of
+    // the two lists.
+    var verbs: u32 = 0;
+    inline for (@typeInfo(@FieldType(Action, "kind")).@"enum".fields) |f| {
+        const half = Half.of(@enumFromInt(f.value));
+        if (std.mem.eql(u8, f.name, "err")) {
+            try testing.expectEqual(@as(?Half, null), half);
+        } else {
+            try testing.expect(half != null);
+            verbs += 1;
+        }
+    }
+    try testing.expectEqual(@as(u32, 3), verbs);
+
+    // **And the split is not vacuous.** Everything downstream - `state
+    // --census`, `inquest`'s stand-in, `joints`'s legal set - exists because
+    // the two halves of a row are different sets. If a real table had no state
+    // where both halves are occupied and unequal, "say which half you mean"
+    // would be a distinction with nothing behind it and every one of those
+    // reports could go back to printing one number. So a pressed grammar is
+    // required to produce such a state, and this fails if one ever cannot.
+    var x = try Expr.init(testing.allocator, 1, 2, .left);
+    defer x.deinit();
+    var c = try lr0.build(testing.allocator, &x.gr, .{});
+    defer c.deinit();
+    var t = try build(testing.allocator, &x.gr, &c);
+    defer t.deinit();
+
+    var found = false;
+    for (0..c.states.len) |s| {
+        var shifts: u32 = 0;
+        var folds: u32 = 0;
+        for (0..t.width) |sym| switch (Half.of(t.at(@intCast(s), @intCast(sym)).kind) orelse continue) {
+            .shift => shifts += 1,
+            .fold => folds += 1,
+        };
+        if (shifts > 0 and folds > 0 and shifts != folds) found = true;
+    }
+    try testing.expect(found);
 }
 
 test "accept happens at end of input and only there" {

@@ -47,17 +47,66 @@ the 17 a little-endian host can produce.
 
 In: symbol names byte-exact (every `highlights.scm` in the world is keyed on
 them), terminal patterns and lexis, shapes, aliases and field names, the
-productions with their steps, the dense action table, and per state the goto
-edges, the completed productions, and the kernel items.
+productions with their steps and their dynamic ranks, the dense action table,
+and per state the goto edges and the completed productions.
 
-Out: everything the press *consumed* - step precedence, associativity, declared
-conflicts - and everything it produced as a report: contested and frayed cells.
+Also in, and easy to miss because it reads like a report: the contested cells
+and the frayed ones, each with the action the table chose, one of the readings
+it dropped, and the rules party to it. They are here because a GLR loop uses
+them - `Forks` is an index over exactly this section - so they are table, not
+commentary.
+
+Out: everything the press *consumed* - step precedence, associativity, the
+author's declared ambiguity groups. Also out, and this one was in once: the
+kernel items that identify each state, which no parse and no tree build reads.
 A folio is the table, not the argument that made it.
+
+`prec.dynamic` is the one precedence that is *not* a press input and so is the
+one that stays. A static rank resolves a cell while the table is built and the
+loser is gone before a parse begins; a dynamic one resolves nothing, the cell
+keeps both actions, and the rank is the tie-break between readings that are all
+still alive at the end. A fork re-ranking its own versions - what tree-sitter's
+GLR does at run time - has to read it from the file or compare zeros.
 
 The goto edges are not redundant with the shifts in `action`. Precedence can
 delete a read from a state that still has the edge, so anything that wants to
 know what the automaton *could* have done needs the edge rather than the
 verdict.
+
+## A field the press adds and the file does not carry
+
+This is the failure this directory is most exposed to, and it does not announce
+itself. A press-side struct grows a field; its `leaf` record has no slot; the
+writer does not write it; `bind` fills it with the type's default; and every
+check anybody owns still passes. Worse than passing: a corpus board that presses
+most of its rows from folios then reports *every grammar byte-identical, nothing
+moved*, which is a lie in the direction of "your change did nothing" and whose
+correct response is to abandon a change that works. A `switch` does not catch it
+- a switch fires on a **rename**, and the new field is silent on both sides.
+
+So it is caught twice, deliberately at two different levels.
+
+`impose` opens with a **ledger**: a written roster of every field of
+`lalr.Conflict`, `settle.Frayed` and `lalr.Tables`, and a `comptime` block that
+asserts the roster and the struct are the same set in both directions. A new
+field fails the build with its own name and the two things that may be done
+about it - give it a slot, or name it in the ledger with a comment saying why
+the file does not need it. Not to forbid a field, but to make its absence a
+decision somebody made rather than one nobody noticed. The same block asserts
+that the three press enums and their `leaf` twins have the same names on the
+same ordinals, because the ordinal is the file format: appending is safe,
+reordering renames every folio already written.
+
+The ledger cannot see a field that is accounted for and written *wrong*, so
+`folio_test` closes the other half. The round trip compares conflict and frayed
+records field by field through `std.meta.fields` rather than against a list
+somebody maintains, and the fixture grammar was extended until it presses an
+`unwritten` cell, which the test asserts is there - a reflective comparison over
+an empty conflict list is a green light for nothing. Adding a class means adding
+a rule to that grammar that provokes it. `outliner mint
+<grammar.json>` makes the same comparison on the way out - it presses, writes,
+maps the file back and checks the reloaded table against the one still in
+memory - so any grammar on disk is a case you can run.
 
 ## What it measures
 

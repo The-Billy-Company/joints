@@ -43,6 +43,45 @@ pub const Report = struct {
     declined: usize,
 };
 
+/// Name every victim still standing, on stderr, as `tally` counts it.
+///
+/// `Report` was computed on every import and read by nothing but this file's
+/// own tests: `import.zig` spells the call `_ = try fold.nonterminals(...)`.
+/// That is the shape that cost this project twenty thousand bytes elsewhere -
+/// `Scanner.declined` was also computed, also acted on, also printed by no
+/// reader, and the damage surfaced hundreds of bytes downstream wearing another
+/// family's name. Here the damage would be worse to trace: an `inline` rule
+/// that did not fold is a rule the author never wanted in the tables, so every
+/// conflict it causes arrives as a wall in a state that should not exist.
+///
+/// Measured 2026-08-05 over all thirty grammars in `upstream/grammars/`: zero
+/// standing, so this is a latent hole rather than a live one and no wall on the
+/// board today is its doing. It stays because the condition is reachable - a
+/// recursive `inline` rule, or one fanning past `fan_budget` - and because a
+/// counter nobody prints is how it stayed invisible the first time. Named
+/// rather than counted: which rule did not fold is the whole of what a reader
+/// needs, and a number would send them back here to find out.
+///
+/// Unconditional rather than behind the `press` trace lens, on `quire.fault`'s
+/// precedent: it fires only where something is already wrong, so a silent run
+/// is the run that had nothing to say.
+fn announce(b: *const g.Builder, victims: []const u32, r: Report) void {
+    if (r.declined == 0) return;
+    std.debug.print("outliner: {d} inline rule(s) the press could not fold away:", .{r.declined});
+    for (victims) |v| {
+        if (standing(b, v)) std.debug.print(" {s}", .{b.nameRaw(v)});
+    }
+    std.debug.print("\n", .{});
+}
+
+/// Does any right-hand side still mention `v`?
+fn standing(b: *const g.Builder, v: u32) bool {
+    for (b.productions.items) |p| {
+        if (std.mem.indexOfScalar(u32, p.rhs, v) != null) return true;
+    }
+    return false;
+}
+
 /// Substitute every symbol in `victims` away, rewriting `b.productions` in
 /// place. `roots` are the symbols the grammar exists to derive, in the builder's
 /// own unresolved numbering - the sweep needs to know what the grammar is *for*
@@ -208,11 +247,9 @@ fn declineCycles(s: std.mem.Allocator, b: *g.Builder, victim: *std.AutoHashMap(u
 fn tally(b: *const g.Builder, victims: []const u32) Report {
     var r: Report = .{ .folded = 0, .declined = 0 };
     for (victims) |v| {
-        const standing = for (b.productions.items) |p| {
-            if (std.mem.indexOfScalar(u32, p.rhs, v) != null) break true;
-        } else false;
-        if (standing) r.declined += 1 else r.folded += 1;
+        if (standing(b, v)) r.declined += 1 else r.folded += 1;
     }
+    announce(b, victims, r);
     return r;
 }
 
@@ -227,11 +264,32 @@ const Alts = std.AutoHashMap(u32, std.ArrayList(Alt));
 /// production: each substituted step keeps the rank it had inside the rule
 /// being folded away, and only the *last* of them falls back to the rank the
 /// host had written on the step it replaced — and only where it has none of
-/// its own. That is what makes inlining precedence-neutral. The version that
-/// picked one rank for the fused production by magnitude is how Rust's
-/// `_non_special_token`, whose whole content is `prec.right(0, repeat1(…))`,
-/// arrived in its callers with the associativity dropped: rank 0 never
-/// out-magnitudes anything, so the host's silence won every time.
+/// its own. That is what makes inlining precedence-neutral.
+/// The version that picked one rank for the fused production by magnitude is
+/// how Rust's `_non_special_token`, whose whole content is
+/// `prec.right(0, repeat1(…))`, arrived in its callers with the associativity
+/// dropped: rank 0 never out-magnitudes anything, so the host's silence won
+/// every time.
+///
+/// Where *both* wrote a rank the deferral discards the host's, and that loss is
+/// real rather than theoretical. `variable_lvalue` is `prec.left(37, …)` around
+/// `_hierarchical_variable_identifier`, which reaches `_identifier` through
+/// `hierarchical_identifier` — itself `prec.left(0, …)` — so the boundary step
+/// arrives at `left(0)` and the 37 is gone. In the state after an identifier the
+/// reading of `[` then polls *level* with `clockvar -> _identifier`'s fold
+/// rather than above it, rung 2 has nothing to say, rung 3 folds on a `left`
+/// `clockvar` also inherited from `hierarchical_identifier`, and `settle`'s
+/// `standing` comes to 1 so the cell is never recorded. No conflict, no fork,
+/// no `[` in the row: `c[i] = 0;` has nowhere to go, and `c[i] <= 0;` only
+/// stands by being read as a clocking-block drive.
+///
+/// Preferring the host's rank here instead was measured on 2026-08-05, pinned
+/// binaries either side, and is worse: verilog damage 63,937 -> 67,349 and
+/// corpus `describes` 97,898 -> 96,261 nodes, because 8,817 cells stop being
+/// contested at all and verilog is disambiguated by its 181 declared conflicts
+/// rather than by its ranks. Twenty-nine of thirty grammars are tree-identical
+/// either way, so the whole trade was verilog's and verilog said no.
+/// `research/joinery/verilog/RESULT-2-splice.md` has the four measurements.
 ///
 /// Shaping splices the other way round, and overwrites rather than defers: a
 /// host that wrote `field('name', $._victim)` was naming *the whole thing it
@@ -251,8 +309,23 @@ fn expand(s: std.mem.Allocator, p: g.Production, alts: *const Alts) !?[]Alt {
                     for (steps[prefix.steps.len..]) |*inserted| {
                         if (host.alias) |x| inserted.alias = x;
                         if (host.field) |x| inserted.field = x;
+                        // A rank that arrived inside the victim was authored
+                        // for the victim's reading. It is still the rank this
+                        // step carries - which one wins is unchanged, and
+                        // preferring the host's was measured worse - but from
+                        // here it can be told apart from one written here.
+                        if (inserted.prec != .none or inserted.assoc != .none) inserted.spliced = true;
                     }
                     const last = &steps[steps.len - 1];
+                    // Where the victim wrote nothing the host's rank fills in,
+                    // and the host's provenance has to come with it: a host
+                    // step whose own rank was absorbed one round earlier would
+                    // otherwise launder clean on the next, which is exactly
+                    // what happens to `clockvar` when `_identifier` folds in
+                    // behind `hierarchical_identifier`.
+                    if (last.prec == .none or last.assoc == .none) {
+                        last.spliced = last.spliced or host.spliced;
+                    }
                     if (last.prec == .none) last.prec = host.prec;
                     if (last.assoc == .none) last.assoc = host.assoc;
                 }
@@ -425,6 +498,14 @@ test "a recursive victim is declined, not chased forever" {
 
     const report = try nonterminals(testing.allocator, &b, &.{start}, &.{loop});
     try testing.expectEqual(@as(usize, 1), report.declined);
+
+    // …and the decline is SAYABLE. No grammar of the thirty declines a fold
+    // today, so `announce` fires nowhere in the corpus and this is the only
+    // thing standing between it and a line that crashes the first time it is
+    // ever needed. `nameRaw` picks a table off the symbol's bias, and picking
+    // the wrong one is an out-of-bounds read on a list that is usually longer.
+    try testing.expectEqualStrings("loop", b.nameRaw(loop));
+    try testing.expectEqualStrings("x", b.nameRaw(x));
 
     // Declining is not damaging: the grammar it hands back is the one it was
     // given, still able to derive `x`.

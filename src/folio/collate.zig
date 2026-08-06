@@ -226,6 +226,13 @@ pub const Folio = struct {
         return f.view(.party, u32)[k.party_off..][0..k.party_len];
     }
 
+    /// The readings this cell dropped behind `other`, as packed action cells.
+    /// Empty is the common answer: an ambiguity has to be at least three ways
+    /// before there is a third reading to carry.
+    pub fn rivalsOf(f: *const Folio, k: leaf.ConflictRecord) []const u32 {
+        return f.view(.rival, u32)[k.rival_off..][0..k.rival_len];
+    }
+
     pub fn frayed(f: *const Folio) []const leaf.FrayedRecord {
         return f.view(.frayed, leaf.FrayedRecord);
     }

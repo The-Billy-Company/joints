@@ -9,7 +9,7 @@
 //! on.
 //!
 //! Two rules about what belongs here. Everything that could become an
-//! out-of-range index, an out-of-arena slice, or an undefined tag is checked  - 
+//! out-of-range index, an out-of-arena slice, or an undefined tag is checked  -
 //! those are the ones that turn a bad file into a bad memory access, and the
 //! accessors do no checking precisely because this pass did. Nothing that is
 //! merely unusual is checked: a nonterminal carrying a pattern is odd and is
@@ -84,6 +84,13 @@ pub fn contents(f: *const Folio) Error!void {
     for (f.view(.production, leaf.ProductionRecord)) |p| {
         if (p.lhs >= h.symbol_count) return Error.FolioBadSymbol;
         if (@as(u64, p.rhs_off) + p.rhs_len > bodies) return Error.FolioBadProduction;
+        // The record is a word wide and the IR's rank is half of it, so a rank
+        // past `i16` is a file `bind` would silently truncate. Doubted here,
+        // where every other impossible number is doubted, rather than narrowed
+        // hopefully at bind.
+        if (p.rank < std.math.minInt(i16) or p.rank > std.math.maxInt(i16)) {
+            return Error.FolioBadProduction;
+        }
     }
     const alias_count = f.aliasCount();
     const field_count = f.fieldCount();
@@ -105,6 +112,7 @@ pub fn contents(f: *const Folio) Error!void {
     }
 
     const parties = f.dir[@intFromEnum(leaf.Kind.party)].count;
+    const rivals = f.dir[@intFromEnum(leaf.Kind.rival)].count;
     for (f.view(.conflict, leaf.ConflictRecord)) |k| {
         if (k.state >= h.state_count) return Error.FolioBadState;
         if (k.terminal >= h.width) return Error.FolioBadSymbol;
@@ -114,10 +122,14 @@ pub fn contents(f: *const Folio) Error!void {
         // the same range checks as one the table chose.
         for ([_]u32{ k.chosen, k.other }) |raw| try reachable(f, @bitCast(raw));
         if (@as(u64, k.party_off) + k.party_len > parties) return Error.FolioBadIndex;
+        if (@as(u64, k.rival_off) + k.rival_len > rivals) return Error.FolioBadIndex;
     }
     for (f.view(.party, u32)) |s| {
         if (s >= h.symbol_count) return Error.FolioBadSymbol;
     }
+    // A third reading is stepped into exactly like the second, so it is held to
+    // the same reachability check and not merely to a bound.
+    for (f.view(.rival, u32)) |raw| try reachable(f, @bitCast(raw));
     for (f.view(.frayed, leaf.FrayedRecord)) |x| {
         if (x.state >= h.state_count) return Error.FolioBadState;
         if (x.terminal >= h.width) return Error.FolioBadSymbol;

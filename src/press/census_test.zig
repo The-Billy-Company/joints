@@ -40,8 +40,14 @@
 //!
 //! The product loop still reports, as the second half of each row: whether it read
 //! past that wall, how many mends that cost, and where it ended up. A row saying
-//! `press ... [quire mended to whole]` is a grammar whose table has a defect the
+//! `press ... [quire read to whole]` is a grammar whose table has a defect the
 //! recovery is currently hiding, which is worth knowing in both directions.
+//!
+//! One tree invariant rides along, because the trees are already here and thirty
+//! of them is the difference between one node and a class of bug: a child whose
+//! span reaches outside its own parent's. `Node` promises a node runs from its
+//! first token to its last, so a kid past the end is a violation and not a matter
+//! of taste. Exactly one exists in this corpus, and it is toml's.
 //!
 //! Importing `kernel/` from a press file is what a cross-layer instrument costs;
 //! `carry_test.zig` reaches into `folio/` for the same reason. Neither is press's
@@ -51,6 +57,7 @@ const std = @import("std");
 const g = @import("grammar.zig");
 const import = @import("import.zig");
 const inquest = @import("inquest.zig");
+const lr0 = @import("lr0.zig");
 const press = @import("press.zig");
 const lex = @import("../kernel/lex/scanner.zig");
 const quire = @import("../kernel/quire/quire.zig");
@@ -156,9 +163,10 @@ fn ask(
     defer if (chain) |c| gpa.free(c);
 
     const wall = seen(trace.ending, chain, &scanner, bytes);
-    const found = built.whose(wall);
+    const found = built.whose(&gr, wall, scanner.blind);
     try w.print("{s:<20} ", .{gr.name});
     try inquest.write(found, &gr, wall, w);
+    try anchor(&gr, &built.collection, found, wall, w);
 
     // What the product loop made of the same bytes. Only ever an annotation: a
     // mend is a decision about how to carry on past a wall, not a claim that the
@@ -167,11 +175,93 @@ fn ask(
     defer gather.deinit();
     var tree = try gather.run(bytes);
     defer tree.deinit();
+    const agreed = try since(tree, wall, &gr, w);
+    try forked(&gather, w);
+    try loose(gpa, tree, w);
     return .{
         .found = found,
         .whole = std.meta.activeTag(tree.stop) == .accepted,
-        .agreed = try since(tree, wall, &gr, w),
+        .agreed = agreed,
     };
+}
+
+/// The kernel of the state a row names, spelled in the grammar's own names.
+///
+/// A state id is an index into a collection that renumbers whenever the symbol
+/// space or the production list moves, and dropping one dead markdown terminal
+/// moved cpp's refusal from 1646 to 935 without touching cpp. `(production, dot)`
+/// pairs are no better: production indices shift for the same reason. What
+/// survives is the kernel *rendered*: `array -> [ ] .` beside
+/// `array_pattern -> [ ] .` names javascript 269 across any press, because it is
+/// spelled in names the grammar owns rather than in numbers this pressing chose.
+///
+/// So the id stays for whoever is reading this press, and the kernel goes beside
+/// it for whoever quotes the row into another one. Two items is the whole budget;
+/// a wide kernel is summarised rather than dumped, since the point is a citation
+/// and not a state listing - `outliner state <n>` is where the rest lives.
+fn anchor(
+    gr: *const g.Grammar,
+    c: *const lr0.Collection,
+    found: inquest.Finding,
+    wall: inquest.Wall,
+    w: *std.Io.Writer,
+) !void {
+    // The cell the finding blames if it named one, else the state that refused;
+    // an address nobody can act on does not need anchoring.
+    const at = if (found.cell) |cell| cell.state else switch (wall) {
+        .refused => |r| r.state,
+        else => return,
+    };
+    if (at >= c.states.len) return;
+    const items = c.states[at].kernel;
+    if (items.len == 0) return;
+
+    try w.print(" [{d} is", .{at});
+    for (items[0..@min(items.len, 2)]) |item| {
+        const p = gr.productions[item.prod];
+        try w.print(" {s} ->", .{gr.nameOf(p.lhs)});
+        for (p.rhs, 0..) |sym, i| {
+            if (i == item.dot) try w.writeAll(" .");
+            try w.print(" {s}", .{gr.nameOf(sym)});
+        }
+        if (item.dot >= p.rhs.len) try w.writeAll(" .");
+        try w.writeAll(";");
+    }
+    if (items.len > 2) try w.print(" +{d} more", .{items.len - 2});
+    try w.writeAll("]");
+}
+
+/// Children outside their own parent's span. `Node`'s contract is that a node
+/// runs from its first token to its last, so the extras between them are inside
+/// it - which makes a kid reaching past its parent's end an invariant violation
+/// and not a matter of taste. Rides along here because the census already holds a
+/// tree per grammar, and because one number over thirty grammars is the difference
+/// between toml's 731st node and a class of bug.
+///
+/// It used to walk the arena itself, and that second walk was the only reason
+/// anyone knew toml violates the invariant - `Quire.verify` demanded the same
+/// thing and was reached by nothing but the amend fuzz. Two spellings of one
+/// rule, agreeing, which is the shape that drifts. Now both read
+/// `Quire.survey`, so a census and a parse can only ever say the same thing.
+fn loose(gpa: std.mem.Allocator, tree: quire.Quire, w: *std.Io.Writer) !void {
+    const found = try tree.survey(gpa);
+    if (found.sound()) return;
+    try w.print(" [{d} loose, {d} disorder, {d} torn", .{
+        found.loose, found.disorder, found.torn,
+    });
+    if (found.first) |f| {
+        if (f.ref >= tree.nodes.len) {
+            try w.print(": {s} - ref {d} past {d} nodes]", .{ f.why, f.ref, tree.nodes.len });
+            return;
+        }
+        const k = tree.nodes[f.ref];
+        try w.print(": {s} - {s} [{d}, {d})", .{ f.why, tree.name(f.ref), k.start, k.end() });
+        if (f.under != quire.none and f.under < tree.nodes.len) {
+            const p = tree.nodes[f.under];
+            try w.print(" in {s} [{d}, {d})", .{ tree.name(f.under), p.start, p.end() });
+        }
+    }
+    try w.writeAll("]");
 }
 
 /// The oracle's stop in the inquest's terms. The one fact the ending does not
@@ -243,6 +333,25 @@ fn since(tree: quire.Quire, wall: inquest.Wall, gr: *const g.Grammar, w: *std.Io
         ),
     }
     return false;
+}
+
+/// What the fork budget did on this file. Silent for a grammar whose tables
+/// cannot fork, which is most of them.
+///
+/// The three numbers answer different questions and only together. `forks` is
+/// how often an author's declared choice was actually taken up; `merged` is how
+/// many of the readings that produced turned out to be one derivation written
+/// twice, which is the population `crowd` used to be spent on; and `denied` is
+/// how often a declared choice found no room at all. A row with `denied` at zero
+/// is a row where the cap is not a limit on anything, whatever its value - which
+/// is the only honest way to ask whether raising it would buy a byte.
+fn forked(gather: *const quire.Gather, w: *std.Io.Writer) !void {
+    if (gather.rifts == 0 and gather.denied == 0) return;
+    try w.print(" [forks {d} merged {d} denied {d}]", .{
+        gather.rifts,
+        gather.merges,
+        gather.denied,
+    });
 }
 
 fn trim(s: []const u8) []const u8 {

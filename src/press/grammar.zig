@@ -25,7 +25,22 @@ const std = @import("std");
 
 /// An index into `Grammar.names`. Terminals occupy `[0, terminal_count)` and
 /// nonterminals the rest, so `isTerminal` is a comparison rather than a lookup.
+///
+/// It is also hashed by its bytes - `dedup` below over a right-hand side, and
+/// `joint/cursor.zig`'s tread check over the symbols standing above a limb -
+/// while being compared field-wise, so it owes every byte of itself to a field.
+/// A bare integer does, which is why the assertion reads as trivial today; it
+/// is here because widening this to a struct is a two-line edit that would make
+/// two identical right-hand sides hash differently and stop deduplicating.
 pub const Symbol = u32;
+
+comptime {
+    if (!std.meta.hasUniqueRepresentation(Symbol)) @compileError(
+        "grammar.Symbol is hashed by its bytes, so every byte of it has to" ++
+            " belong to a field. See `folio/leaf.zig`'s `seamless` for the" ++
+            " same law over the records that reach disk.",
+    );
+}
 
 /// Which way an equal-precedence shift/reduce tie falls. `none` leaves the
 /// conflict unresolved, which is the honest answer and the thing rung 1 counts.
@@ -138,6 +153,27 @@ pub const Alias = struct { name: []const u8, named: bool };
 pub const Step = struct {
     prec: Prec = .none,
     assoc: Assoc = .none,
+    /// Whether the rank above was **absorbed** rather than written here: it
+    /// arrived inside a rule the press folded away, and it was authored for
+    /// that rule's reading rather than for this production's.
+    ///
+    /// Provenance and not a rank, because the two questions have different
+    /// answers and only one of them is on the step today. `variable_lvalue` is
+    /// `prec.left(37, …)` and reaches `_identifier` through
+    /// `hierarchical_identifier`, itself `prec.left(0, …)`; after the fold both
+    /// it and `clockvar` carry `left(0)` on that step and nothing distinguishes
+    /// the rank `clockvar` inherited from one its author chose. Rung 3 then
+    /// folds on a side nobody wrote for this reading and deletes the `[`.
+    ///
+    /// Set only by `fold.zig::expand`, which is the only place two authors ever
+    /// meet on one step - a body the author wrote is authored by definition.
+    ///
+    /// **Press-only, like the two ranks it describes.** `leaf.StepRecord`
+    /// carries `alias` and `field` and nothing else, because a folio holds the
+    /// table rather than the argument that built it; see `bind.zig`. `impose`'s
+    /// ledger names this field anyway, so its absence from the file is a
+    /// decision on the record instead of one nobody noticed.
+    spliced: bool = false,
     /// Which `Grammar.aliases` entry renames this step's child, if any.
     alias: ?u32 = null,
     /// Which `Grammar.field_names` entry this step's child is filed under, if
@@ -522,6 +558,15 @@ pub const Builder = struct {
         return s < nonterminal_bias;
     }
 
+    /// What an *unresolved* symbol is called, for a diagnostic raised before
+    /// `finish` has a `Grammar` to ask `nameOf`. The bias stays private: a
+    /// caller that had to strip it itself would be one rename away from
+    /// indexing the wrong table.
+    pub fn nameRaw(b: *const Builder, s: u32) []const u8 {
+        const list = if (isTerminalRaw(s)) b.terminals else b.nonterminals;
+        return list.items[s & ~nonterminal_bias].name;
+    }
+
     pub fn init(gpa: std.mem.Allocator) Builder {
         return .{
             .gpa = gpa,
@@ -902,6 +947,13 @@ fn dedup(b: *Builder) !void {
             for (k.steps) |s| {
                 h.update(std.mem.asBytes(&std.meta.activeTag(s.prec)));
                 h.update(std.mem.asBytes(&s.assoc));
+                // Provenance is part of what makes two bodies distinct for the
+                // same reason the rank is: one of them was ranked by its own
+                // author and the other absorbed a rank on the way through a
+                // fold, and rung 3 now answers them differently. `dedup` runs
+                // *after* `fold`, so this is the round where the difference
+                // exists to be collapsed.
+                h.update(std.mem.asBytes(&s.spliced));
                 // Flattened rather than hashed as optionals: an absent `?u32`
                 // leaves its payload bytes undefined, and feeding those to a
                 // hash is how a deduplicator starts giving different answers on
@@ -923,6 +975,7 @@ fn dedup(b: *Builder) !void {
             if (!std.mem.eql(Symbol, x.rhs, y.rhs)) return false;
             for (x.steps, y.steps) |a, c| {
                 if (a.assoc != c.assoc or !a.prec.eql(c.prec)) return false;
+                if (a.spliced != c.spliced) return false;
                 if (a.alias != c.alias or a.field != c.field) return false;
             }
             return true;

@@ -79,7 +79,7 @@ pub fn freeze(gpa: std.mem.Allocator, m: *const Munch, stamp: u64) Frozen!?[]u8 
     defer raw.deinit();
     const w = &raw.writer;
 
-    try w.writeAll(std.mem.asBytes(&Preamble{
+    try w.writeAll(&flat(Preamble, .{
         .magic = magic,
         .voices = @intCast(m.voices.len),
         .npatterns = @intCast(m.seats.len),
@@ -105,7 +105,7 @@ pub fn freeze(gpa: std.mem.Allocator, m: *const Munch, stamp: u64) Frozen!?[]u8 
         // one per state, or this format will not describe it.
         if (d.reach.len != if (v.ordinals.len == 1) 0 else d.nstates) return null;
         try seat(&raw);
-        try w.writeAll(std.mem.asBytes(&Head{
+        try w.writeAll(&flat(Head, .{
             .ncls = d.ncls,
             .nstates = d.nstates,
             .match_hi = d.match_hi,
@@ -133,7 +133,13 @@ pub fn freeze(gpa: std.mem.Allocator, m: *const Munch, stamp: u64) Frozen!?[]u8 
         try seat(&raw);
         try w.writeAll(std.mem.sliceAsBytes(d.trans_in_w));
         try seat(&raw);
-        try w.writeAll(std.mem.sliceAsBytes(d.pat_runs));
+        // One at a time rather than `sliceAsBytes`, for the reason `flat`
+        // exists: `PatRun` is `{ hi: u32, mask: u64 }`, so Zig seats the word
+        // first and rounds the pair to sixteen, and the four bytes past `hi`
+        // belong to whatever the determinizer's array list was allocated over.
+        // The elements keep the layout `thaw` views them at; only the bytes
+        // between them stop being somebody else's.
+        for (d.pat_runs) |run| try w.writeAll(&flat(Dfa.PatRun, run));
         try seat(&raw);
         try w.writeAll(std.mem.sliceAsBytes(d.reach));
         try seat(&raw);
@@ -278,6 +284,51 @@ pub fn thaw(gpa: std.mem.Allocator, block: []const u8, npatterns: usize, stamp: 
     return .{ .munch = m, .image = image };
 }
 
+/// A record as bytes, with every one of them assigned.
+///
+/// `std.mem.asBytes` hands over `@sizeOf(T)`, and `@sizeOf` rounds a struct up
+/// to its own alignment - so a record whose fields stop short of that carries
+/// bytes no field owns. `Head` is sixty bytes of fields in a type that rounds
+/// to sixty-four; `Dfa.PatRun` is twelve in a type that rounds to sixteen. Zig
+/// promises nothing about what is in the difference, and the two answers it
+/// gives in practice are both bad: a struct literal inherits the stack frame,
+/// an array-list element inherits the allocation.
+///
+/// That put arbitrary process memory into a file meant to travel between
+/// machines, and - because the block is deflated - made the *length* of the
+/// section move, so twelve of thirty grammars pressed to different bytes twice
+/// in a row from one binary. The tables underneath were identical every time;
+/// only these bytes were not. See `research/press/RESULT-1-scope.md`.
+///
+/// Field by field into a zeroed cell, so the padding is written rather than
+/// hoped about, and reflectively, so a field added to `Head` tomorrow is
+/// carried without anyone remembering this exists.
+fn flat(comptime T: type, v: T) [@sizeOf(T)]u8 {
+    comptime for (@typeInfo(T).@"struct".fields) |f| {
+        // A field with slack of its own carries it: assigning the field whole
+        // copies the source's bytes over the zeroed cell, and the ones no
+        // sub-field owns are the same bug one level down, invisible again. A
+        // nested struct is the obvious way in; a `u21` is the quiet one, four
+        // bytes wide and twenty-one bits full, which the older spelling of this
+        // check - "is it an integer" - waved straight through.
+        //
+        // The predicate is `std.meta.hasUniqueRepresentation`, the same one
+        // `std.mem.eql` consults before it will `memcmp` a type and the same
+        // one `leaf`'s section gate holds every folio record to. One law with
+        // one spelling, so there is one thing to keep right.
+        if (!std.meta.hasUniqueRepresentation(f.type)) @compileError(@typeName(T) ++
+            "." ++ f.name ++ " has bytes no field of it owns, so `flat` cannot" ++
+            " promise every byte of it is assigned. Widen it to a whole number" ++
+            " of bytes, or spell its slack as a field - do not reach for" ++
+            " `asBytes`, which is what wrote four bytes of this process's heap" ++
+            " into every folio on disk.");
+    };
+    var out: [@sizeOf(T)]u8 align(@alignOf(T)) = @splat(0);
+    const cell: *T = @ptrCast(&out);
+    inline for (@typeInfo(T).@"struct".fields) |f| @field(cell, f.name) = @field(v, f.name);
+    return out;
+}
+
 /// Advance the written length to the next grain, so the record after it starts
 /// where `Cursor` will look for it.
 fn seat(raw: *std.Io.Writer.Allocating) !void {
@@ -399,4 +450,54 @@ comptime {
         std.debug.assert(@alignOf(T) <= grain);
     }
     std.debug.assert(grain % @alignOf(u64) == 0);
+}
+
+const testing = std.testing;
+
+/// The three records this file writes whole. Named once so the test below and
+/// a reader looking for what `flat` is for see the same list.
+const written = .{ Preamble, Head, Dfa.PatRun };
+
+test "a record is written with every byte of it assigned, padding included" {
+    // The failure this stands against: `asBytes` on a struct literal hands over
+    // `@sizeOf(T)`, and the bytes past the last field are whatever the frame or
+    // the allocation held. Two of these three have such bytes - `Head` stops at
+    // sixty of sixty-four, `PatRun` at twelve of sixteen - and writing them put
+    // heap in a folio and made eleven of thirty grammars press to different
+    // bytes twice running.
+    //
+    // Reflective on both sides: which bytes a field owns comes from `@offsetOf`
+    // rather than from remembered numbers, so a field added to `Head` tomorrow
+    // is covered without anybody editing this.
+    inline for (written) |T| {
+        var owned: [@sizeOf(T)]bool = @splat(false);
+        // Every field all-ones, so an owned byte reading zero is one `flat`
+        // failed to assign rather than one that was legitimately zero.
+        var loud: T = undefined; // and its padding is the poison
+        inline for (@typeInfo(T).@"struct".fields) |f| {
+            @memset(owned[@offsetOf(T, f.name)..][0..@sizeOf(f.type)], true);
+            @field(loud, f.name) = std.math.maxInt(f.type);
+        }
+        const bytes: [@sizeOf(T)]u8 align(@alignOf(T)) = flat(T, loud);
+        for (bytes, owned) |b, mine| try testing.expectEqual(mine, b != 0);
+        // And the fields are still what they were: a `flat` that zeroed
+        // everything would pass the half above and write an empty record.
+        const back: *const T = @ptrCast(&bytes);
+        inline for (@typeInfo(T).@"struct".fields) |f| {
+            try testing.expectEqual(@field(loud, f.name), @field(back, f.name));
+        }
+    }
+}
+
+test "at least one of the written records has padding to get wrong" {
+    // Otherwise the test above is green because there was nothing to check,
+    // which is the shape of every flattering instrument in this tree. If a
+    // future layout makes all three seamless, delete this and say so.
+    var slack = false;
+    inline for (written) |T| {
+        comptime var fields: usize = 0;
+        inline for (@typeInfo(T).@"struct".fields) |f| fields += @sizeOf(f.type);
+        if (fields != @sizeOf(T)) slack = true;
+    }
+    try testing.expect(slack);
 }

@@ -53,9 +53,12 @@
 //!     has to see the whitespace in front of it - that whitespace *is* Python's
 //!     indentation - so it must be asked before an extra eats it.
 //!   * **It may answer zero-width.** The slate must refuse a zero-length match
-//!     (nothing in a regex promises the next call differs), a hand need not:
-//!     every `_dedent` pops a column, so the memory is the proof of progress.
-//!     `step` checks that proof rather than trusting it - see `Carry.pinned`.
+//!     (nothing in a regex promises the next call differs), a hand need not -
+//!     but the licence is `step`'s to give and not the hand's to assume, and
+//!     it is given by a bound rather than by a promise. Some hands make
+//!     progress in memory (every `_dedent` pops a column) and some make none at
+//!     all (julia's five `_immediate_*` markers), so the proof cannot be "the
+//!     memory moved". See `Spent` for the one that covers both.
 //!
 //! What generalises across the hands is the *memory*, not the scanners: a
 //! stack of columns (`offside.zig`) and a stack of open marks (`fence.zig`).
@@ -71,6 +74,7 @@ const marrow = @import("marrow.zig");
 const caesura = @import("caesura.zig");
 const scry = @import("scry.zig");
 const lineage = @import("lineage.zig");
+const writ = @import("writ.zig");
 
 test {
     _ = offside;
@@ -127,9 +131,99 @@ pub fn holds(p: *const Provision, bytes: []const u8, end: u32) bool {
     return false;
 }
 
+/// What tree-sitter-swift's scanner refuses to let follow one of its operator
+/// externals, named for the group in its `OP_ILLEGAL_TERMINATORS` table.
+///
+/// This is the whole reason those terminals are external, and it is trailing
+/// context rather than memory: `=` is the assignment operator only where no
+/// further operator byte follows it, because `=~` is a custom operator and
+/// `==` is its own token. The scanner spells that as a refusal and so do we.
+const Terminator = enum { alphanumeric, symbols, symbols_or_dot, non_whitespace };
+
+/// The bytes the scanner's `switch (lexer->lookahead)` lists, in its order.
+const op_bytes = [_][]const u8{ "/", "=", "-", "+", "!", "*", "%", "<", ">", "&", "|", "^", "?", "~" };
+
+/// `iswalnum`, as bytes. The scanner reads codepoints, so a non-ASCII letter
+/// after `where` is a refusal there and an acceptance here - which is the
+/// direction that costs a wrong tree, so it is the one place in this table
+/// worth naming as a known divergence rather than a transcription.
+const op_alnum = blk: {
+    const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    var list: [chars.len][]const u8 = undefined;
+    // Sliced out of the literal rather than built from each byte, so every
+    // element points into static data and the table can be a `const`.
+    for (0..chars.len) |i| list[i] = chars[i .. i + 1];
+    break :blk list;
+};
+
+/// Swift's operator and keyword externals, and this is the derivation rather
+/// than a reading of the names.
+///
+/// tree-sitter-swift's scanner holds three parallel tables - `OPERATORS` for
+/// the spelling, `OP_SYMBOLS` for the terminal, `OP_ILLEGAL_TERMINATORS` for
+/// the refusal - and this is those three joined, in their order. So the
+/// spelling of `where_keyword` is `where` because the scanner's own table says
+/// so at that index, not because the name ends in `_keyword`.
+///
+/// Nineteen of the scanner's twenty rows. `_bang_custom` is the twentieth and
+/// is declined: `OP_SYMBOL_SUPPRESSOR` conditions it on `FAKE_TRY_BANG` *not*
+/// being wanted, which is a question about the parse table, and a `Provision`
+/// is a function of bytes with no access to one. Seating it would mean lexing
+/// the `!` of `try!` as a postfix operator - a plausible tree, which is the
+/// thing this table exists to refuse.
+const swift_roll = blk: {
+    const Op = struct { []const u8, []const u8, Terminator };
+    const ops = [_]Op{
+        .{ "_arrow_operator_custom", "->", .symbols },
+        .{ "_dot_custom", "\\.", .symbols_or_dot },
+        .{ "_conjunction_operator_custom", "&&", .symbols },
+        .{ "_disjunction_operator_custom", "\\|\\|", .symbols },
+        .{ "_nil_coalescing_operator_custom", "\\?\\?", .symbols },
+        .{ "_eq_custom", "=", .symbols },
+        .{ "_eq_eq_custom", "==", .symbols },
+        .{ "_plus_then_ws", "\\+", .non_whitespace },
+        .{ "_minus_then_ws", "-", .non_whitespace },
+        .{ "_throws_keyword", "throws", .alphanumeric },
+        .{ "_rethrows_keyword", "rethrows", .alphanumeric },
+        .{ "default_keyword", "default", .alphanumeric },
+        .{ "where_keyword", "where", .alphanumeric },
+        .{ "else", "else", .alphanumeric },
+        .{ "catch_keyword", "catch", .alphanumeric },
+        .{ "_as_custom", "as", .alphanumeric },
+        .{ "_as_quest_custom", "as\\?", .symbols },
+        .{ "_as_bang_custom", "as!", .symbols },
+        .{ "_async_keyword_custom", "async", .alphanumeric },
+    };
+    var out: [ops.len]Provision = undefined;
+    for (ops, 0..) |op, i| out[i] = .{
+        .name = op[0],
+        .pattern = op[1],
+        // Trailing context only. `after` states what must follow and `never`
+        // what may not, and the scanner's four groups are exactly three of the
+        // first and one of the second.
+        .never = switch (op[2]) {
+            .alphanumeric => &op_alnum,
+            .symbols => &op_bytes,
+            .symbols_or_dot => &(op_bytes ++ [_][]const u8{"."}),
+            .non_whitespace => &.{},
+        },
+        .after = switch (op[2]) {
+            // `_plus_then_ws` is named for this: the scanner refuses `+` unless
+            // whitespace follows, which is how `a + b` is an operator and
+            // `a+b` a custom one. End of file has none, and refusing there is
+            // the scanner's answer too - `iswspace('\0')` is false.
+            .non_whitespace => &.{ " ", "\t", "\n", "\r", "\x0b", "\x0c" },
+            else => &.{},
+        },
+        // Both swift's alone in the thirty, and both from this same scanner.
+        .cohort = &.{ "_implicit_semi", "_fake_try_bang" },
+    };
+    break :blk out;
+};
+
 /// The roll. Ordered by the grammar that motivated each row, which is a
 /// comment about provenance and nothing the lookup depends on.
-pub const roll = [_]Provision{
+pub const roll = swift_roll ++ [_]Provision{
     // Rust. `string_content` stops at a backslash rather than consuming it, so
     // the grammar's own `escape_sequence` - immediate, and longer at that
     // offset - still takes the escape. Stopping at the quote is what leaves
@@ -207,6 +301,18 @@ pub const roll = [_]Provision{
         .cohort = &.{ "simple_symbol", "hash_key_symbol" },
     },
 
+    // Elixir. `:` before a quote, and nothing else - the scanner advances one
+    // byte, marks the end, and then only *looks* at the delimiter, so the
+    // quote is the grammar's own token and must not be eaten. It is external
+    // for the same reason ruby's hash key is: `:"a"` is an atom and `: "a"` is
+    // a colon before a string, and only the next byte tells them apart.
+    .{
+        .name = "_quoted_atom_start",
+        .pattern = ":",
+        .after = &.{ "\"", "'" },
+        .cohort = &.{ "_not_in", "_before_unary_op" },
+    },
+
     // JavaScript and TypeScript share their scanner. The ternary `?` is
     // external only to keep it away from optional chaining and optional
     // parameters, both of which the state already separates.
@@ -276,15 +382,91 @@ fn declaresExternal(gr: *const g.Grammar, name: []const u8) bool {
 /// being answered by the Rust-shaped row in the roll and starts being answered
 /// by the fence that knows which quote opened it.
 pub const Troupe = struct {
+    /// One member of a family a grammar spells one terminal per delimiter of.
+    ///
+    /// The whole difference between elixir's twenty content terminals is the
+    /// mark that closes each, so the twenty are twenty rows of data behind one
+    /// arm rather than twenty veins. Order is the specification's own table
+    /// order, because that is the order it resolves a tie in.
+    pub const Part = struct { name: []const u8, mark: marrow.Mark };
+
+    /// The terminal a family's walk emits when the delimiter is standing where
+    /// its matter would have been, keyed by the character that closes.
+    ///
+    /// Keyed by the shut and not parallel to the roster because that is
+    /// literally how the specification picks one: julia's `scan_content` opens
+    /// with `end_symbol = (end_char == '"') ? END_STR : END_CMD`, so eight
+    /// content terminals share two closes and the width they close over is the
+    /// part's, not the close's.
+    pub const Shut = struct { at: u8, name: []const u8 };
+
+    /// A zero-width marker that means "the delimiter after me is touching the
+    /// token before me", keyed by the delimiter.
+    ///
+    /// The character is the whole of the decision, which is why this is data
+    /// and not five arms: julia's five differ only in which bracket or quote
+    /// has to be glued on. Keyed by the character rather than parallel to a
+    /// roster for the same reason `Shut` is - the hand reads a byte and needs
+    /// the symbol that byte implies.
+    pub const Glue = struct { at: u8, name: []const u8 };
+
+    /// How many markers one language may glue. Julia declares five; the room
+    /// above that is for the next language and not for a cohort to grow into
+    /// silently, since `seated` refuses a troupe that overflows it.
+    pub const glues = 6;
+
+    /// How many terminals one caesura may answer: exactly the arms
+    /// `caesura.Seam` names, so a row cannot spell a seam the rules cannot reach
+    /// and the array cannot fall out of step with the enum.
+    pub const seats = @typeInfo(caesura.Seam).@"enum".fields.len;
+
     /// The terminal whose presence says this language uses this shape.
     anchor: []const u8,
-    kind: enum { offside, fence, marrow, caesura, scry, lineage },
+    kind: enum { offside, fence, marrow, caesura, scry, lineage, writ, abut },
     dialect: fence.Dialect = .python,
+    /// Which separator rule to run, when `kind` is `.caesura`. A discriminator
+    /// like `dialect` and `vein` rather than a set of knobs, because the three
+    /// languages that hand their separator to a scanner do not share a rule -
+    /// swift's suppressors are the inverse of ecma's. See `caesura.Tongue`.
+    tongue: caesura.Tongue = .ecma,
     /// The bounding spelling, when `kind` is `.marrow`. Kept beside `dialect`
     /// rather than folded into it because the two answer different questions -
     /// one names an opener, the other names a close - and a row uses exactly
     /// one of them.
     vein: marrow.Dialect = .rust_block,
+    /// The family, when the vein's close is a `Mark` rather than a walk. Every
+    /// member must resolve for the cast to seat, which is the same whole-shape
+    /// evidence `opens` demands and is worth more here: twenty names arriving
+    /// together is not a collision anyone can have by accident.
+    roster: []const Part = &.{},
+    /// Which family that roster is, which is what tells two rosters apart
+    /// where `vein` tells two walks apart.
+    family: marrow.Family = .none,
+    /// The closes that family emits itself, when it emits any. Empty for a
+    /// family whose delimiters the press lexes - elixir's quotes are ordinary
+    /// terminals, so its walk only ever answers matter.
+    shuts: []const Shut = &.{},
+    /// The glued markers, when `kind` is `.abut`. Every one must resolve, on
+    /// the same whole-shape evidence a roster demands: a grammar declaring two
+    /// of five means something else by the names.
+    glued: []const Glue = &.{},
+    /// The two members whose being admitted *at once* means the state is not
+    /// inside the family at all.
+    ///
+    /// The members are mutually exclusive by construction, so two of them live
+    /// together only in a state that would accept either - which is a state
+    /// outside every quote, reading ordinary code that happens to be able to
+    /// start one. elixir names the pair its own scanner names; a family with no
+    /// such state leaves this empty and every member simply wins on its own.
+    rival: [2][]const u8 = .{ "", "" },
+    /// Whether *any* two members being admitted at once means the state is not
+    /// inside the family - the whole-roster form of `rival`, and latex's own
+    /// dispatcher rather than a generalisation of somebody else's:
+    /// `external_scanner_scan` walks all twelve, and returns false the moment it
+    /// finds a second live one. A row sets this or names a `rival` pair, never
+    /// both: the pair is what a family with a legitimately ambiguous state needs,
+    /// and this is what a family with none declares.
+    lone: bool = false,
     /// Whose lookahead, when `kind` is `.scry`. Beside `dialect` and `vein`
     /// for the same reason they are beside each other: a row uses exactly one
     /// of the three, and which one is what `kind` already says.
@@ -295,6 +477,34 @@ pub const Troupe = struct {
     newline: []const u8 = "",
     indent: []const u8 = "",
     dedent: []const u8 = "",
+    /// How this language spells the comment the measurement sees through, when
+    /// `kind` is `.offside`. A discriminator like `dialect` and `vein`, and it
+    /// earns the field the same way: python's `#` read over scala puts the
+    /// wrong column on four lines in five of the fixture, because a scaladoc
+    /// block is content to a `#` rule and whitespace to a `//` one.
+    note: offside.Note = .hash,
+    /// The orders that open a block, when `kind` is `.writ`. A list rather than
+    /// a name because haskell spells one per construct - `_cmd_layout_start_do`,
+    /// `_case`, `_if`, `_let`, `_quote` and a bare one for `where` and `of` - and
+    /// all six mean the identical push. They differ only in which state admits
+    /// them, which is the parser's business and not this hand's.
+    ///
+    /// Every entry that is spelled must resolve, on the same whole-shape evidence
+    /// `opens` demands: a grammar declaring two of six does not mean this
+    /// protocol by them.
+    writs: []const []const u8 = &.{},
+    /// The order that opens a block over an explicit `{`, when `kind` is `.writ`.
+    /// Apart from `writs` because it consumes a byte and pushes a frame the
+    /// offside rule may not close, where the others consume nothing.
+    brace: []const u8 = "",
+    /// The condition that ends one item and begins the next - a zero-width
+    /// semicolon, answered when a fresh line lands level with the block.
+    sever: []const u8 = "",
+    /// The condition that ends the block, answered when a fresh line lands left
+    /// of it. Zero-width, and the pop.
+    seal: []const u8 = "",
+    /// The condition that ends an explicit block, over its `}`.
+    unbrace: []const u8 = "",
     /// Terminals whose being wanted stands this hand down. Python's are its
     /// brackets, because inside `(`, `[` or `{` a line break carries no
     /// meaning; JavaScript's are the template body and JSX text, because the
@@ -333,10 +543,37 @@ pub const Troupe = struct {
     /// suppresses the break before what would otherwise be its body. Optional:
     /// TypeScript declares it and JavaScript has no such thing.
     sign: []const u8 = "",
+    /// The terminal for a separator the file *did* spell, when the grammar
+    /// names one apart from the implied one. Swift does - `_explicit_semi` for
+    /// a `;` its scanner reads as whitespace - and that is why swift cannot
+    /// read even a written semicolon without this hand: nothing else in its
+    /// member rules spells a separator. Emitted with a width where `body` is
+    /// emitted with none. Optional; kotlin folds both into one terminal.
+    spelled: []const u8 = "",
+    /// The terminals a caesura answers where its tongue answers more than one,
+    /// indexed by `caesura.Seam` so the hand reads the arm the rule decided and
+    /// never a position in a list.
+    ///
+    /// A part rather than a refinement, and required whole, on the same evidence
+    /// a roster is: elixir's three arrive together out of one function, and a
+    /// grammar declaring one of the three means something of its own by the name.
+    /// Left empty by the three tongues whose whole answer is `body`, and `seated`
+    /// asks only about the entries a row actually spells - a caesura naming both
+    /// `body` and one seam would be a contradiction no row states.
+    seams: [seats]([]const u8) = @splat(""),
     /// The openers, when `kind` is `.fence`. Ordered to match the dialect's
     /// own tag numbering, because a dialect with six openers and one closer
     /// has to say on the way out which one it was.
     opens: []const []const u8 = &.{},
+    /// The interpolation openings, when the dialect spells its own rather than
+    /// leaving the bracket to the grammar's ordinary terminal. Ordered to match
+    /// `fence.Sigil`, so the hand reads the index the reader answered with.
+    ///
+    /// Kotlin is why this is a part and not a refinement: `${` reaches the
+    /// ordinary lexer today, which sees a brace and returns a `lambda_literal`
+    /// - a confidently wrong node in the middle of a string, which the contract
+    /// above calls worse than an unanswered token.
+    sigils: []const []const u8 = &.{},
     body: []const u8 = "",
     close: []const u8 = "",
     escape: []const u8 = "",
@@ -365,6 +602,58 @@ pub const troupes = [_]Troupe{
         .indent = "_indent",
         .dedent = "_dedent",
         .hushed = &.{ ")", "]", "}" },
+    },
+    // Scala 3's optional braces, which are the offside rule again and not
+    // haskell's inversion — a distinction worth stating because the two look
+    // alike from the grammar and are opposite in the scanner.
+    //
+    // The evidence is where the push is: tree-sitter-scala emits INDENT only
+    // when `newline_count > 0` and the measured width is greater than the
+    // frame's, so the scanner *detects* the region and the parser only permits
+    // it. Haskell's `_cmd_layout_start_do` is granted on the parser's say-so
+    // with nothing measured, which is why that one needed `.writ`. Classified
+    // off the scanner's structure, not off either name.
+    //
+    // `_outdent` rather than python's `_dedent`, and the separator spelled as
+    // the newline: scala's three arms are tried in the order INDENT, OUTDENT,
+    // AUTOMATIC_SEMICOLON, and `layout` already runs them in exactly that
+    // order. The anchor is shared with python and the separator with kotlin,
+    // php and javascript, so neither alone would identify this grammar — what
+    // does is that all three resolve together, which no other grammar in the
+    // thirty can say.
+    .{
+        .anchor = "_indent",
+        .kind = .offside,
+        .note = .slashes,
+        .newline = "_automatic_semicolon",
+        .indent = "_indent",
+        .dedent = "_outdent",
+        .hushed = &.{ ")", "]", "}" },
+    },
+    // Haskell's layout, which is the offside rule with the authority inverted:
+    // the parser orders a block open and the scanner tests the stack it was told
+    // to fill. `writ.zig`'s header is the argument for why that needs its own
+    // kind rather than the row above.
+    //
+    // The cohort is ten names and all ten are haskell's alone across the thirty
+    // - no other grammar declares even one - so this row cannot be picked up the
+    // way kotlin picked up ruby's openers. `seated` requires all six orders and
+    // all four conditions, so a grammar spelling a subset gets nothing.
+    .{
+        .anchor = "_cmd_layout_start",
+        .kind = .writ,
+        .writs = &.{
+            "_cmd_layout_start",
+            "_cmd_layout_start_do",
+            "_cmd_layout_start_case",
+            "_cmd_layout_start_if",
+            "_cmd_layout_start_let",
+            "_cmd_layout_start_quote",
+        },
+        .brace = "_cmd_layout_start_explicit",
+        .sever = "_cond_layout_semicolon",
+        .seal = "_cond_layout_end",
+        .unbrace = "_cond_layout_end_explicit",
     },
     // Python's strings, which its scanner answers in the same C function as
     // the layout and for the same reason: `f"{x}"` puts an interpolation
@@ -400,6 +689,33 @@ pub const troupes = [_]Troupe{
         .opens = &.{"_raw_string_literal_start"},
         .body = "raw_string_literal_content",
         .close = "_raw_string_literal_end",
+    },
+    // Kotlin's strings, and the largest blind cohort on the board: five of its
+    // eight unanswered externals are this one row.
+    //
+    // It is a fence rather than a `marrow` family, and the reason is worth
+    // stating because the two look alike from the grammar. A bounded run walks
+    // backwards from its content offset to find the opener - which is how
+    // C++'s `R"tag(` and Lua's `[==[` are read - and an interpolated interior
+    // re-enters arbitrarily far from where it opened: `"a ${ f("b") } c"`
+    // resumes after a `}` with a whole nested literal in between. Only a
+    // remembered mark survives that, so the memory has to be a span.
+    //
+    // `_by_delegation_hint` is the cohort. Every other name here is a word
+    // some other grammar could pick - kotlin was handed Ruby's six openers
+    // once, on the strength of sharing `_string_start` alone (see `seated`) -
+    // and the hint is kotlin's alone across the thirty. The interpolation
+    // starts are parts rather than evidence, because today `${` reaches the
+    // ordinary lexer, which sees a brace and returns a `lambda_literal`.
+    .{
+        .anchor = "_string_start",
+        .kind = .fence,
+        .dialect = .kotlin,
+        .opens = &.{"_string_start"},
+        .sigils = &.{ "_interpolation_expression_start", "_interpolation_identifier_start" },
+        .body = "string_content",
+        .close = "_string_end",
+        .kin = "_by_delegation_hint",
     },
     // Rust's block comments, which nest. The cast is the content plus both doc
     // markers, because a grammar that declares all three is following Rust's
@@ -440,6 +756,105 @@ pub const troupes = [_]Troupe{
         .body = "multiline_comment",
         .kin = "_by_delegation_hint",
     },
+    // Swift's block comments, which nest. The same terminal name as kotlin's
+    // row above and a different scanner behind it, which is the whole reason
+    // both rows carry a cohort: `multiline_comment` is declared by exactly
+    // these two grammars across the thirty, so the anchor alone cannot tell
+    // them apart and `seated` would hand each the other's. `_fake_try_bang` is
+    // swift's alone and comes off the same C file, the way
+    // `_by_delegation_hint` does for kotlin.
+    //
+    // A separate vein rather than kotlin's, for the reason `slashStar`'s header
+    // gives: the walk is shared and the end-of-input rule is not. It also keeps
+    // the two rows' pinned permissions apart, which one shared vein could not -
+    // the same key held by two rows is how `marrow/kotlin_block` once read
+    // `{kotlin, scala}` and let either widen onto the other silently.
+    //
+    // What this corrects is not a refusal. `/* c\n d */` parses today as one
+    // root with no mends - `custom_operator` `/*`, then `d * /` as a
+    // multiplicative expression - so the bytes are counted `built` while being
+    // read as arithmetic. Seating the comment moves them out of `built`; see
+    // the result dossier, which prices that as a correction.
+    .{
+        .anchor = "multiline_comment",
+        .kind = .marrow,
+        .vein = .swift_block,
+        .body = "multiline_comment",
+        .kin = "_fake_try_bang",
+    },
+    // Swift's raw strings, `#"…"#` and `##"…"##`, where the closer must be as
+    // wide as the opener. A captured close, and stateless the way C++'s is:
+    // the width sits at `at`, so nothing has to be remembered between the two
+    // ends of one literal.
+    //
+    // Seated as a `close` and not a `body`, which is the whole design of the
+    // row rather than an omission. The grammar is
+    //
+    //     raw_string_literal := (raw_str_part raw_str_interpolation ...)*
+    //                           raw_str_end_part
+    //
+    // so a literal with no `\#(` in it is *only* `raw_str_end_part`, opener and
+    // closer included - one token over the whole extent, which is what
+    // `marrow.shut` answers. `raw_str_part` and `raw_str_continuing_indicator`
+    // stay blind because the parse resumes after an interpolation's `)` at an
+    // offset whose bytes cannot name the delimiter's width; `swiftRaw`'s header
+    // gives that argument in full, including why `fence` cannot hold it either.
+    //
+    // `raw_str_continuing_indicator` is the cohort. All three of these names
+    // are swift's alone across the thirty, so the anchor could have vouched for
+    // itself - the kin is here because it comes off the same C function
+    // (`eat_raw_str_part`) and says which scanner this row claims to be, which
+    // is the standard every other row in this file is held to.
+    //
+    // Both specimens are extent claims and neither can be made by presence:
+    // `#"a \(n) b"#` builds a `raw_string_literal` either way, and only the
+    // span says whether `\(n)` was read as six literal bytes or as an
+    // interpolation that swift does not have at this width.
+    .{
+        .anchor = "raw_str_end_part",
+        .kind = .marrow,
+        .vein = .swift_raw,
+        .close = "raw_str_end_part",
+        .kin = "raw_str_continuing_indicator",
+    },
+    // Scala's block comments, which nest. Kotlin's shape exactly - a terminal
+    // extra with no rule, so the hand answers the whole token including the
+    // `/*` - and it reuses kotlin's vein rather than getting a spelling of its
+    // own, because the bytes really are the same bytes.
+    //
+    // `_suppress_block_comment` is the cohort and it is doing the same work
+    // `kin` does everywhere else in this file: `block_comment` is a name any
+    // language could pick, and what says scala means *scala's* scanner by it is
+    // that the same C function emits the suppression beside it. Both spellings
+    // are scala's alone across the thirty.
+    //
+    // Until this row seated, `/* , */` refused at the comma: the comment was
+    // never one token, so the parser read its contents as code and state 584
+    // was offered a `,` no rule there admits.
+    .{
+        .anchor = "block_comment",
+        .kind = .marrow,
+        .vein = .kotlin_block,
+        .body = "block_comment",
+        .kin = "_suppress_block_comment",
+    },
+    // OCaml's comments, which nest. Also a terminal extra with no rule, so the
+    // hand answers the whole `(* … *)`.
+    //
+    // `comment` is the most collided name in the population - haskell, html,
+    // ocaml, python and yaml all declare one, and they mean `--`, `<!-- -->`,
+    // `(* *)` and `#` by it. So the cohort carries the entire soundness of this
+    // row: `_left_quoted_string_delimiter` is ocaml's `{|…|}` and no other
+    // grammar in the thirty spells it. Keyed on the name alone this row would
+    // hand python's comments to ocaml, which is the defect this file's header
+    // was written about.
+    .{
+        .anchor = "comment",
+        .kind = .marrow,
+        .vein = .ocaml_comment,
+        .body = "comment",
+        .kin = "_left_quoted_string_delimiter",
+    },
     // Julia's block comments, which nest. The `#=` is an ordinary pattern the
     // parser lexes, so only the rest is external - `rust_block` with a
     // different spelling, one grammar over.
@@ -449,6 +864,224 @@ pub const troupes = [_]Troupe{
         .vein = .julia_block,
         .body = "_block_comment_rest",
         .kin = "_immediate_paren",
+    },
+    // Elixir: one content terminal per delimiter, twenty of them, and the
+    // delimiter is the only difference between any two. The `_i_` half
+    // interpolates and the other half does not; a sigil's delimiter is its
+    // *closing* bracket, which is why `_parenthesis` closes on `)`. Order is
+    // the specification's table order, and its own rival pair is the two that
+    // a state outside every quote can admit together.
+    //
+    // Both quotes are ordinary strings the press lexes, so the hand answers the
+    // middle and nothing else - which is what `marrow` is for.
+    .{
+        .anchor = "_quoted_content_double",
+        .kind = .marrow,
+        .family = .elixir_quoted,
+        .rival = .{ "_quoted_content_i_single", "_quoted_content_i_double" },
+        .roster = &.{
+            .{ .name = "_quoted_content_i_single", .mark = .{ .shut = '\'', .interpolates = true } },
+            .{ .name = "_quoted_content_i_double", .mark = .{ .shut = '"', .interpolates = true } },
+            .{ .name = "_quoted_content_i_heredoc_single", .mark = .{ .shut = '\'', .wide = 3, .interpolates = true } },
+            .{ .name = "_quoted_content_i_heredoc_double", .mark = .{ .shut = '"', .wide = 3, .interpolates = true } },
+            .{ .name = "_quoted_content_i_parenthesis", .mark = .{ .shut = ')', .interpolates = true } },
+            .{ .name = "_quoted_content_i_curly", .mark = .{ .shut = '}', .interpolates = true } },
+            .{ .name = "_quoted_content_i_square", .mark = .{ .shut = ']', .interpolates = true } },
+            .{ .name = "_quoted_content_i_angle", .mark = .{ .shut = '>', .interpolates = true } },
+            .{ .name = "_quoted_content_i_bar", .mark = .{ .shut = '|', .interpolates = true } },
+            .{ .name = "_quoted_content_i_slash", .mark = .{ .shut = '/', .interpolates = true } },
+            .{ .name = "_quoted_content_single", .mark = .{ .shut = '\'' } },
+            .{ .name = "_quoted_content_double", .mark = .{ .shut = '"' } },
+            .{ .name = "_quoted_content_heredoc_single", .mark = .{ .shut = '\'', .wide = 3 } },
+            .{ .name = "_quoted_content_heredoc_double", .mark = .{ .shut = '"', .wide = 3 } },
+            .{ .name = "_quoted_content_parenthesis", .mark = .{ .shut = ')' } },
+            .{ .name = "_quoted_content_curly", .mark = .{ .shut = '}' } },
+            .{ .name = "_quoted_content_square", .mark = .{ .shut = ']' } },
+            .{ .name = "_quoted_content_angle", .mark = .{ .shut = '>' } },
+            .{ .name = "_quoted_content_bar", .mark = .{ .shut = '|' } },
+            .{ .name = "_quoted_content_slash", .mark = .{ .shut = '/' } },
+        },
+    },
+    // Julia's eight string and command interiors, and the two closes its own
+    // walk emits.
+    //
+    // Seated because its `serialize` writes nothing: `external_scanner_create`
+    // returns NULL, `serialize` returns 0, `deserialize` has an empty body. A
+    // scanner with no memory has no answer that depends on which reading asked,
+    // which is the soundness bar met by construction rather than by argument.
+    // The eight are `{str,cmd}` x `{1,3}` x `{plain,raw}` and differ only in
+    // the mark, exactly as elixir's twenty do; order is the specification's own
+    // dispatch order in `external_scanner_scan`, because that is the order it
+    // resolves a tie in.
+    //
+    // The rival pair is what the census bought, and it bought it by
+    // contradicting the first reading of itself. By shift, no two of the eight
+    // are ever co-admitted, which reads as "no guard needed". But the
+    // permission set a hand sees is `drive.offer`'s - every terminal with any
+    // non-error action, shifts and reduce-lookaheads alike - and in *that*
+    // column six of them sit together in three states, first at state 1, where
+    // 103 terminals all fold `identifier -> _word_identifier`. A hand reading
+    // the shift column would have answered string content over an identifier.
+    // The pair below is admitted together in exactly those three loose states
+    // and in none of the eight real interiors (state 44 is shift 4,
+    // lookahead 0, and holds no command terminal at all), so it refuses where
+    // the family is not and nowhere else.
+    .{
+        .anchor = "_content_str_1",
+        .kind = .marrow,
+        .family = .julia_quoted,
+        .rival = .{ "_content_str_1", "_content_cmd_1" },
+        .shuts = &.{
+            .{ .at = '"', .name = "_end_str" },
+            .{ .at = '`', .name = "_end_cmd" },
+        },
+        .roster = &.{
+            .{ .name = "_content_str_1", .mark = .{ .shut = '"', .interpolates = true } },
+            .{ .name = "_content_str_3", .mark = .{ .shut = '"', .wide = 3, .interpolates = true } },
+            .{ .name = "_content_cmd_1", .mark = .{ .shut = '`', .interpolates = true } },
+            .{ .name = "_content_cmd_3", .mark = .{ .shut = '`', .wide = 3, .interpolates = true } },
+            .{ .name = "_content_str_1_raw", .mark = .{ .shut = '"' } },
+            .{ .name = "_content_str_3_raw", .mark = .{ .shut = '"', .wide = 3 } },
+            .{ .name = "_content_cmd_1_raw", .mark = .{ .shut = '`' } },
+            .{ .name = "_content_cmd_3_raw", .mark = .{ .shut = '`', .wide = 3 } },
+        },
+    },
+    // Julia's five glued delimiters, which are the other half of the same
+    // scanner and the last of its blind terminals.
+    //
+    // Seated on the same evidence the interiors were: julia's
+    // `external_scanner_create` returns NULL and its `serialize` writes
+    // nothing, so no answer of its can depend on which reading asked. These
+    // five carry that further than the eight do - they read one byte, move no
+    // stack, and claim no width - which is why `step` needed a bound that
+    // survives a hand making no progress at all. See `Spent`.
+    //
+    // The character in each row is not a convention, it is the rule the
+    // grammar spells: `call_expression = _primary _immediate_paren
+    // tuple_expression`, and `tuple_expression` opens with `(`. Order is the
+    // grammar's own external declaration order, which is the order the C enum
+    // is generated in.
+    //
+    // The census here is a near-miss worth keeping. By shift, no `_immediate_*`
+    // is ever co-admitted with a `_content_*` or with either close: 28 pairs at
+    // `shift 0`, which reads as a clearance. In the permission set every one of
+    // them is co-admitted with every interior terminal, at state 1, and
+    // `_immediate_string_start` shares the `"` that `_end_str` is keyed to - so
+    // the shift column would have licensed a seating the set column condemns.
+    // It was condemned and then measured, and the measurement declined to
+    // convict: the parser never stands in state 1 at a quote, so the phase this
+    // hand sits in changes nothing on the corpus or on any probe. The guard
+    // doing the work is the permission-set test in `glued`.
+    .{
+        .anchor = "_immediate_paren",
+        .kind = .abut,
+        .glued = &.{
+            .{ .at = '(', .name = "_immediate_paren" },
+            .{ .at = '[', .name = "_immediate_bracket" },
+            .{ .at = '{', .name = "_immediate_brace" },
+            .{ .at = '"', .name = "_immediate_string_start" },
+            .{ .at = '`', .name = "_immediate_command_start" },
+        },
+    },
+    // php's string and backtick interiors: four terminals, one C function,
+    // and no memory between them.
+    //
+    // `scan_encapsed_part_string` takes five arguments and only two of them
+    // vary here - `is_after_variable` and `is_execution_string` - so the four
+    // are four rows of data behind one walk, exactly as elixir's twenty and
+    // julia's eight are. Neither argument is carried: the parse state supplies
+    // both by naming one member rather than another, which is the definition
+    // this file's `Part` was written for.
+    //
+    // **The other two members of the same function are deliberately absent.**
+    // With `is_heredoc` true the first statement reads `scanner->heredocs`, a
+    // stack of tags one token pushes and another spends, so
+    // `encapsed_string_chars_heredoc` and its after-variable twin are a fence
+    // and not a family. Seating them here would be the kotlin defect again:
+    // one shape's walk quietly answering another shape's terminals.
+    //
+    // The roster is its own cohort. All four names are php's alone across the
+    // thirty, and four arriving together is not a collision anyone can have by
+    // accident; `sentinel_error` is `kin` anyway, because it is read at the
+    // top of the same `scan()` and is php's alone too.
+    //
+    // Order is the specification's dispatch order in `scan()` - after-variable
+    // before plain, encapsed before execution - and the census says that order
+    // is load-bearing in one walk and decorative in the other. By shift no two
+    // of the four are ever co-admitted (0 for all six pairs), so under
+    // `Gather` the state names exactly one. In the permission set `drive`
+    // hands a hand, `encapsed_string_chars` sits with its after-variable twin
+    // in 3 states - state 386, `variable_name .` inside an interpolation,
+    // where `->` and `[` are both live shifts and after-variable is the right
+    // reading. So the order is what makes the union walk agree with the shift
+    // walk instead of stopping a run one byte into a subscript.
+    //
+    // The rival pair is the same guard julia's row carries and it is needed
+    // for the same reason. States 174 and 410 are bare folds -
+    // `_simple_variable -> dynamic_variable_name .` and `variable_name -> $
+    // name .` - whose lookahead row admits nearly every terminal in the
+    // grammar, including all four of these, and they stand in ordinary code
+    // after any `$foo`. A hand reading the union there would have answered
+    // string content over the rest of the statement. You cannot be inside a
+    // `"` string and a backtick string at once, so a state admitting both of
+    // those is not inside either; the two real interiors keep their own pairs
+    // apart (386 holds no execution terminal, 408 holds no encapsed one) and
+    // are untouched by it.
+    .{
+        .anchor = "encapsed_string_chars",
+        .kind = .marrow,
+        .family = .php_encapsed,
+        .rival = .{ "encapsed_string_chars", "execution_string_chars" },
+        .roster = &.{
+            .{ .name = "encapsed_string_chars_after_variable", .mark = .{ .shut = '"', .after = true } },
+            .{ .name = "encapsed_string_chars", .mark = .{ .shut = '"' } },
+            .{ .name = "execution_string_chars_after_variable", .mark = .{ .shut = '`', .after = true } },
+            .{ .name = "execution_string_chars", .mark = .{ .shut = '`' } },
+        },
+        .kin = "sentinel_error",
+    },
+    // latex's raw regions: twelve terminals, one C function, and the close is a
+    // string where every family before this one closed on a byte.
+    //
+    // `find_verbatim` takes a keyword and a boolean and reads nothing else, and
+    // `external_scanner_create` returns NULL with an empty `serialize` - so the
+    // twelve are twelve rows of data behind one walk on the same evidence php's
+    // four were. The keyword arrives with the question: the state names
+    // `_trivia_raw_env_minted` rather than `_trivia_raw_env_verbatim`, and that
+    // *is* which `\end{…}` ends the run.
+    //
+    // `_trivia_raw_fi` is in the roster and not left out, which is the opposite
+    // call from php's two heredoc members and made on the opposite evidence. The
+    // heredoc pair's first statement reads a tag stack, so it is a fence wearing a
+    // family's name; `\fi` reads the same keyword loop as the other eleven and
+    // differs only in `is_command_name`, which is a parameter of that loop.
+    //
+    // `lone` rather than a `rival` pair, because latex's dispatcher is the
+    // whole-roster rule outright: it counts live symbols across all twelve and
+    // refuses on the second. Nothing here had to be inferred from a census.
+    //
+    // Order is the `TokenType` enum's, which is the grammar's own external
+    // declaration order, because that is the order the dispatcher's `for` would
+    // have resolved a tie in had it ever allowed one.
+    .{
+        .anchor = "_trivia_raw_env_verbatim",
+        .kind = .marrow,
+        .family = .latex_verbatim,
+        .lone = true,
+        .roster = &.{
+            .{ .name = "_trivia_raw_fi", .mark = .{ .shut = '\\', .tail = "fi", .command = true } },
+            .{ .name = "_trivia_raw_env_comment", .mark = .{ .shut = '\\', .tail = "end{comment}" } },
+            .{ .name = "_trivia_raw_env_verbatim", .mark = .{ .shut = '\\', .tail = "end{verbatim}" } },
+            .{ .name = "_trivia_raw_env_listing", .mark = .{ .shut = '\\', .tail = "end{lstlisting}" } },
+            .{ .name = "_trivia_raw_env_minted", .mark = .{ .shut = '\\', .tail = "end{minted}" } },
+            .{ .name = "_trivia_raw_env_asy", .mark = .{ .shut = '\\', .tail = "end{asy}" } },
+            .{ .name = "_trivia_raw_env_asydef", .mark = .{ .shut = '\\', .tail = "end{asydef}" } },
+            .{ .name = "_trivia_raw_env_pycode", .mark = .{ .shut = '\\', .tail = "end{pycode}" } },
+            .{ .name = "_trivia_raw_env_luacode", .mark = .{ .shut = '\\', .tail = "end{luacode}" } },
+            .{ .name = "_trivia_raw_env_luacode_star", .mark = .{ .shut = '\\', .tail = "end{luacode*}" } },
+            .{ .name = "_trivia_raw_env_sagesilent", .mark = .{ .shut = '\\', .tail = "end{sagesilent}" } },
+            .{ .name = "_trivia_raw_env_sageblock", .mark = .{ .shut = '\\', .tail = "end{sageblock}" } },
+        },
     },
     // Lua's long strings and long comments. Both ends are external here, so
     // the hand answers all three parts; the level is read back out of the
@@ -536,6 +1169,67 @@ pub const troupes = [_]Troupe{
         .sign = "_function_signature_automatic_semicolon",
         .hushed = &.{ "_template_chars", "jsx_text" },
     },
+    // Swift, whose separator is two terminals for one decision: the line ended,
+    // or the file said so. Nothing else in its member and statement rules
+    // spells a separator, so without this row swift cannot read a second member
+    // of anything - not even one written with a `;`.
+    //
+    // `_fake_try_bang` is the evidence. It is swift's alone in the thirty and
+    // comes out of the same scanner function, where `_implicit_semi` alone
+    // would be the anchor vouching for itself.
+    .{
+        .anchor = "_implicit_semi",
+        .kind = .caesura,
+        .tongue = .swift,
+        .body = "_implicit_semi",
+        .spelled = "_explicit_semi",
+        .kin = "_fake_try_bang",
+    },
+    // Kotlin. One terminal for both, so `spelled` stays empty and the hand
+    // answers `_automatic_semicolon` with a width where the file wrote a `;`.
+    // `_by_delegation_hint` is kotlin's alone and comes from the same scanner;
+    // the anchor is shared with javascript, php and scala, which is the whole
+    // reason a caesura row needs kin.
+    .{
+        .anchor = "_automatic_semicolon",
+        .kind = .caesura,
+        .tongue = .kotlin,
+        .body = "_automatic_semicolon",
+        .kin = "_by_delegation_hint",
+    },
+    // elixir's line break, which is the opposite claim from the three above: not
+    // that a statement ended, but that it *did not* - the next line resumes it
+    // with a comment, a `do`, or a binary operator, and the grammar names one
+    // terminal per reason.
+    //
+    // So there is no `body`. Three seams and no implied one, because a break
+    // whose next line is none of the three is not a token at all here; the
+    // grammar's extras eat it and nothing is owed. That is why this is the row
+    // that made `seams` necessary rather than a fourth `Tongue` over `body`.
+    //
+    // Seated on the same soundness bar julia's family met: elixir's
+    // `external_scanner_create` returns NULL, `serialize` returns 0, `deserialize`
+    // is empty. A scanner with no memory cannot answer differently for having
+    // been asked before.
+    //
+    // `_not_in` is the kin, and it is doing the same work `_fake_try_bang` does
+    // for swift: the three seam names are elixir's alone in the thirty, but they
+    // are also the entire cast, so the anchor would be vouching for itself. It
+    // comes out of the same `scan` and stays blind, exactly as ecma's
+    // `_template_chars` does.
+    .{
+        .anchor = "_newline_before_do",
+        .kind = .caesura,
+        .tongue = .elixir,
+        .kin = "_not_in",
+        .seams = brk: {
+            var s: [Troupe.seats]([]const u8) = @splat("");
+            s[@intFromEnum(caesura.Seam.comment)] = "_newline_before_comment";
+            s[@intFromEnum(caesura.Seam.block)] = "_newline_before_do";
+            s[@intFromEnum(caesura.Seam.operator)] = "_newline_before_binary_operator";
+            break :brk s;
+        },
+    },
     // CSS's selector-versus-declaration colon, and the whitespace that is a
     // combinator. `__error_recovery` is the third name the same function
     // branches on and the spec refuses outright while it is wanted, which is
@@ -612,10 +1306,19 @@ pub fn provision(t: *const Troupe, names: anytype) ?Cast {
     c.indent = names.external(t.indent);
     c.dedent = names.external(t.dedent);
     c.body = names.external(t.body);
+    c.spelled = names.external(t.spelled);
     c.close = names.external(t.close);
     c.escape = names.external(t.escape);
     c.stray = names.external(t.stray);
     c.implied = names.external(t.implied);
+    c.brace = names.external(t.brace);
+    c.sever = names.external(t.sever);
+    c.seal = names.external(t.seal);
+    c.unbrace = names.external(t.unbrace);
+    for (t.writs, 0..) |name, k| {
+        if (k >= c.writs.len) break;
+        c.writs[k] = names.external(name);
+    }
     // html's is declared as the anonymous string `/>` rather than a named
     // terminal, so it is looked up across the whole set: the press keeps the
     // ordinary token for a spelling it can lex, and this hand has to answer for
@@ -630,6 +1333,21 @@ pub fn provision(t: *const Troupe, names: anytype) ?Cast {
     c.gate = names.terminal(t.gate);
     c.sign = names.terminal(t.sign);
     for (t.opens, 0..) |name, tag| c.opens[tag] = names.external(name);
+    for (t.sigils, 0..) |name, k| {
+        if (k >= c.sigils.len) break;
+        c.sigils[k] = names.external(name);
+    }
+    for (t.roster, 0..) |part, k| c.roster[k] = names.external(part.name);
+    for (t.shuts, 0..) |s, k| {
+        if (k >= c.shuts.len) break;
+        c.shuts[k] = names.external(s.name);
+    }
+    for (t.glued, 0..) |gl, k| {
+        if (k >= c.glued.len) break;
+        c.glued[k] = names.external(gl.name);
+    }
+    for (t.seams, 0..) |name, k| c.seams[k] = names.external(name);
+    for (t.rival, 0..) |name, k| c.rival[k] = names.external(name);
     // A hushing terminal may be an ordinary anonymous token rather than an
     // external - python's are its brackets - so it is looked up in the whole
     // terminal set. It is read for its presence in the permission set and never
@@ -648,15 +1366,43 @@ pub fn seated(t: *const Troupe, c: *const Cast) bool {
         .{ .name = t.indent, .got = c.indent },
         .{ .name = t.dedent, .got = c.dedent },
         .{ .name = t.body, .got = c.body },
+        .{ .name = t.spelled, .got = c.spelled },
         .{ .name = t.close, .got = c.close },
         .{ .name = t.escape, .got = c.escape },
         .{ .name = t.kin, .got = c.kin },
         .{ .name = t.stray, .got = c.stray },
         .{ .name = t.implied, .got = c.implied },
         .{ .name = t.shut, .got = c.shut },
+        .{ .name = t.brace, .got = c.brace },
+        .{ .name = t.sever, .got = c.sever },
+        .{ .name = t.seal, .got = c.seal },
+        .{ .name = t.unbrace, .got = c.unbrace },
     };
     for (named) |p| if (p.name.len > 0 and p.got == null) return false;
     for (t.opens, 0..) |o, tag| if (o.len > 0 and c.opens[tag] == null) return false;
+    // Half an interpolation is the worst outcome available: the marker that
+    // resolved would open a span the one that did not could never be found
+    // inside of.
+    if (t.sigils.len > c.sigils.len) return false;
+    for (t.sigils, 0..) |s, k| if (s.len > 0 and c.sigils[k] == null) return false;
+    if (t.writs.len > c.writs.len) return false;
+    for (t.writs, 0..) |w, k| if (w.len > 0 and c.writs[k] == null) return false;
+    if (t.roster.len > marrow.widest) return false;
+    for (t.roster, 0..) |part, k| if (part.name.len > 0 and c.roster[k] == null) return false;
+    // A family that emits its own close and cannot resolve one would answer
+    // matter and then stall on the delimiter it just refused to eat, which is
+    // a worse failure than not seating at all.
+    if (t.shuts.len > c.shuts.len) return false;
+    for (t.shuts, 0..) |s, k| if (s.name.len > 0 and c.shuts[k] == null) return false;
+    // A marker cohort that seats partially is the worst of both: the members
+    // that resolved would answer, and the constructs behind the members that
+    // did not would wall in a state the resolved ones just changed.
+    if (t.glued.len > c.glued.len) return false;
+    for (t.glued, 0..) |gl, k| if (gl.name.len > 0 and c.glued[k] == null) return false;
+    // A caesura seating some of its seams would answer the arms that resolved and
+    // stay blind on the rest - and its arms are decided by the rule that asked,
+    // so the ones left out are exactly the constructs nothing else can reach.
+    for (t.seams, 0..) |name, k| if (name.len > 0 and c.seams[k] == null) return false;
     return true;
 }
 
@@ -668,11 +1414,20 @@ pub fn claimed(t: *const Troupe, name: []const u8) bool {
     // `gate`, `sign`, `kin` and `hushed` are read from the permission set and
     // never emitted, so a hand does not answer them and must not claim them.
     const named = [_][]const u8{
-        t.newline, t.indent, t.dedent, t.body, t.close, t.escape,
-        t.stray,   t.implied, t.shut,
+        t.newline, t.indent,  t.dedent, t.body,  t.close, t.escape,
+        t.stray,   t.implied, t.shut,   t.brace, t.sever, t.seal,
+        t.unbrace, t.spelled,
     };
     for (named) |n| if (n.len > 0 and std.mem.eql(u8, n, name)) return true;
     for (t.opens) |n| if (std.mem.eql(u8, n, name)) return true;
+    for (t.sigils) |n| if (n.len > 0 and std.mem.eql(u8, n, name)) return true;
+    for (t.writs) |n| if (n.len > 0 and std.mem.eql(u8, n, name)) return true;
+    // `rival` is not here for the same reason `hushed` is not: it is read out
+    // of the permission set and never answered.
+    for (t.roster) |part| if (std.mem.eql(u8, part.name, name)) return true;
+    for (t.shuts) |s| if (std.mem.eql(u8, s.name, name)) return true;
+    for (t.glued) |gl| if (std.mem.eql(u8, gl.name, name)) return true;
+    for (t.seams) |n| if (n.len > 0 and std.mem.eql(u8, n, name)) return true;
     return false;
 }
 
@@ -683,17 +1438,147 @@ pub const Cast = struct {
     newline: ?g.Symbol = null,
     indent: ?g.Symbol = null,
     dedent: ?g.Symbol = null,
+    /// Parallel to `troupe.writs`, and read as a set: the hand asks how many of
+    /// them the permission set admits, never which one by name.
+    writs: [8]?g.Symbol = @splat(null),
+    brace: ?g.Symbol = null,
+    sever: ?g.Symbol = null,
+    seal: ?g.Symbol = null,
+    unbrace: ?g.Symbol = null,
     hushed: [4]?g.Symbol = @splat(null),
     kin: ?g.Symbol = null,
     gate: ?g.Symbol = null,
     sign: ?g.Symbol = null,
     opens: [fence.tags]?g.Symbol = @splat(null),
+    /// Parallel to `troupe.sigils`, and read by the index `fence.Sigil` gives.
+    sigils: [fence.sigils]?g.Symbol = @splat(null),
+    /// Parallel to `troupe.roster`, so the hand reads a mark by the index it
+    /// found a symbol at and never compares a string. Named for the field it
+    /// resolves, because the fixture that seats every troupe pairs the two
+    /// structs by field name.
+    roster: [marrow.widest]?g.Symbol = @splat(null),
+    /// Parallel to `troupe.shuts`, found by the shut character rather than by
+    /// the roster index, because two closes serve eight parts.
+    shuts: [4]?g.Symbol = @splat(null),
+    /// Parallel to `troupe.glued`, so the hand reads the byte at the offset and
+    /// finds the marker by the index the character sat at.
+    glued: [Troupe.glues]?g.Symbol = @splat(null),
+    /// Parallel to `troupe.seams` and indexed by `caesura.Seam`, so the hand
+    /// emits the arm the rule decided rather than the first one that resolved.
+    seams: [Troupe.seats]?g.Symbol = @splat(null),
+    rival: [2]?g.Symbol = @splat(null),
     body: ?g.Symbol = null,
+    spelled: ?g.Symbol = null,
     close: ?g.Symbol = null,
     escape: ?g.Symbol = null,
     stray: ?g.Symbol = null,
     implied: ?g.Symbol = null,
     shut: ?g.Symbol = null,
+};
+
+/// The zero-width answers already given at one offset, and why that is a proof
+/// rather than a heuristic.
+///
+/// # The problem
+///
+/// Every other token in this parser bounds its own repetition: it consumes a
+/// byte, the cursor moves, and the next ask is a different question. A
+/// zero-width token consumes nothing, so if the parser can ask the same
+/// question twice it can ask it forever. That is not hypothetical - it is what
+/// a hand answering unconditionally does on its second ask.
+///
+/// # What used to stand here, and the hole in it
+///
+/// A single slot holding the last `(offset, symbol, shape)`, refusing an exact
+/// repeat of it. That refuses `A A` and it does not refuse `A B A`: the second
+/// answer overwrote the slot that would have caught the third. Nothing in the
+/// tree reached it, because every zero-width hand seated before now either
+/// moves a stack - python's dedents pop a column, html's implied closes pop a
+/// tag - or is the only member that can answer at its offset. A cohort of five
+/// memoryless markers is the first arrival for which one slot is not enough,
+/// and finding a spin by running one is not a proof either way.
+///
+/// # The termination argument
+///
+/// Three facts, and the conclusion is arithmetic:
+///
+///  1. **The offset never goes backwards.** The walk resumes each token from
+///     the end of the last, so `at` is monotone and bounded by the file.
+///  2. **A hit with extent advances it.** `step` returns those without
+///     consulting this ledger at all, because the cursor moving *is* the proof.
+///  3. **A hit without extent is counted, and the count has a ceiling.** Every
+///     zero-width answer accepted at one offset adds one to `total`; at
+///     `ceiling` the answer is refused whatever it is.
+///
+/// So the zero-width answers over a file of `n` bytes number at most
+/// `ceiling * (n + 1)`, and the parse terminates. The bound does not depend on
+/// any grammar, on which hands are seated, or on what a hand promises about
+/// itself - which is the property the old slot could not offer.
+///
+/// # The second arm, which is quality rather than termination
+///
+/// A ceiling alone terminates by exhaustion: a two-cycle would emit 256 junk
+/// tokens and then stop. So within one `(offset, shape)` the ledger also holds
+/// the symbols already answered and refuses a repeat on sight. Memory moving
+/// clears that arm, because a stack that pushed or popped has made the question
+/// genuinely different - which is precisely what lets a run of dedents through
+/// while `A B A` at one unmoved shape is refused.
+///
+/// # The sizes
+///
+/// `ceiling` clears every legitimate run: the longest is a file closing its
+/// blocks at EOF, bounded by `offside.Columns.max` at 96, then
+/// `lineage.Tags.max` at 64 and `fence.Spans.max` at 16. `cohort` bounds the
+/// distinct symbols one *unmoved* shape may answer, where the real number is
+/// one - the abut cohort keys on disjoint bytes, and every other zero-width
+/// hand moves a stack per answer. A full `cohort` refuses, so the smaller
+/// number is fail-closed rather than a silent overwrite.
+pub const Spent = struct {
+    pub const ceiling = 256;
+    pub const cohort = 8;
+
+    /// The offset these records belong to. A hit that moves the cursor retires
+    /// them by moving this, which is why the bound above is per offset.
+    at: u32 = 0,
+    /// The memory shape `syms` was recorded under. A different shape is a
+    /// different question at the same offset, so the symbols reset and the
+    /// total does not.
+    shape: u64 = 0,
+    total: u16 = 0,
+    len: u8 = 0,
+    /// Past `len` this is `undefined`, like every other stack here, so `same`
+    /// compares the live prefix and never the array.
+    syms: [cohort]g.Symbol = undefined,
+
+    /// Whether this exact zero-extent answer already stands at this offset.
+    pub fn held(s: *const Spent, at: u32, shape: u64, sym: g.Symbol) bool {
+        if (s.at != at or s.shape != shape) return false;
+        for (s.syms[0..s.len]) |seen| if (seen == sym) return true;
+        return false;
+    }
+
+    /// Record one zero-width answer, or refuse it. False means the loop has
+    /// already been here and `step` must return null.
+    fn admit(s: *Spent, at: u32, shape: u64, sym: g.Symbol) bool {
+        if (s.at != at) s.* = .{ .at = at, .shape = shape };
+        if (s.total == ceiling) return false;
+        if (s.shape != shape) {
+            s.shape = shape;
+            s.len = 0;
+        } else {
+            for (s.syms[0..s.len]) |seen| if (seen == sym) return false;
+        }
+        if (s.len == cohort) return false;
+        s.syms[s.len] = sym;
+        s.len += 1;
+        s.total += 1;
+        return true;
+    }
+
+    fn same(a: *const Spent, b: *const Spent) bool {
+        return a.at == b.at and a.shape == b.shape and a.total == b.total and
+            a.len == b.len and std.mem.eql(g.Symbol, a.syms[0..a.len], b.syms[0..b.len]);
+    }
 };
 
 /// The memory a scan carries between tokens.
@@ -706,32 +1591,34 @@ pub const Carry = struct {
     columns: offside.Columns = .{},
     spans: fence.Spans = .{},
     tags: lineage.Tags = .{},
-    /// The last zero-width answer, and the shape of the memory when it was
-    /// given. A hand that answers the same terminal at the same offset with
-    /// the memory unmoved has not made progress, and is refused - which is the
-    /// proof that lets a hand do what the slate may not. A run of `_dedent`s
-    /// passes it because each one pops a column.
-    pinned: ?struct { at: u32, sym: g.Symbol, shape: u64 } = null,
+    /// The zero-width answers already given at one offset.
+    ///
+    /// A hand that consumes nothing has not moved the cursor, so the next ask
+    /// is the same question and something other than the cursor has to bound
+    /// the repeat. This is that bound, and it is the whole reason a hand may
+    /// answer where the slate may not. See `Spent` for the termination
+    /// argument; it is short and it is the point of the field.
+    spent: Spent = .{},
 
     /// Begin a file.
     pub fn rewind(c: *Carry) void {
         c.columns.reset();
         c.spans.reset();
         c.tags.reset();
-        c.pinned = null;
+        c.spent = .{};
     }
 
     /// Whether two carries are the same lexical state.
     ///
     /// Use this and never `std.meta.eql` on a `Carry`: every stack is a
     /// fixed-capacity array with a live prefix, and everything past that
-    /// prefix is `undefined`. The stacks answer for their own dead bytes; the
-    /// guard has none.
+    /// prefix is `undefined`. The stacks answer for their own dead bytes; so
+    /// does the ledger.
     pub fn same(a: *const Carry, b: *const Carry) bool {
         return a.columns.same(&b.columns) and
             a.spans.same(&b.spans) and
             a.tags.same(&b.tags) and
-            std.meta.eql(a.pinned, b.pinned);
+            a.spent.same(&b.spent);
     }
 
     /// Whether this exact zero-extent answer has already been given here.
@@ -745,8 +1632,7 @@ pub const Carry = struct {
     /// winning. A hand offering one member per offset never needs this; for it
     /// `step`'s refusal is the whole rule.
     pub fn answered(c: *const Carry, at: u32, sym: g.Symbol) bool {
-        const was = c.pinned orelse return false;
-        return was.at == at and was.sym == sym and was.shape == c.shape();
+        return c.spent.held(at, c.shape(), sym);
     }
 
     /// Every stack's depth in one word, which is what `step` compares to decide
@@ -777,10 +1663,12 @@ pub const Hit = struct { symbol: g.Symbol, len: u32, skip: u32 = 0 };
 /// exactly that order, and Ruby, which has no layout, skips the middle.
 ///
 /// `fresh` says no extra has been stepped over since the last token ended, and
-/// only the layout phase reads it. That split is the specifications': Python's
-/// scanner measures the whitespace itself and so must be asked before anything
-/// eats it, while Ruby's and Rust's begin by skipping whitespace, so their
-/// openers have to be reachable at an offset the extras already moved to. A
+/// two phases read it: the layout one and the caesura. That split is the
+/// specifications': Python's scanner measures the whitespace itself and so must
+/// be asked before anything eats it, and a caesura is a question about the
+/// whitespace between two tokens, so an offset the extras already moved past
+/// has none left to read. Ruby's and Rust's openers instead begin by skipping
+/// whitespace, so they have to be reachable at an offset the extras moved to; a
 /// hand asked only at fresh offsets would never see `let s = r#"..."#`.
 pub fn step(
     casts: []const Cast,
@@ -789,18 +1677,17 @@ pub fn step(
     at: u32,
     fresh: bool,
     wanted: *const std.DynamicBitSetUnmanaged,
+    named: *const std.DynamicBitSetUnmanaged,
 ) ?Hit {
-    const hit = offer(casts, carry, bytes, at, fresh, wanted) orelse return null;
+    const hit = offer(casts, carry, bytes, at, fresh, wanted, named) orelse return null;
+    // Skipped bytes count as progress for the same reason consumed ones do:
+    // the cursor ends past where it started, so the next ask is a different
+    // question and the ledger below is not needed to say so.
     if (hit.skip + hit.len > 0) return hit;
-    // No progress, so the memory has to have moved. `pinned` is written only
-    // here, which keeps every hand free of the bookkeeping. Skipped bytes
-    // count as progress for the same reason consumed ones do: the cursor ends
-    // past where it started, so the next ask is a different question.
-    const now = carry.shape();
-    if (carry.pinned) |was| {
-        if (was.at == at and was.sym == hit.symbol and was.shape == now) return null;
-    }
-    carry.pinned = .{ .at = at, .sym = hit.symbol, .shape = now };
+    // No cursor movement, so the ledger is the only thing standing between
+    // this answer and a spin. It is written only here, which keeps every hand
+    // free of the bookkeeping.
+    if (!carry.spent.admit(at, carry.shape(), hit.symbol)) return null;
     return hit;
 }
 
@@ -811,6 +1698,7 @@ fn offer(
     at: u32,
     fresh: bool,
     wanted: *const std.DynamicBitSetUnmanaged,
+    named: *const std.DynamicBitSetUnmanaged,
 ) ?Hit {
     // At the end of input a hand still has answers - the dedents a file owes
     // for every block it left open - so `at == bytes.len` is in bounds here on
@@ -826,6 +1714,22 @@ fn offer(
         if (c.troupe.kind != .offside) continue;
         if (layout(c, casts, carry, bytes, at, wanted)) |h| return h;
     };
+    // Not gated on `fresh`, unlike the offside rule: this hand measures the line
+    // ending itself rather than being told about one, because a `}` and a `{` are
+    // answers it owes anywhere.
+    for (casts) |*c| {
+        if (c.troupe.kind != .writ) continue;
+        if (tested(c, carry, bytes, at, wanted)) |h| return h;
+        // The forced half of the warrant. `named` is the state's own shiftable
+        // admissions with the extras taken back out, so an order standing alone
+        // in it is one no other terminal competes with at all - and `Gather.offer`
+        // already ran the folds, so what is left is genuinely a shift. Asked
+        // before the slate because there is nothing for the slate to say: this is
+        // `do`'s block opening over the expression that follows it.
+        if (sole(c, wanted, named)) |sym| {
+            if (raise(carry, bytes, at)) return .{ .symbol = sym, .len = 0 };
+        }
+    }
     for (casts) |*c| {
         if (c.troupe.kind != .fence) continue;
         if (opening(c, carry, bytes, at, wanted)) |h| return h;
@@ -862,28 +1766,122 @@ fn offer(
         if (c.troupe.kind != .caesura) continue;
         if (unwritten(c, bytes, at, wanted)) |h| return h;
     };
+    // Below even the caesura, and the census is what put it here rather than a
+    // preference. A caesura at least skips the whitespace it decided on; this
+    // hand moves nothing at all, so every other claim on the offset outranks
+    // it by the same rule that ranks a caesura last.
+    if (fresh) for (casts) |*c| {
+        if (c.troupe.kind != .abut) continue;
+        if (glued(c, carry, bytes, at, wanted)) |h| return h;
+    };
     return null;
 }
 
-/// A terminator the line implies and the file never spells.
+/// A marker for a delimiter that is touching the token before it.
+///
+/// `f(x)` is a call and `f (x)` is not, and the only difference is a byte of
+/// whitespace nobody consumes. Julia spells that difference as five zero-width
+/// externals sitting between the callee and its bracket - `call_expression` is
+/// literally `_primary _immediate_paren tuple_expression` - so the hand answers
+/// a token of no width and lets the grammar's own terminal eat the bracket.
+///
+/// Three vetoes, each earning its line:
+///
+///   * **`fresh`**, applied by the caller, because adjacency *is* the claim.
+///     An offset the extras have moved to had whitespace in front of it, which
+///     is exactly the reading this marker denies.
+///   * **`at > 0`**, because `fresh` is vacuously true at the start of a file
+///     and a leading `(` has nothing to be glued to.
+///   * **no open span**, because inside a fenced body every one of these bytes
+///     is matter rather than syntax. It fires for no language seated today -
+///     julia's interiors are a `marrow` family and push no span - so it is an
+///     invariant stated for the next language rather than a measured guard.
+///
+/// The permission set is read as `wanted` and not as `named` on purpose. A
+/// marker is a token like any other to the parser: where the state can only
+/// fold on it, the folds run and a state that shifts it is on the other side.
+/// `_immediate_paren` is a shift in 20 states and a reduce-lookahead in 239,
+/// and reading only the first would refuse the marker in the states that reach
+/// the call through a reduction.
+///
+/// **What actually keeps this hand off a string's closing quote is that test,
+/// and not the phase.** The census reads like the phase matters -
+/// `_immediate_string_start` and `_end_str` are keyed to the same `"` and are
+/// co-admitted in the permission set at state 1, where 103 terminals fold to
+/// `_word_identifier` - so the placement below was chosen against it. Running
+/// the hand from the *first* phase instead was then measured, and julia's
+/// board did not move by a byte, nor did any probe written to provoke it. The
+/// parser never stands in state 1 at a quote. So the ordering is the rule this
+/// file already applies (a hand that moves nothing outranks nothing) and a
+/// defence against a table shape that exists, and it is honestly not what is
+/// carrying julia today.
+fn glued(
+    c: *const Cast,
+    carry: *const Carry,
+    bytes: []const u8,
+    at: u32,
+    wanted: *const std.DynamicBitSetUnmanaged,
+) ?Hit {
+    if (at == 0 or at >= bytes.len) return null;
+    if (carry.spans.depth() > 0) return null;
+    for (c.troupe.glued, 0..) |gl, k| {
+        if (gl.at != bytes[at]) continue;
+        const sym = c.glued[k] orelse return null;
+        return if (wanted.isSet(sym)) .{ .symbol = sym, .len = 0 } else null;
+    }
+    return null;
+}
+
+/// A terminator the line implies, and the one it spells.
 ///
 /// Asked only at a fresh offset, because the decision is about the whitespace
 /// between two tokens and an offset the extras have already moved past has
 /// none left to read. `caesura.zig` holds the rules; everything here is the
-/// translation between the parser's expected set and the two questions those
-/// rules put to it.
+/// translation between the parser's expected set and the questions those rules
+/// put to it.
+///
+/// Both terminals must be wanted where the grammar names both, which is the
+/// scanner's own `valid_symbols[IMPLICIT_SEMI] && valid_symbols[EXPLICIT_SEMI]`
+/// and not a convenience: swift's two are one decision reached two ways, and a
+/// state admitting only one of them is not the state that decision is for.
+///
+/// **A tongue that answers several terminals is gated per arm instead**, and the
+/// asymmetry is the two shapes' own. swift's pair is one decision, so requiring
+/// both is requiring the state. elixir's three are three decisions - a comment, a
+/// block, an operator - and its own specification reads each out of
+/// `valid_symbols` separately, three lines apart. Requiring all three would
+/// refuse every state that expects only one, which is nearly all of them.
 fn unwritten(
     c: *const Cast,
     bytes: []const u8,
     at: u32,
     wanted: *const std.DynamicBitSetUnmanaged,
 ) ?Hit {
-    const sym = c.body orelse return null;
-    if (!wanted.isSet(sym)) return null;
     if (hushed(c, wanted)) return null;
-    const ask: caesura.Asks = .{ .binary = want(wanted, c.gate), .signature = want(wanted, c.sign) };
-    if (!caesura.breaks(bytes, at, ask)) return null;
-    return .{ .symbol = sym, .len = 0 };
+    var ask: caesura.Asks = .{ .binary = want(wanted, c.gate), .signature = want(wanted, c.sign) };
+    // A one-terminal tongue answers `body`, and its permission is the gate on
+    // the whole hand. A several-terminal one has no `body` at all: each arm
+    // carries its own permission into the rules and back out as a `Seam`.
+    var body: ?g.Symbol = null;
+    if (c.body) |sym| {
+        if (!wanted.isSet(sym)) return null;
+        if (c.spelled) |w| if (!wanted.isSet(w)) return null;
+        body = sym;
+    } else {
+        ask.comment = want(wanted, c.seams[@intFromEnum(caesura.Seam.comment)]);
+        ask.block = want(wanted, c.seams[@intFromEnum(caesura.Seam.block)]);
+        ask.operator = want(wanted, c.seams[@intFromEnum(caesura.Seam.operator)]);
+    }
+    const b = caesura.breaks(c.troupe.tongue, bytes, at, ask) orelse return null;
+    // A spelled separator is a different terminal where the grammar has one,
+    // and the same one with a width where it does not. An arm the rules chose is
+    // resolved rather than defaulted: the rules only reach an arm whose ask was
+    // true, so a null here would be a binding fault and not a state.
+    const which = switch (b.seam) {
+        .only => if (b.spelled) (c.spelled orelse body.?) else body.?,
+        else => c.seams[@intFromEnum(b.seam)] orelse return null,
+    };
+    return .{ .symbol = which, .len = b.len, .skip = b.skip };
 }
 
 /// html's element ancestry: six parts behind one dispatch.
@@ -1013,10 +2011,12 @@ fn implies(
 
 /// A run of content whose end is computed from where it starts.
 ///
-/// Carries nothing and mutates nothing, which is why it takes neither `carry`
-/// nor a span - see `marrow.zig` for why the captured close does not need to be
-/// remembered. Both answers are non-empty by construction, so this hand never
-/// reaches `step`'s zero-width guard.
+/// Mutates nothing and needs no span - see `marrow.zig` for why the captured
+/// close does not have to be remembered. It reads `carry` all the same, for one
+/// reason and only ever to ask a question: a body may be empty, and this is the
+/// one hand that offers several members over a single offset, so it has to know
+/// whether the zero-extent one has already been given before it offers it
+/// again. `Carry.answered` states that case; lua's `[[]]` is it.
 fn bounded(
     c: *const Cast,
     carry: *const Carry,
@@ -1024,6 +2024,7 @@ fn bounded(
     at: u32,
     wanted: *const std.DynamicBitSetUnmanaged,
 ) ?Hit {
+    if (c.troupe.roster.len > 0) return spelt(c, bytes, at, wanted);
     if (c.body) |sym| {
         if (wanted.isSet(sym)) {
             // A body of zero bytes is legal - lua's `[[]]` has one - and the
@@ -1056,6 +2057,77 @@ fn bounded(
     return null;
 }
 
+/// A run whose close the parse state named, by asking for one member of a
+/// family rather than another.
+///
+/// Two questions and no bytes read between them. First whether the state is
+/// inside the family at all: the members are mutually exclusive, so a state
+/// admitting `rival` - both of the two that can begin at the same offset - is
+/// reading ordinary code that *could* open a quote and is not inside one. Then
+/// which member, which is the first the state admits, in the specification's
+/// own table order.
+///
+/// The mark that comes back is the whole of what distinguishes twenty terminals
+/// from each other, so everything past this point is `marrow.walk` and is the
+/// same code for all of them.
+///
+/// A family whose walk emits its own close answers it from the same pass, and
+/// only when the state also admits the part that would have carried matter
+/// there. That last clause is a deliberate narrowing of the specification,
+/// which emits `_end_str` without consulting the permission set at all: the
+/// census says the close is shiftable in exactly the eight states one content
+/// terminal is shiftable in and in no other, so the narrowing costs nothing
+/// measured and keeps the hand from handing back a token the state would have
+/// to reject.
+fn spelt(
+    c: *const Cast,
+    bytes: []const u8,
+    at: u32,
+    wanted: *const std.DynamicBitSetUnmanaged,
+) ?Hit {
+    var rivals: u8 = 0;
+    for (c.rival) |maybe| {
+        const sym = maybe orelse continue;
+        if (wanted.isSet(sym)) rivals += 1;
+    }
+    if (rivals == c.rival.len) return null;
+    // The whole-roster form of the same refusal. Counted rather than short-
+    // circuited so the loop is the specification's own walk over all twelve.
+    if (c.troupe.lone) {
+        var live: u8 = 0;
+        for (c.roster) |maybe| {
+            const sym = maybe orelse continue;
+            if (wanted.isSet(sym)) live += 1;
+        }
+        if (live > 1) return null;
+    }
+
+    for (c.roster, 0..) |maybe, k| {
+        const sym = maybe orelse continue;
+        if (!wanted.isSet(sym)) continue;
+        const mark = c.troupe.roster[k].mark;
+        switch (marrow.walk(c.troupe.family, mark, bytes, at)) {
+            .matter => |n| return .{ .symbol = sym, .len = n },
+            .close => |n| {
+                const end = shutOf(c, mark.shut) orelse return null;
+                if (!wanted.isSet(end)) return null;
+                return .{ .symbol = end, .len = n };
+            },
+            .none => return null,
+        }
+    }
+    return null;
+}
+
+/// The close a family spells for one shut character, or null where it spells
+/// none. Two entries at most, so the scan is cheaper than the index would be.
+fn shutOf(c: *const Cast, at: u8) ?g.Symbol {
+    for (c.troupe.shuts, 0..) |s, k| {
+        if (s.at == at and k < c.shuts.len) return c.shuts[k];
+    }
+    return null;
+}
+
 /// The bytes an open span accounts for: its escape, its body, or its close.
 fn inside(
     c: *const Cast,
@@ -1075,6 +2147,14 @@ fn inside(
         },
         .body => |n| if (c.body) |sym| {
             if (wanted.isSet(sym)) return .{ .symbol = sym, .len = n };
+        },
+        .enters => |e| if (c.sigils[@intFromEnum(e.which)]) |sym| {
+            // No push and no pop: the span stays open underneath the
+            // interpolation, which is the whole reason `"${"$n"}"` can be read
+            // at all. The inner string pushes its own through `opening`, and
+            // every offset in between finds this hand declining because the
+            // state inside an expression wants neither a body nor a close.
+            if (wanted.isSet(sym)) return .{ .symbol = sym, .len = e.len };
         },
         .close => |n| {
             // Ruby's six openers share one `_string_end`; a dialect that names
@@ -1100,7 +2180,7 @@ fn layout(
     at: u32,
     wanted: *const std.DynamicBitSetUnmanaged,
 ) ?Hit {
-    const lead = offside.lead(bytes, at);
+    const lead = offside.lead(bytes, at, c.troupe.note);
     // A backslash that continued into something other than a line ending is
     // malformed, and the spec answers by declining rather than guessing.
     if (lead.broken or !lead.fresh) return null;
@@ -1132,6 +2212,153 @@ fn layout(
     }
     if (c.newline) |sym| {
         if (wanted.isSet(sym)) return .{ .symbol = sym, .len = 0 };
+    }
+    return null;
+}
+
+/// Read the stack a `.writ` order filled: the pop, the separator, and the brace.
+///
+/// The half of the protocol that rests on Landin's argument. `standing` is three
+/// arms of one comparison between the measured column and the frame's, so at most
+/// one can hold and every live reading gets the same answer from the same memory
+/// - which is exactly why co-admission with forty-five ordinary tokens is
+/// harmless here and why this half is asked before the slate, like `.offside`.
+///
+/// The braces are in this pass rather than with the orders because both are
+/// byte-determined outright: a `{` is present or it is not, and a frame it opened
+/// is closed by its `}` and by no column. Neither needs the warrant.
+fn tested(
+    c: *const Cast,
+    carry: *Carry,
+    bytes: []const u8,
+    at: u32,
+    wanted: *const std.DynamicBitSetUnmanaged,
+) ?Hit {
+    const lead = writ.ahead(bytes, at);
+    if (c.unbrace) |sym| {
+        if (wanted.isSet(sym) and carry.columns.top() == writ.sealed and
+            lead.at < bytes.len and bytes[lead.at] == '}')
+        {
+            carry.columns.close();
+            return .{ .symbol = sym, .skip = lead.at - at, .len = 1 };
+        }
+    }
+    // End of input owes a close for every block still open, whatever column the
+    // block sits at. Without this clause a block opened at column zero - which is
+    // every module body - could never be closed, because no line can land left of
+    // zero and the file would end inside it.
+    const over = lead.at >= bytes.len and carry.columns.len > 0 and
+        carry.columns.top() != writ.sealed;
+    const how = if (over) writ.Standing.left else writ.standing(&carry.columns, lead.column, lead.fresh);
+    switch (how) {
+        .left => if (c.seal) |sym| {
+            if (wanted.isSet(sym)) {
+                carry.columns.close();
+                return .{ .symbol = sym, .len = 0 };
+            }
+        },
+        .level => if (c.sever) |sym| {
+            if (wanted.isSet(sym)) return .{ .symbol = sym, .len = 0 };
+        },
+        .inside => {},
+    }
+    if (c.brace) |sym| {
+        if (wanted.isSet(sym) and lead.at < bytes.len and bytes[lead.at] == '{') {
+            if (!carry.columns.open(writ.sealed)) return null;
+            return .{ .symbol = sym, .skip = lead.at - at, .len = 1 };
+        }
+    }
+    return null;
+}
+
+/// Whether a symbol is one of this cast's own protocol members.
+///
+/// Members are not rivals to each other, which is the point of asking. The family
+/// is mutually exclusive by construction: a `{` is present or it is not, a `}`
+/// closes only the frame its brace opened, and the pop, the separator and ordinary
+/// code are three arms of one comparison. So a state offering an order beside its
+/// brace - which is every `do`, `where` and `of` in the grammar - is offering one
+/// question, not two answers in conflict.
+fn mine(c: *const Cast, sym: g.Symbol) bool {
+    for (c.writs) |w| if (w) |own| if (own == sym) return true;
+    const named = [_]?g.Symbol{ c.brace, c.sever, c.seal, c.unbrace };
+    for (named) |own| if (own) |it| if (it == sym) return true;
+    return false;
+}
+
+/// The one order a state admits, or null if it admits none or several.
+///
+/// `only`, when given, additionally demands that nothing *outside* the family
+/// stand beside it - the forced half of the warrant. Two orders at once would be a
+/// state asking the bytes to tell `do` from `case`, which nothing in the bytes can
+/// do; haskell's table holds no such state, and a grammar that did is declined
+/// here rather than guessed.
+fn sole(
+    c: *const Cast,
+    wanted: *const std.DynamicBitSetUnmanaged,
+    named: ?*const std.DynamicBitSetUnmanaged,
+) ?g.Symbol {
+    var order: ?g.Symbol = null;
+    for (c.writs) |w| if (w) |sym| {
+        if (!wanted.isSet(sym)) continue;
+        if (order != null) return null;
+        order = sym;
+    };
+    const sym = order orelse return null;
+    if (named) |only| {
+        var it = only.iterator(.{});
+        while (it.next()) |other| if (!mine(c, @intCast(other))) return null;
+    }
+    return sym;
+}
+
+/// Open a frame over the next lexeme. The mutation both halves of the warrant
+/// share, so neither can drift from the other about where a block begins.
+///
+/// The Report's rule, and the reason an order is zero-width: the bytes it opens
+/// over belong to the token *after* it, so the frame takes that token's column and
+/// the order itself consumes nothing. Zero extent with the stack moved is exactly
+/// the progress `step`'s pin demands, and the proof a hand may do what the slate
+/// may not.
+fn raise(carry: *Carry, bytes: []const u8, at: u32) bool {
+    const lead = writ.ahead(bytes, at);
+    if (lead.at >= bytes.len) return false;
+    return carry.columns.open(lead.column);
+}
+
+/// Execute a `.writ` order the slate could not answer around.
+///
+/// The second half of the warrant, and the reason this kind is not `.offside` with
+/// other names. An order carries no measurement to compare, so it cannot ride the
+/// argument `tested` rides; the memory it mutates is shared across the union of
+/// live readings, and a push made on one reading's behalf is read by all of them.
+///
+/// What licenses it is *where it is asked*. `Scanner.read` offers a hand first and
+/// the slate second, and this pass runs only after the slate has failed - so the
+/// order is emitted only when no terminal the state admits can consume the bytes
+/// standing here. That is a function of the bytes and the memory alone, which is
+/// the criterion, and it is the local shadow of the Report's own `parse-error(t)`:
+/// the block opens because the parse has no other move, not because a reading was
+/// guessed at.
+///
+/// It is what the five awkward states need, and it needs to know nothing about
+/// which state it is in. Measured over haskell's 3543, 56 admit an order and 51
+/// admit no other shift; of the five that do, four are settled by a literal the
+/// slate lexes - `module` opening a file, `in` closing an empty `let`, `|]`
+/// closing an empty quotation - and the fifth is multi-way `if`, where the slate
+/// matches `variable` for `if x then` and matches nothing at all for `if | g`.
+pub fn ordered(
+    casts: []const Cast,
+    carry: *Carry,
+    bytes: []const u8,
+    at: u32,
+    wanted: *const std.DynamicBitSetUnmanaged,
+) ?Hit {
+    if (at > bytes.len) return null;
+    for (casts) |*c| {
+        if (c.troupe.kind != .writ) continue;
+        const sym = sole(c, wanted, null) orelse continue;
+        if (raise(carry, bytes, at)) return .{ .symbol = sym, .len = 0 };
     }
     return null;
 }
@@ -1270,40 +2497,113 @@ test "outside: every troupe the eleven rely on can still seat" {
     for (&troupes) |*t| {
         var c: Cast = .{ .troupe = t };
         var next: g.Symbol = 0;
-        if (t.newline.len > 0) {
-            c.newline = next;
-            next += 1;
+        // Every role a `Troupe` names and a `Cast` resolves, paired by field
+        // name rather than by a list written out here. A hand-written list is
+        // the thing this test exists to be, and the html row proved it can go
+        // stale silently: three roles were added to both structs and to
+        // `seated`, and the only thing that still enumerated them by hand was
+        // this fixture, so the row could not seat and no other test noticed.
+        //
+        // Pairing on the name alone was still one list short, and elixir's
+        // roster proved *that*: a role can arrive as a run of names rather
+        // than one, and the first version of this loop only understood the
+        // scalar. So the shape is read off the field too - a name, a list of
+        // names, or a list of records carrying one - and the only thing a new
+        // role has to do to be seated here is be spelled in both structs.
+        inline for (@typeInfo(Troupe).@"struct".fields) |f| {
+            if (@hasField(Cast, f.name)) {
+                const Seat = @FieldType(Cast, f.name);
+                if (Seat == ?g.Symbol) {
+                    if (@field(t, f.name).len > 0) {
+                        @field(c, f.name) = next;
+                        next += 1;
+                    }
+                } else if (@typeInfo(Seat) == .array and
+                    @typeInfo(Seat).array.child == ?g.Symbol)
+                {
+                    for (@field(t, f.name), 0..) |role, k| {
+                        if (k >= @typeInfo(Seat).array.len) break;
+                        const spelling = if (@TypeOf(role) == []const u8) role else role.name;
+                        if (spelling.len > 0) {
+                            @field(c, f.name)[k] = next;
+                            next += 1;
+                        }
+                    }
+                }
+            }
         }
-        if (t.indent.len > 0) {
-            c.indent = next;
-            next += 1;
-        }
-        if (t.dedent.len > 0) {
-            c.dedent = next;
-            next += 1;
-        }
-        if (t.body.len > 0) {
-            c.body = next;
-            next += 1;
-        }
-        if (t.close.len > 0) {
-            c.close = next;
-            next += 1;
-        }
-        if (t.escape.len > 0) {
-            c.escape = next;
-            next += 1;
-        }
-        if (t.kin.len > 0) {
-            c.kin = next;
-            next += 1;
-        }
-        for (t.opens, 0..) |o, tag| if (o.len > 0) {
-            c.opens[tag] = next;
-            next += 1;
-        };
         try std.testing.expect(seated(t, &c));
     }
+}
+
+test "outside: the ledger refuses the two-cycle the old slot let through" {
+    // The hole, stated as the sequence that walks through it. `A B A` at one
+    // offset with nothing moving: the old single slot held `A`, was overwritten
+    // by `B`, and had nothing left to refuse the second `A` with. Two hands
+    // taking turns at one offset is a spin that never repeats a *consecutive*
+    // pair, so the slot could not see it however long it ran.
+    var s: Spent = .{};
+    try std.testing.expect(s.admit(10, 0, 1));
+    try std.testing.expect(s.admit(10, 0, 2));
+    try std.testing.expect(!s.admit(10, 0, 1));
+    try std.testing.expect(!s.admit(10, 0, 2));
+
+    // And it is not refusing by offset alone, or a moved cursor would inherit
+    // the refusal and a legitimate second answer would die with the spin.
+    try std.testing.expect(s.admit(11, 0, 1));
+
+    // Memory moving is what makes the same symbol a different question, which
+    // is the whole reason a run of dedents is legal and `A B A` is not. `shape`
+    // is depth-only, so this is the exact fact the hand changed.
+    var run: Spent = .{};
+    for (0..offside.Columns.max) |d| {
+        try std.testing.expect(run.admit(7, @intCast(offside.Columns.max - d), 3));
+    }
+
+    // **Anti-vacuity, and it is the load-bearing half.** Everything above
+    // passes just as well if the ceiling were 1 and every zero-width answer in
+    // the parser were refused - a ledger that admits nothing terminates
+    // beautifully and seats no cohort. So two claims the refusals cannot make:
+    // the longest legitimate run the tree can produce fits *under* the ceiling
+    // with room left, and a hand answering unconditionally is stopped *by* it.
+    try std.testing.expect(offside.Columns.max < Spent.ceiling);
+    try std.testing.expect(lineage.Tags.max < Spent.ceiling);
+    try std.testing.expect(fence.Spans.max < Spent.ceiling);
+    var spin: Spent = .{};
+    var got: u32 = 0;
+    // Every ask a different symbol and a different shape, which is the most
+    // generous thing a hand could claim about itself. Only the total stops it.
+    for (0..Spent.ceiling * 4) |i| {
+        if (spin.admit(3, @intCast(i), @intCast(i % Spent.cohort))) got += 1;
+    }
+    try std.testing.expectEqual(@as(u32, Spent.ceiling), got);
+}
+
+test "outside: julia's glued markers are zero-width, byte-keyed and disjoint" {
+    const abut = for (&troupes) |*t| {
+        if (t.kind == .abut) break t;
+    } else return error.NoAbutTroupe;
+
+    // Disjoint bytes is what lets `cohort` be small and what makes the ledger's
+    // second arm a refusal of a spin rather than of a legitimate sibling: two
+    // markers keyed to one byte would be two answers at one unmoved shape, and
+    // the second would be refused as a repeat. This is checked rather than
+    // asserted in prose because a sixth marker is a one-line addition.
+    try std.testing.expect(abut.glued.len > 1);
+    for (abut.glued, 0..) |gl, i| {
+        try std.testing.expect(gl.name.len > 0);
+        for (abut.glued[i + 1 ..]) |other| try std.testing.expect(gl.at != other.at);
+    }
+
+    // The whole cohort or none. A partial seat would answer three of julia's
+    // five markers and leave the parse asking for the other two at an offset
+    // the hand just declined to move.
+    var partial: Cast = .{ .troupe = abut };
+    partial.glued[0] = 0;
+    try std.testing.expect(!seated(abut, &partial));
+    var whole: Cast = .{ .troupe = abut };
+    for (abut.glued, 0..) |_, k| whole.glued[k] = @intCast(k);
+    try std.testing.expect(seated(abut, &whole));
 }
 
 test "outside: the caesura needs the operator it consults, not just the token it emits" {

@@ -58,6 +58,7 @@
 //! declined to the cold parse's leaves one element at a time.
 
 const std = @import("std");
+const assay = @import("irregex").assay;
 const g = @import("../../press/grammar.zig");
 const lr0 = @import("../../press/lr0.zig");
 const lalr = @import("../../press/lalr.zig");
@@ -219,6 +220,12 @@ pub const Weave = struct {
     /// begins. Together they are what lets a policy align two parses.
     entries: std.ArrayList(u32),
     starts: std.ArrayList(u32),
+    /// Which parse minted each leaf. Not needed to parse and not read by any
+    /// policy: it is the one fact that tells a leaf derived beside its
+    /// neighbour apart from a leaf retained past a re-parse of it, which is
+    /// the difference between a lift that composes badly and a prefix that
+    /// kept something it had no right to keep.
+    gens: std.ArrayList(u32),
     /// The alignment marks the next amend offers subtrees against.
     marks: std.ArrayList(graft.Mark),
     trail: std.ArrayList(Move),
@@ -229,8 +236,18 @@ pub const Weave = struct {
     held: std.ArrayList(Leaf),
     held_at: std.ArrayList(u32),
     held_in: std.ArrayList(u32),
+    held_gen: std.ArrayList(u32),
 
     tree: ?quire.Quire = null,
+    /// Which parse this is. Only ever compared, never arithmetic: two leaves
+    /// carrying the same one were derived by the same run.
+    era: u32 = 0,
+    /// Where the last parse picked up and where the last window opened, kept
+    /// only so a failure can say whether the seam had room to move.
+    lastfloor: u32 = 0,
+    lastfrom: u32 = 0,
+    lastto: u32 = 0,
+    lastwas: u32 = 0,
     policy: Policy = .prove,
     /// Whether finished subtrees are offered to the next parse. Off leaves the
     /// prefix resume on its own, which is the shape that re-reads every byte
@@ -243,6 +260,32 @@ pub const Weave = struct {
     /// account of its own moves and a stopped one has no whole file, so the
     /// spine stands down rather than holding an element nobody made.
     spun: bool = false,
+    /// The lowest byte whose leaf absorbed folds a run had pending when it hit
+    /// a wall. `maxInt` when there is no such leaf, which is every clean file.
+    ///
+    /// Those folds belong to the run rather than to the hole, so `distil`
+    /// charges them onto the leaf before it - right for the file that broke,
+    /// and wrong for any later one that does not, because the leaf then records
+    /// a pop no parse of the fixed text makes. Nothing else can see it: same
+    /// bytes, same entry state, so the tree, the spans, the mend count and the
+    /// byte partition all agree and only the algebra objects. And it objects
+    /// only sometimes, because a refusal is not absorbing - whether the bad
+    /// pairing is *asked* depends on how the spine happens to be grouped, which
+    /// is why it shows up as the maintained product disagreeing with a rebuild
+    /// over its own leaves.
+    ///
+    /// So no window may stand above it. The win survives the clamp because the
+    /// leaf sits at the break and the edit is somewhere else.
+    frail: u32 = std.math.maxInt(u32),
+    /// Why the last parse kept no tiling, when it kept none. Three sites clear
+    /// it and they want different repairs - `off` is a resume that landed
+    /// inside a leaf, `seam` is the prefix product refusing the first leaf the
+    /// resume derived, `charge` is the resumed parse walling before it laid a
+    /// leaf of its own so its folds fell on the previous parse's last one - and
+    /// `spun` alone cannot tell them apart. Named because a count of cleared
+    /// tilings without the reason is the same shape as the verdict
+    /// `recover.py` was filing before round 8.
+    unspun: enum { none, off, seam, charge, win } = .none,
     cost: Cost = .{},
 
     pub fn init(gpa: std.mem.Allocator, loom: *Loom) !Weave {
@@ -261,6 +304,8 @@ pub const Weave = struct {
             .held = .empty,
             .held_at = .empty,
             .held_in = .empty,
+            .held_gen = .empty,
+            .gens = .empty,
         };
     }
 
@@ -278,6 +323,8 @@ pub const Weave = struct {
         w.held.deinit(w.gpa);
         w.held_at.deinit(w.gpa);
         w.held_in.deinit(w.gpa);
+        w.held_gen.deinit(w.gpa);
+        w.gens.deinit(w.gpa);
         w.* = undefined;
     }
 
@@ -309,6 +356,7 @@ pub const Weave = struct {
         std.debug.assert(cut.from <= cut.to and cut.to <= w.text.items.len);
         std.debug.assert(insert.len == cut.insert);
 
+        w.era += 1;
         try w.stow();
         try w.text.replaceRange(w.gpa, cut.from, cut.to - cut.from, insert);
         const delta = @as(i32, @intCast(cut.insert)) - @as(i32, @intCast(cut.to - cut.from));
@@ -316,32 +364,22 @@ pub const Weave = struct {
         var old = w.tree;
         w.tree = null;
         defer if (old) |*q| q.deinit();
-        // Two clauses, and the accepted-parse one is what a resume across a
-        // break costs. It is a narrowing *on top of* `w.spun`: a mended parse
-        // tiles the file perfectly well now that a hole is an element, and the
-        // spine over that tiling verifies. What is not settled is standing a new
-        // parse up on a tiling a break shaped, and two separate defects live
-        // there. Both were found by widening this clause and reverting it.
+        // A broken file is resumed from, and that is the point: a hole is an
+        // element, so a mended parse tiles the file and the spine over that
+        // tiling verifies. This clause used to also demand the old parse was
+        // accepted, which cost a keystroke the length of the file every time -
+        // and the shape it cost it on is the common one, since typing something
+        // broken and continuing to type is most of an editing session.
         //
-        // The first is a leaf. A run that walks into a wall is mid-derivation,
-        // and the folds it had pending belong to it rather than to the hole - so
-        // `distil` composes them onto the leaf before the hole. That leaf is
-        // right for the file that broke and wrong for any later one that does
-        // not, because it records a pop no parse of the fixed text makes. One
-        // leaf, same bytes, same entry state, so the tree, the spans, the mend
-        // count and the byte partition all still agree and only the product
-        // disagrees. Clamping the window below the lowest such leaf fixes it and
-        // keeps the win, since the leaf sits at the break rather than at the
-        // edit; it is not here because with this clause narrow it is
-        // unreachable, and a guard nothing can reach is worse than a note.
-        //
-        // The second is not diagnosed: resuming across a break leaves rust's
-        // tiling short of the end of the file - `1297` of `1437` bytes on the
-        // reproducer - which the first defect was masking, because the coverage
-        // check runs before the product one. Different symptom, different check,
-        // so presumed a different cause. Round 10 in
-        // `.local/orchestrate/weave.report.md` has both.
-        const offering = old != null and old.?.stop == .accepted and w.spun;
+        // Standing a new parse up on a tiling a break shaped hid three defects,
+        // each found by widening this clause and reverting it, and all three
+        // repairs are in the tree: `w.frail` clamps the window below a leaf
+        // that absorbed a run's pending folds; `rip` declines a tiling it
+        // cannot splice rather than keeping one that covers the same bytes
+        // twice; and `rip` declines a resume whose first leaf the prefix
+        // product refuses. Rounds 12 to 14 in
+        // `.local/orchestrate/weave.report.md`.
+        const offering = old != null and w.spun;
         var gr: ?graft.Graft = if (offering) .{
             .gpa = w.gpa,
             .old = &old.?,
@@ -351,8 +389,17 @@ pub const Weave = struct {
             // to resume into: the file's closing folds and its trailing bytes
             // are already folded into that one, so it is re-derived rather than
             // picked up. Below that, `cut.from` is the whole of the condition.
+            // `w.frail` used to floor this too - the lowest byte whose leaf
+            // absorbed a run's pending folds, so a resume could not stand above
+            // a break. Round 19 measured it inert and dropped it: the fuzz's
+            // every column is byte-identical with it in and out, because
+            // `cut.from` already floors the resume below any wall the edit can
+            // reach, and a ring inside the frail leaf is not a seam so `alight`
+            // declines it anyway. It was costing the case it never protected -
+            // an edit far above a break, which is most of an editing session.
             .firm = @min(cut.from, w.starts.getLastOrNull() orelse 0),
             .ceiling = if (w.marks.items.len == 0) 0 else w.marks.items[w.marks.items.len - 1].start,
+            .seam = w.starts.items,
             .delta = delta,
             .lifting = w.reusing,
             .skew = if (w.bend == .skew) 1 else 0,
@@ -372,6 +419,19 @@ pub const Weave = struct {
             .read = @intCast(w.gather.tokens.items.len - if (w.gather.stood) |r| r.token else 0),
             .stood = if (w.gather.stood) |r| r.at else 0,
         };
+        // What the lift walk was offered against what it took. `passed` is the
+        // whole question: candidates strictly wider than the one taken, since
+        // the chain is ordered widest first. Zero means nothing wider was ever
+        // nominated and the ceiling is nomination; a large number means the
+        // ordering or the break is losing answers that were on the table.
+        if (gr) |it| assay.trace(.weave, "lifts={d} taken={d}B widest={d}B offered={d} passed={d} (shape={d} goto={d} break={d}) asked={d} probes={d} turned(fork={d} align={d})\n", .{
+            it.lifts,        it.taken,
+            it.widest,       it.offered,
+            it.passed,       it.passed_shape,
+            it.passed_goto,  it.passed_break,
+            it.asked,        it.probes,
+            it.turned_fork,  it.turned_align,
+        });
         if (!w.spun) {
             _ = try w.spine.build(w.arena(), w.leaves.items);
             w.cost.minted = @intCast(w.leaves.items.len);
@@ -379,7 +439,26 @@ pub const Weave = struct {
             return;
         }
 
-        const win = try w.window(cut, delta, floor);
+        w.lastfloor = floor;
+        // A refused window is a declined tiling, not a wider one. The leaves
+        // are dropped rather than spliced, so the next amend re-tiles from a
+        // cold parse: correct and slow, where a spliced seam that does not
+        // compose would be fast and wrong.
+        const win = try w.window(cut, delta, floor) orelse {
+            w.spun = false;
+            w.unspun = .win;
+            w.leaves.clearRetainingCapacity();
+            w.entries.clearRetainingCapacity();
+            w.starts.clearRetainingCapacity();
+            w.gens.clearRetainingCapacity();
+            _ = try w.spine.build(w.arena(), w.leaves.items);
+            w.cost.minted = 0;
+            w.cost.leaves = 0;
+            return;
+        };
+        w.lastfrom = win.from;
+        w.lastto = win.to;
+        w.lastwas = win.was;
         w.cost.at = win.from;
         w.cost.minted = win.to - win.from;
         w.cost.kept = @as(u32, @intCast(w.held.items.len)) - (win.was - win.from);
@@ -388,10 +467,17 @@ pub const Weave = struct {
         w.leaves.shrinkRetainingCapacity(win.to);
         w.entries.shrinkRetainingCapacity(win.to);
         w.starts.shrinkRetainingCapacity(win.to);
-        for (w.held.items[win.was..], w.held_at.items[win.was..], w.held_in.items[win.was..]) |l, at, in| {
+        w.gens.shrinkRetainingCapacity(win.to);
+        for (
+            w.held.items[win.was..],
+            w.held_at.items[win.was..],
+            w.held_in.items[win.was..],
+            w.held_gen.items[win.was..],
+        ) |l, at, in, gen| {
             try w.leaves.append(w.gpa, l);
             try w.starts.append(w.gpa, @intCast(@as(i64, at) + delta));
             try w.entries.append(w.gpa, in);
+            try w.gens.append(w.gpa, gen);
         }
         _ = try w.spine.replace(w.arena(), win.from, win.was, w.leaves.items[win.from..win.to]);
         w.cost.leaves = @intCast(w.leaves.items.len);
@@ -418,9 +504,11 @@ pub const Weave = struct {
         w.held.clearRetainingCapacity();
         w.held_at.clearRetainingCapacity();
         w.held_in.clearRetainingCapacity();
+        w.held_gen.clearRetainingCapacity();
         try w.held.appendSlice(w.gpa, w.leaves.items);
         try w.held_at.appendSlice(w.gpa, w.starts.items);
         try w.held_in.appendSlice(w.gpa, w.entries.items);
+        try w.held_gen.appendSlice(w.gpa, w.gens.items);
     }
 
     /// `from .. to` of the new leaves replaces `from .. was` of the old ones.
@@ -436,7 +524,7 @@ pub const Weave = struct {
     /// merely equal to the old ones, they *are* the old ones - no parse ran
     /// over those bytes - so the search for the first moved leaf starts there
     /// rather than at zero, and a keystroke stops paying for the file above it.
-    fn window(w: *Weave, cut: Cut, delta: i32, floor: u32) !Window {
+    fn window(w: *Weave, cut: Cut, delta: i32, floor: u32) !?Window {
         const was = w.held.items;
         const now = w.leaves.items;
         var from: u32 = floor;
@@ -482,7 +570,55 @@ pub const Weave = struct {
                 };
                 if (stops) return .{ .from = from, .to = i, .was = @intCast(j) };
             };
+            // A hole ends the search for a right edge, and ending the search
+            // is not the same as declining the tiling.
+            //
+            // A hole is the zero: no product spanning it can say anything
+            // about the run above it, so there is no rejoin left to prove and
+            // every policy below is out of questions. Round 14 had only two
+            // answers here and a hole was given the wrong one - `null`, which
+            // drops the *whole* tiling including the prefix below the cut that
+            // was never in doubt, so the next keystroke is cold. On json that
+            // was 293 of 293 mended edits, and it is the common case rather
+            // than a corner: a file being typed into is momentarily invalid
+            // almost continuously.
+            //
+            // `all` is the third answer and it concedes exactly what the hole
+            // costs: re-mint every leaf from `from` on, which is what `.whole`
+            // does on every edit and which the fuzz holds to a cold parse.
+            // Nothing above the break is kept, and nothing below `from` was in
+            // question. Round 19 tried this and java refused it, returning a
+            // tree with its leading `(block_comment)` twice - which round 21
+            // located in `holds`, a ring probe leaving its own scan in the
+            // extras list, one module away and reachable with no window
+            // involved at all. With that repaired the same stream takes it.
+            //
+            // The distinction is the whole of the fix: `head == null` below is
+            // a *seam* refusing - two runs the parse never put side by side -
+            // and that is still a decline, because the tiling really is
+            // unusable. Asking which of the two happened is the local question
+            // this lane has now had to ask three times.
+            if (now[i].element.entry == Effect.broken) return all;
             head = try w.then(head, now[i].element);
+            // A null head is not "no stop found yet"; it is the opposite. The
+            // leaves so far describe runs that were never adjacent, and every
+            // policy above needs a head to ask its question with, so widening
+            // rightward from here searches with the question already
+            // unanswerable. Falling through to `all` looked like the safe
+            // default and is the bug: it re-mints the whole suffix, keeps the
+            // seam that refused, and reports a spine over a pairing no parse
+            // made. The left edge is where the answer would be, and `from` is
+            // already floored at the resume, so there is nothing to walk down
+            // to; declining is what is left. Hazard named in round 14.
+            if (head == null) {
+                // No `hole=` here any more: a hole returned above, so every
+                // refusal that reaches this line is a seam. The field was
+                // carrying the distinction back when the code did not.
+                assay.trace(.weave, "window refused at leaf {d} of {d}, entry={d}\n", .{
+                    i, now.len, now[i].element.entry,
+                });
+                return null;
+            }
         }
         return all;
     }
@@ -514,8 +650,20 @@ pub const Weave = struct {
         const trail = if (stood) |r| r.trail else 0;
         const at = if (stood) |r| r.at else 0;
         var leaf: u32 = 0;
+        // A resume has to land on a seam of the old tiling, because that tiling
+        // is what the leaves below it are: keeping leaves that reach past `r.at`
+        // and then laying new ones from `r.at` covers those bytes twice, and a
+        // spine addressing a file nobody has is silent - the product is still an
+        // element, just the wrong one over the wrong bytes. Every token boundary
+        // is a seam while a parse runs clean; a mend is where that stops, since
+        // the bytes it steps over become one hole and the boundaries inside it
+        // are no longer starts. `alight` prefers a seamed ring so this is rarely
+        // paid, and when it is paid the tiling is dropped rather than doubled.
+        var aligned = true;
         if (stood) |r| {
-            leaf = @intCast(seek(w.starts.items, r.at) orelse w.starts.items.len);
+            if (seek(w.starts.items, r.at)) |k| {
+                leaf = @intCast(k);
+            } else aligned = false;
             w.marks.shrinkRetainingCapacity(r.token);
         } else w.marks.clearRetainingCapacity();
 
@@ -533,27 +681,98 @@ pub const Weave = struct {
         };
         w.leaves.shrinkRetainingCapacity(leaf);
         w.entries.shrinkRetainingCapacity(leaf);
+        w.gens.shrinkRetainingCapacity(leaf);
         w.starts.shrinkRetainingCapacity(leaf);
-        // Tiling the file and deriving one product for it are two claims, and
-        // this makes them one. The tiling half is no longer the reason: a
+        // Every frail leaf is at or above the resume, because `firm` was held
+        // under the lowest of them, so all of them have just been shrunk away.
+        w.frail = std.math.maxInt(u32);
+        // Tiling the file and deriving one product for it used to be one claim
+        // here, and a mend forfeited both. Only the first is really at stake: a
         // mended parse tiles the file, because a hole is an element and
-        // `distil` lays one over the bytes a mend stepped across. What is not
-        // settled is that a *resumed* mended parse tiles it the way a cold one
-        // does, so the whole claim stays until that does. Which leaf disagrees,
-        // and why, is on `offering` above; dropping `accepted` here is the other
-        // half of the same one-line change and the fuzz refuses the pair.
-        w.spun = !w.gather.torn and q.stop == .accepted;
+        // `distil` lays one over the bytes a mend stepped across, and the
+        // product over that tiling is the zero exactly where it should be. So
+        // what is left is whether the trail can be replayed at all, which is
+        // `torn`, and whether the resume landed on a seam of the old tiling,
+        // which is `aligned`. Whether a *resumed* mended parse composes is
+        // asked below, once there is something to ask it about.
+        w.spun = aligned and !w.gather.torn;
+        // Four words, and they turned an inference into a fact: `spun=false`
+        // alone cannot say whether the trail was unusable or the resume merely
+        // landed off a seam, and those want different repairs. Naming the parse
+        // verdict beside them is what showed that java and javascript are torn
+        // on a *clean* parse - which is why an incremental path they have never
+        // once been on never looked like a failure. Round 15.
+        assay.trace(.weave, "spun={} aligned={} torn={} rifts={d} roosts={d} merges={d} rings={d} tokens={d} stood={d} roots={d} mends={d} stop={s}\n", .{
+            w.spun,          aligned,
+            w.gather.torn,   w.gather.rifts,
+            w.gather.roosts, w.gather.merges,
+            w.bough.rings.items.len, w.gather.tokens.items.len,
+            if (stood) |r| r.at else 0,
+            q.roots.len,     q.mends,
+            @tagName(q.stop),
+        });
+        w.unspun = .none;
         if (!w.spun) {
+            w.unspun = .off;
             // The trail could not be replayed, so there is nothing to fold and
             // the leaves the prefix left behind describe a spine nobody is
             // going to be told about.
             w.leaves.clearRetainingCapacity();
             w.entries.clearRetainingCapacity();
+            w.gens.clearRetainingCapacity();
             w.starts.clearRetainingCapacity();
             return 0;
         }
-        try w.distil(trail, at);
+        if (!try w.distil(trail, at, leaf)) {
+            w.unspun = .charge;
+            return w.shed();
+        }
+        // The resume is a claim that two runs were adjacent, and the algebra is
+        // the only thing that checks it. `holds` proves the ring's stack is one
+        // this text reaches; it does not prove the leaf below the ring can
+        // stand under the leaf above it, and those are different questions once
+        // a lift is involved: a lifted leaf's push is a coarse summary that was
+        // a legal left operand for the leaf it was minted beside and need not
+        // be one for a leaf derived later against a different suffix.
+        //
+        // Found by `Run.continuous`, which asks each adjacent pair on its own
+        // rather than waiting for the whole product to give out. The seam it
+        // named sat at `floor` every time - the resume boundary itself - so
+        // there is no left edge to walk down and nothing to re-mint: below the
+        // floor no parse ran. Declining is the only honest answer, and it is
+        // the one `aligned` already gives an unspliceable tiling. Round 14 in
+        // `.local/orchestrate/weave.report.md`.
+        if (leaf > 0 and leaf < w.leaves.items.len) {
+            // The prefix product rather than the leaf below, because that is
+            // the question the spine will ask: whether everything already read
+            // can stand under the first thing this parse derived. A neighbour
+            // on its own is a narrower operand than the range a node folds, so
+            // asking pairwise here would decline resumes the algebra accepts.
+            const under = try w.spine.between(w.arena(), 0, leaf);
+            const over = w.leaves.items[leaf].element;
+            if (under != null and over.entry != effect.Effect.broken and
+                try effect.compose(w.arena(), under.?, over) == null)
+            {
+                assay.trace(.weave, "seam refused: leaf={d} under.entry={d} over.entry={d}\n", .{
+                    leaf, under.?.entry, over.entry,
+                });
+                w.unspun = .seam;
+                return w.shed();
+            }
+        }
         return leaf;
+    }
+
+    /// Keep no tiling, and say so to the one caller that reads a leaf count.
+    /// The reason is the caller's to set, because it is the only thing the two
+    /// sites differ by.
+    fn shed(w: *Weave) u32 {
+        w.spun = false;
+        w.leaves.clearRetainingCapacity();
+        w.entries.clearRetainingCapacity();
+        w.gens.clearRetainingCapacity();
+        w.starts.clearRetainingCapacity();
+        return 0;
     }
 
     /// The move trail, folded into one element per token span.
@@ -570,20 +789,37 @@ pub const Weave = struct {
     /// that sits entirely to one side of a break and the zero on every node
     /// that spans one, which is exactly the shape reuse needs: a subtree the
     /// break did not touch is still a subtree with an answer.
-    fn distil(w: *Weave, from: u32, begin: u32) !void {
+    ///
+    /// There is a third case neither sentence covers, and it is fatal only by
+    /// accident. A run's trailing folds are charged onto the last leaf laid -
+    /// and a *resumed* parse that walls before it has laid one charges them onto
+    /// the last leaf of the parse before it, across the resume. Those two runs
+    /// are claimed adjacent by the resume itself, so the composition has to
+    /// hold; when it does not, what is false is the claim, not the parser's
+    /// account of its own moves. `floor` is where this parse's own leaves begin,
+    /// so a charge below it is that claim failing, and false is the answer -
+    /// the same answer `aligned` gives a resume that landed off a seam. Raising
+    /// would let a resume that merely cannot be spliced kill the process, which
+    /// is what it did: verilog's keystroke at 20,086, one edit, `mend onto
+    /// leaf` at the resume byte with nothing of its own laid yet.
+    ///
+    /// False means the tiling is gone. True does not mean it is good - the
+    /// prefix product still has to accept the first leaf, which is the caller's
+    /// next question.
+    fn distil(w: *Weave, from: u32, begin: u32, floor: u32) !bool {
         const x = w.arena();
         var acc: Effect = .identity;
         var at: u32 = begin;
 
-        for (w.trail.items[from..]) |mv| switch (mv) {
+        for (w.trail.items[from..], from..) |mv, j| switch (mv) {
             .fold => |f| {
                 const p = w.loom.gr.productions[f.prod];
                 const e = try effect.reduce(x, f.under, p.rhs, p.lhs);
-                acc = try effect.compose(x, acc, e) orelse return error.TrailRefused;
+                acc = try effect.compose(x, acc, e) orelse return w.torn(j, at, "fold", acc, e);
             },
             .read => |r| {
-                acc = try effect.compose(x, acc, try effect.shift(x, r.at, r.symbol)) orelse
-                    return error.TrailRefused;
+                const e = try effect.shift(x, r.at, r.symbol);
+                acc = try effect.compose(x, acc, e) orelse return w.torn(j, at, "read", acc, e);
                 // A zero-width symbol is not a segment; it rides on the next
                 // one that covers a byte, which keeps every leaf spendable.
                 if (r.end == at) continue;
@@ -596,8 +832,11 @@ pub const Weave = struct {
                 // of that run and belongs to the leaf before the hole; the
                 // hole itself covers only the bytes nothing read.
                 if (if (acc.entry == Effect.nowhere) null else w.charge()) |last| {
-                    last.element = try effect.compose(x, last.element, acc) orelse
-                        return error.TrailRefused;
+                    last.element = try effect.compose(x, last.element, acc) orelse {
+                        if (w.leaves.items.len <= floor) return w.snapped(j, at, "mend");
+                        return w.torn(j, at, "mend onto leaf", last.element, acc);
+                    };
+                    w.frail = @min(w.frail, w.starts.items[w.leaves.items.len - 1]);
                 }
                 // A leaf covering no bytes has no place in the byte order, and
                 // a mend always resumes past where the parse stood, so this
@@ -613,12 +852,15 @@ pub const Weave = struct {
             },
         };
 
-        if (w.leaves.items.len == 0) return;
+        if (w.leaves.items.len == 0) return true;
         // The folds the end-of-input column fired belong to the file as much as
         // any others, and there is no token left to hang them on.
         if (acc.entry != Effect.nowhere) if (w.charge()) |last| {
-            last.element = try effect.compose(x, last.element, acc) orelse
-                return error.TrailRefused;
+            const end: u32 = @intCast(w.trail.items.len);
+            last.element = try effect.compose(x, last.element, acc) orelse {
+                if (w.leaves.items.len <= floor) return w.snapped(end, at, "close");
+                return w.torn(end, at, "close onto leaf", last.element, acc);
+            };
         };
         // And the bytes past the last token, which are whitespace by
         // definition: the spine tiles the file or it is not addressing it.
@@ -626,6 +868,35 @@ pub const Weave = struct {
         // to charge an element, but it is still a span, and the tiling has to
         // reach the end of the file whether or not the last thing in it is one.
         w.leaves.items[w.leaves.items.len - 1].bytes += @intCast(w.text.items.len - at);
+        return true;
+    }
+
+    /// The resume claimed two runs were adjacent and the algebra says otherwise.
+    /// Not a fault of either side: see `distil`.
+    fn snapped(w: *Weave, move: usize, at: u32, what: []const u8) bool {
+        assay.trace(.weave, "resume snapped: move {d} of {d} at byte {d}: {s} fell across the resume\n", .{
+            move, w.trail.items.len, at, what,
+        });
+        return false;
+    }
+
+    /// Say which pairing the algebra refused, then refuse.
+    ///
+    /// `error.TrailRefused` on its own is the least useful shape a fatal has:
+    /// four call sites raise it, three of them mean "the parser did something
+    /// the algebra says it could not have done" and one means "these two runs
+    /// were never adjacent", and the error names neither the move nor the
+    /// operands. A lane that reached one of them spent its afternoon bisecting
+    /// keystrokes to find out which. The lens is `weave`, and the error is
+    /// unchanged so nothing downstream reads a different failure.
+    fn torn(w: *Weave, move: usize, at: u32, what: []const u8, left: Effect, right: Effect) error{TrailRefused} {
+        assay.trace(.weave, "trail refused: move {d} of {d} at byte {d}: {s}," ++
+            " left.entry={d} right.entry={d}, leaves={d} era={d}\n", .{
+            move,             w.trail.items.len, at,   what,
+            left.entry,       right.entry,       w.leaves.items.len,
+            w.era,
+        });
+        return error.TrailRefused;
     }
 
     /// The leaf a run's trailing folds belong to, when there is one.
@@ -644,6 +915,7 @@ pub const Weave = struct {
     inline fn lay(w: *Weave, at: u32, e: Effect, bytes: u32) !void {
         try w.starts.append(w.gpa, at);
         try w.entries.append(w.gpa, e.entry);
+        try w.gens.append(w.gpa, w.era);
         try w.leaves.append(w.gpa, .{ .bytes = bytes, .element = e });
     }
 

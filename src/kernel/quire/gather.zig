@@ -111,6 +111,7 @@
 //! where it is made.
 
 const std = @import("std");
+const assay = @import("irregex").assay;
 const g = @import("../../press/grammar.zig");
 const lr0 = @import("../../press/lr0.zig");
 const lalr = @import("../../press/lalr.zig");
@@ -163,7 +164,6 @@ pub const Move = union(enum) {
     mend: struct { at: u32 },
 };
 
-
 /// What a parse does with a token it cannot read.
 ///
 /// A buffer under edit is broken most of the time - between `if (` and `if (x)`
@@ -196,9 +196,73 @@ pub const Mend = enum {
 /// from what the table alone would have said.
 const Reading = struct {
     top: u32,
+    /// Which strand this reading's moves are being written to while a fork
+    /// stands, or `sole` when none does. See `Gather.strands`.
+    seg: u32 = sole,
     /// How many declared conflicts this reading took the losing side of. Zero
-    /// is the deterministic LR answer, and it wins every tie.
+    /// is the deterministic LR answer, and it breaks every tie `heft` leaves.
     rank: u32 = 0,
+    /// What the author's `prec.dynamic` comes to over everything this reading
+    /// has folded. The one number in the grammar written *for* this comparison
+    /// and nothing else — see `Reading.beats`.
+    heft: i32 = 0,
+    /// How many folds this reading has taken since the parse was last sole -
+    /// which is how many interior nodes it built to explain the bytes it has
+    /// read, a fold being the only thing here that makes one. The size of this
+    /// reading's derivation over the contested span, and nothing to do with the
+    /// size of the file: `roost` puts it back to zero the moment one reading
+    /// stands again, so two readings compared on it were always counting from
+    /// the same fork. See `Reading.beats`.
+    folds: u32 = 0,
+
+    /// Which of two readings the parse should keep, wherever both are standing
+    /// and only one tree can be handed back.
+    ///
+    /// The author's declaration first. `prec.dynamic` is the *only* rank a
+    /// grammar writes that the press deliberately cannot spend: a static rank
+    /// deletes an action while the table is being built, and a dynamic one is
+    /// left for exactly this moment, when the two derivations it orders both
+    /// exist. Summed over the fold, because the author ranks a *production* and
+    /// the thing being compared is a derivation made of many - which is also
+    /// how upstream reads it: a tree-sitter subtree's rank is the sum over its
+    /// children plus its own production's, so a stack version's rank moves by
+    /// the folded production's declaration and by nothing else
+    /// (`subtree.c:353,407`, `parser.c:1030`, `stack.c:164,171`), and versions
+    /// are ordered by it in `parser.c:284`.
+    ///
+    /// **The shorter derivation second.** Upstream has a rung here and we did
+    /// not, which is what left two thirds of the corpus's ambiguity being
+    /// settled by which reading was born first. Read at v0.26.11: once error
+    /// cost and dynamic precedence have both tied, `ts_parser__select_tree`
+    /// falls through to `ts_subtree_compare` (`parser.c:872`), which compares
+    /// symbol, then **child count, fewer winning** (`subtree.c:605-608`), then
+    /// recurses into the children (`subtree.c:614-619`). Two readings that
+    /// reach `collapse` are `twinned` - same state chain, same depth - so they
+    /// carry the same symbols over the same bytes and the symbol rung is
+    /// vacuous for us. What survives that precondition is the child-count rung,
+    /// and summed over a shared frontier the recursion of "fewer children"
+    /// *is* "fewer interior nodes", which is "fewer folds". So: of two
+    /// derivations the grammar ranked equally, standing on the same states over
+    /// the same bytes, keep the one that asserted less structure to get there.
+    ///
+    /// That is the shortest-derivation preference and it is a claim about
+    /// parsing, not about this corpus: a fold the grammar did not have to make
+    /// is a node the author did not ask for. It is deliberately not upstream's
+    /// *lexicographic* order, which stops at the first differing child count
+    /// and is a determinism rule rather than a quality one ("select_earlier",
+    /// `parser.c:875`); the aggregate is the half that carries the judgement.
+    ///
+    /// Speculation depth last, unchanged, and now reached only when the author
+    /// ranked nothing *and* the two derivations are the same size. It is a fact
+    /// about the parse loop rather than about the language, so it is the right
+    /// thing to decide a cell nothing else can and the wrong thing to let
+    /// overrule one that can. It is still what keeps the pick total, and so
+    /// deterministic.
+    fn beats(a: Reading, b: Reading) bool {
+        if (a.heft != b.heft) return a.heft > b.heft;
+        if (a.folds != b.folds) return a.folds < b.folds;
+        return a.rank < b.rank;
+    }
 };
 
 /// A reading waiting to move, and the action it was split into taking. `act` is
@@ -206,8 +270,20 @@ const Reading = struct {
 const Turn = struct {
     top: u32,
     rank: u32,
+    seg: u32 = sole,
+    heft: i32 = 0,
+    folds: u32 = 0,
     act: ?lalr.Action = null,
 };
+
+/// No strand: the reading is the only one, so its moves are the file's and go
+/// straight into the trail.
+const sole = std.math.maxInt(u32);
+
+/// What one token's worth of movement did. `lifted` is the one the driver
+/// could not read off a bool: the token was never absorbed, because a whole
+/// subtree arrived in its place and the offset is already past it.
+const Moved = enum { took, lifted, refused };
 
 /// One way of spelling an extra the grammar declared as a rule rather than as
 /// a terminal - lua's `comment`, julia's `line_comment` - held as the
@@ -254,26 +330,299 @@ const Sprig = struct {
 /// waiting beside `keep` for the shift that files them both.
 const Grown = struct { ref: quire.Ref, start: u32 };
 
+/// One table action, spelled the way `outliner state` spells it, so a trace line
+/// and a table row can be read against each other without translation. A fold
+/// carries its production index because the rule is the limb - two rules with
+/// the same left-hand side are two different answers.
+const Limb = struct {
+    gr: *const g.Grammar,
+    act: lalr.Action,
+
+    pub fn format(l: Limb, w: *std.Io.Writer) std.Io.Writer.Error!void {
+        switch (l.act.kind) {
+            .err => try w.writeAll("nothing"),
+            .accept => try w.writeAll("accept"),
+            .shift => try w.print("read on -> {d}", .{l.act.value}),
+            .reduce => try w.print("fold {s} #{d}", .{
+                l.gr.nameOf(l.gr.productions[l.act.value].lhs),
+                l.act.value,
+            }),
+        }
+    }
+};
+
 /// The most readings held at once.
 ///
 /// Not a tuning knob so much as a fuse. Refutation is what keeps the count
 /// down: a losing reading is usually dead within a token or two, and this only
 /// decides what happens where several conflicts overlap before any of them are
-/// settled. Measured on the corpus by rebuilding at 2, 4 and 16: c needs more
-/// than two readings at its widest point and cpp more than four, while sixteen
-/// reaches no further than eight anywhere. So the fuse sits above the corpus's
-/// high-water mark rather than at it. When it does bind, the reading that is
-/// *not* forked is the most speculative one, so the table's own answer is never
-/// the thing that gets dropped.
-const crowd = 8;
+/// settled. When it does bind, the reading that is *not* forked is the most
+/// speculative one, so the table's own answer is never the thing that gets
+/// dropped.
+///
+/// It used to be recorded here that sixteen reaches no further than eight
+/// anywhere, so the fuse sat above the corpus's high-water mark rather than at
+/// it, and then that "8 stays because the cap is cheap". Both readings were
+/// taken with this knob moved alone and neither survives; the paragraph below
+/// says why, and the denial counts they quoted (46 in verilog, 4 in swift) are
+/// no longer the tree's. At 64/512 the whole corpus is re-censused: **twenty-
+/// nine of thirty grammars deny nothing at all**, and swift denies 80 of 987 -
+/// all of them the same state on the same token at byte 24283, one fold storm
+/// rather than a starved parse.
+///
+/// That distinction only became measurable once `collapse` stopped spending the
+/// budget on copies. Before it, verilog filled the cap with eight spellings of
+/// one derivation and the same knob was worth 51 bytes at ~4% - a number that
+/// was measuring the twins, not the ambiguity.
+///
+/// **And "the cap is cheap" was true only of the fork population that existed
+/// when it was measured.** That sweep moved this number alone against tables
+/// that were resolving the author's declared ties away before the parse ever
+/// saw them. Once `bench.decide` spares an associativity-decided cell, the
+/// population changes and 8 is far under the mark: swift alone is 4,006 square
+/// bytes, and it is 4,006 with no press change at all, so the old sweep was
+/// leaving them on the floor already. The reason it read as saturated is that
+/// **this fuse and `skeins` are in series** - raising either one alone just
+/// moves which of the two blows. Measured with the side-rung cell spared:
+/// 8/64 and 8/512 both leave elixir at 1 square byte, 64/64 leaves it at 1, and
+/// 64/512 restores all 23,879. A sweep over one knob cannot see that.
+///
+/// **And 64 is the knee, not a waypoint - the corner above it was priced and is
+/// empty.** The same four-corner method run upward from here, each arm its own
+/// binary and all seven boards against one frozen oracle: 512/512, 64/4096 and
+/// 512/4096 are byte-identical to 64/512 on all thirty grammars, 309,356 square
+/// without verilog. 512 is not inert - it clears every one of swift's 80
+/// denials and opens 96 more splits - and those 96 readings are worth **zero
+/// square**, which is the cleanest statement of saturation this fuse can make.
+/// The trade below is as sharp as the one above is flat: 4/4 costs 110,337.
+/// Time and peak RSS across the corpus are 1.02x and 1.00x at 512/4096, so what
+/// stops this rising further is that there is nothing above it, not the cost.
+const crowd = 64;
 
-/// How many times one file may be mended before the parse stops calling it a
-/// file in this language. Every mend costs an `offer` over every terminal, so
-/// a byte-by-byte walk through a megabyte of the wrong language is the one
-/// shape recovery makes slow, and it is also the shape where the answer was
-/// never going to be a tree. Well above anything a buffer under edit reaches:
-/// the broken corpus needs one.
-const ceiling = 1 << 14;
+/// How many strands may stand between two collapses.
+///
+/// A strand is one live reading's unrecorded moves, so the memory a standing
+/// fork costs is this times the moves since it opened. Forks that never
+/// collapse are the only way to reach it, and the answer when it binds is the
+/// same as `crowd`'s: decline to split. Declining costs one speculative
+/// reading; tearing the trail costs the file's whole tiling.
+///
+/// In series with `crowd`, and that is the whole reason this number moved:
+/// a fork needs a slot *and* a strand, so whichever fuse is lower is the only
+/// one a single-knob sweep can observe. See `crowd` for the four-corner
+/// measurement. Raising it costs nothing measurable - a strand is allocated
+/// when a fork opens, not reserved - and the elixir parse, the only case on the
+/// board big enough to time honestly, is 1.00x either side.
+///
+/// Which of the pair is live is now separated rather than inferred, and it is
+/// not this one. Swift is the corpus's only denier at 64/512; `skeins` at 4096
+/// with `crowd` held leaves **all 80 of its denials standing**, while `crowd`
+/// at 512 with `skeins` held clears them all. So on today's board this fuse is
+/// slack everywhere and 512 is headroom, not a limit - it earns its number by
+/// being the thing that must not be lower than `crowd` needs, which is why it
+/// still has to move whenever `crowd` does.
+const skeins = 512;
+
+/// How much of one file recovery may walk past before the parse stops calling
+/// it a file in this language, as a numerator over `whole`.
+///
+/// Every mend costs an `offer` over every terminal, so a byte-by-byte walk
+/// through a megabyte of the wrong language is the one shape recovery makes
+/// slow, and it is also the shape where the answer was never going to be a
+/// tree. That shape is "the file was skipped", and the honest way to say it is
+/// in bytes: this was a cap on the mend *count* until round 22, which is the
+/// wrong unit twice over. A count says nothing about how much of the file
+/// survived - a mend deletes a byte where it used to delete a kilobyte - and
+/// it was not load-bearing anyway, since `over` is always past `x.at` and so
+/// the count is already bounded by the file length.
+///
+/// Three quarters, because that is where the measurement separates. Every
+/// grammar in the corpus is under it on a file of its own language, the worst
+/// real rows being julia and haskell; a walk through the wrong language runs
+/// away toward the whole file. The same shape as `covered` replacing `reach`:
+/// count the bytes, not the events.
+const fuse = 3;
+const whole = 4;
+
+/// How far a lookahead walk may follow the table before it stops guessing:
+/// pretend-perches it may stack up, and steps it may take doing it.
+///
+/// Hoisted out of `shiftable`, where they were two locals, because there are
+/// now two walks over the same table and a second copy of a bound is a third
+/// bound - which is the shape a sibling lane is auditing the whole tree for.
+/// Same values, same reason, one home beside the other fuses.
+///
+/// **What a walk does when it runs out is not shared, and must not be.** A
+/// production that consumes nothing can push forever, so both walks stop; but
+/// `shiftable` is asking whether to hand a terminal to the scanner, where
+/// admitting one the parse then refuses is the old behaviour and losing one it
+/// could have shifted is a wrong tree - so it answers yes. `follows` is asking
+/// whether to write a token the author did not, where a yes on a walk that gave
+/// up is a node over text nobody wrote - so it answers no. Two questions, two
+/// safe defaults, one budget.
+///
+/// **These two are in series and neither had ever been swept.** `climb` bounds
+/// the pretend-perches and `chase` bounds the steps, and a step is what stacks
+/// a perch, so `chase` under `climb` makes `climb` unreachable and the pair has
+/// one effective bound. That is `crowd`/`skeins`' wiring, and the danger runs
+/// the other way here: **running out is an answer, not a pause.** `shiftable`
+/// answers yes when it gives up, so a *wider* budget is a stricter walk - it
+/// has more chances to reach one of the three `return false` arms before the
+/// permissive exit. Raising one of these is not obviously safe.
+///
+/// Swept jointly, seven arms on one tree against one frozen oracle, scored on
+/// square without verilog: 1/2 loses **143,879** - php, scala, kotlin, swift,
+/// typescript and julia all collapse - 2/8 loses 23,878, and 4/16, 8/32, 32/32,
+/// 8/128 and 32/128 are byte-identical at 309,356 on all thirty grammars. So
+/// the answer saturates at 4/16, 8/32 is one doubling of margin above the knee,
+/// and 32/128 costs 0.995x the corpus's parse time for nothing. The margin is
+/// what these are for; the numbers are now measured rather than inherited.
+const climb = 8;
+const chase = 32;
+
+/// One lookahead walk over the table, standing on a real stack it never
+/// touches.
+///
+/// Folds are forced moves, so replaying them costs a few table reads and
+/// answers exactly; nothing is minted and no perch is pushed. States the walk's
+/// own folds arrive in live in `up`, and only those are popped before the real
+/// chain beneath `base` is walked down.
+const Ahead = struct {
+    x: *const Gather,
+    /// The deepest real perch the walk has descended to.
+    base: u32,
+    /// States pushed by folds this walk performed, standing on `base`.
+    up: [climb]u32,
+    ups: usize,
+    /// Why the last `unsure` this walk returned was unsure. Meaningless
+    /// unless a `Step.unsure` was actually handed back.
+    hazy: Hazy,
+
+    fn on(x: *const Gather, top: u32) Ahead {
+        return .{ .x = x, .base = top, .up = undefined, .ups = 0, .hazy = .clear };
+    }
+
+    fn state(a: *const Ahead) u32 {
+        return if (a.ups > 0) a.up[a.ups - 1] else a.x.perches.items[a.base].state;
+    }
+
+    /// Why a walk declined to answer, recorded beside the `unsure` that
+    /// carries it.
+    ///
+    /// Diagnostic only: no arm of the parse branches on this, and every
+    /// `unsure` remains a no to `follows` and a yes to `shiftable` exactly as
+    /// before. It exists because *the caller cannot otherwise tell a table
+    /// fact from a spent budget*, and a bucket that cannot tell them apart is
+    /// a residual wearing a positive name - `residue.py`'s `none` read 1,288
+    /// on this corpus with no way to say how many were real.
+    const Hazy = enum {
+        /// Nothing declined; the walk answered.
+        clear,
+        /// A cell the author declared ambiguous, which `absorb` would split
+        /// rather than choose. A property of the grammar, not of the budget.
+        forked,
+        /// `climb` overlay full - more folds stacked than the walk can stand
+        /// on. A budget.
+        climbed,
+        /// `chase` steps taken without reaching a shift. A budget.
+        chased,
+    };
+
+    /// What one lookahead comes to, once the folds it forces have run.
+    const Step = union(enum) {
+        /// A shift is on the other side of them, landing here.
+        reads: u32,
+        /// The end column accepting, which has no state to land in.
+        done,
+        /// The table has nothing for this symbol from here.
+        stops,
+        /// The walk cannot say: a cell the author declared ambiguous, which
+        /// `absorb` would split rather than choose, or a budget it ran out of.
+        /// The two callers want opposite defaults, so neither is taken here.
+        /// Which of the three it was is left in `hazy`.
+        unsure,
+    };
+
+    fn take(a: *Ahead, sym: g.Symbol) Step {
+        for (0..chase) |_| {
+            const here = a.state();
+            if (a.x.forking) if (a.x.forks.at(here, sym).len != 0) return a.gave(.forked);
+            const act = a.x.t.at(here, sym);
+            switch (act.kind) {
+                .err => return .stops,
+                .shift => return .{ .reads = act.value },
+                .accept => return .done,
+                .reduce => {
+                    const p = a.x.gr.productions[act.value];
+                    var n = p.rhs.len;
+                    const virtual = @min(a.ups, n);
+                    a.ups -= virtual;
+                    n -= virtual;
+                    if (n > 0) {
+                        if (a.x.deep(a.base) < n) return .stops;
+                        for (0..n) |_| a.base = a.x.below(a.base);
+                    }
+                    const under = a.state();
+                    const to = a.x.c.goto(under, p.lhs) orelse return .stops;
+                    if (!a.push(to)) return a.gave(.climbed);
+                },
+            }
+        }
+        return a.gave(.chased);
+    }
+
+    /// Record why this walk is about to decline, and decline.
+    fn gave(a: *Ahead, why: Hazy) Step {
+        a.hazy = why;
+        return .unsure;
+    }
+
+    /// What a whole `follows` question came to. `no` is a table fact - the
+    /// walk reached an `err` cell or an accept and knows the answer. The other
+    /// three are the walk declining, and they are kept apart from `no` so a
+    /// bucket built on "every candidate said no" can assert that rather than
+    /// inherit it.
+    const Says = enum {
+        yes,
+        no,
+        forked,
+        climbed,
+        chased,
+
+        fn from(h: Hazy) Says {
+            return switch (h) {
+                // `take` sets `hazy` at every arm that returns `unsure`, so a
+                // `clear` here is that invariant broken rather than a state to
+                // paper over. `chased` is the conservative read - it says the
+                // walk could not tell, which is the whole point of the split.
+                .clear => .chased,
+                .forked => .forked,
+                .climbed => .climbed,
+                .chased => .chased,
+            };
+        }
+
+        /// The wire name `declined` reports and `residue.py` buckets on.
+        fn word(s: Says) []const u8 {
+            return switch (s) {
+                .yes => "yes",
+                .no => "none",
+                .forked => "forked",
+                .climbed => "climbed",
+                .chased => "chased",
+            };
+        }
+    };
+
+    /// Stand on a state the walk decided to arrive in, so it can carry on
+    /// above it. False is the overlay full, which is the walk giving up.
+    fn push(a: *Ahead, to: u32) bool {
+        if (a.ups == climb) return false;
+        a.up[a.ups] = to;
+        a.ups += 1;
+        return true;
+    }
+};
 
 /// The first offset past `at` worth trying again from, when nothing lexed
 /// there at all. One byte, unless `at` is inside a word, in which case the
@@ -374,10 +723,55 @@ pub const Gather = struct {
     /// Where to record the moves, when a caller wants the parse's own account
     /// of what it did rather than a re-derivation of it.
     trail: ?*std.ArrayList(Move),
-    /// Whether a fork stood while `trail` was being written, which makes the
-    /// record one file's moves interleaved with a reading that is not the
-    /// file's. Sticky: the trail cannot be repaired, only refused.
+    /// Whether the trail holds two readings' moves interleaved, which is a
+    /// record neither of them made and cannot be repaired, only refused.
+    ///
+    /// Nothing sets it any more, and that is the point rather than an
+    /// oversight: `strands` keeps each live reading's moves apart and welds the
+    /// survivor's in, so the interleaving this guarded against no longer
+    /// happens. It stood for two years and cost every forking grammar its whole
+    /// incremental path - one fork anywhere forfeited the tiling for the file,
+    /// including every token before the fork opened - while eleven lines below
+    /// where it was set the parse already knew when the fork ended. Kept as the
+    /// name of the hazard and as the flag a future writer into the trail has to
+    /// either honour or re-raise. Round 15.
     torn: bool,
+    /// How many times a fork was created, and how many of those the parse
+    /// later collapsed back to one reading. `torn` says a fork happened; these
+    /// say how often and whether it stayed. A grammar whose table can fork and
+    /// whose input never makes it is a different animal from one that forks
+    /// forty times and resolves every one, and only the second is worth
+    /// recording a trail per limb for.
+    rifts: u32,
+    roosts: u32,
+    /// How many readings were dropped for standing on a stack another reading
+    /// was already standing on. A fork that folds back to the same states is
+    /// not a second reading of anything - see `twinned` - and counting the
+    /// collapses is what distinguishes a grammar whose conflicts really do
+    /// carry two derivations from one that was paying 2^n for one derivation
+    /// written n ways.
+    merges: u32,
+    /// How many declared conflicts went unforked because `crowd` or `skeins` had
+    /// no room. This is the number that says whether either cap is a live limit,
+    /// and it only became answerable once `collapse` stopped filling the budget
+    /// with copies: a denial now means the loop ran out of room for a *genuine*
+    /// alternative, which is a different and worse thing than running out of
+    /// room for the eighth spelling of one derivation.
+    denied: u32,
+    /// One move list per live reading while a fork stands. A fork is the only
+    /// thing that makes the flat trail a lie - two readings appending into it
+    /// interleave a record neither of them made - so each reading writes its
+    /// own moves here instead, and the survivor's are spliced into the trail
+    /// when the fork collapses. Pooled: the lists are cleared and reused, so a
+    /// file that forks ten times allocates for the widest fork, not for ten.
+    strands: std.ArrayList(std.ArrayList(Move)),
+    /// How many of `strands` are handed out right now. The pool itself only
+    /// grows, so a file that forks ten times pays one allocation per strand of
+    /// the widest fork and none after that.
+    spun: u32,
+    /// Where a move goes right now - `sole` for the trail, otherwise an index
+    /// into `strands`. Set by `absorb` as it takes each reading in turn.
+    pen: u32,
 
     /// Where the last token ended. Where a rule that consumed nothing sits.
     at: u32,
@@ -419,6 +813,56 @@ pub const Gather = struct {
     /// first time. A file that needed no mending reports and behaves exactly
     /// as it did.
     mends: u32,
+    /// Bytes those mends walked past, and the length of the file they are a
+    /// share of. The pair the fuse is asked of - a count of mends cannot tell
+    /// a file with sixty small holes from a file that was skipped whole, and
+    /// telling those apart is the entire job of the fuse.
+    skipped: u32,
+    /// Where each of those mends was, in order. The counts above are this list
+    /// folded; a reader that wants to know which bytes were repaired rather
+    /// than how many needs the sites, and nothing else in the runtime keeps
+    /// them. Handed to the `Quire` by `finish`.
+    scars: std.ArrayList(quire.Scar),
+    /// Whether the second move is available at all.
+    ///
+    /// A vocabulary switch, not a tuning knob: on, a refusal may be repaired by
+    /// supplying a terminal as well as by deleting one; off, this loop has the
+    /// one move it had before `supply` existed. It is here because **the
+    /// control for measuring what the second move bought has to be the same
+    /// binary over the same tree** - ten agents edit this checkout at once, so
+    /// a control built from another commit is a control that differs in more
+    /// than the thing under test. Any board can now price both arms of that
+    /// comparison without a second pin, and can keep doing it after this lane.
+    ///
+    /// ## Why `init` leaves it off and only the CLI turns it on
+    ///
+    /// The one caller that was measured is `outliner parse`, and it is also the
+    /// only one that reads a file once. The **incremental** path does not: an
+    /// amend replays a recorded trail, and the trail's alignment marks are one
+    /// per `read`, indexed by token count, offered to a later parse as "resume
+    /// here in this state". A supply scribes a `read` that keeps that index
+    /// 1:1 - which is the whole reason `plant` lays its own leaf rather than
+    /// reusing `perch` - but the mark it adds points at a byte where re-lexing
+    /// yields the *real* token and not the ghost, and no test in this tree has
+    /// ever offered a graft a zero-width token to land on.
+    ///
+    /// So the default is the behaviour every existing caller already has, and
+    /// the surface that measured the change is the surface that asks for it.
+    /// This is scoping, not gating: the argument for the second move is a
+    /// measurement of `square` against a tree-sitter oracle over whole files,
+    /// and that measurement says nothing about resume. Turning it on for
+    /// `weave` wants its own evidence and is the next lane's third brief.
+    supplying: bool,
+    /// Terminals supplied, and refusals where more than one would have done.
+    /// See `supply`, and `Quire.supplied` for why neither is `mends`.
+    supplies: u32,
+    spurned: u32,
+    /// Every anonymous terminal this grammar has, gathered once. The candidate
+    /// set a supply chooses from, and the whole reason `supply` is a loop over
+    /// a short list rather than over `terminal_count` with a shape test inside
+    /// it - most grammars spell far more patterns than literals.
+    literals: []const g.Symbol,
+    wide: u32,
     why: ?quire.Stop,
     /// Whether the last mend kept the stack rather than felling it. Read only
     /// by `relent`, and cleared by any token that shifts, so the benefit of
@@ -438,6 +882,11 @@ pub const Gather = struct {
         errdefer forks.deinit(gpa);
         const sprigs = try Sprig.all(gpa, gr);
         errdefer gpa.free(sprigs);
+        var literals: std.ArrayList(g.Symbol) = .empty;
+        errdefer literals.deinit(gpa);
+        for (0..gr.terminal_count) |sym| {
+            if (gr.shapeOf(@intCast(sym)) == .anonymous) try literals.append(gpa, @intCast(sym));
+        }
         return .{
             .gpa = gpa,
             .gr = gr,
@@ -472,6 +921,13 @@ pub const Gather = struct {
             .stood = null,
             .trail = null,
             .torn = false,
+            .rifts = 0,
+            .roosts = 0,
+            .merges = 0,
+            .denied = 0,
+            .strands = .empty,
+            .spun = 0,
+            .pen = sole,
             .at = 0,
             .lone = true,
             .grafted = false,
@@ -484,6 +940,13 @@ pub const Gather = struct {
             .spent = 0,
             .mend = .fell,
             .mends = 0,
+            .skipped = 0,
+            .scars = .empty,
+            .supplying = false,
+            .supplies = 0,
+            .spurned = 0,
+            .literals = try literals.toOwnedSlice(gpa),
+            .wide = 0,
             .why = null,
             .kept = false,
         };
@@ -491,6 +954,8 @@ pub const Gather = struct {
 
     pub fn deinit(x: *Gather) void {
         x.forks.deinit(x.gpa);
+        for (x.strands.items) |*st| st.deinit(x.gpa);
+        x.strands.deinit(x.gpa);
         x.perches.deinit(x.gpa);
         x.stand.deinit(x.gpa);
         x.borne.deinit(x.gpa);
@@ -509,9 +974,11 @@ pub const Gather = struct {
         x.expected.deinit(x.gpa);
         x.keep.deinit(x.gpa);
         x.gpa.free(x.sprigs);
+        x.gpa.free(x.literals);
         x.grown.deinit(x.gpa);
         x.tokens.deinit(x.gpa);
         x.enter.deinit(x.gpa);
+        x.scars.deinit(x.gpa);
         x.* = undefined;
     }
 
@@ -522,9 +989,19 @@ pub const Gather = struct {
         x.bare();
         x.roots.clear();
         x.mends = 0;
+        x.skipped = 0;
+        x.scars.clearRetainingCapacity();
+        x.supplies = 0;
+        x.spurned = 0;
+        x.wide = @intCast(bytes.len);
         x.why = null;
         x.kept = false;
         x.torn = false;
+        x.rifts = 0;
+        x.roosts = 0;
+        x.merges = 0;
+        x.denied = 0;
+        x.unstrand();
         x.lone = true;
         x.grafted = false;
         x.lead = 0;
@@ -539,7 +1016,7 @@ pub const Gather = struct {
 
         while (true) {
             x.offer();
-            const here = x.perches.items[x.first().top].state;
+            var here = x.perches.items[x.first().top].state;
             x.stowed = false;
             const step = try x.scanner.nextKeeping(x.gpa, bytes, x.at, &x.expected, &x.keep);
             const tok: Token = switch (step) {
@@ -559,24 +1036,13 @@ pub const Gather = struct {
                 // the wide slate names goes on to be refused through the same
                 // path as any other, so a truncated parse salvages what it
                 // always salvaged.
-                .stray => |off| (if (x.blame(bytes)) |bt| both: {
-                    var shifts: u32 = 0;
-                    var acts: u32 = 0;
-                    const n: u32 = @intCast(x.t.action.len / x.t.width);
-                    for (0..n) |st| {
-                        const c = x.t.at(@intCast(st), bt.symbol);
-                        if (c.kind != .err) acts += 1;
-                        if (c.kind == .shift) shifts += 1;
-                    }
-                    std.debug.print("PROBE blame at={d} named sym={d}; over {d} states sym has {d} actions, {d} shifts; 616 goto-in? {d}\n", .{ off, bt.symbol, n, acts, shifts, @intFromBool(x.t.at(616, bt.symbol).kind != .err) });
-                    break :both bt;
-                } else null) orelse {
+                .stray => |off| x.blame(bytes, off) orelse {
                     // No terminal begins here under any state, so there is no
                     // token to delete. A word is stepped over whole even so:
                     // resuming inside `return` reads `eturn` as an identifier,
                     // and a node over half a word is worse than no node.
                     const stop: quire.Stop = .{ .stray = off };
-                    if (try x.mended(stop, x.first().top, word(bytes, off))) continue;
+                    if (try x.mended(stop, x.first().top, off, word(bytes, off))) continue;
                     try x.stow(null);
                     try x.unwind(x.first().top);
                     return x.finish(x.why orelse stop);
@@ -585,23 +1051,45 @@ pub const Gather = struct {
             };
 
             if (try x.sprout(tok, bytes)) continue;
-            if (try x.lift(here, tok)) continue;
-            if (!try x.absorb(tok)) {
-                const stop: quire.Stop = .{ .unexpected = .{
-                    .symbol = tok.symbol,
-                    .at = tok.start,
-                    // The state that refused it, which is where the folds ran
-                    // out - not `here`, where they started.
-                    .state = x.refused,
-                } };
-                if (try x.mended(stop, x.spent, tok.end())) continue;
-                // The token was refused, so nothing shifted and its leaf is
-                // never made - but the extras read on the way to it were
-                // read, and they are the forest's as much as a trailing
-                // comment is.
-                try x.stow(null);
-                try x.unwind(x.spent);
-                return x.finish(x.why orelse stop);
+            var moved = try x.absorb(tok);
+            // The refused token is the first of two hypotheses, not the
+            // verdict: it may be that nothing is wrong with it and something
+            // in front of it is missing. `supply` asks the table, and a yes
+            // leaves a zero-width terminal shifted and this same token still
+            // to read - so it is re-offered here rather than re-lexed, which
+            // is what makes the retry provably the token we proved readable.
+            //
+            // A second refusal falls straight through to the deletion that
+            // would have happened anyway. `shiftable`'s walk gives up rather
+            // than guessing, so a supply can be admitted on a walk that never
+            // reached the shift; when that happens the cost is one zero-width
+            // node and the ordinary repair, not a loop.
+            if (moved == .refused) if (try x.supply(tok)) {
+                here = x.perches.items[x.first().top].state;
+                moved = try x.absorb(tok);
+            };
+            switch (moved) {
+                .lifted => continue,
+                .took => {},
+                .refused => {
+                    const stop: quire.Stop = .{
+                        .unexpected = .{
+                            .symbol = tok.symbol,
+                            .at = tok.start,
+                            // The state that refused it, which is where the folds ran
+                            // out - not `here`, where they started.
+                            .state = x.refused,
+                        },
+                    };
+                    if (try x.mended(stop, x.spent, tok.start, tok.end())) continue;
+                    // The token was refused, so nothing shifted and its leaf is
+                    // never made - but the extras read on the way to it were
+                    // read, and they are the forest's as much as a trailing
+                    // comment is.
+                    try x.stow(null);
+                    try x.unwind(x.spent);
+                    return x.finish(x.why orelse stop);
+                },
             }
             try x.tokens.append(x.gpa, tok);
             try x.enter.append(x.gpa, here);
@@ -609,9 +1097,19 @@ pub const Gather = struct {
             const was = x.at;
             x.at = tok.end();
             // A ring is a promise that a later parse can stand up where this
-            // one stood. Past a mend this run's own roots are no longer only
-            // what the chain is holding, so it is not a promise to make.
-            if (x.mends == 0) if (x.bough) |b| if (b.tick()) try x.limb(b, was);
+            // one stood. Past a mend the chain is no longer the whole tree -
+            // a `fell` carries what completed before the break off into the
+            // roots - so the promise needs the roots watermark beside it, and
+            // for want of that field the ring used simply not to be taken.
+            //
+            // Not taking it is the same "possible somewhere for standing right
+            // now" shape as `torn` and `x.forking`: one mend anywhere ended
+            // ring-taking for the rest of the file, so every later keystroke
+            // on that file resumed below the first wall or not at all. On the
+            // corpus that is fourteen grammars mending in the thousands, and
+            // in an editor it is the median keystroke, since a file being
+            // typed into is momentarily invalid almost continuously. Round 19.
+            if (x.bough) |b| if (b.tick()) try x.limb(b, was);
         }
     }
 
@@ -645,10 +1143,28 @@ pub const Gather = struct {
     /// before the break followed by what completes after it, and the bytes
     /// under no root are the bytes no reading could place - a gap being the
     /// absence of a root rather than a node claiming to be one.
-    fn mended(x: *Gather, stop: quire.Stop, top: u32, over: u32) !bool {
-        if (x.mend == .none or x.mends >= ceiling) return false;
+    fn mended(x: *Gather, stop: quire.Stop, top: u32, from: u32, over: u32) !bool {
+        if (x.mend == .none) return false;
+        // The fuse, in bytes. `from` rather than `x.at` is the honest left
+        // edge: the bytes between them were read as extras on the way to the
+        // refusal and are in the forest, so charging them to recovery would
+        // meter a heavily commented file as a skipped one. Same distinction
+        // `covered` drew against `reach` - what is under a root, not what a
+        // watermark reached.
+        //
+        // Asked of what recovery has walked *already*, so the mend in hand is
+        // never the one refused. A file smaller than the fuse would otherwise
+        // get no recovery at all from a single wide mend, and one mend is
+        // exactly the case the broken corpus is made of. Termination is
+        // unchanged and does not rest on this: `over` is always past `x.at`.
+        if (x.skipped > @as(u64, x.wide) * fuse / whole) return false;
+        // Read before either branch below, because both clear `live`: the
+        // question is how many readings stood at the *refusal*, and after the
+        // branch the only honest answer is one.
+        const heads: u32 = @intCast(x.live.items.len);
         if (x.why == null) x.why = stop;
         x.mends += 1;
+        x.skipped += over - from;
 
         const fell = switch (x.mend) {
             .none => unreachable,
@@ -698,13 +1214,302 @@ pub const Gather = struct {
         // real folds, and those belong to the run on the *left* of the break.
         // Recorded first, they land on the right of it and get composed into a
         // run whose base they pop straight through.
-        if (x.trail) |tr| try tr.append(x.gpa, .{ .mend = .{ .at = over } });
+        try x.scribe(.{ .mend = .{ .at = over } });
+        // The site, for anyone downstream who needs to tell a stretch this
+        // parse read from one it walked past. Appended after the unwind so the
+        // list orders with the trail, but every field it carries about the
+        // break itself was read before it - see `heads`.
+        try x.scars.append(x.gpa, .{
+            .at = from,
+            .over = over,
+            .heads = heads,
+            .shifted = @intCast(x.tokens.items.len),
+            .felled = fell,
+            .why = stop,
+        });
         x.at = over;
         return true;
     }
 
+    /// The other hypothesis about a refusal: nothing is wrong with this token
+    /// and a terminal in front of it is missing.
+    ///
+    /// True means one was supplied, the stack read it, and the caller should
+    /// offer the same token again. False means the parse should repair the way
+    /// it always did.
+    ///
+    /// ## Why this is a rule and not a heuristic
+    ///
+    /// The tables already know what each state wants, and most states want
+    /// several things, so "a terminal is legal here" justifies nothing. What
+    /// justifies a supply is the *pair*: a terminal that, once read, makes the
+    /// token the file actually holds readable again. That is the grammar
+    /// naming the omission rather than the parser guessing at one, and it is
+    /// asked of the stack that is standing rather than of a state in the
+    /// abstract - `follows` walks the real chain down.
+    ///
+    /// Three clauses, and each one is a claim that can be wrong on its own:
+    ///
+    ///   1. **Anonymous only.** An anonymous terminal is a literal the grammar
+    ///      spells itself, so "a `}` is missing" is a complete statement. A
+    ///      named terminal is a pattern; a zero-width instance of one is a
+    ///      token no lexer could produce, and supplying it would assert text is
+    ///      missing while declining to say which text. The layout terminals
+    ///      that legitimately *are* zero-width - swift's `_implicit_semi`,
+    ///      haskell's layout hand - are named, and they are the scanner's to
+    ///      produce, not recovery's to invent.
+    ///   2. **The refused token must resume.** Not "the supply is shiftable".
+    ///      This is what stops an insertion letting the parse limp on through
+    ///      nonsense, and it is also the termination proof: a supply is always
+    ///      immediately followed by a real shift, so the offset advances and no
+    ///      byte can be supplied into twice.
+    ///   3. **Exactly one candidate.** Two terminals that would each resume the
+    ///      parse is the table declining to say which, and choosing there is
+    ///      worse than not choosing: a wrong delimiter builds a real subtree
+    ///      over bytes the author grouped differently. Counted as `spurned`
+    ///      rather than resolved, because a ranking rule is a different claim
+    ///      than this one and wants its own evidence.
+    ///
+    /// No constant is introduced. The two bounds are `climb` and `chase`, which
+    /// `shiftable` was already spending on every token of every parse.
+    ///
+    /// ## Where it is asked from
+    ///
+    /// `x.spent` - the perch the table's own reading died on, after the folds
+    /// this token forced. Those folds are already committed to the stack, so
+    /// this is the configuration the refusal is genuinely standing in and the
+    /// one `mended`'s `keep` would re-seat on. Not `x.live`: a fold under
+    /// `x.lone` shrinks the perch array, so a reading's recorded top can be an
+    /// index that no longer exists by the time the refusal is reported.
+    fn supply(x: *Gather, tok: Token) !bool {
+        if (!x.supplying or x.mend == .none) return false;
+        // The same fuse `mended` is held to. A supply walks past no bytes so it
+        // cannot move the numerator, but a file this far gone is one recovery
+        // has already declined to keep reading, and paying a candidate search
+        // per token to keep saying so is the one shape this is slow in.
+        if (x.skipped > @as(u64, x.wide) * fuse / whole) {
+            return x.declined("fuse", tok);
+        }
+        // The perch the refusal stood on is gone: a fold under `x.lone` shrinks
+        // the array, so the recorded top can outlive the thing it indexed.
+        // There is no configuration left to ask a question of.
+        if (x.spent >= x.perches.items.len) return x.declined("unseated", tok);
+        // A supply repairs an *omission*, and an omission is only a thing
+        // relative to something the author began. On the ground there is no
+        // such thing: nothing has been read, so a terminal refused here is
+        // simply not a legal start, and writing a prefix that makes it legal
+        // manufactures a construct rather than completing one.
+        //
+        // This is not a nicety. Without it the two moves eat each other: a
+        // `fell` stands the parse up in state zero at the byte after the token
+        // it deleted, and the very next thing the ground refuses is whatever
+        // that token was *part* of - so the parse deletes a `"` and then
+        // supplies a `"` so the string body it left behind can be read. Both
+        // repairs are individually table-justified and together they are a
+        // no-op with two scars.
+        if (x.deep(x.spent) == 0) return x.declined("ground", tok);
+        // Both read before anything moves. `heads` taken after the plant would
+        // be one on every scar of every grammar - the constant-field trap this
+        // channel already fell into once - and `shifted` would count the
+        // supplied token as a token this parse had read when it refused.
+        const heads: u32 = @intCast(x.live.items.len);
+        const shifted: u32 = @intCast(x.tokens.items.len);
+
+        var give: ?g.Symbol = null;
+        // The positive test. `none` claims *no literal terminal could stand
+        // for the refused external* - a claim about the table. A walk that ran
+        // out of `climb` or `chase`, or hit a declared fork, did not establish
+        // it: that candidate might have resumed the parse with one more step.
+        // Counted rather than flagged, because one hazy walk out of two
+        // hundred is an instrument nit and two hundred out of two hundred is a
+        // walk that never worked, and the two need different repairs.
+        var hazy: Ahead.Says = .no;
+        var hazes: u32 = 0;
+        for (x.literals) |sym| {
+            const says = x.follows(x.spent, sym, tok.symbol);
+            if (says != .yes) {
+                if (says != .no) {
+                    hazes += 1;
+                    if (hazy == .no) hazy = says;
+                }
+                continue;
+            }
+            if (give != null) {
+                // Two answers is no answer. Recorded here rather than inferred
+                // downstream, because "no repair exists" and "several do" are
+                // the two halves of the residue and only the parse can tell
+                // them apart.
+                x.spurned += 1;
+                assay.trace(.quire, "spurned: {s} and {s} both resume {s} at {d} in state {d}\n", .{
+                    x.gr.nameOf(give.?), x.gr.nameOf(sym), x.gr.nameOf(tok.symbol), tok.start, x.refused,
+                });
+                return false;
+            }
+            give = sym;
+        }
+        // Said on its own line rather than folded into the `stood down` word,
+        // so the shape downstream already parses does not move and the
+        // severity is readable: how many of how many candidates the walk could
+        // not tell about. A grammar with no anonymous symbols at all reads
+        // `0 of 0`, which is a vacuous `none` and the third way this bucket
+        // could have been lying.
+        //
+        // Emitted whatever the outcome, because a *supply* made while some
+        // other candidate was untellable is the same weakness pointing the
+        // other way: `give` is the only literal that said yes, but it is not
+        // established that it is the only one that would have. The `spurned`
+        // arm above returns mid-loop and so has no count - that is a real hole
+        // and saying nothing is the honest form of it.
+        if (hazes != 0) assay.trace(.quire, "unsure ({s}): {d} of {d} literals at {d} in state {d}\n", .{
+            hazy.word(), hazes, x.literals.len, tok.start, x.refused,
+        });
+        const sym = give orelse return x.declined(hazy.word(), tok);
+
+        // Against the last byte the stack consumed, not against the refused
+        // token. See `plant`: this is where the omission is, and it is the
+        // only offset at which a zero-width child is inside its parent.
+        const anchor = x.perches.items[x.spent].end;
+        const grown = try x.plant(x.spent, sym, anchor) orelse return false;
+        assay.trace(.quire, "supplied: {s} at {d} so state {d} can read {s}\n", .{
+            x.gr.nameOf(sym), anchor, x.refused, x.gr.nameOf(tok.symbol),
+        });
+        // Every other reading died with this one; the parse stands where the
+        // repair left it, exactly as `mended`'s `keep` leaves it.
+        x.live.clearRetainingCapacity();
+        try x.live.append(x.gpa, .{ .top = grown });
+        x.lone = true;
+
+        if (x.why == null) x.why = .{
+            .unexpected = .{ .symbol = tok.symbol, .at = tok.start, .state = x.refused },
+        };
+        x.supplies += 1;
+        try x.scars.append(x.gpa, .{
+            .at = anchor,
+            .over = anchor,
+            .gave = sym,
+            .heads = heads,
+            .shifted = shifted,
+            .felled = false,
+            .why = .{
+                .unexpected = .{ .symbol = tok.symbol, .at = tok.start, .state = x.refused },
+            },
+        });
+        return true;
+    }
+
+    /// Why the second move stood down here, said once and always false.
+    ///
+    /// The residue is the point. A refusal insertion declined is one of six
+    /// different things - `fuse` (recovery had already given up on the file),
+    /// `unseated` (the perch the refusal stood on was folded away), `ground`
+    /// (nothing standing to have omitted anything from), `none` (every literal
+    /// reached a *table* no), and `forked`/`climbed`/`chased` (the walk
+    /// declined to say, at a declared ambiguity or at one of the two budgets)
+    /// - plus the `spurned` counter, which is the only one a *ranking* rule
+    /// could close.
+    ///
+    /// The last three used to be spelled `none` as well, and that is what made
+    /// `none` a residual: it was whatever fell through, so a spent budget and
+    /// an honest miss produced the same word and no downstream instrument
+    /// could separate them. They are named here because naming them is the
+    /// only place the distinction still exists - by the time `supply` returns,
+    /// every one of them is the same `false`. Compiles out unless
+    /// `OUTLINER_TRACE=quire` is set.
+    fn declined(x: *const Gather, why: []const u8, tok: Token) bool {
+        assay.trace(.quire, "stood down ({s}): {s} at {d} in state {d}\n", .{
+            why, x.gr.nameOf(tok.symbol), tok.start, x.refused,
+        });
+        return false;
+    }
+
+    /// Read a terminal that is not in the file: fold to the state that shifts
+    /// it, then shift it over no bytes at all.
+    ///
+    /// The shift path, but not `perch`'s, and the difference is the two things
+    /// a token nobody wrote must not take from the token that comes after it.
+    ///
+    /// **Its offset.** A supply goes at `at` - the end of the last byte the
+    /// stack consumed - and not at the refused token's start. The parse is
+    /// asserting the author finished a construct and omitted its end, so the
+    /// end belongs against the last thing they did write; and the whitespace
+    /// and comments between belong to the token they were read in front of.
+    /// This is also a soundness requirement rather than a taste: `reduce`
+    /// spans a node over the children that consumed something, so a zero-width
+    /// child past the last real one is a child outside its parent, which is
+    /// the `loose` half of what `--sound` counts. Measured: with the ghost at
+    /// the refused token's start, `int x = 1 \n return x;` yields the right
+    /// tree with `; [31,31) in declaration [19,28)` hanging off the end of it.
+    ///
+    /// **Its extras.** `stow` merges everything read since the last token into
+    /// the run in front of the token in hand, and it runs once. Spending it
+    /// here would put the newline and the comment before the missing `;` in
+    /// front of the *supply*, out of offset order with a leaf that now sits
+    /// behind them. So this lays down the ghost's own leaf and leaves `stow`
+    /// unspent for the real token, which is what puts a comment written before
+    /// a supplied `}` inside the block it closes.
+    ///
+    /// `absorb` is not reused either: it would offer the graft a lift at a
+    /// zero-width position and split on a declared conflict, and neither is a
+    /// thing to do with a token nobody wrote.
+    ///
+    /// The token stream gets it. `weave` builds one alignment mark per `read`
+    /// in the trail and a ring indexes them by token count, so a move with no
+    /// token behind it would slide every mark past it by one. The cost is that
+    /// a later parse re-lexing the recorded stream finds no zero-width literal
+    /// there and declines the ring - a cold resume on a file that was
+    /// repaired, which is the conservative half of the trade.
+    fn plant(x: *Gather, top: u32, sym: g.Symbol, at: u32) !?u32 {
+        const ghost: Token = .{ .symbol = sym, .start = at, .len = 0 };
+        var t = top;
+        for (0..chase) |_| {
+            const state = x.perches.items[t].state;
+            const act = x.t.at(state, sym);
+            switch (act.kind) {
+                .shift => {
+                    const own: u32 = @intCast(x.borne.len());
+                    var owns: u32 = 0;
+                    if (x.gr.shapeOf(sym).visible()) {
+                        try x.bear(&x.borne, try x.mint(.of(sym), at, 0, .{}), .{});
+                        owns = 1;
+                    }
+                    try x.scribe(.{ .read = .{
+                        .at = state,
+                        .symbol = sym,
+                        .from = at,
+                        .end = at,
+                    } });
+                    const grown = try x.push(t, .{
+                        .state = act.value,
+                        .own = own,
+                        .owns = owns,
+                        // No extras of its own, and none borrowed: the run in
+                        // front of the real token is still unspent.
+                        .lead = own,
+                        .leads = 0,
+                        .start = at,
+                        .end = at,
+                    });
+                    try x.tokens.append(x.gpa, ghost);
+                    try x.enter.append(x.gpa, state);
+                    return grown;
+                },
+                .reduce => t = try x.fold(t, act.value) orelse return null,
+                .err, .accept => return null,
+            }
+        }
+        return null;
+    }
+
     /// Put the parse on the ground: one perch holding nothing, in state zero.
+    ///
+    /// Reached either because no ring was on offer or because every ring tried
+    /// was declined, and the second of those has been somewhere: `holds` drove
+    /// the scanner over a stretch of the file to ask its question. A file
+    /// begins at byte zero with a scanner that remembers nothing, the same
+    /// thing `mended`'s `fell` says to both halves, so the memory is rewound
+    /// here rather than left wherever the last probe stopped.
     fn ground(x: *Gather) !void {
+        x.scanner.rewind();
         x.nodes.clearRetainingCapacity();
         x.kids.clearRetainingCapacity();
         x.marks.clearRetainingCapacity();
@@ -740,9 +1545,56 @@ pub const Gather = struct {
     /// The rest is `holds`, and a ring that does not hold gives way to the one
     /// below it. Two attempts is nearly always enough, because the reason a
     /// ring fails is that the edit landed exactly on it.
+    ///
+    /// ## Descending past a decline is not free, and the reason is measured
+    ///
+    /// It reads like it should be. `holds` declining says the stretch between
+    /// two rings cannot be shown to lex the way it was recorded - and that is
+    /// exactly the stretch the ordinary loop re-reads if the parse stands on the
+    /// ring *below* it. So a decline looks like an answer to *which* ring to
+    /// mount rather than whether to mount one, resting on the assumption `holds`
+    /// already states for the hundreds of tokens under its own stretch: that no
+    /// token's scan reaches beyond a whole ring's worth of text.
+    ///
+    /// That is worth a lot. verilog's keystroke fell from 8,951 tokens to 1,333
+    /// and 59,481us to 8,138us on the deep edits; scala, lua, haskell and
+    /// markdown all resumed where they had been re-reading the file.
+    ///
+    /// `abide` refuses it, and the witness is one keystroke:
+    ///
+    ///     outliner amend haskell.folio Shared.hs '23548..23548=x'
+    ///
+    /// against a cold parse of the same bytes. Baseline agrees; descending past
+    /// the decline diverges, and diverges *above* the resume - `(wildcard)`
+    /// where the cold parse reads `(variable)`, three `"="` tokens that are not
+    /// in the cold tree. The mount was ring 112 at 23,184, after ring 113
+    /// declined. haskell's layout hand is the reason it is the grammar that
+    /// catches this: `_cmd_layout_start` is recorded at 23,187 and the walk
+    /// answers 23,185, so the two rings disagree about where a zero-width token
+    /// standing between them belongs, and the resumed hand carries that
+    /// disagreement forward into every token after it.
+    ///
+    /// Two narrowings of `holds` were measured beside it and are refused for the
+    /// same reason, which is worth writing down because both look obviously
+    /// safe. Accepting a zero-width token's *offset* (nothing covers no bytes,
+    /// so there is nothing for an edit to have changed) costs `abide` five
+    /// haskell keystrokes: those tokens are in the tree, so an offset is a leaf
+    /// boundary. And refusing a zero-width terminal the walk volunteers in front
+    /// of the recorded token - swift's `_implicit_semi` at 13,246 where the parse
+    /// read `public` at 13,249 - hides the case where the *bytes* now produce
+    /// one, which is the case the walk exists to catch. The walk cannot tell a
+    /// slate artefact from a changed byte, and every narrowing of it is a guess
+    /// about which it is looking at.
+    ///
+    /// See `research/keystroke/RESULT-3-slate.md`. What would settle it is
+    /// `offer`'s own slate, and that needs the stack: `shiftable` follows folds
+    /// down the one that is standing, and nothing is mounted here yet.
     fn alight(x: *Gather, b: *const Bough, bytes: []const u8) !?u32 {
         const gr = x.graft orelse return null;
-        if (gr.firm == 0 or b.rings.items.len == 0) return null;
+        if (gr.firm == 0 or b.rings.items.len == 0) {
+            assay.trace(.weave, "alight: none - firm={d} rings={d}\n", .{ gr.firm, b.rings.items.len });
+            return null;
+        }
         // A resume that believes a snapshot because it exists: no `firm`, no
         // re-lex, just the newest stack there is. The control for both checks.
         if (gr.trusting) {
@@ -750,13 +1602,39 @@ pub const Gather = struct {
             return if (x.fits(b.rings.items[last])) last else null;
         }
 
-        var i = b.before(gr.firm) orelse return null;
+        var i = b.before(gr.firm) orelse {
+            assay.trace(.weave, "alight: no ring at or below firm={d} of {d} rings (first at {d})\n", .{
+                gr.firm, b.rings.items.len, b.rings.items[0].at,
+            });
+            return null;
+        };
+        // Which of the three questions turned each candidate away. A resume
+        // that does not happen is indistinguishable in the cost line from one
+        // that happened and saved nothing, and the three want different
+        // repairs: `seam` is the old tiling having no boundary here, `fits` is
+        // a watermark past the tree on offer, `holds` is the stretch re-lexing
+        // differently. Counted rather than printed per candidate because
+        // `tries` is four and the interesting number is which one is always
+        // the answer.
+        var unseamed: u32 = 0;
+        var unfit: u32 = 0;
+        var unheld: u32 = 0;
         var tries: u32 = 4;
         while (tries > 0) : (tries -= 1) {
-            if (x.fits(b.rings.items[i]) and try x.holds(b, i, bytes)) return i;
-            if (i == 0) return null;
+            const at = b.rings.items[i].at;
+            if (!gr.seamed(at)) {
+                unseamed += 1;
+            } else if (!x.fits(b.rings.items[i])) {
+                unfit += 1;
+            } else if (!try x.holds(b, i, bytes)) {
+                unheld += 1;
+            } else return i;
+            if (i == 0) break;
             i -= 1;
         }
+        assay.trace(.weave, "alight: declined - firm={d} unseamed={d} unfit={d} unheld={d} lowest={d}\n", .{
+            gr.firm, unseamed, unfit, unheld, b.rings.items[i].at,
+        });
         return null;
     }
 
@@ -770,6 +1648,7 @@ pub const Gather = struct {
     inline fn fits(x: *const Gather, r: Bough.Ring) bool {
         const old = x.graft.?.old;
         return r.nodes <= old.nodes.len and r.kids <= old.kids.len and
+            r.roots <= old.roots.len and
             r.token <= x.tokens.items.len and r.token <= x.enter.items.len and
             r.trail <= (if (x.trail) |tr| tr.items.len else 0);
     }
@@ -796,6 +1675,16 @@ pub const Gather = struct {
     /// token in front of it is re-read like any other, which is what would
     /// catch it being reached into.
     fn holds(x: *Gather, b: *const Bough, i: u32, bytes: []const u8) !bool {
+        // The probe borrows the loop's own extras list, and it is a question
+        // rather than a move, so it leaves nothing in it. `nextKeeping`
+        // appends, and this walks tens of tokens: whatever stood in front of
+        // the last one it read would otherwise still be sitting there when the
+        // first real `stow` runs, and get minted a second time as leaves at
+        // offsets this parse has already accounted for. That is a duplicated
+        // leading comment in the tree, and it does not need the resume to
+        // succeed - a *declined* ring falls through to `ground`, which starts
+        // a whole cold parse on top of the residue. Round 21.
+        defer x.keep.clearRetainingCapacity();
         const r = b.rings.items[i];
         const back: struct { at: u32, token: u32 } = if (i == 0)
             .{ .at = 0, .token = 0 }
@@ -826,11 +1715,25 @@ pub const Gather = struct {
             switch (try x.scanner.nextKeeping(x.gpa, bytes, at, &x.expected, &x.keep)) {
                 .token => |got| {
                     if (got.symbol != want.symbol or got.start != want.start or got.len != want.len) {
+                        assay.trace(.weave, "holds: ring {d} at {d} wanted {s} {d}..{d} got {s} {d}..{d} from state {d}\n", .{
+                            i,                        at,
+                            x.gr.nameOf(want.symbol), want.start,
+                            want.end(),               x.gr.nameOf(got.symbol),
+                            got.start,                got.end(),
+                            state,
+                        });
                         return false;
                     }
                     at = got.end();
                 },
-                else => return false,
+                else => |no| {
+                    assay.trace(.weave, "holds: ring {d} at {d} wanted {s} {d}..{d} got {s} from state {d}\n", .{
+                        i,          at,         x.gr.nameOf(want.symbol),
+                        want.start, want.end(), @tagName(no),
+                        state,
+                    });
+                    return false;
+                },
             }
         }
         return at == r.at;
@@ -861,6 +1764,25 @@ pub const Gather = struct {
         // places under the restored kids are blank rather than lost.
         x.marks.clearRetainingCapacity();
         if (x.forking) try x.marks.appendNTimes(x.gpa, .{}, r.kids);
+        // What the break already closed over. These are roots of the tree this
+        // resume is continuing, not of the prefix it is standing on, so they
+        // are adopted rather than re-derived - the same move as the nodes above
+        // and sound for the same reason: they were raised out of bytes below
+        // the resume that the edit did not touch. Their marks were spent into
+        // those nodes by the parse that made them, so blanks here say nothing
+        // and change nothing, exactly as for the kids.
+        try x.roots.ref.appendSlice(x.gpa, old.roots[0..r.roots]);
+        if (x.forking) try x.roots.mark.appendNTimes(x.gpa, .{}, r.roots);
+        x.mends = r.mends;
+        x.skipped = r.skipped;
+        // The sites behind the resume are the old parse's, and they are still
+        // true of the bytes below it - the same adoption as the roots above,
+        // sound for the same reason. Restored rather than re-derived because
+        // this resume will never visit those bytes to derive them again, and a
+        // scar list one mend short of `mends` is a list nobody can trust.
+        std.debug.assert(r.mends <= old.scars.len);
+        try x.scars.appendSlice(x.gpa, old.scars[0..r.mends]);
+        if (r.mends > 0) x.why = old.stop;
 
         x.tokens.shrinkRetainingCapacity(r.token);
         x.enter.shrinkRetainingCapacity(r.token);
@@ -898,6 +1820,23 @@ pub const Gather = struct {
     fn limb(x: *Gather, b: *Bough, was: u32) !void {
         if (!x.lone or x.grafted or x.live.items.len != 1) return;
         if (x.at == was) return;
+        // A ring standing above a break used to be declined here whenever the
+        // grammar could fork, over java returning a `program` with its leading
+        // `(block_comment)` twice at edit 215 of seed 0x20575EED0F110003. The
+        // decline is gone, and the negative result is the part worth keeping:
+        // the duplication was never the ring's. `holds` left the extras of its
+        // last probe token sitting in `x.keep`, and the first `stow` after it
+        // minted them a second time - so the failing edit resumed nothing and
+        // lifted nothing, and no ring-past-a-mend machinery ran in it at all.
+        // Taking rings past mends only made the probe run more often, which is
+        // why the two looked like one defect. With the probe cleaning up after
+        // itself the same stream is green under `.whole`, 75 of its resumes
+        // stand over a hole, and `Bough.verify` finds no ring in it carrying a
+        // node twice.
+        //
+        // So there is nothing here to narrow to "did a fork stand between this
+        // ring and the mend below it". `x.forking` was standing in for a
+        // defect one function away. Round 21.
         try b.keep(.{
             .at = x.at,
             .token = @intCast(x.tokens.items.len),
@@ -908,6 +1847,9 @@ pub const Gather = struct {
             .perched = 0,
             .ref = 0,
             .refed = 0,
+            .roots = @intCast(x.roots.ref.items.len),
+            .mends = x.mends,
+            .skipped = x.skipped,
         }, x.perches.items, x.borne.all(), x.nodes.items, x.remembers());
     }
 
@@ -925,15 +1867,53 @@ pub const Gather = struct {
     inline fn first(x: *const Gather) Reading {
         var best = x.live.items[0];
         for (x.live.items[1..]) |v| {
-            if (v.rank < best.rank) best = v;
+            if (v.beats(best)) best = v;
         }
         return best;
     }
 
+    /// One line per fork, under `OUTLINER_TRACE=quire`: which limb the reading
+    /// in hand kept, which one it left standing beside it, and where.
+    ///
+    /// `rifts`, `denied` and `merges` say how *often* the parse split. None of
+    /// them can say whether the tree that came back is the one the split was
+    /// for, and that is the only question a wrong-limb defect asks. Verilog's
+    /// cost the corpus a full afternoon of bisecting three-line modules against
+    /// `outliner state`, because the cell that chose was invisible from both
+    /// ends: the table prints two actions and the tree prints one shape, with
+    /// nothing in between saying which action produced it.
+    fn said(
+        x: *const Gather,
+        what: []const u8,
+        state: u32,
+        tok: Token,
+        rank: u32,
+        keep: lalr.Action,
+        cast: lalr.Action,
+    ) void {
+        if (!assay.lit(.quire)) return;
+        assay.trace(.quire, "{s}: state {d} on {s} at {d} rank {d} - keeps {f}, casts {f}\n", .{
+            what,
+            state,
+            x.gr.nameOf(tok.symbol),
+            tok.start,
+            rank,
+            Limb{ .gr = x.gr, .act = keep },
+            Limb{ .gr = x.gr, .act = cast },
+        });
+    }
+
     fn finish(x: *Gather, why: Stop) !Quire {
+        // A fork that never collapsed still has a survivor - the reading whose
+        // tree this is - so the trail gets its moves rather than nothing. The
+        // alternative is forfeiting a whole file's tiling over a conflict that
+        // was still open when the bytes ran out.
+        if (x.spun > 0 and x.live.items.len > 0) try x.weld(x.first().seg);
         if (x.forking) try x.bind();
         const roots = try x.gpa.dupe(quire.Ref, x.roots.ref.items);
         errdefer x.gpa.free(roots);
+        const scars = try x.gpa.dupe(quire.Scar, x.scars.items);
+        errdefer x.gpa.free(scars);
         const nodes = try x.nodes.toOwnedSlice(x.gpa);
         errdefer x.gpa.free(nodes);
         return .{
@@ -944,6 +1924,10 @@ pub const Gather = struct {
             .roots = roots,
             .stop = why,
             .mends = x.mends,
+            .skipped = x.skipped,
+            .supplied = x.supplies,
+            .spurned = x.spurned,
+            .scars = scars,
         };
     }
 
@@ -1125,7 +2109,14 @@ pub const Gather = struct {
     /// byte nothing in the grammar lexes. Tier one stays because it names a
     /// *better* token where it answers - the one a state was actually waiting
     /// for, rather than whichever greedy pattern reaches furthest.
-    fn blame(x: *Gather, bytes: []const u8) ?Token {
+    ///
+    /// Asked at the offset the narrowed attempt failed at rather than at the
+    /// parse's own, because those are not the same byte: the scanner passes
+    /// over the layout between them, and a wide slate handed the earlier offset
+    /// lets whichever terminal reaches furthest name the layout instead of the
+    /// token that is really there. Naming the wrong byte is how a sharper
+    /// verdict becomes a worse one.
+    fn blame(x: *Gather, bytes: []const u8, at: u32) ?Token {
         // Every reading, not just the first: a fork's other branch is as much a
         // place this parse is standing as the branch that happens to be first,
         // and a terminal one of them permits is not a stray byte.
@@ -1140,7 +2131,7 @@ pub const Gather = struct {
             }
         }
         if (asked) {
-            switch (x.scanner.next(bytes, x.at, &x.expected)) {
+            switch (x.scanner.next(bytes, at, &x.expected)) {
                 .token => |tok| return tok,
                 else => {},
             }
@@ -1148,8 +2139,8 @@ pub const Gather = struct {
 
         // Named, not lexed. This slate is every terminal the grammar has, which
         // is a set no state asked for, so the longest member of it is a fact
-        // about the grammar rather than about the offset - see `Scanner.spot`.
-        return switch (x.scanner.spot(bytes, x.at)) {
+        // about the grammar rather than about `at` - see `Scanner.spot`.
+        return switch (x.scanner.spot(bytes, at)) {
             .token => |tok| tok,
             else => null,
         };
@@ -1169,44 +2160,105 @@ pub const Gather = struct {
     /// answer is yes: admitting a terminal the parse then refuses is the old
     /// behaviour, and losing one it could have shifted would be a wrong tree.
     fn shiftable(x: *const Gather, top: u32, sym: g.Symbol) bool {
-        const climb = 8;
-        const chase = 32;
-        // States pushed by folds the walk performed, standing on `base`. Only
-        // these are popped before the real stack is touched.
-        var up: [climb]u32 = undefined;
-        var ups: usize = 0;
-        var base = top;
+        var a: Ahead = .on(x, top);
+        // A fork is a yes without looking: one branch reaching a shift is
+        // enough to make the terminal real. So is a walk that gave up - see
+        // `climb`.
+        return switch (a.take(sym)) {
+            .stops => false,
+            .reads, .done, .unsure => true,
+        };
+    }
 
-        for (0..chase) |_| {
-            const here = if (ups > 0) up[ups - 1] else x.perches.items[base].state;
-            // Where the author declared the cell ambiguous there is a second
-            // action this walk is not following, and `absorb` would split
-            // rather than choose. One branch reaching a shift is enough to
-            // make the terminal real, so a fork is a yes without looking.
-            if (x.forking) if (x.forks.at(here, sym) != null) return true;
-            const act = x.t.at(here, sym);
-            switch (act.kind) {
-                .err => return false,
-                .shift, .accept => return true,
-                .reduce => {
-                    const p = x.gr.productions[act.value];
-                    var n = p.rhs.len;
-                    const virtual = @min(ups, n);
-                    ups -= virtual;
-                    n -= virtual;
-                    if (n > 0) {
-                        if (x.deep(base) < n) return false;
-                        for (0..n) |_| base = x.below(base);
-                    }
-                    const under = if (ups > 0) up[ups - 1] else x.perches.items[base].state;
-                    const to = x.c.goto(under, p.lhs) orelse return false;
-                    if (ups == climb) return true;
-                    up[ups] = to;
-                    ups += 1;
-                },
-            }
-        }
-        return true;
+    /// Whether supplying `give` here would let `want` be read.
+    ///
+    /// The insertion hypothesis, asked of the table and nothing else: run the
+    /// folds `give` forces, shift it, and from there run the folds `want`
+    /// forces and see whether a shift is on the other side of *those*. Two legs
+    /// of the same walk, over one stack neither of them touches.
+    ///
+    /// The second leg is the whole rule. A terminal that is merely legal here
+    /// is not evidence of anything - most states admit several - and supplying
+    /// one on that basis is the parse guessing. A terminal that makes **the
+    /// token the file actually holds** readable again is the grammar saying
+    /// what is missing, and it is also the termination proof: the supply is
+    /// always followed immediately by a real shift, so the offset advances and
+    /// no position can be supplied into twice.
+    ///
+    /// ## The clause that is not here, and the measurement that removed it
+    ///
+    /// This walk used to carry a third demand: that folds run on **both** legs,
+    /// which is the table's way of saying the supply closes something already
+    /// standing rather than opening something new. The argument was that a
+    /// terminal shifting straight out of the standing state is one the state
+    /// was merely willing to admit, so writing it manufactures a construct -
+    /// and c did exactly that, supplying a `{` in front of a file's last `}`
+    /// to build a compound statement neither byte is inside.
+    ///
+    /// It is a good story and the corpus refuted it. Over thirty grammars under
+    /// `--mend=keep`, against the same pinned oracle: with the clause, `square`
+    /// moves **+0** and the parse supplies ten terminals; without it, it moves
+    /// **+3,124**. Half the clause is worse than either whole - requiring the
+    /// fold on the first leg only costs **4,995** `square`, because verilog's
+    /// 48,339 deletions become 15,953 when every supply lands and stay 48,339
+    /// when only some of them do. (Those three are one sweep on the tree of
+    /// the day; the clause has not been re-measured since. The corpus figure
+    /// for *this* rule, re-pinned on `83cf2f249d8b` with both arms in one run,
+    /// is **+2,592** `square`, **-5,308** `crooked`, **-2,540** built.)
+    ///
+    /// That last number is the finding, and it is why no cleverer clause was
+    /// substituted here. What a supply is worth on this corpus is not whether
+    /// its node is right - it is whether the parse stays synchronised, and a
+    /// parse that resynchronises at some walls and not others follows a worse
+    /// trajectory than one that never tries. Repairs are not independently
+    /// scorable, so a rule admitting a *subset* has to earn that subset by
+    /// measurement rather than by argument.
+    ///
+    /// The openers this admits **do** cost, and the charge is live: on tree
+    /// `83cf2f249d8b`, both arms of one sweep, c pays **396** `square` and cpp
+    /// **134** for exactly the `{`-before-the-last-`}` case above. It went away
+    /// for about a day when a press change from another lane stopped both
+    /// grammars refusing under `keep` at all - no refusal, no supply, no charge
+    /// - and it came back when that stopped being true. Believing it gone was
+    /// the flattering reading and it did not survive a re-pin.
+    ///
+    /// So this clause is the wrong answer for the reason measured above, and
+    /// the case it was aimed at is a **standing** defect rather than a
+    /// hypothetical. It is most of the headline: swift gains 1,172 `square` on
+    /// the twelve grammars this was aimed at, c and cpp give back 530 of it,
+    /// and the twelve net **+642**. What is owed is a *ranking* rule that can
+    /// prefer a closer over an opener when both are unique - not this clause,
+    /// which refuses the openers by refusing nearly every supply. `spurned` is
+    /// where the rest of that brief is.
+    ///
+    /// Every uncertainty is a no, which is the opposite of `shiftable`'s
+    /// default and deliberately so. A declared fork means `absorb` would carry
+    /// two readings and this walk followed one; a full overlay or a spent
+    /// budget means the walk stopped early. Either way the answer would be a
+    /// guess, and the cost of a wrong yes here is a node over bytes the author
+    /// never wrote that way.
+    ///
+    /// **Three states, not two, and the third is why this returns an enum.**
+    /// Every non-`yes` is still a no at the call site - the paragraph above is
+    /// unchanged and no repair decision moved. But a caller that folds `no`
+    /// and `cannot tell` together before recording anything can never afterwards
+    /// say which it had, and `supply`'s `none` is precisely a claim that every
+    /// literal was a *table* no. A spent budget masquerading as that claim is
+    /// the residual `residue.py` could not see into.
+    fn follows(x: *const Gather, top: u32, give: g.Symbol, want: g.Symbol) Ahead.Says {
+        var a: Ahead = .on(x, top);
+        const to = switch (a.take(give)) {
+            .reads => |s| s,
+            // Accepting is a table fact: there is no `want` after the end.
+            .done, .stops => return .no,
+            .unsure => return .from(a.hazy),
+        };
+        if (!a.push(to)) return .climbed;
+        return switch (a.take(want)) {
+            .reads, .done => .yes,
+            .stops => .no,
+            .unsure => .from(a.hazy),
+        };
     }
 
     /// Move every live reading over one token: fold until the token can be
@@ -1220,44 +2272,82 @@ pub const Gather = struct {
     /// is enforced, and it is enforced by declining to split rather than by
     /// evicting: the reading in hand always has at least as good a claim as the
     /// one being considered.
-    fn absorb(x: *Gather, tok: Token) !bool {
+    fn absorb(x: *Gather, tok: Token) !Moved {
         if (!x.forking) return x.alone(tok);
         x.work.clearRetainingCapacity();
         x.next.clearRetainingCapacity();
-        for (x.live.items) |v| try x.work.append(x.gpa, .{ .top = v.top, .rank = v.rank });
+        for (x.live.items) |v| try x.work.append(x.gpa, .{
+            .top = v.top,
+            .rank = v.rank,
+            .seg = v.seg,
+            .heft = v.heft,
+            .folds = v.folds,
+        });
         x.lone = x.work.items.len == 1 and !x.grafted;
 
         var i: usize = 0;
         while (i < x.work.items.len) : (i += 1) {
             var top = x.work.items[i].top;
             const rank = x.work.items[i].rank;
+            var heft = x.work.items[i].heft;
+            var folds = x.work.items[i].folds;
             var forced = x.work.items[i].act;
+            x.pen = x.work.items[i].seg;
             while (true) {
                 const state = x.perches.items[top].state;
                 const act = forced orelse take: {
-                    if (x.forking and x.next.items.len + x.work.items.len - i < crowd) {
-                        if (x.forks.at(state, tok.symbol)) |other| {
-                            try x.work.append(x.gpa, .{ .top = top, .rank = rank + 1, .act = other });
+                    // The conflict is looked up before the budget is consulted,
+                    // so a cap that binds can say so. The other order cannot
+                    // tell "no author declared a choice here" from "one did and
+                    // there was no room for it", and those are the two halves of
+                    // whether `crowd` is a live limit or a dead knob.
+                    // A cell may have dropped more than one reading, so this is
+                    // a loop and not an `if`: each rival gets its own strand,
+                    // and the budget is re-consulted per rival rather than per
+                    // cell, so a wide ambiguity spends the cap the same way two
+                    // narrow ones would.
+                    if (x.forking) for (x.forks.at(state, tok.symbol), 1..) |split, born| {
+                        const other = split.other;
+                        if (x.next.items.len + x.work.items.len - i < crowd and
+                            x.spun < skeins)
+                        {
+                            x.said("split", state, tok, rank, x.t.at(state, tok.symbol), other);
+                            // Both readings get a strand before either writes
+                            // another move: the one in hand keeps its history
+                            // and the new one is handed a copy, because up to
+                            // this cell they are the same derivation.
+                            if (x.pen == sole) {
+                                x.pen = try x.strand(sole);
+                                x.work.items[i].seg = x.pen;
+                            }
+                            try x.work.append(x.gpa, .{
+                                .top = top,
+                                .rank = rank + @as(u32, @intCast(born)),
+                                .seg = try x.strand(x.pen),
+                                // The two readings are one derivation up to
+                                // this cell, so they start level and only the
+                                // folds each takes from here can part them.
+                                .heft = heft,
+                                .folds = folds,
+                                .act = other,
+                            });
                             // The perch just handed to the new reading has to
                             // still be there when its turn comes, so nothing
                             // may be taken back from here on.
                             x.lone = false;
                             x.grafted = true;
-                            // Two readings' moves interleaved are not the
-                            // file's moves, and no later collapse makes the
-                            // record retrospectively true.
-                            x.torn = true;
+                            x.rifts += 1;
+                        } else {
+                            x.said("denied", state, tok, rank, x.t.at(state, tok.symbol), other);
+                            x.denied += 1;
                         }
-                    }
+                    };
                     break :take x.t.at(state, tok.symbol);
                 };
                 forced = null;
-                if (rank == 0 and tok.symbol == 38) std.debug.print(
-                    "PROBE chain state={d} act={s} fork={}\n",
-                    .{ state, @tagName(act.kind), x.forks.at(state, tok.symbol) != null },
-                );
                 switch (act.kind) {
                     .err => {
+                        x.said("refuted", state, tok, rank, act, act);
                         // Refuted. Only the table's own reading is worth
                         // reporting from, and only if it is the one that died.
                         if (rank == 0) {
@@ -1267,40 +2357,152 @@ pub const Gather = struct {
                         break;
                     },
                     .shift => {
-                        try x.next.append(x.gpa, .{ .top = try x.perch(top, act.value, tok), .rank = rank });
+                        // The only sound place to offer a lift. Every fold this
+                        // lookahead calls for has run, `state` is the state the
+                        // shift would happen from, and `x.lone` says one reading
+                        // stands on a stack that is still a stack. Nothing was
+                        // folded early to arrive here, because these are
+                        // absorb's own folds - which is the whole reason the
+                        // offer moved in from the driver.
+                        if (x.lone) {
+                            if (try x.lift(top, state, tok)) |grown| {
+                                x.pen = sole;
+                                x.live.items[0] = .{ .top = grown, .rank = rank, .heft = heft, .folds = folds };
+                                return .lifted;
+                            }
+                        } else if (x.graft) |gr| {
+                            gr.asked += 1;
+                            gr.turned_fork += 1;
+                        }
+                        try x.next.append(x.gpa, .{
+                            .top = try x.perch(top, act.value, tok),
+                            .rank = rank,
+                            .seg = x.pen,
+                            .heft = heft,
+                            .folds = folds,
+                        });
                         break;
                     },
-                    .reduce => top = try x.fold(top, act.value) orelse {
-                        if (rank == 0) {
-                            x.refused = state;
-                            x.spent = top;
-                        }
-                        break;
+                    .reduce => {
+                        // The whole of what upstream's stack rank does, in one
+                        // add: the children's ranks are already in this total
+                        // and the parent re-counts them, so the net move is the
+                        // folded production's own declaration. See
+                        // `Reading.beats`.
+                        heft += x.gr.productions[act.value].dynamic;
+                        // And the one node this fold is about to build, which
+                        // is the size half of the same comparison.
+                        folds += 1;
+                        top = try x.fold(top, act.value) orelse {
+                            if (rank == 0) {
+                                x.refused = state;
+                                x.spent = top;
+                            }
+                            break;
+                        };
                     },
                     // Accept is only in the end column, which `absorb` is never
                     // called with; treat it as "nothing further to shift".
                     .accept => {
-                        try x.next.append(x.gpa, .{ .top = top, .rank = rank });
+                        try x.next.append(x.gpa, .{
+                            .top = top,
+                            .rank = rank,
+                            .seg = x.pen,
+                            .heft = heft,
+                            .folds = folds,
+                        });
                         break;
                     },
                 }
             }
         }
-        if (x.next.items.len == 0) {
-            var sprig = false;
-            for (x.sprigs) |sp| {
-                if (sp.first == tok.symbol) sprig = true;
-            }
-            for (x.live.items) |v| std.debug.print(
-                "PROBE fork-refuse sym={d} at={d} refused={d} start_top={d} start_state={d} shiftable={} fork={} sprig={}\n",
-                .{ tok.symbol, tok.start, x.refused, v.top, x.perches.items[v.top].state, x.shiftable(v.top, tok.symbol), x.forks.at(x.perches.items[v.top].state, tok.symbol) != null, sprig },
-            );
-            return false;
-        }
+        x.pen = sole;
+        if (x.next.items.len == 0) return .refused;
+        x.collapse();
         x.live.clearRetainingCapacity();
         try x.live.appendSlice(x.gpa, x.next.items);
         if (x.grafted and x.live.items.len == 1) try x.roost();
-        return true;
+        return .took;
+    }
+
+    /// Keep one of each reading that survived the token, and drop the copies.
+    ///
+    /// Two declared conflicts can each be a real choice and still fold back to
+    /// the same states, and once they have there is nothing left to choose: see
+    /// `twinned`. Carrying both anyway is what makes the reading count double
+    /// per construct instead of returning to one, and the cost is not the memory
+    /// - it is that `absorb` declines to fork once `crowd` readings are standing,
+    /// so a *later* conflict that really does need two readings is answered by
+    /// the table alone. verilog's port list is the worked example: three
+    /// consecutive typed ports fill the budget with eight copies of one
+    /// derivation, and the untyped port that follows then never gets the fork
+    /// that would have read its identifier as the port's name.
+    ///
+    /// `Reading.beats` picks, which is the tie-break `first` already applies at
+    /// the end of the parse - so the tree this yields is the tree the parse would
+    /// have handed back had every copy survived to the last byte, and the
+    /// collapse only decides it sooner. That is a property of the two keys
+    /// agreeing and not of either one, so the three sites move together or the
+    /// sentence stops being true.
+    ///
+    /// That last sentence was tested rather than trusted, on 2026-08-06, and it
+    /// holds: **declining the merge outright for differing-rank twins hands back
+    /// the same trees.** The verilog witness table is byte-identical either way,
+    /// because `first` reaches the same tie-break at the last byte. What it is
+    /// not is free - keeping both costs **57,627 bytes** over five grammars
+    /// (kotlin +24,393, julia +17,820, elixir +7,737, swift +5,102, verilog
+    /// +2,550), because the extra readings fill `crowd` and the later forks that
+    /// mattered are then denied. So this merge is load-bearing rather than an
+    /// optimisation, and it is the *tie-break* and not the merge that decides a
+    /// limb.
+    ///
+    /// Flipping that tie-break to keep the *higher* rank was measured too, and
+    /// it is a coin toss that lands slightly worse: two more verilog witness
+    /// rows seat correctly and verilog describes 846 more nodes, against
+    /// **+677 bytes** of corpus damage (elixir +583, verilog +94) and 160 bytes
+    /// of a php row that was 100% square against tree-sitter. Both arms are
+    /// pinned either side with identical folio shas.
+    /// `research/joinery/verilog/RESULT-5-merge.md` has both boards, and the
+    /// stale-baseline mistake that first read this as a win.
+    ///
+    /// Both of those arms flipped or removed a comparison over *rank*, which is
+    /// the parse loop's own bookkeeping - so both were coin tosses, and both
+    /// landed like one. What was missing is a key the grammar wrote:
+    /// `prec.dynamic`, summed over the fold, which upstream orders its stack
+    /// versions by and which nothing here read until `Reading.heft`. It leads
+    /// the comparison. `research/joinery/limb/` has that board.
+    ///
+    /// A key the grammar wrote is no use to a grammar that wrote none, and two
+    /// of the three that hold the corpus's ambiguity declare zero
+    /// `prec.dynamic`: all 2,708 of verilog's merges and all 536 of haskell's
+    /// read `heft 0 and heft 0`, so until 2026-08-06 rank decided them, and
+    /// rank at a merge is which reading was born first.
+    /// `research/joinery/arity/RESULT-2-reach.md` priced what that costs -
+    /// verilog's 891 entered wide cells opened +1,808 forks and every one died,
+    /// +1,674 of them merged away one step later. The rung between heft and
+    /// rank is now `Reading.folds`, the size of the derivation, which is what
+    /// upstream reaches for at the same point and by the same argument.
+    ///
+    /// Quadratic in the readings standing, which `crowd` bounds at eight, and
+    /// skipped outright for the one reading that is the common case.
+    fn collapse(x: *Gather) void {
+        if (x.next.items.len < 2) return;
+        var kept: usize = 0;
+        each: for (x.next.items) |v| {
+            for (x.next.items[0..kept]) |*k| {
+                if (!x.twinned(v.top, k.top)) continue;
+                const won = if (v.beats(k.*)) v else k.*;
+                assay.trace(.quire, "merged: rank {d} heft {d} folds {d} and rank {d} heft {d} folds {d} stand on the same states; rank {d} heft {d} folds {d} keeps the nodes\n", .{
+                    k.rank, k.heft, k.folds, v.rank, v.heft, v.folds, won.rank, won.heft, won.folds,
+                });
+                k.* = won;
+                x.merges += 1;
+                continue :each;
+            }
+            x.next.items[kept] = v;
+            kept += 1;
+        }
+        x.next.shrinkRetainingCapacity(kept);
     }
 
     /// The same move over a grammar whose tables cannot fork, where there is
@@ -1311,7 +2513,7 @@ pub const Gather = struct {
     /// is nothing to be more speculative than; no set of survivors, because
     /// the survivor is the reading. What is left is the textbook LR drive,
     /// which is what json runs and what it ran before any of this existed.
-    inline fn alone(x: *Gather, tok: Token) !bool {
+    inline fn alone(x: *Gather, tok: Token) !Moved {
         var top = x.live.items[0].top;
         while (true) {
             const state = x.perches.items[top].state;
@@ -1320,9 +2522,18 @@ pub const Gather = struct {
                 .err => {
                     x.refused = state;
                     x.spent = top;
-                    return false;
+                    return .refused;
                 },
-                .shift => top = try x.perch(top, act.value, tok),
+                .shift => {
+                    // Same offer as the forking loop makes, at the same moment:
+                    // folds done, about to shift, one reading. Here there can
+                    // never be a second, so there is no condition to check.
+                    if (try x.lift(top, state, tok)) |grown| {
+                        x.live.items[0].top = grown;
+                        return .lifted;
+                    }
+                    top = try x.perch(top, act.value, tok);
+                },
                 // Accept is only in the end column, which `absorb` is never
                 // called with; treat it as "nothing further to shift".
                 .accept => {},
@@ -1333,19 +2544,29 @@ pub const Gather = struct {
                         // still standing to report it from.
                         x.refused = state;
                         x.spent = top;
-                        return false;
+                        return .refused;
                     };
                     continue;
                 },
             }
             x.live.items[0].top = top;
-            return true;
+            return .took;
         }
     }
 
     /// Take a whole subtree from the previous parse instead of reading the
-    /// bytes under it. True means the offset moved and this token was never
-    /// absorbed at all.
+    /// bytes under it. A new stack top means the offset moved and this token
+    /// was never absorbed at all.
+    ///
+    /// Called from inside the absorb loops, at the shift, and nowhere else.
+    /// It used to be offered from the driver, which meant it had to run the
+    /// lookahead's folds itself to find the state a shift would happen from -
+    /// and a fold run out there, before the loop that owns the worklist, is
+    /// unsound on any grammar that can fork. Four sharper and sharper
+    /// predicates were refused by the fuzz before the A/B that settled it:
+    /// with every candidate declined, so no graft ever ran, java still
+    /// diverged from a cold parse on one edit. No predicate over a corrupt
+    /// stack can be right, so the folds moved rather than the question.
     ///
     /// The refusals are all cheap and all silent, because a lift is an
     /// optimisation and a declined one costs an ordinary parse: no graft, a
@@ -1354,33 +2575,53 @@ pub const Gather = struct {
     /// last of those is about the grammar, and it is the table saying the
     /// old derivation is not one this parse could have made - which is the
     /// answer, not an error.
-    fn lift(x: *Gather, _: u32, tok: Token) !bool {
-        const gr = x.graft orelse return false;
-        if (!gr.lifting) return false;
-        // A lift standing on one of several readings hands its nodes to a
-        // reading that has not earned them, and `roost` has no way to take
-        // them back. The settled stack is the only place this is sound, and on
-        // a conflict-free grammar it is every place.
-        if (x.live.items.len != 1 or x.grafted) return false;
-        const here = try x.ready(tok) orelse return false;
-        if (!gr.aligned(tok.start, here)) return false;
+    fn lift(x: *Gather, top: u32, here: u32, tok: Token) !?u32 {
+        const gr = x.graft orelse return null;
+        if (!gr.lifting) return null;
+        gr.asked += 1;
+        if (!gr.aligned(tok.start, here)) {
+            gr.turned_align += 1;
+            return null;
+        }
         gr.probes += 1;
 
-        for (try gr.stoop(tok.start)) |ref| {
-            const sym = gr.liftable(ref) orelse continue;
+        const chain = try gr.stoop(tok.start);
+        gr.offered += chain.len;
+        // Why the walk passed over everything wider than what it takes, counted
+        // before the take so a probe that lifts nothing still reports. The
+        // chain is ordered widest first, so every candidate seen before the one
+        // taken *is* a wider one that something refused.
+        var missed: u64 = 0;
+        var by_shape: u64 = 0;
+        var by_goto: u64 = 0;
+        var by_break: u64 = 0;
+        if (chain.len > 0) gr.widest += gr.old.nodes[chain[0]].len;
+        for (chain) |ref| {
+            const sym = gr.liftable(ref) orelse {
+                missed += 1;
+                by_shape += 1;
+                continue;
+            };
             const wide = gr.old.nodes[ref].len;
             // One token's worth is a copy with extra steps, and the chain is
             // ordered widest first, so nothing further in is worth trying.
-            if (wide <= tok.len) break;
-            const to = x.c.goto(here, sym) orelse continue;
+            if (wide <= tok.len) {
+                missed += 1;
+                by_break += 1;
+                break;
+            }
+            const to = x.c.goto(here, sym) orelse {
+                missed += 1;
+                by_goto += 1;
+                continue;
+            };
 
-            const top = x.live.items[0].top;
             try x.stow(null);
             const root = try x.transcribe(gr, ref);
             const own = x.borne.len();
             try x.bear(&x.borne, root, .{});
             const end = tok.start + wide;
-            x.live.items[0].top = try x.push(top, .{
+            const grown = try x.push(top, .{
                 .state = to,
                 .own = own,
                 .owns = 1,
@@ -1389,7 +2630,7 @@ pub const Gather = struct {
                 .start = tok.start,
                 .end = end,
             });
-            if (x.trail) |tr| try tr.append(x.gpa, .{
+            try x.scribe(.{
                 .read = .{ .at = here, .symbol = sym, .from = tok.start, .end = end },
             });
             // The stream this parse consumed, with one symbol standing for the
@@ -1400,47 +2641,14 @@ pub const Gather = struct {
             x.at = end;
             gr.lifts += 1;
             gr.skipped += wide;
-            return true;
+            gr.passed += missed;
+            gr.passed_shape += by_shape;
+            gr.passed_goto += by_goto;
+            gr.passed_break += by_break;
+            gr.taken += wide;
+            return grown;
         }
-        return false;
-    }
-
-    /// Run the folds this lookahead calls for, and say what state that leaves
-    /// on top.
-    ///
-    /// The state a token is *read* in is not the state it is *shifted* from:
-    /// between them stand the reductions its lookahead forces. A subtree's
-    /// derivation begins at the shift of its first token, and returns to the
-    /// state right beneath it, so the goto that lands a lifted subtree has to
-    /// start there too. Landing it at the read state instead puts the parse on
-    /// a stack no reading of this file has, which the tree may survive and the
-    /// states will not.
-    ///
-    /// The folds are the ones the ordinary path would run a moment later, so a
-    /// declined lift has cost nothing and changed nothing.
-    fn ready(x: *Gather, tok: Token) !?u32 {
-        var top = x.live.items[0].top;
-        while (true) {
-            const state = x.perches.items[top].state;
-            // A cell the grammar author called contested is where a second
-            // reading is born, and it is born in `absorb` rather than here.
-            if (x.forking and x.forks.at(state, tok.symbol) != null) return null;
-            const act = x.t.at(state, tok.symbol);
-            if (act.kind != .reduce) {
-                x.live.items[0].top = top;
-                return if (act.kind == .shift) state else null;
-            }
-            // Where a second reading can be born at all, a fold run early is a
-            // fold run before the split that might have wanted it. The lift
-            // gives up rather than reorder a forked parse's moves; on a
-            // grammar with no declared conflicts, which is where nearly every
-            // lift happens, there is nothing to give up.
-            if (x.forking) return null;
-            top = try x.fold(top, act.value) orelse {
-                x.live.items[0].top = top;
-                return null;
-            };
-        }
+        return null;
     }
 
     /// Copy one old subtree into this parse's arena, shifted onto its new
@@ -1510,6 +2718,8 @@ pub const Gather = struct {
     /// declares conflicts but reaches none never pays it at all.
     fn roost(x: *Gather) !void {
         x.grafted = false;
+        x.roosts += 1;
+        try x.weld(x.live.items[0].seg);
         x.spine.clearRetainingCapacity();
         var at = x.live.items[0].top;
         while (at != 0) : (at = x.below(at)) try x.spine.append(x.gpa, x.perches.items[at]);
@@ -1535,7 +2745,10 @@ pub const Gather = struct {
             try x.stand.append(x.gpa, .{ .down = @intCast(i -| 1), .depth = @intCast(i) });
         }
         // Sole again, so it speaks for the table: a refusal from here is worth
-        // reporting, which `absorb` only does for rank zero.
+        // reporting, which `absorb` only does for rank zero. Every key goes
+        // back to its default with it - there is nothing left to be ranked
+        // against, and the next fork wants both its readings counting from
+        // this perch rather than from the whole file behind it.
         x.live.items[0] = .{ .top = @intCast(x.perches.items.len - 1), .rank = 0 };
     }
 
@@ -1561,6 +2774,14 @@ pub const Gather = struct {
             while (g_i < x.grown.items.len and x.grown.items[g_i].start < e.start) : (g_i += 1) {
                 try x.bear(&x.borne, x.grown.items[g_i].ref, .{});
             }
+            // An extra was read on the way to the token in hand, so it cannot
+            // begin behind where the parse is standing. The one thing that
+            // ever put one there was a ring probe leaving its own scan in this
+            // list; the tripwire is here rather than in `holds` because this
+            // is where the damage is done - a leaf minted over bytes the parse
+            // has already accounted for - and any future borrower of `keep`
+            // trips it too. Free in release. Round 21.
+            std.debug.assert(e.start >= x.at);
             const leaf = try x.mint(.aside(e.symbol), e.start, e.len, .{});
             try x.bear(&x.borne, leaf, .{});
         }
@@ -1580,10 +2801,50 @@ pub const Gather = struct {
         x.helds = x.borne.len() - x.held;
     }
 
+    /// Record one move where the current reading's moves go.
+    ///
+    /// While no fork stands this is the trail, unchanged. While one does, it is
+    /// the reading's own strand, because the trail is a single sequence and two
+    /// readings writing into it produce a record neither of them made - the
+    /// thing `torn` used to forfeit the whole file over.
+    inline fn scribe(x: *Gather, mv: Move) !void {
+        if (x.pen != sole) return x.strands.items[x.pen].append(x.gpa, mv);
+        if (x.trail) |tr| try tr.append(x.gpa, mv);
+    }
+
+    /// Hand a reading a strand of its own, copying what it has written so far -
+    /// which is its parent's, since up to the split the two readings *are* the
+    /// same derivation and share every move.
+    fn strand(x: *Gather, from: u32) !u32 {
+        const at = x.spun;
+        if (at == x.strands.items.len) try x.strands.append(x.gpa, .empty);
+        x.spun += 1;
+        x.strands.items[at].clearRetainingCapacity();
+        if (from != sole) {
+            try x.strands.items[at].appendSlice(x.gpa, x.strands.items[from].items);
+        }
+        return at;
+    }
+
+    /// The fork is over: the survivor's moves are the file's moves, so they
+    /// join the trail and the strands go back in the pool.
+    fn weld(x: *Gather, seg: u32) !void {
+        if (seg != sole) if (x.trail) |tr| {
+            try tr.appendSlice(x.gpa, x.strands.items[seg].items);
+        };
+        x.unstrand();
+    }
+
+    fn unstrand(x: *Gather) void {
+        for (x.strands.items[0..x.spun]) |*st| st.clearRetainingCapacity();
+        x.spun = 0;
+        x.pen = sole;
+    }
+
     /// A token's own perch, standing on the run `stow` laid down for it.
     inline fn perch(x: *Gather, top: u32, to: u32, tok: Token) !u32 {
         try x.stow(tok);
-        if (x.trail) |tr| try tr.append(x.gpa, .{ .read = .{
+        try x.scribe(.{ .read = .{
             .at = x.perches.items[top].state,
             .symbol = tok.symbol,
             .from = tok.start,
@@ -1622,6 +2883,34 @@ pub const Gather = struct {
         return if (x.forking) x.stand.items[at].depth else at;
     }
 
+    /// Whether two readings are standing on the same states, top to ground.
+    ///
+    /// Every decision either reading can still make is a function of its state
+    /// chain and the bytes left: `offer` and `shiftable` read states, `fold`
+    /// reads the depth and the goto, and the table is indexed by state. So two
+    /// readings with the same chain are not two readings - they are one
+    /// derivation the loop is carrying twice, and they will agree on every token
+    /// to the end of the file. What differs is the tree already built beneath
+    /// them, and `first` was going to hand the finished parse the lowest-ranked
+    /// of them anyway.
+    ///
+    /// Cheap because a fork *shares* the perches below where it came apart, so
+    /// two readings that fold back to the same shape meet at a common perch
+    /// index and the walk stops there. The cost is the divergent suffix - a few
+    /// perches, the ones minted since the conflict - and never the stack.
+    fn twinned(x: *const Gather, a: u32, b: u32) bool {
+        if (a == b) return true;
+        if (x.stand.items[a].depth != x.stand.items[b].depth) return false;
+        var p = a;
+        var q = b;
+        while (p != q) {
+            if (x.perches.items[p].state != x.perches.items[q].state) return false;
+            p = x.stand.items[p].down;
+            q = x.stand.items[q].down;
+        }
+        return true;
+    }
+
     /// Pop this reading's top `p.rhs.len` perches and push what they reduce to.
     /// Null is a table that cannot be followed from here, which on a truncated
     /// file is where the parse stops.
@@ -1656,7 +2945,7 @@ pub const Gather = struct {
         }
         const under = x.perches.items[at].state;
         const to = x.c.goto(under, p.lhs) orelse return null;
-        if (x.trail) |tr| try tr.append(x.gpa, .{ .fold = .{ .under = under, .prod = prod } });
+        try x.scribe(.{ .fold = .{ .under = under, .prod = prod } });
         return try x.reduce(p, mine, at, to);
     }
 
@@ -1668,14 +2957,35 @@ pub const Gather = struct {
         // nullable child sits at the offset the previous token ended, and
         // letting it set the start would pull the node back over the
         // whitespace in front of the first real one.
+        //
+        // Unless it is a **terminal** that consumed nothing and has a node
+        // anyway - a supplied one, or a visible zero-width one the scanner
+        // handed back. That is a different animal from a nullable child: an
+        // absence derived nothing and the span rule is right to ignore it, but
+        // a zero-width token is a place the parse stood and a node a reader
+        // can hold, and a node the span does not reach is a child outside its
+        // parent - the `loose` half of what `--sound` counts, and a real one:
+        // supplying a `{` in front of a file's last `}` built the compound
+        // statement `[41, 42)` around a `{` at `[40, 40)` until this clause
+        // existed.
+        //
+        // Terminal, not merely node-owning, and the difference is 3,561
+        // `square`: a nullable *nonterminal* can own extras - a comment read
+        // in front of it and claimed by nobody else - so keying on `owns`
+        // alone lets a swallowed comment set an edge and pulls thirty
+        // grammars' nodes over their own whitespace.
         var start = x.at;
         var end = x.at;
         var seen = false;
-        for (mine) |*f| {
-            if (f.start == f.end) continue;
+        for (p.rhs, mine) |sym, *f| {
+            if (f.start == f.end and !(f.owns > 0 and sym < x.gr.terminal_count)) continue;
+            // `end` starts at `x.at`, which is ahead of every child, so the
+            // first one assigns and the rest may only widen. Folding that into
+            // one `@max` costs 3,561 `square` corpus-wide, because it is the
+            // seed rather than a child that wins the comparison.
+            end = if (seen) @max(end, f.end) else f.end;
             if (!seen) start = f.start;
             seen = true;
-            end = f.end;
         }
         if (!seen) end = start;
 
@@ -1752,6 +3062,36 @@ pub const Gather = struct {
             x.borne.shrink(floor);
             x.perches.shrinkRetainingCapacity(under + 1);
             if (x.forking) x.stand.shrinkRetainingCapacity(under + 1);
+        }
+
+        // The span again, and this time over the children that were actually
+        // minted rather than over the symbols the recipe named. The loop at
+        // the top can only see the right-hand side; Rule 2 hands this node
+        // extras that no symbol on that side covers - a comment sitting in the
+        // next perch's lead rides in as a child of the node being made, and
+        // nothing between here and there reconciles the two. `pair` in
+        // `b = "2"  # c` was minted [8, 15) holding `comment [17, 20)`: a child
+        // wholly outside its parent, which is precisely the `loose` that
+        // `Quire.survey` counts, and the one row on the board that read
+        // `100% standing, 0 damage` while not handing back a tree.
+        //
+        // Over child *nodes*, not over perches, and that is the whole
+        // difference from the rule the loop above had to refuse: a nullable
+        // child's perch carries a bare offset sitting ahead of the whitespace,
+        // which is a position and not a span, and letting one set an edge
+        // costs thirty grammars their own leading trivia. A minted node's
+        // start is a span. Widening to cover the children it already holds
+        // gains 29 `square` and drops 16 `crooked` and 13 `soft` corpus-wide,
+        // and moves no other row.
+        for (x.born.ref.items) |c| {
+            const kid = x.nodes.items[c];
+            const from, const upto = .{ kid.start, kid.start + kid.len };
+            if (seen) {
+                start = @min(start, from);
+                end = @max(end, upto);
+            } else {
+                start, end, seen = .{ from, upto, true };
+            }
         }
 
         const own = x.borne.len();
@@ -1863,28 +3203,43 @@ pub const Gather = struct {
     /// The start production is never reduced - accept fires in its place - so
     /// what stands at the end of an accepting reading is the start symbol's own
     /// perch, which is either one root or, for a hidden start rule, the forest
-    /// it spliced. Where several readings accept, the least speculative wins:
-    /// without dynamic precedence there is nothing better to compare them by,
-    /// and preferring the table's own answer is what makes forking a strict
-    /// addition rather than a change of mind about files that already parsed.
+    /// it spliced. Where several readings accept, `Reading.beats` picks: the
+    /// author's `prec.dynamic` over each derivation first, the shorter
+    /// derivation next, and the least speculative reading where neither said
+    /// anything - so preferring the table's own answer still makes forking a
+    /// strict addition rather than a change of mind about files that already
+    /// parsed, for every grammar that declared no dynamic rank to spend.
+    ///
+    /// The end column folds like any other, so its reductions carry their own
+    /// declarations and count toward their own size. A reading that accepts
+    /// after three folds is three productions richer and three nodes bigger
+    /// than the perch it started this function on, and comparing it on the
+    /// total it *arrived* with would be scoring two derivations at different
+    /// points.
     fn close(x: *Gather) !struct { top: u32, ok: bool } {
         x.lone = x.live.items.len == 1 and !x.grafted;
         var won: ?Reading = null;
         var tried: ?Reading = null;
         for (x.live.items) |v| {
             var top = v.top;
+            var heft = v.heft;
+            var folds = v.folds;
             const ok = done: while (true) {
                 const act = x.t.at(x.perches.items[top].state, x.t.end);
                 switch (act.kind) {
                     .accept => break :done true,
-                    .reduce => top = try x.fold(top, act.value) orelse break :done false,
+                    .reduce => {
+                        heft += x.gr.productions[act.value].dynamic;
+                        folds += 1;
+                        top = try x.fold(top, act.value) orelse break :done false;
+                    },
                     .err, .shift => break :done false,
                 }
             };
-            const r: Reading = .{ .top = top, .rank = v.rank };
+            const r: Reading = .{ .top = top, .rank = v.rank, .heft = heft, .folds = folds };
             if (ok) {
-                if (won == null or r.rank < won.?.rank) won = r;
-            } else if (tried == null or r.rank < tried.?.rank) tried = r;
+                if (won == null or r.beats(won.?)) won = r;
+            } else if (tried == null or r.beats(tried.?)) tried = r;
         }
         if (won) |w| return .{ .top = w.top, .ok = true };
         return .{ .top = tried.?.top, .ok = false };
@@ -1908,10 +3263,53 @@ pub const Gather = struct {
         }
         std.mem.reverse(Perch, x.spine.items);
 
-        for (x.spine.items) |f| {
+        // Where the chain stops being a derivation. `supply` writes a terminal
+        // in on the strength of clause 2, which justifies it for exactly one
+        // token: the refused token shifts next, and what happens after that is
+        // the parse's answer about whether the omission was real. A fold taking
+        // the ghost as a child is that answer arriving - and a second refusal
+        // reaching here first is the answer never arriving. Publishing from
+        // there up asserts a construct whose closing terminal nobody wrote, and
+        // at the top of a forest it asserts a node covering no bytes and
+        // standing under no parent, which is not the derivation of anything.
+        //
+        // Only the `own` runs are withheld. A perch's `lead` is the extras read
+        // in front of it - comments the file really holds - and those are the
+        // forest's whatever the parse decided about the structure over them.
+        var held: usize = x.spine.items.len;
+        for (x.spine.items, 0..) |f, i| {
+            if (x.unproven(f)) {
+                held = i;
+                break;
+            }
+        }
+        for (x.spine.items, 0..) |f, i| {
             try x.carry(&x.roots, x.borne.at(f.lead, f.leads));
-            try x.carry(&x.roots, x.borne.at(f.own, f.owns));
+            if (i < held) try x.carry(&x.roots, x.borne.at(f.own, f.owns));
         }
         try x.carry(&x.roots, x.borne.at(x.lead, x.leads));
+    }
+
+    /// Whether this perch is a supply no fold ever took as a child.
+    ///
+    /// `plant` pushes a zero-width perch holding one anonymous node, and
+    /// clause 1 is what makes reading that back off the perch exact rather than
+    /// a guess: a supply is *always* anonymous, and the terminals that are
+    /// legitimately zero-width - swift's `_implicit_semi`, haskell's layout
+    /// hand - are named and the scanner's to produce. So a zero-width perch
+    /// holding an anonymous node is one this runtime wrote in, and one still
+    /// standing on the chain is one nothing has reduced over.
+    ///
+    /// Measured rather than assumed: across the corpus the arm without the
+    /// second move builds **no** zero-width node at all, and under `--mend=keep`
+    /// every one of verilog's 59 supplies is inside a parent by the time the
+    /// parse ends. Under `--mend=fell` 127 are not.
+    fn unproven(x: *const Gather, f: Perch) bool {
+        if (f.start != f.end or f.owns == 0) return false;
+        for (x.borne.at(f.own, f.owns).ref) |r| {
+            const kind = x.nodes.items[r].kind;
+            if (!kind.renamed and x.gr.shapeOf(kind.index) != .named) return true;
+        }
+        return false;
     }
 };

@@ -20,6 +20,7 @@
 const std = @import("std");
 const g = @import("grammar.zig");
 const lr0 = @import("lr0.zig");
+const import = @import("import.zig");
 
 /// An edge, seen from its far end.
 pub const Step = struct { from: u32, symbol: g.Symbol };
@@ -193,4 +194,71 @@ test "a state several stacks share unwinds to all of them" {
     for ([_]u32{ 0, after_plus, after_lp }) |q| {
         try testing.expect(std.mem.indexOfScalar(u32, back, q) != null);
     }
+}
+
+/// c's `f(a);` under two readings — a declaration and a call over the same four
+/// tokens — pressed through the tree-sitter front end rather than a `Builder`,
+/// so the automaton under test is one a real import produces.
+const two_readings =
+    \\{"name":"decl","rules":{
+    \\ "statement":{"type":"CHOICE","members":[
+    \\  {"type":"SYMBOL","name":"declaration"},
+    \\  {"type":"SYMBOL","name":"expression_statement"}]},
+    \\ "declaration":{"type":"SEQ","members":[
+    \\  {"type":"SYMBOL","name":"declarator"},{"type":"STRING","value":";"}]},
+    \\ "expression_statement":{"type":"SEQ","members":[
+    \\  {"type":"SYMBOL","name":"call"},{"type":"STRING","value":";"}]},
+    \\ "declarator":{"type":"SEQ","members":[
+    \\  {"type":"STRING","value":"f"},{"type":"STRING","value":"("},
+    \\  {"type":"STRING","value":"a"},{"type":"STRING","value":")"}]},
+    \\ "call":{"type":"SEQ","members":[
+    \\  {"type":"STRING","value":"f"},{"type":"STRING","value":"("},
+    \\  {"type":"STRING","value":"a"},{"type":"STRING","value":")"}]}}}
+;
+
+test "every unwound origin can read its body forward and land where it started" {
+    // The two tests above check hand-picked positions, which is what a walk
+    // that ignored the edge symbols would also pass: on a small automaton
+    // "every state within |rhs| steps" is frequently the same set as the right
+    // answer. This asserts the defining property instead, over every completed
+    // item of every state, so a walk that is accidentally right has nowhere to
+    // hide.
+    const gpa = testing.allocator;
+    var gr = try import.treeSitter(gpa, two_readings);
+    defer gr.deinit();
+    var c = try lr0.build(gpa, &gr, .{});
+    defer c.deinit();
+
+    var r = try Retrace.build(gpa, &c);
+    defer r.deinit(gpa);
+
+    // First that the inversion is a bijection: every arrival is a real edge and
+    // every real edge is an arrival. An index missing edges would make the walk
+    // below vacuously true by reaching nothing.
+    var edges: usize = 0;
+    for (c.states) |st| edges += st.edges.len;
+    var arrivals: usize = 0;
+    for (0..c.states.len) |q| {
+        for (r.into[r.at[q]..r.at[q + 1]]) |step| {
+            try testing.expectEqual(@as(?u32, @intCast(q)), c.goto(step.from, step.symbol));
+            arrivals += 1;
+        }
+    }
+    try testing.expectEqual(edges, arrivals);
+
+    // Then the property itself, and that it is not vacuous.
+    var checked: usize = 0;
+    for (c.states, 0..) |st, at| {
+        for (st.complete) |prod| {
+            const rhs = gr.productions[prod].rhs;
+            const back = try r.back(gpa, @intCast(at), rhs);
+            for (back) |from| {
+                var q = from;
+                for (rhs) |sym| q = c.goto(q, sym).?;
+                try testing.expectEqual(@as(u32, @intCast(at)), q);
+                checked += 1;
+            }
+        }
+    }
+    try testing.expect(checked > 0);
 }

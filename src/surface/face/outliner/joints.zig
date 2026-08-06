@@ -38,6 +38,7 @@
 
 const std = @import("std");
 const outliner = @import("outliner");
+const assay = outliner.assay;
 const intake = @import("intake.zig");
 
 const import = outliner.press.import;
@@ -403,18 +404,45 @@ fn shape(w: *std.Io.Writer, gr: *const g.Grammar, prod: u32) !void {
 /// What the stuck state does accept. A missing action is nearly always a
 /// missing *fold* — the token is legal one reduction away — so the terminals
 /// the state does have are the shape of the hole.
+///
+/// **In two halves, because the sentence above is about one of them.** This
+/// printed a single flat list of every terminal with a non-error action, cut
+/// off at twelve by symbol number. In a state with three shifts and two hundred
+/// lookaheads that is a dozen mixed names, and a reader counting them reads a
+/// state that consumes three tokens as one that consumes twelve. The same
+/// conflation cost a lane a night in `state --census` and named the wrong
+/// scanner in `inquest`; the split is `lalr.Half` in all three, so none of them
+/// can drift from the others.
 fn legal(w: *std.Io.Writer, gr: *const g.Grammar, t: *const lalr.Tables, state: u32) !void {
-    try w.writeAll("      it accepts:");
+    const shift = try side(w, gr, t, state, .shift);
+    const fold = try side(w, gr, t, state, .fold);
+    if (shift + fold == 0) try w.writeAll("      it accepts: nothing\n");
+}
+
+/// One half of the row, named and counted. Silent when empty unless the whole
+/// row is, because an absent half is itself the answer a stuck state usually
+/// has: no shift at all means no token could have been read here whatever the
+/// scanner did.
+fn side(
+    w: *std.Io.Writer,
+    gr: *const g.Grammar,
+    t: *const lalr.Tables,
+    state: u32,
+    half: lalr.Half,
+) !u32 {
     var shown: u32 = 0;
     for (0..gr.terminal_count) |sym| {
-        if (t.at(state, @intCast(sym)).kind == .err) continue;
+        if (lalr.Half.of(t.at(state, @intCast(sym)).kind) != half) continue;
         shown += 1;
         if (shown > 12) continue;
+        if (shown == 1) try w.print("      it {s}:", .{
+            if (half == .shift) "reads" else "folds on",
+        });
         try w.print(" {s}", .{gr.nameOf(@intCast(sym))});
     }
     if (shown > 12) try w.print(" (+{d} more)", .{shown - 12});
-    if (shown == 0) try w.writeAll(" nothing");
-    try w.writeAll("\n");
+    if (shown > 0) try w.print("  [{d} {s}]\n", .{ shown, half.word() });
+    return shown;
 }
 
 /// The last few tokens that did parse. Where a walk stopped is rarely where it
@@ -493,7 +521,7 @@ const Probe = struct {
     fn measure(p: *Probe, edges: []const u32) !Report {
         var r: Report = .{};
         var shown = !p.dump;
-        const started = std.Io.Clock.awake.now(p.io);
+        const surveying = assay.Span.open(p.io);
         for (edges[0 .. edges.len - 1], edges[1..]) |lo, hi| {
             const s = try p.cur.survey(p.entries, p.symbols[lo..hi]);
             r.pairs += p.entries.len;
@@ -511,10 +539,9 @@ const Probe = struct {
                 try p.expose(lo, hi);
             }
         }
-        r.us = @intCast(@divTrunc(
-            started.durationTo(std.Io.Clock.awake.now(p.io)).nanoseconds,
-            std.time.ns_per_us,
-        ));
+        // Read before the oracle runs: this is the cursor's cost, and the
+        // reference walk that checks it is not part of what is being measured.
+        r.us = @intCast(surveying.read(p.io).us());
         r.chain = try p.oracle(edges);
         std.mem.sort(u32, r.ranks.items, {}, std.sort.asc(u32));
         std.mem.sort(u32, r.domains.items, {}, std.sort.asc(u32));

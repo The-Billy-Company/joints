@@ -77,6 +77,17 @@ pub const Graft = struct {
     /// into whatever covers the end, so the end is not a thing that can be
     /// lifted into the middle of another parse.
     ceiling: u32,
+    /// Where the old tiling has its seams, ascending. A resume may only stand
+    /// where one is: the spine is spliced leaf by leaf, so a stack picked up
+    /// half way through a leaf leaves that leaf covering bytes the new parse is
+    /// about to lay its own leaves over. Empty declines the check, which is
+    /// what a caller with no tiling to protect wants.
+    ///
+    /// Every token boundary is a seam while a parse runs clean, so this costs
+    /// nothing there. It bites where a mend has been: the bytes a mend steps
+    /// over become one hole, the boundaries inside it stop being seams, and a
+    /// ring taken at one of them is a resume the tiling cannot express.
+    seam: []const u32 = &.{},
     /// New offset minus old offset, for everything at or past `stable`.
     delta: i32,
     /// Whether finished subtrees are on offer as well as the prefix stack. The
@@ -115,7 +126,46 @@ pub const Graft = struct {
     /// Offsets where a lift was considered. `lifts` over this is the hit rate.
     probes: u32 = 0,
 
+    /// Why the walk did not take something wider than it took.
+    ///
+    /// A lift is only ever as good as the widest candidate `stoop` nominated,
+    /// and there are exactly two ways for it to be small: the wide subtree was
+    /// never on the chain, or it was on the chain and something refused it.
+    /// These separate those, and they are the only way to know which fix the
+    /// coverage problem wants. Read after the parse.
+    /// Every call to `lift`, and what turned each one away before it ever
+    /// reached a candidate. Counting only the probes that got past the gates
+    /// is how an instrument reports a healthy walk over a file it barely
+    /// looked at: 611 probes against 1383 tokens read says nothing about the
+    /// 772 tokens that were never asked.
+    asked: u64 = 0,
+    turned_fork: u64 = 0,
+    turned_align: u64 = 0,
+    offered: u64 = 0,
+    /// Candidates strictly wider than the one taken, at probes that lifted.
+    passed: u64 = 0,
+    /// What refused each of those: shape, then the table, then the break.
+    passed_shape: u64 = 0,
+    passed_goto: u64 = 0,
+    passed_break: u64 = 0,
+    /// Bytes in the widest candidate offered, over bytes actually taken. The
+    /// gap is what a perfect ordering could still recover.
+    widest: u64 = 0,
+    taken: u64 = 0,
+
     const Step = struct { ref: quire.Ref, done: u32 };
+
+    /// Whether the old tiling has a seam exactly here.
+    pub fn seamed(gr: *const Graft, at: u32) bool {
+        if (gr.seam.len == 0) return true;
+        var lo: usize = 0;
+        var hi: usize = gr.seam.len;
+        while (lo < hi) {
+            const mid = lo + (hi - lo) / 2;
+            if (gr.seam[mid] < at) lo = mid + 1 else hi = mid;
+        }
+        return lo < gr.seam.len and gr.seam[lo] == at;
+    }
 
     pub fn deinit(gr: *Graft) void {
         gr.chain.deinit(gr.gpa);
@@ -148,30 +198,63 @@ pub const Graft = struct {
     /// Every old node beginning at this new offset, outermost first. The
     /// outermost is the biggest lift, and the caller walks inward only because
     /// the table may refuse the outermost's symbol here.
+    /// ## Why the forest is refused, which is not because nobody finished it
+    ///
+    /// A mend leaves a forest, and this used to read as an unfinished descent:
+    /// it enters at `roots[0]` and gives up when there is more than one root,
+    /// and the roots are the same kind of run as a node's children - source
+    /// order, no overlap, `Quire.survey` holds both to it - so picking the root
+    /// that covers the offset is the same binary search as every step below.
+    /// The refusal costs the whole suffix half of reuse on the 17 corpus
+    /// grammars that mend: 11,606 probes across seven of them return an empty
+    /// chain on one keystroke each.
+    ///
+    /// It was tried, and it is measured, and it is wrong. Descending the
+    /// covering root turns lifts on across the forest and the speed is
+    /// dramatic - 22 of 29 grammars faster, zig's keystroke 13,783us to 583us,
+    /// html's 3,205us to 304us, the median gain over the mended set 1x to 3x.
+    /// It also stops the amended tree being the tree a cold parse of the same
+    /// bytes derives, on html (11 of 24 keystrokes), swift, verilog and lua,
+    /// and the disagreement is in the **root count** - 2,974 amended against
+    /// 2,971 cold on verilog, 215 against 220 on swift. A lift carried out from
+    /// under one root and spliced into a parse whose mends fall elsewhere moves
+    /// a hole's boundary, and a hole's boundary is where the roots are. The two
+    /// conditions in the header are conditions on the *node*; nothing in them
+    /// constrains the mend structure the node is being replanted into, and on a
+    /// clean parse there is none to constrain.
+    ///
+    /// So the gate is load-bearing for correctness, and lifting across a forest
+    /// needs the mend boundaries to be part of the offer - not a wider descent.
+    /// `research/keystroke/` carries the measurement and the guard that caught
+    /// it; `research/keystroke/abide.py` is the guard.
     pub fn stoop(gr: *Graft, at: u32) ![]const quire.Ref {
         gr.chain.clearRetainingCapacity();
         const old = gr.back(at) orelse return gr.chain.items;
         const q = gr.old;
         if (q.roots.len != 1) return gr.chain.items;
 
-        var ref = q.roots[0];
+        var ref = holder(q, q.roots, old) orelse return gr.chain.items;
         while (true) {
             const n = q.nodes[ref];
-            if (old < n.start or old >= n.end()) break;
             if (n.start == old) try gr.chain.append(gr.gpa, ref);
-            const kids = q.kids[n.kids_at..][0..n.kids_len];
-            // Siblings are in source order and do not overlap, so the first
-            // child that has not already ended is the one holding this offset.
-            var lo: usize = 0;
-            var hi: usize = kids.len;
-            while (lo < hi) {
-                const mid = lo + (hi - lo) / 2;
-                if (q.nodes[kids[mid]].end() <= old) lo = mid + 1 else hi = mid;
-            }
-            if (lo == kids.len or q.nodes[kids[lo]].start > old) break;
-            ref = kids[lo];
+            ref = holder(q, q.kids[n.kids_at..][0..n.kids_len], old) orelse break;
         }
         return gr.chain.items;
+    }
+
+    /// Which of these siblings covers this offset, or none of them. They run in
+    /// source order and do not overlap, which is what makes it a search; the
+    /// gaps between them are the holes a mend stepped over, and an offset in
+    /// one is held by nobody.
+    fn holder(q: *const quire.Quire, kin: []const quire.Ref, old: u32) ?quire.Ref {
+        var lo: usize = 0;
+        var hi: usize = kin.len;
+        while (lo < hi) {
+            const mid = lo + (hi - lo) / 2;
+            if (q.nodes[kin[mid]].end() <= old) lo = mid + 1 else hi = mid;
+        }
+        if (lo == kin.len or q.nodes[kin[lo]].start > old) return null;
+        return kin[lo];
     }
 
     /// Whether this node is a thing a parse can be handed rather than a thing a

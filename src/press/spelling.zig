@@ -164,6 +164,50 @@ pub fn renderPattern(self: *Import, node: json.Value) Error!?[]const u8 {
     return try self.b.dupe(out.items);
 }
 
+/// What a whole *rule body* lexes as, which is one boundary further out than
+/// `atomPattern` draws - and only for a rule the grammar declared an extra.
+///
+/// An extra has to be steppable, and only a *terminal* can be stepped over: the
+/// scanner's skip is a bitset of terminals, and nothing in the automaton hosts a
+/// nonterminal, because an extra is reachable from `$start` through nothing by
+/// definition. So an extra reaching no other rule has no structure to host and
+/// no reading but bytes, and `line_comment: seq('#', /.*/)` is one token spelled
+/// in two pieces exactly as `token(seq('#', /.*/))` is.
+///
+/// **Extras only, and the census is why.** Lowering every rule that reaches
+/// nothing is tree-sitter's `extract_tokens` as it is usually described, and it
+/// is wrong here: run over the whole corpus it moved twenty-six of thirty
+/// automata and cost typescript a parse that had been whole, because a rule like
+/// `x: choice('a','b')` is a node with an anonymous child and welding it into one
+/// token deletes the child. An extra is the one place where the argument holds on
+/// its own, which is the narrowing this keeps.
+///
+/// The symbol test runs before the render and not inside it: `renderPattern`
+/// *inlines* the rules it finds, which is right under a `token(...)` the author
+/// asked for and wrong here, where a reference is the evidence that this rule has
+/// structure the automaton would have to host. julia's `line_comment` is the
+/// whole of what this moves - it and eight other extras are the corpus's
+/// structural extras, and it is the only one of the nine reaching nothing.
+pub fn bodyPattern(self: *Import, name: []const u8, node: json.Value) Error!?g.Pattern {
+    if (try atomPattern(self, node)) |atom| return atom;
+    if (!self.lexical.contains(name)) return null;
+    return if (try renderPattern(self, node)) |rx| .{ .regex = rx } else null;
+}
+
+/// Whether a subtree names no rule. A `SYMBOL` anywhere in it - an external's
+/// name included, since an external is a rule we cannot render - means the
+/// node derives something and is not a token.
+pub fn bare(node: json.Value) bool {
+    const o = obj(node) orelse return true;
+    const kind = str(o.get("type")) orelse return true;
+    if (std.mem.eql(u8, kind, "SYMBOL")) return false;
+    if (o.get("members")) |m| if (m == .array) {
+        for (m.array.items) |item| if (!bare(item)) return false;
+    };
+    if (o.get("content")) |content| if (!bare(content)) return false;
+    return true;
+}
+
 /// A `SYMBOL` inside a token inlines the named rule's body. Returning it
 /// unconditionally is safe: the renderer fails on whatever it cannot
 /// flatten, and its depth limit ends a cycle.

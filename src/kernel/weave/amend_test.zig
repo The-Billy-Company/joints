@@ -32,6 +32,7 @@ const scanner = @import("../lex/scanner.zig");
 const press = @import("../../press/press.zig");
 const import = @import("../../press/import.zig");
 const g = @import("../../press/grammar.zig");
+const effect = @import("../joint/effect.zig");
 
 /// One edit, recorded as magnitudes rather than as byte offsets, which is the
 /// whole reason a script can be shrunk: an offset recorded against a file that
@@ -105,6 +106,19 @@ const Tally = struct {
     /// against a spine, since a stopped parse has no product.
     whole: u32 = 0,
     lifts: u32 = 0,
+    /// Forks created and forks collapsed, summed over the stream. A floor on
+    /// these is what stops this suite passing without ever running the strand
+    /// machinery: json and rust both fire zero forks, so before java was added
+    /// nothing here had exercised a per-limb trail at all.
+    rifts: u64 = 0,
+    roosts: u64 = 0,
+    /// Bytes that arrived as a whole subtree, over the bytes of the files they
+    /// arrived into. Lift *coverage*, which is the thing every other column
+    /// here can look healthy without: a run may lift constantly and still
+    /// re-read most of the file if each lift is a fragment. java lifted 3449
+    /// times over less of the file than it now covers in 2078.
+    skipped: u64 = 0,
+    bytes: u64 = 0,
     /// Nodes lifted, over nodes built. The share of the tree that was reused.
     carried: u64 = 0,
     nodes: u64 = 0,
@@ -127,6 +141,38 @@ const Tally = struct {
     /// times and the tree still matched".
     mended: u32 = 0,
     mends: u64 = 0,
+    /// Edits that stood back up on a tiling with a hole in it - the previous
+    /// parse mended, and this one resumed above the break anyway.
+    ///
+    /// This is the only column that reaches the machinery round 19 added, and
+    /// none of the others can stand in for it: `stood` counts resumes on clean
+    /// tilings, `mended` counts breaks nobody resumed over, and a corpus of
+    /// files that parse whole never reaches the line at all. Before the repair
+    /// this was structurally zero - one mend anywhere stopped every later ring
+    /// being taken, and `w.frail` floored the resume below the first wall - so
+    /// a floor here is a threshold with a demonstrated failing case rather than
+    /// today's number written down.
+    healed: u32 = 0,
+    /// Tilings cleared, split by which site cleared them: a resume that landed
+    /// inside a leaf, a prefix product that refused the resume's first leaf,
+    /// and the window finding no right edge. Summing them into one "not spun"
+    /// number is what hid, for four rounds, that these are different defects -
+    /// and the split is what named the third one, since `win` read 293 of 293
+    /// mended json edits while the other two read zero.
+    ///
+    /// All three read zero now. `win` in particular no longer means "the file
+    /// has a hole in it": a hole ends the window's search without declining,
+    /// so anything counted here is a seam inside the window rather than a
+    /// break in the text.
+    off: u32 = 0,
+    seam: u32 = 0,
+    win: u32 = 0,
+    /// The fourth, and the one this corpus cannot reach: a resumed parse that
+    /// walls before laying a leaf of its own, so its folds are charged across
+    /// the resume onto the previous parse's last leaf. It was a fatal until the
+    /// resume was made to decline instead, and it reads zero here because every
+    /// resume on this corpus lays a leaf first.
+    charge: u32 = 0,
 };
 
 const Run = struct {
@@ -151,6 +197,14 @@ const Run = struct {
     algebra: bool = true,
     /// Scratch for the bytes an edit inserts.
     put: [16]u8 = undefined,
+    /// The prefix-continuity instrument. `seen` counts the edits it examined
+    /// so it can say it found nothing; `told` stops it after the first report,
+    /// because the interesting edit is the one where a discontinuity is *born*
+    /// and every edit after it inherits the same pair.
+    seen: u32 = 0,
+    told: bool = false,
+    /// Whether the parse that laid the tiling now on offer had a break in it.
+    holed: bool = false,
 
     fn init(bolt: *Bolt, seed0: []const u8, policy: weave.Policy, bend: weave.Bend) !Run {
         var r: Run = .{
@@ -264,22 +318,39 @@ const Run = struct {
     }
 
     fn check(r: *Run) !void {
+        try r.continuous();
         const cold = r.cold.tree.?;
         try r.same(&r.w, cold);
         try r.same(&r.plain, cold);
 
+        r.tally.skipped += r.w.cost.skipped;
+        r.tally.bytes += r.text.items.len;
         r.tally.carried += r.w.cost.carried;
         r.tally.nodes += r.w.cost.nodes;
         r.tally.lifts += r.w.cost.lifts;
+        r.tally.rifts += r.w.gather.rifts;
+        r.tally.roosts += r.w.gather.roosts;
         r.tally.read += r.w.cost.read;
         r.tally.cold += r.cold.cost.read;
         if (r.w.cost.stood > 0) {
             r.tally.stood += 1;
             r.tally.passed += r.w.cost.stood;
+            // The tiling this stack stood on is the one the *previous* parse
+            // laid, so that is the parse whose breaks decide whether this was
+            // a resume over a hole.
+            if (r.holed) r.tally.healed += 1;
         }
         if (cold.mends > 0) {
             r.tally.mended += 1;
             r.tally.mends += cold.mends;
+        }
+        r.holed = if (r.w.tree) |q| q.mends > 0 else false;
+        switch (r.w.unspun) {
+            .none => {},
+            .off => r.tally.off += 1,
+            .seam => r.tally.seam += 1,
+            .charge => r.tally.charge += 1,
+            .win => r.tally.win += 1,
         }
         if (!r.w.spun) return;
 
@@ -290,14 +361,105 @@ const Run = struct {
         if (r.algebra) try r.derives();
     }
 
+    /// Every adjacent pair in the tiling, asked locally rather than as a fold.
+    ///
+    /// `product()` refusing says only that *some* pairing failed, and the
+    /// left-to-right fold that finds it reports where the accumulation gave
+    /// out, which is not where the two runs stopped being adjacent. This asks
+    /// the pairwise question - does leaf i compose with leaf i+1, on their own,
+    /// with nothing else in hand - so the answer is a seam and not an index.
+    ///
+    /// The two generations are the whole point. A pair minted by the same parse
+    /// was derived side by side, so a refusal between them is the derivation's:
+    /// a lifted leaf whose exit is not a legal left operand for an unlifted
+    /// right. A pair whose generations differ was never derived together; one
+    /// side was retained past a re-parse of the other, and a refusal between
+    /// them is the retention's.
+    ///
+    /// Holes are skipped on both sides. `compose` refuses beside the zero by
+    /// design and that refusal is the mend doing its job, not a seam coming
+    /// apart.
+    fn continuous(r: *Run) !void {
+        if (r.bend != .none or !r.w.spun or r.told) return;
+        r.seen += 1;
+        const x = r.w.arena();
+        const leaves = r.w.leaves.items;
+        for (1..leaves.len) |i| {
+            const l = leaves[i - 1];
+            const n = leaves[i];
+            if (l.element.entry == effect.Effect.broken) continue;
+            if (n.element.entry == effect.Effect.broken) continue;
+            if (try effect.compose(x, l.element, n.element) != null) continue;
+
+            const at = r.w.starts.items[i];
+            // Coarser than the cold parse over the same bytes is what a lift
+            // leaves behind, and it is visible without a flag: count how many
+            // leaves a parse that lifted nothing put inside this one's span.
+            var under: u32 = 0;
+            for (r.cold.starts.items) |c| {
+                if (c >= r.w.starts.items[i - 1] and c < at) under += 1;
+            }
+            std.debug.print(
+                "SEAM edit {d}: leaves {d}|{d} part at byte {d} (floor {d}, window {d}..{d} was {d})\n" ++
+                    "  left  ends {d}  entry {d} guard {d} push {d}  gen {d}  cold leaves under it {d}\n" ++
+                    "  right start {d}  entry {d} guard {d} push {d}  gen {d}\n" ++
+                    "  minted {s}\n",
+                .{
+                    r.seen,                        i - 1,
+                    i,                             at,
+                    r.w.lastfloor,                 r.w.lastfrom,
+                    r.w.lastto,                    r.w.lastwas,
+                    at,                            l.element.entry,
+                    @intFromEnum(l.element.guard), @intFromEnum(l.element.push),
+                    r.w.gens.items[i - 1],         under,
+                    at,                            n.element.entry,
+                    @intFromEnum(n.element.guard), @intFromEnum(n.element.push),
+                    r.w.gens.items[i],
+                    if (r.w.gens.items[i - 1] == r.w.gens.items[i])
+                        "together - the derivation's"
+                    else
+                        "apart - the retention's",
+                },
+            );
+            r.told = true;
+            // Reported, not asserted, and the difference is the algebra's.
+            // The spine folds ranges rather than neighbours, so a node joining
+            // a range that ends here to one that starts there composes with the
+            // whole left context in hand, and a guard the single leaf cannot
+            // satisfy the prefix often can. A refusing pair is therefore a
+            // place to look and not a defect on its own; the defect is the
+            // product, which is what the caller checks. Both were true at once
+            // in round 14, which is what made this a locator.
+            return;
+        }
+        // The other way the answer can be no: the fold gave out but no two
+        // neighbours did. Then the discontinuity is not at any seam and the
+        // pairwise question is the wrong one, which is worth one line.
+        if (r.algebra and !weave.Joint.same(r.w.product(), r.cold.product())) {
+            std.debug.print(
+                "edit {d}: the product refuses and every adjacent pair composes\n",
+                .{r.seen},
+            );
+            r.told = true;
+        }
+    }
+
+    /// The path where the answer is no. Absence of a SEAM line has meant
+    /// nothing twice this project; this makes it mean something.
+    fn verdict(r: *Run) void {
+        if (r.bend != .none) return;
+        if (!r.told) std.debug.print(
+            "every adjacent pair in the prefix agrees on state, all {d} edits\n",
+            .{r.seen},
+        );
+    }
+
     /// Whether the maintained spine still says what a cold one does, as one
     /// answer rather than as a located failure. The fuzz wants the location and
     /// asks `same` and `derives` directly; a policy measurement only wants to
     /// know that the policy lost it.
     fn agrees(r: *Run) bool {
-        if (!weave.Joint.same(r.w.product(), r.cold.product())) return false;
-        r.derives() catch return false;
-        return true;
+        return weave.Joint.same(r.w.product(), r.cold.product()) and r.parted() == null;
     }
 
     /// One weave's tree, spine and tiling against a cold parse of the same
@@ -308,6 +470,15 @@ const Run = struct {
     /// an s-expression prints the same way.
     fn same(r: *Run, it: *weave.Weave, cold: quire.Quire) !void {
         const got = it.tree.?;
+        // Before the comparison, not after it, and not instead of it. A tree
+        // can equal a cold parse and still be a structure no parse could have
+        // made, and the kept stack beside it is not in the comparison at all -
+        // round 20's defect was a ring that carried one node twice, shipped
+        // two hundred edits before the tree it eventually corrupted. Asking
+        // here means the edit that *makes* a bad snapshot is the edit that
+        // reports it.
+        try got.verify(r.gpa);
+        try it.bough.verify(r.gpa, &got);
         try t.expectEqual(std.meta.activeTag(cold.stop), std.meta.activeTag(got.stop));
         // Two parses can agree on every root and still have got there by
         // different routes; a reuse that skipped a wall the cold parse had to
@@ -360,21 +531,65 @@ const Run = struct {
     /// promised. What is not a degree of freedom - that the tree and the
     /// product match - `same` has already asked of both weaves.
     fn derives(r: *Run) !void {
-        try t.expectEqual(r.cold.leaves.items.len, r.plain.leaves.items.len);
+        const rift = r.parted() orelse return;
+        std.debug.print(
+            "tiling parts from cold at leaf {d} of {d}: {s} - cold {d}, warm {d}\n",
+            .{ rift.leaf, r.cold.leaves.items.len, rift.why, rift.cold, rift.warm },
+        );
+        return error.TilingParted;
+    }
+
+    /// The first place the maintained tiling and a cold parse of the same text
+    /// part company, or null when they agree everywhere.
+    ///
+    /// A predicate, and that is the whole of round 22's repair here. `agrees`
+    /// *scores* this comparison - how often a policy loses the spine is the
+    /// number that test is for - and `derives` *asserts* it. When both went
+    /// through one body written in `expectEqual`, the scored call printed
+    /// `expected 289, found 0` from inside a **passing** test, because
+    /// `expectEqual` prints before it returns and `agrees` swallowed the
+    /// error. That is the same shape as `same()` comparing only the rendered
+    /// tree: a check whose failure path is indistinguishable from its success
+    /// path, occupying the seat a real comparison would take.
+    ///
+    /// So the comparison answers, the callers decide what an answer means, and
+    /// only the one that fails a test prints - with a located rift rather than
+    /// two bare integers, which is more than the swallowed version ever gave
+    /// the reader it was printing at.
+    fn parted(r: *const Run) ?Rift {
+        const cold = r.cold.leaves.items;
+        const warm = r.plain.leaves.items;
+        if (cold.len != warm.len) {
+            return .{ .leaf = @min(cold.len, warm.len), .why = "leaf count", .cold = cold.len, .warm = warm.len };
+        }
         for (
-            r.plain.leaves.items,
+            warm,
             r.plain.starts.items,
             r.plain.entries.items,
-            r.cold.leaves.items,
+            cold,
             r.cold.starts.items,
             r.cold.entries.items,
-        ) |l, from, entry, want, at, was| {
-            try t.expectEqual(at, from);
-            try t.expectEqual(was, entry);
-            try t.expectEqual(want.bytes, l.bytes);
-            try t.expect(weave.Joint.same(want.element, l.element));
+            0..,
+        ) |l, from, entry, want, at, was, i| {
+            if (from != at) return .{ .leaf = i, .why = "start", .cold = at, .warm = from };
+            if (entry != was) return .{ .leaf = i, .why = "entry state", .cold = was, .warm = entry };
+            if (l.bytes != want.bytes) return .{ .leaf = i, .why = "bytes", .cold = want.bytes, .warm = l.bytes };
+            if (!weave.Joint.same(want.element, l.element)) {
+                return .{ .leaf = i, .why = "element", .cold = want.element.entry, .warm = l.element.entry };
+            }
         }
+        return null;
     }
+};
+
+/// Where a maintained tiling stops matching a cold one, and on which of the
+/// four facts. Named rather than returned as a bool so a scored caller and an
+/// asserting one can share one comparison without sharing one verdict.
+const Rift = struct {
+    leaf: usize,
+    why: []const u8,
+    cold: u64,
+    warm: u64,
 };
 
 /// Every node's span, in lockstep down two trees. The s-expression is blind to
@@ -471,18 +686,22 @@ fn drive(
         r.play(st) catch |e| return confess(bolt, name, seed0, policy, seed, &script, e);
     }
     const q = r.tally;
+    r.verdict();
     std.debug.print(
         "  {s:<12} {s:<5} {d:>5} edits  {d:>4} whole  {d:>5} lifts  " ++
             "window {d:>5.1}/{d:<5.1}  nodes reused {d:>4.0}%  tokens read {d:>4.0}%  " ++
-            "resumed {d:>4} past {d:>5.0}B  mended {d:>4} ({d} mends)\n",
+            "bytes lifted {d:>4.0}%  resumed {d:>4} past {d:>5.0}B  " ++
+            "mended {d:>4} ({d} mends)  over a hole {d:>4}  cleared {d}off/{d}seam/{d}win\n",
         .{
-            name,                            @tagName(policy),
-            q.edits,                         q.whole,
-            q.lifts,                         ratio(q.minted, q.whole),
-            ratio(q.leaves, q.whole),        100 * ratio(q.carried, 1) / @max(1.0, ratio(q.nodes, 1)),
-            100 * ratio(q.read, 1) / @max(1.0, ratio(q.cold, 1)), q.stood,
-            ratio(q.passed, q.stood),        q.mended,
-            q.mends,
+            name,                                                 @tagName(policy),
+            q.edits,                                              q.whole,
+            q.lifts,                                              ratio(q.minted, q.whole),
+            ratio(q.leaves, q.whole),                             100 * ratio(q.carried, 1) / @max(1.0, ratio(q.nodes, 1)),
+            100 * ratio(q.read, 1) / @max(1.0, ratio(q.cold, 1)), 100 * ratio(q.skipped, 1) / @max(1.0, ratio(q.bytes, 1)),
+            q.stood,                                              ratio(q.passed, q.stood),
+            q.mended,                                             q.mends,
+            q.healed,                                             q.off,
+            q.seam,                                               q.win,
         },
     );
     return q;
@@ -570,11 +789,46 @@ test "weave: the incremental tree equals a cold parse after every edit" {
     // across a recovered file would be evidence about clean input only.
     try t.expect(p.mended > 200);
     try t.expect(p.mends > p.mended);
+    // The three floors above are all satisfied by a stream that reuses on its
+    // clean edits and re-parses every broken one, which is exactly what this
+    // suite did until round 21: 293 mended edits, and `healed` said not one of
+    // them stood back up on a tiling a break had shaped. `mended` cannot see
+    // that - a break the run never reused across still counts - which is why
+    // round 19 added the column rather than another floor. It read 0 against
+    // `win` 293, because the window declined on a hole and took the whole
+    // tiling with it, prefix and all, so the *next* keystroke was cold too.
+    //
+    // That pair was pinned as an equality on purpose, as today's defect
+    // written down rather than left unstated, and this is the repair that
+    // earns the floor: a hole ends the search for a right edge without
+    // declining the tiling. Calibrated the same way `b.healed` below is -
+    // against the structural zero it replaces, not against today's 37.
+    try t.expect(p.healed > 20);
+    try t.expectEqual(@as(u32, 0), p.win);
 
     const b = try drive(bolt, "json", seed0, .whole, 0xA31E_5EED_0F10_0001, 1500);
     // Re-minting everything past the cut is trivially right and costs the file;
     // the point of a right edge is that it does not.
     try t.expectEqual(p.lifts, b.lifts);
+    // And the floor round 19 does earn today. `.whole` never declines a window,
+    // so it is the one policy here that reaches a resume standing above a break
+    // - and every one of those trees was checked against a cold parse, which is
+    // what makes the ring-past-a-mend repair a claim rather than a hope. Before
+    // it this was structurally zero: one mend anywhere stopped every later ring
+    // being taken, so there was nothing above a break to stand on. Calibrated
+    // against that, not written down from today's 37.
+    try t.expect(b.healed > 20);
+    // And the shape of round 21's repair, stated as the inequality it really
+    // is rather than as the equality both sides happen to read today. `.whole`
+    // never declines a window, so it is the ceiling on how often any policy
+    // can stand back up over a hole, and `prove` can only fall short of it by
+    // declining one. It no longer does on this stream.
+    //
+    // A future failure here is not a number to lower. It says a window
+    // declined, and since a hole returns before that line the only thing left
+    // is a *seam* - two runs the parse never put side by side - which is round
+    // 14's real hazard and worth going to look at.
+    try t.expect(p.healed >= b.healed);
     // Measured, not aspired to: re-minting to the end of the file costs about
     // twice what stopping at the first rejoin does on this stream.
     try t.expect(ratio(b.minted, p.minted) > 1.8);
@@ -615,7 +869,7 @@ test "weave: what each re-mint policy costs, and what the cheap one loses" {
         }
         minted[k] = ratio(r.tally.minted, r.tally.whole);
         std.debug.print("  {s:<5} window {d:>5.1}/{d:<5.1} leaves   spine lost after {d} of {d} edits\n", .{
-            @tagName(policy), minted[k],   ratio(r.tally.leaves, r.tally.whole),
+            @tagName(policy), minted[k],     ratio(r.tally.leaves, r.tally.whole),
             lost,             r.tally.edits,
         });
         // `prove` is `snap` and then a composition, so it can only ever widen
@@ -688,9 +942,9 @@ test "weave: what a keystroke costs as the file grows" {
             "  {d:>3}x  {d:>6} leaves  height {d:>4.1}  reminted p50 {d:>3} p90 {d:>4} max {d:>5}" ++
                 "   read {d:>5.1}% of {d}\n",
             .{
-                copies,               cold.leaves,
-                ratio(height, beats), window[beats / 2],
-                window[beats * 9 / 10], window[beats - 1],
+                copies,                                         cold.leaves,
+                ratio(height, beats),                           window[beats / 2],
+                window[beats * 9 / 10],                         window[beats - 1],
                 100 * ratio(read, beats) / ratio(cold.read, 1), cold.read,
             },
         );
@@ -728,8 +982,121 @@ test "weave: the same, on rust, which is the grammar that forks" {
     }
 
     const q = try drive(bolt, "rust", seed0, .prove, 0x2057_5EED_0F11_0002, 400);
+    // Lift *coverage*, not lift count, and the two move in opposite directions:
+    // admitting a lift after the lookahead's folds have run makes each one span
+    // a whole item, so rust went from 4486 lifts covering 24% of the bytes to
+    // 2566 covering 30%. A count floor would have read that as a regression.
+    // Pinned between the two, so the admission set this replaced fails it.
+    try t.expect(q.skipped * 100 / @max(1, q.bytes) >= 27);
     try t.expect(q.lifts > 20);
     try t.expect(q.whole > 20);
+}
+
+test "weave: the same, on java, whose forks used to forfeit the file" {
+    const gpa = t.allocator;
+    const src = shelf(gpa, "upstream/grammars/java.json") catch |e| {
+        if (e == error.FileNotFound) return error.SkipZigTest;
+        return e;
+    };
+    defer gpa.free(src);
+    const bolt = try Bolt.of(gpa, src);
+    defer bolt.deinit();
+    const seed0 = shelf(gpa, "research/joinery/corpus/Ledger.java") catch |e| {
+        if (e == error.FileNotFound) return error.SkipZigTest;
+        return e;
+    };
+    defer gpa.free(seed0);
+
+    {
+        var probe = try bolt.open();
+        defer probe.deinit();
+        try probe.open(seed0);
+        if (probe.tree.?.stop != .accepted) return error.SkipZigTest;
+    }
+
+    const q = try drive(bolt, "java", seed0, .prove, 0x2057_5EED_0F11_0003, 400);
+    // The floor that matters is not the reuse - it is that a fork was created
+    // and collapsed while the trail was being written, because that is the only
+    // path on which a strand exists to be welded in. rust and json fire zero
+    // forks, so without this the suite is green over machinery it never ran.
+    try t.expect(q.rifts > 100);
+    try t.expect(q.roosts > 50);
+    // 18% under the admission set that refused a lift once a fold had run, 28%
+    // now. See the rust test above for why this is bytes and not lifts.
+    try t.expect(q.skipped * 100 / @max(1, q.bytes) >= 23);
+    try t.expect(q.lifts > 20);
+    try t.expect(q.whole > 20);
+
+    // The same stream under the policy that never declines a window, which is
+    // the only way this corpus can ask whether a resume standing above a break
+    // is sound on a *forking* grammar: rust fires zero forks, so its 91 heals
+    // never touch the path, and json never forks at all. Round 19 tried twice
+    // to let `prove` keep its tiling across a hole and java refused both,
+    // returning a tree with a leading `(block_comment)` twice - so the question
+    // is whether that duplication belongs to the window policy or to the resume
+    // underneath it, and `.whole` answers it by exercising the resume with the
+    // window taken out of the picture.
+    const a = try drive(bolt, "java", seed0, .whole, 0x2057_5EED_0F11_0003, 400);
+    // 75 today. The floor is on `healed` rather than on reuse because a stream
+    // of clean edits cannot reach this path at all: it counts the edits that
+    // resumed onto a tiling with a hole in it, so a run that stopped mending,
+    // or stopped keeping the tiling across a mend, goes red here instead of
+    // going green over machinery it never ran.
+    try t.expect(a.healed > 40);
+}
+
+// The ten edits that separated a ring from a probe.
+//
+// A ring probe re-lexes a stretch of the file to ask whether the kept token
+// stream still reads out of the new bytes, and it borrowed the parse's own
+// extras list to do it. Whatever stood in front of the last token it read was
+// still sitting there afterwards, and the first `stow` of the parse that
+// followed minted it a second time - so the tree came back with its leading
+// `(block_comment)` twice. It did not need the resume to succeed: the tenth
+// edit here declines every ring and falls through to a cold parse standing on
+// the residue, which is why the failing parse resumes nothing and lifts
+// nothing and was read for a round as a corruption some earlier edit had left
+// behind.
+//
+// Kept as a fixed script rather than a seed because the seed is a 520-edit
+// stream and this is ten edits and five seconds. The floors in the java fuzz
+// above are what says the machinery still runs; this is what says this defect
+// stays fixed, and it fails on the exact node - `Quire.verify` reports two
+// siblings overlapping without needing a cold parse to compare against.
+test "weave: a ring probe leaves no extras behind for the next parse to mint" {
+    const gpa = t.allocator;
+    const src = shelf(gpa, "upstream/grammars/java.json") catch |e| {
+        if (e == error.FileNotFound) return error.SkipZigTest;
+        return e;
+    };
+    defer gpa.free(src);
+    const bolt = try Bolt.of(gpa, src);
+    defer bolt.deinit();
+    const seed0 = shelf(gpa, "research/joinery/corpus/Ledger.java") catch |e| {
+        if (e == error.FileNotFound) return error.SkipZigTest;
+        return e;
+    };
+    defer gpa.free(seed0);
+
+    const script = [_]Step{
+        .{ .kind = .wild, .from = 4112758893, .span = 1595090134, .seed = 0x20AE71DE1169F413 },
+        .{ .kind = .space, .from = 2547040469, .span = 1644871271, .seed = 0xD3BA1BA22236A44B },
+        .{ .kind = .inside, .from = 3273770982, .span = 2556981051, .seed = 0xB6B907D417BD5289 },
+        .{ .kind = .inside, .from = 2429498641, .span = 62688543, .seed = 0xF17F75A3EAF71DEC },
+        .{ .kind = .wild, .from = 4208132367, .span = 2211242609, .seed = 0xD9382D326BA00750 },
+        .{ .kind = .wild, .from = 1493988254, .span = 2339332807, .seed = 0x2F2A963949DAFD1E },
+        .{ .kind = .inside, .from = 2612214075, .span = 1152012614, .seed = 0x0B5C37B25FAE2D12 },
+        .{ .kind = .wild, .from = 2163217391, .span = 2986024492, .seed = 0x4D6AC0DDC883D21A },
+        .{ .kind = .space, .from = 4207039471, .span = 4165181718, .seed = 0x6AE7817E88A3F763 },
+        .{ .kind = .wild, .from = 937366441, .span = 3406869344, .seed = 0x23423E129592F46E },
+    };
+    var r = try Run.init(bolt, seed0, .whole, .none);
+    defer r.deinit();
+    for (script) |st| try r.play(st);
+    // The last edit is the one that declines every ring, and a run that
+    // stopped reaching it would pass this test by not exercising it.
+    try t.expect(r.tally.mended > 0);
+    try t.expect(r.tally.stood > 0);
 }
 
 test "weave: a deliberately broken reuse is caught and shrinks to a few edits" {

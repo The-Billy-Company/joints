@@ -22,6 +22,24 @@ pub const Item = packed struct(u64) {
     prod: u32,
     dot: u32,
 
+    comptime {
+        // The sentence above, as a build failure. Six interners key on
+        // `sliceAsBytes` of a run of these while comparing them with
+        // `std.mem.eql` - and `eql` consults exactly this predicate before it
+        // will `memcmp`, so a type with slack makes the two halves disagree
+        // about which states are one state. `packed struct(u64)` cannot hold
+        // slack today; the assertion is against the day somebody drops the
+        // backing integer to add a field, which compiles and looks harmless.
+        // Stated as `std.meta.hasUniqueRepresentation` rather than through
+        // `folio/leaf.zig`'s `seamless`, which says the same thing for the
+        // sections on disk: the production arrow is folio -> press and nothing
+        // under `press/` reads folio back. One law, std's spelling, no cycle.
+        if (!std.meta.hasUniqueRepresentation(Item)) @compileError(
+            "lr0.Item is hashed by its bytes and compared by its fields, so" ++
+                " every byte of it has to belong to a field.",
+        );
+    }
+
     fn before(a: Item, b: Item) bool {
         return if (a.prod != b.prod) a.prod < b.prod else a.dot < b.dot;
     }
