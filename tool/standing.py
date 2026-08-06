@@ -1278,11 +1278,13 @@ def shaped(rows: list[Row]) -> list[tuple[bool, str]]:
          f" row(s) carry a `surveyed` clause"
          + (f" — BROKEN: {', '.join(mute)} cleared themselves on an absence" if mute else
             ", so `sound` is evidence and not the lack of a complaint")),
-        (not off,
+        (bool(seen) and not off,
          f"and two readings of the same forest agree: the survey's node count equals the"
          f" printer's on {len(seen) - len(off)} of {len(seen)} row(s)"
          + (f" — BROKEN on {' · '.join(off)}" if off else
-            f" ({walked} node(s), counted once off stderr and once off stdout)")),
+            f" ({walked} node(s), counted once off stderr and once off stdout)" if seen else
+            " — VACUOUS: no row answered, so nothing was compared and this agrees about"
+            " nothing")),
         (walked > 0 and bool(trees),
          f"and not vacuous: {walked} node(s) across {len(trees)} sound forest(s) were put"
          f" under the walk, so a fault had somewhere to be found"),

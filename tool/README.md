@@ -265,6 +265,91 @@ python3 tool/standing.py --settle     # re-measure any row an artifact moved und
 OUTLINER_WORK=/tmp/mine python3 tool/standing.py   # a private folio cache
 ```
 
+### Three axes, and the only count that means what `parse whole` sounds like
+
+`built` is the union of the spans of the top-level roots that have a child, and
+`tops()` discards every indented row before it is computed. **So neither
+`standing` nor `damage` has ever read a byte below the root frontier.** On a
+file one root covers whole they read 100% and 0 no matter what the tree
+underneath looks like: a child outside its parent contributes its bytes exactly
+like a well-placed one, and so do a child out of source order, a node reached
+twice, and a whole subtree hung under the wrong parent. That is not a bug in
+either column - it is what a frontier measurement *is*, and coverage is worth
+measuring. It is only a lie when it is read as correctness.
+
+So the board carries three columns that answer three different questions, and
+never adds them up:
+
+```
+stand   coverage    did one root reach this byte              built / size
+shape   structure   is what it built a TREE                   Quire.survey
+trued   agreement   does the oracle defend the derivation     square / size
+```
+
+`shape` is the cheapest of the three by a wide margin - ten seconds, no oracle,
+every grammar that parses - and it prints one word per row: `tree` when the walk
+liked the forest, `loose`/`disorde`/`torn` naming the worst class when it did
+not, `void` when nothing was built, and **`unasked`** when the binary handed
+back no survey at all. That last one is the point; see `sound.py` below.
+
+The headline is four tallies rather than one, and the fourth is the one to
+quote:
+
+```
+30 grammars · 17 reached whole (one root over every byte, no gap by construction)
+              29 surveyed sound (every node reached once, inside its parent, in source order)
+              16 agreed whole (`trued` 100% - the oracle defends every byte), over the 29 row(s) it judged
+              16 whole on ALL THREE - coverage, shape and agreement are different questions and this is
+                the only count that means what `17 parse whole` sounds like
+```
+
+Read on `pin-shapelane` 2026-08-06 (binary `4c262974e`, oracle `d85e736fa`, 30
+attributed). **17 -> 16**: the hole this split was cut to size costs exactly one
+row, elixir, which builds every byte of its file into one root that surveys
+sound and whose derivation the oracle rejects over 22,089 bytes - 48% of the
+file. Every other row that reached whole also survives both interior questions.
+So the finding is a documentation fix in its magnitude and a real one in its
+kind: nothing was silently wrong at 100%/0 except elixir, and no column on this
+board could have told you that before now.
+
+Three assertions in `checks()` keep the third axis from going quiet, and all
+three redden when pointed at a binary from before the contract (measured against
+pin `sound`, binary `b9bd1cc19`, built 2026-08-06T00:15Z): every forest-building
+row must carry a `surveyed` clause; the survey's node count off stderr must equal
+the printer's line count off stdout (109,717 either way, two independent readings
+of one parse); and the walk must have had somewhere to find a fault.
+
+### `--cite` - the one line to paste beside a number you are writing down
+
+A board's footer names the world it was taken in, and a lane copies the *row*.
+That is not carelessness - the row is the correct thing to copy - and it is how
+four correct boards became four disagreeing headlines in one morning. So the
+attribution is a command of its own, priced so it never gets skipped: no survey,
+no press, just the world.
+
+```
+python3 tool/standing.py --cite                             # ~130 ms, one markdown line
+outliner `a525dc9b8` · tree `3d0d2e481` (live) · **no oracle** — outliner's own words
+
+python3 tool/standing.py --cite=board.json --quote=built    # ~100 ms off a saved board
+`built` reads **400,044** over 30 row(s) — outliner `346d880fc` · tree `c3d371769` (live) · oracle `d85e736fa` (30 attributed)
+```
+
+Those two lines were taken four minutes apart and name different binaries,
+because a sibling lane reinstalled `zig-out` in between. That is the whole
+argument for the second form in one accident.
+
+The second form is the better one when you have the board, because it renders
+the figure and its world **from the same board** and so they cannot drift apart
+the way a hand-pasted pair can. It refuses a column that does not add up over
+rows, and refuses an oracle column on a board no oracle judged rather than
+totalling unmeasured zeroes.
+
+This is the supply side of `sighting.py --gate`, which is CI's `record` job: the
+gate refuses a page you changed that reports a measured figure and names no
+tree, and it prints whichever of these two commands fits the page. A refusal
+with no cheap remedy beside it is a gate that gets disabled.
+
 **Exit 3 means the table is not one measurement.** Every folio and the binary
 are digested at read time and read again at the end (`stamp.reconcile`); if a
 row's artifact moved in between, that row is marked ` · SPLIT`, the footer names
@@ -367,6 +452,63 @@ guard here except one clears that: `covered` rises, `spoil` falls, `rubble`
 collapses 14,057 -> 8, bare leaves fall 2,481 -> 48. **Only `describes` catches
 it.** Full dossier, five predictions and the two that were wrong:
 `research/joinery/board/`.
+
+## `sound.py` - is what it built a tree at all?
+
+`standing` asks whether a root reached a byte. `crooked` asks whether the
+oracle agrees with the derivation, and costs minutes and an oracle seat. This
+one asks the question in between, which nothing else asks and which costs ten
+seconds: **is the thing the parser handed back a tree?** Every node reached
+exactly once, every child inside its parent's span, siblings disjoint and in
+source order. A forest can fail all four and still stand at 100% with zero
+damage, because a misplaced child's bytes count exactly like a well-placed
+one's.
+
+```
+python3 tool/sound.py                 # every grammar in the roster
+python3 tool/sound.py --set=corpus    # or --set=breadth
+```
+
+It iterates the roster rather than naming a witness on purpose: toml was the
+row that exposed the hole (one loose node under a `string` whose span
+`Gather.reduce` computed without its children), but the defect was structural
+and any grammar could have carried it.
+
+**Three answers, not two.** The reason this file exists in the shape it does is
+that `Quire.survey`'s verdict used to arrive only as a complaint, so a gate
+reading it could not tell a sound tree from a tree nobody looked at - the same
+defect `collate.py`'s `recall` and `shear.py`'s `cut_rubble` were repaired for,
+both of which read zero for "none there were" and for "nobody asked". So
+`parse.zig` now prints `surveyed N of M nodes` on **every** parse, before the
+optional `UNSOUND:` clause, and `stamp.Outcome` carries `surveyed`/`arena` off
+it:
+
+```
+outliner: /t/a.toml: accepted, 1 root, surveyed 731 of 731 nodes
+outliner: /t/b.zig: stray byte at 41, 4 roots, surveyed 31 of 31 nodes, UNSOUND: 1 loose, 0 disorder, 0 torn
+```
+
+A row with no clause is `UNASKED` and fails, loudly, naming `verdict` in
+`src/surface/face/outliner/parse.zig`. `survey_test.zig` holds the arenas that
+make the walk say no across all four violation classes plus the two legal
+shapes a naive containment check would wrongly flag - but no unit test can tell
+you the binary in front of *this* board still calls `survey`, which is what the
+clause is for. Pointing the gate at pin `sound` (binary `b9bd1cc19`, built
+2026-08-06T00:15Z, from before the contract) turns all 29 rows `UNASKED`
+instead of clearing them, which is the falsifier the old evidence could not
+have.
+
+**29 of 29 asked grammars hand back a tree**, 109,717 nodes walked, measured on
+`pin-shapelane` 2026-08-06 (binary `4c262974e`). yaml is the thirtieth and is a
+skip rather than a pass: the binary refuses the file outright, so there is no
+forest to survey, and the earlier `30 of 30` counted that refusal as a
+clearance.
+
+The arenas hold 145,351 nodes against those 109,717, and twenty rows carry
+slack (widest verilog, 18,240). That shortfall is arena the roots abandoned -
+speculative nodes `Gather.reduce` allocated and no root ended up pointing at -
+not forest that went unchecked. Every node any root reaches was walked, which
+is exactly what `sound` claims and no more.
 
 ## `shear.py` - is the forest one refusal's shadow, or real?
 
