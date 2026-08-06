@@ -1562,3 +1562,22 @@ Not rungs; these run forever once there is code.
 - **Folio format stability.** Byte-exact round-trip plus a rejection test per
   malformed field. A grammar artifact that a future version silently
   misinterprets is worse than one it refuses to load.
+- **Leaf coverage against an outside lexer.**
+  `python3 research/joinery/verilog/leaf.py --check`, floors in
+  `leaf.floor.json`. Every other column here is computed from our own forest -
+  `standing` and `damage` read top-level root spans, `square` reads agreement
+  with an oracle that can go blind over a whole file, `spoil` reads whether a
+  byte was reached - and **not one of them can see a token nobody stood on**.
+  An independent lexer's token stream can, needs no agreement about tree shape,
+  and is the one number directly comparable to tree-sitter. Verilog was at
+  59.4% of Verible's token bytes to tree-sitter's 98.8% for the life of the
+  project with nothing on the board able to say so
+  ([verilog/RESULT-7-leaf.md](verilog/RESULT-7-leaf.md)).
+
+  Two habits make it a test rather than a reading. **A missing instrument skips
+  loudly and never passes** - no yardstick, no folio, or a second source whose
+  sha256 moved, each says so by name. And it carries **witnesses with their
+  verdicts written down**, including verdicts that are defects: a witness
+  expected to be `refused` fails the moment somebody repairs it, which forces
+  the repair to be acknowledged rather than absorbed, and turns the falsifier
+  into the regression guard for the fix that dissolved it.
