@@ -49,8 +49,13 @@ step. `forked`/`climbed`/`chased` name which wall the walk hit first.
 `supplied` gets the same weakness pointing the other way and the runtime now
 says so on a second line: a supply made while some *other* candidate was
 untellable is one literal that said yes, not the only literal that would have.
-`unsure` counts those - see `hazed` below. `spurned` returns mid-loop and has
-no count, which is a real hole this file declines to paper over.
+`unsure` counts those - see `hazed` below. `spurned` used to return mid-loop and
+so had no count, which this file declined to paper over; the `felled` lane was
+permitted to change behaviour and closed it, running the candidate loop to the
+end without moving any decision. `spurned` now reaches `unsure` too, and carries
+a `rivals:` line naming how many literals resumed the parse - 40 of 71 turn out
+to have more than two. This file's regexes are unaffected: that count went on a
+new line precisely so the `spurned:` shape parsed below did not move.
 
 ## The population is the arm's, and that is the honest caveat
 
