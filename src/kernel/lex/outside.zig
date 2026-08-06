@@ -410,6 +410,15 @@ pub const Troupe = struct {
     /// the symbol that byte implies.
     pub const Glue = struct { at: u8, name: []const u8 };
 
+    /// A pair of parser orders that bracket a region, and the frame they leave.
+    ///
+    /// The frame is named rather than positional because the close is keyed to
+    /// it: `_cmd_texp_end` pops a `fenced` frame and a `_cmd_brace_close` pops a
+    /// `braced` one, and a state admitting the wrong close over the right frame
+    /// must decline rather than pop whatever is on top. That is the whole of the
+    /// C scanner's `current_context(env) == TExp` guard, kept as data.
+    pub const Bracket = struct { open: []const u8, shut: []const u8, frame: u16 };
+
     /// How many markers one language may glue. Julia declares five; the room
     /// above that is for the next language and not for a cohort to grow into
     /// silently, since `seated` refuses a troupe that overflows it.
@@ -505,6 +514,24 @@ pub const Troupe = struct {
     seal: []const u8 = "",
     /// The condition that ends an explicit block, over its `}`.
     unbrace: []const u8 = "",
+    /// The bracket orders, when `kind` is `.writ`: pairs of zero-width terminals
+    /// the grammar spells immediately after a delimiter it also spells, which
+    /// push and pop a frame the layout rule reads but no column may close.
+    ///
+    /// A separate field from `writs` because the mutation is different in kind.
+    /// A `writ` opens a *block*, so it measures the next lexeme and stores its
+    /// column; a bracket carries no measurement at all - `(` is a bracket
+    /// wherever it stands - so its frame is a marker and its close is a stack
+    /// test rather than a comparison. Haskell spells two pairs: `_cmd_texp_*`
+    /// around `(`, `[` and a guard's `|`, and `_cmd_brace_*` around a record's
+    /// `{`, and tree-sitter-haskell's scanner answers both in four lines that
+    /// read no bytes whatever.
+    ///
+    /// Every pair that is spelled must resolve whole, on the same evidence
+    /// `writs` demands and for a sharper reason: seating an open without its
+    /// close strands a marker on the stack, and a marker on top silences the
+    /// offside rule for the rest of the file. Half of this is worse than none.
+    brackets: []const Bracket = &.{},
     /// Terminals whose being wanted stands this hand down. Python's are its
     /// brackets, because inside `(`, `[` or `{` a line break carries no
     /// meaning; JavaScript's are the template body and JSX text, because the
@@ -654,6 +681,20 @@ pub const troupes = [_]Troupe{
         .sever = "_cond_layout_semicolon",
         .seal = "_cond_layout_end",
         .unbrace = "_cond_layout_end_explicit",
+        // The two bracket orders, and the cleanest warrant on the board. Both
+        // pairs are pure `valid()` tests in `pre_ws_commands` - four functions,
+        // no byte read between them - and the table grants the warrant outright
+        // rather than on the corpus: measured over haskell's 3543 states,
+        // `_cmd_texp_start` shifts in 3 and is the *sole* shift in all 3,
+        // `_cmd_texp_end` in 6 and sole in 6, `_cmd_brace_open` in 4 and sole in
+        // 4, `_cmd_brace_close` in 13 and sole in 13. Zero rivals anywhere, and
+        // zero co-admission with each other in either the shift or the
+        // permission set. Nothing here ever asks the bytes a question, because
+        // there is never a second answer for the bytes to choose between.
+        .brackets = &.{
+            .{ .open = "_cmd_texp_start", .shut = "_cmd_texp_end", .frame = writ.fenced },
+            .{ .open = "_cmd_brace_open", .shut = "_cmd_brace_close", .frame = writ.braced },
+        },
     },
     // Python's strings, which its scanner answers in the same C function as
     // the layout and for the same reason: `f"{x}"` puts an interpolation
@@ -1319,6 +1360,13 @@ pub fn provision(t: *const Troupe, names: anytype) ?Cast {
         if (k >= c.writs.len) break;
         c.writs[k] = names.external(name);
     }
+    for (t.brackets, 0..) |b, k| {
+        if (k >= c.brackets.len) break;
+        c.brackets[k] = .{
+            .open = names.external(b.open),
+            .shut = names.external(b.shut),
+        };
+    }
     // html's is declared as the anonymous string `/>` rather than a named
     // terminal, so it is looked up across the whole set: the press keeps the
     // ordinary token for a spelling it can lex, and this hand has to answer for
@@ -1387,6 +1435,16 @@ pub fn seated(t: *const Troupe, c: *const Cast) bool {
     for (t.sigils, 0..) |s, k| if (s.len > 0 and c.sigils[k] == null) return false;
     if (t.writs.len > c.writs.len) return false;
     for (t.writs, 0..) |w, k| if (w.len > 0 and c.writs[k] == null) return false;
+    // Both halves of a bracket or neither. An open without its close pushes a
+    // marker nothing can pop, and a marker on top of the stack suspends the
+    // offside rule for every line after it - so a half-seated pair does not
+    // lose one construct, it loses the file.
+    if (t.brackets.len > c.brackets.len) return false;
+    for (t.brackets, 0..) |b, k| {
+        if (b.open.len == 0 and b.shut.len == 0) continue;
+        const got = c.brackets[k];
+        if (got.open == null or got.shut == null) return false;
+    }
     if (t.roster.len > marrow.widest) return false;
     for (t.roster, 0..) |part, k| if (part.name.len > 0 and c.roster[k] == null) return false;
     // A family that emits its own close and cannot resolve one would answer
@@ -1422,6 +1480,10 @@ pub fn claimed(t: *const Troupe, name: []const u8) bool {
     for (t.opens) |n| if (std.mem.eql(u8, n, name)) return true;
     for (t.sigils) |n| if (n.len > 0 and std.mem.eql(u8, n, name)) return true;
     for (t.writs) |n| if (n.len > 0 and std.mem.eql(u8, n, name)) return true;
+    for (t.brackets) |b| {
+        if (b.open.len > 0 and std.mem.eql(u8, b.open, name)) return true;
+        if (b.shut.len > 0 and std.mem.eql(u8, b.shut, name)) return true;
+    }
     // `rival` is not here for the same reason `hushed` is not: it is read out
     // of the permission set and never answered.
     for (t.roster) |part| if (std.mem.eql(u8, part.name, name)) return true;
@@ -1441,6 +1503,12 @@ pub const Cast = struct {
     /// Parallel to `troupe.writs`, and read as a set: the hand asks how many of
     /// them the permission set admits, never which one by name.
     writs: [8]?g.Symbol = @splat(null),
+    /// Parallel to `troupe.brackets`, holding only the two symbols. The frame
+    /// each pair leaves is read back off `c.troupe.brackets[k]` at the offset a
+    /// slot resolved at, exactly as `roster` reads its `mark` - a `Cast` field
+    /// resolves spellings and nothing else, and duplicating the frame here gave
+    /// one fact two homes that could disagree.
+    brackets: [4]struct { open: ?g.Symbol = null, shut: ?g.Symbol = null } = @splat(.{}),
     brace: ?g.Symbol = null,
     sever: ?g.Symbol = null,
     seal: ?g.Symbol = null,
@@ -2243,13 +2311,35 @@ fn tested(
             return .{ .symbol = sym, .skip = lead.at - at, .len = 1 };
         }
     }
+    // A bracket order's close: pop the frame its open pushed, if that frame is
+    // what is standing on top. Byte-determined in the same sense the braces
+    // below are - the delimiter it follows has already been consumed, so the
+    // only question left is a stack identity - and it needs no warrant for the
+    // same reason `standing` does not: the test is a function of the memory
+    // alone, so every live reading gets the same answer from it.
+    for (c.brackets, 0..) |b, k| {
+        const sym = b.shut orelse continue;
+        if (wanted.isSet(sym) and carry.columns.len > 0 and
+            carry.columns.top() == c.troupe.brackets[k].frame)
+        {
+            carry.columns.close();
+            return .{ .symbol = sym, .len = 0 };
+        }
+    }
     // End of input owes a close for every block still open, whatever column the
     // block sits at. Without this clause a block opened at column zero - which is
     // every module body - could never be closed, because no line can land left of
-    // zero and the file would end inside it.
+    // zero and the file would end inside it. A marker is not a block and owes
+    // nothing at the end of input; its own order is what pops it.
     const over = lead.at >= bytes.len and carry.columns.len > 0 and
-        carry.columns.top() != writ.sealed;
-    const how = if (over) writ.Standing.left else writ.standing(&carry.columns, lead.column, lead.fresh);
+        carry.columns.top() < writ.marker;
+    // A delimiter closes the layouts opened inside the bracket it ends, because
+    // nothing else can: the `)` of `(do a; a)` shares a line with the block it
+    // ends, so no column ever measures shallower. One layout per call, so a
+    // bracket holding two of them is unwound over two reads and the bracket's
+    // own close then finds its frame on top.
+    const shed = writ.bracketed(&carry.columns);
+    const how = if (over or shed) writ.Standing.left else writ.standing(&carry.columns, lead.column, lead.fresh);
     switch (how) {
         .left => if (c.seal) |sym| {
             if (wanted.isSet(sym)) {
@@ -2281,6 +2371,10 @@ fn tested(
 /// question, not two answers in conflict.
 fn mine(c: *const Cast, sym: g.Symbol) bool {
     for (c.writs) |w| if (w) |own| if (own == sym) return true;
+    for (c.brackets) |b| {
+        if (b.open) |own| if (own == sym) return true;
+        if (b.shut) |own| if (own == sym) return true;
+    }
     const named = [_]?g.Symbol{ c.brace, c.sever, c.seal, c.unbrace };
     for (named) |own| if (own) |it| if (it == sym) return true;
     return false;
@@ -2353,14 +2447,50 @@ pub fn ordered(
     bytes: []const u8,
     at: u32,
     wanted: *const std.DynamicBitSetUnmanaged,
+    named: *const std.DynamicBitSetUnmanaged,
 ) ?Hit {
     if (at > bytes.len) return null;
     for (casts) |*c| {
         if (c.troupe.kind != .writ) continue;
+        // A bracket order carries no measurement, so it does not need the next
+        // lexeme to exist and it cannot be told from a rival by any byte. It
+        // rides the same warrant the layout orders do and clears it by a wider
+        // margin: haskell's four are the sole shift in every one of the 26
+        // states that admit any of them, so `unrivalled` is a formality the
+        // table grants rather than a corpus fact this seat is hoping for.
+        for (c.brackets, 0..) |b, k| {
+            const sym = b.open orelse continue;
+            if (!wanted.isSet(sym) or !unrivalled(c, sym, named)) continue;
+            if (!carry.columns.open(c.troupe.brackets[k].frame)) return null;
+            return .{ .symbol = sym, .len = 0 };
+        }
         const sym = sole(c, wanted, null) orelse continue;
         if (raise(carry, bytes, at)) return .{ .symbol = sym, .len = 0 };
     }
     return null;
+}
+
+/// Whether this order is the only terminal the union admits by shift.
+///
+/// The warrant, for an order that has no family to be exclusive within. A
+/// `writ` earns it through `sole`, which asks whether two *orders* stand
+/// together; a bracket has to ask the wider question, because the harm is the
+/// same either way - a push executed in the shared stack on one reading's
+/// behalf is read by every reading - and there is no measurement here to
+/// partition the answer the way `standing` partitions a column's.
+///
+/// Asked of `named` rather than `wanted`, and the difference is the whole test.
+/// `wanted` auto-admits every extra so a hand sees what tree-sitter's
+/// `valid_symbols` would show, and haskell declares four of them - comment,
+/// haddock, cpp, pragma - so a warrant read off `wanted` is refused in every
+/// state in the grammar and this seat would be dead code that measured clean.
+fn unrivalled(c: *const Cast, sym: g.Symbol, named: *const std.DynamicBitSetUnmanaged) bool {
+    var it = named.iterator(.{});
+    while (it.next()) |other| {
+        if (@as(g.Symbol, @intCast(other)) == sym) continue;
+        if (!mine(c, @intCast(other))) return false;
+    }
+    return true;
 }
 
 /// A new span, when the state will accept one of this dialect's openers.
@@ -2510,6 +2640,17 @@ test "outside: every troupe the eleven rely on can still seat" {
         // scalar. So the shape is read off the field too - a name, a list of
         // names, or a list of records carrying one - and the only thing a new
         // role has to do to be seated here is be spelled in both structs.
+        //
+        // It went stale a third time, the same way, and the third case is the
+        // one that finishes the argument. Haskell's bracket orders are a run of
+        // records carrying *two* names each - an open and its close, which have
+        // to resolve together or the seat strands a frame nothing can pop - and
+        // a loop that understood one name per record skipped the field
+        // silently, left both halves null, and failed the row it was seating.
+        // So the record is now paired by field name too, exactly as the outer
+        // loop pairs the structs: every `?g.Symbol` in a seat slot is filled
+        // from the spelling of the same name in the troupe's record. A role
+        // carrying three names would need nothing here at all.
         inline for (@typeInfo(Troupe).@"struct".fields) |f| {
             if (@hasField(Cast, f.name)) {
                 const Seat = @FieldType(Cast, f.name);
@@ -2529,11 +2670,67 @@ test "outside: every troupe the eleven rely on can still seat" {
                             next += 1;
                         }
                     }
+                } else if (@typeInfo(Seat) == .array and
+                    @typeInfo(@typeInfo(Seat).array.child) == .@"struct")
+                {
+                    const Slot = @typeInfo(Seat).array.child;
+                    for (@field(t, f.name), 0..) |role, k| {
+                        if (k >= @typeInfo(Seat).array.len) break;
+                        inline for (@typeInfo(Slot).@"struct".fields) |sf| {
+                            if (comptime @FieldType(Slot, sf.name) == ?g.Symbol) {
+                                if (@field(role, sf.name).len > 0) {
+                                    @field(@field(c, f.name)[k], sf.name) = next;
+                                    next += 1;
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
         try std.testing.expect(seated(t, &c));
     }
+}
+
+test "outside: the troupe fixture still refuses half a role" {
+    // **Anti-vacuity for the loop above.** Teaching a fixture a new shape is
+    // one keystroke away from teaching it to fill everything and assert what it
+    // just filled, and this file has already been burned by a fixture that
+    // could not fail. So the generalisation is held to the thing it must still
+    // catch: a paired role with one half resolved and the other null is exactly
+    // the half-seating `seated` exists to refuse, because an open with no close
+    // pushes a frame nothing can pop and a marker on top of the stack silences
+    // the offside rule for every line after it.
+    const hs = for (&troupes) |*t| {
+        if (t.brackets.len > 0) break t;
+    } else unreachable;
+
+    var half: Cast = .{ .troupe = hs };
+    var next: g.Symbol = 0;
+    // Everything the row spells except the closes, so the only thing missing is
+    // the half whose absence is the hazard.
+    for (hs.writs, 0..) |w, k| if (w.len > 0) {
+        half.writs[k] = next;
+        next += 1;
+    };
+    for ([_]*?g.Symbol{ &half.brace, &half.sever, &half.seal, &half.unbrace }) |slot| {
+        slot.* = next;
+        next += 1;
+    }
+    for (hs.brackets, 0..) |_, k| {
+        half.brackets[k].open = next;
+        next += 1;
+    }
+    try std.testing.expect(!seated(hs, &half));
+
+    // And it is the missing close doing the refusing, not something else the
+    // row needs - fill them and the same cast seats.
+    var whole = half;
+    for (hs.brackets, 0..) |_, k| {
+        whole.brackets[k].shut = next;
+        next += 1;
+    }
+    try std.testing.expect(seated(hs, &whole));
 }
 
 test "outside: the ledger refuses the two-cycle the old slot let through" {

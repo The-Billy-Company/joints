@@ -72,16 +72,35 @@ const std = @import("std");
 
 const offside = @import("offside.zig");
 
-/// The column an explicit `{ … }` frame is stored at.
+/// The lowest frame value that is a marker rather than a measured column.
+///
+/// Three of the frames on this stack are not indentation at all - an explicit
+/// `{ … }` layout block and the two bracket orders below - and none of them may
+/// be closed by a line's indentation. Storing them as reserved columns keeps one
+/// stack where the alternative is four parallel ones that can disagree about
+/// nesting order, and nesting order is the whole question a bracket asks.
+///
+/// The top of the range is the choice because a column only reaches it through
+/// `+|=` saturating on a line of 65,533 leading spaces, and a frame that wide
+/// read as a marker is *refused* a column-driven close rather than given a wrong
+/// one. The failure direction is silence.
+pub const marker: u16 = std.math.maxInt(u16) - 2;
+
+/// A record `{ … }` the parser ordered open: haskell's `Braces` context.
+pub const braced: u16 = marker;
+
+/// A tuple-expression bracket the parser ordered open: haskell's `TExp`.
+///
+/// The sort exists because `(`, `[` and a guard's `|` delimit their contents
+/// unambiguously, which lets a layout inside one be closed by the delimiter
+/// rather than by a column - see `bracketed`.
+pub const fenced: u16 = marker + 1;
+
+/// The column an explicit `{ … }` layout frame is stored at.
 ///
 /// A brace-opened block is closed by `}` and by nothing else - the Report is
-/// explicit that the offside rule does not apply inside one - so its frame has
-/// to be tellable from a measured column, and one stack is much better than two
-/// parallel ones that can disagree. `maxInt` is the choice because a column only
-/// reaches it through `+|=` saturating on a line of 65,535 leading spaces, and a
-/// frame that wide read as explicit is *refused* a column-driven close rather
-/// than given a wrong one. The failure direction is silence.
-pub const sealed: u16 = std.math.maxInt(u16);
+/// explicit that the offside rule does not apply inside one.
+pub const sealed: u16 = marker + 2;
 
 /// Haskell's symbol class, which is what decides whether `--` opens a comment.
 ///
@@ -194,13 +213,92 @@ pub fn standing(columns: *const offside.Columns, column: u16, fresh: bool) Stand
     if (columns.len == 0) return .inside;
     const top = columns.top();
     // Inside `{ … }` the offside rule is suspended outright, so no measurement
-    // of any line can end the frame - only its `}`.
-    if (top == sealed) return .inside;
+    // of any line can end the frame - only its `}`. A bracket order is not a
+    // block at all and has no column to be measured against, so the same
+    // silence is the right answer for all three markers.
+    if (top >= marker) return .inside;
     // Without a line ending there is no new line to measure. A `where` sharing
     // a line with the declaration it follows says nothing about layout.
     if (!fresh) return .inside;
     if (column < top) return .left;
     return if (column == top) .level else .inside;
+}
+
+/// Whether the open blocks stand inside a bracket the parser ordered.
+///
+/// The clause that makes a bracket order worth seating rather than merely
+/// possible. `(case a of a -> a, do a; a)` opens two layouts inside one `(`,
+/// and neither of them can be closed by a column: the `)` is on the same line
+/// as the block it ends, so `standing` reads `.inside` forever and both frames
+/// are stranded. A stranded marker is worse than an unseated one, because a
+/// marker on top silences the offside rule for the rest of the file.
+///
+/// The Report has no clause for this; GHC gets it from `parse-error(t)`, and
+/// tree-sitter-haskell encodes it as the `TExp` sort precisely so a delimiter
+/// can end a layout. So the test is a *stack* test, not a column one: are the
+/// frames above the innermost bracket all layouts? If they are, the delimiter
+/// that closes the bracket closes them first, one per call.
+///
+/// Total over the memory alone, which is what lets it answer under a carry
+/// shared by every live reading - the same argument `standing` rests on.
+pub fn bracketed(columns: *const offside.Columns) bool {
+    // The top has to be a layout, or there is nothing here to close.
+    if (columns.len < 2 or columns.top() >= marker) return false;
+    var i = columns.len - 1;
+    while (i > 0) {
+        i -= 1;
+        switch (columns.deep[i]) {
+            braced, fenced => return true,
+            // An explicit block is a wall: its `}` owes the close, and a
+            // delimiter outside it may not reach past one.
+            sealed => return false,
+            else => {},
+        }
+    }
+    return false;
+}
+
+test "writ: a bracket closes the layouts opened inside it" {
+    var columns: offside.Columns = .{};
+    try std.testing.expect(columns.open(fenced));
+    try std.testing.expect(columns.open(4)); // `do` inside the bracket
+    try std.testing.expect(bracketed(&columns));
+    // Two deep is still inside it - `(case a of a -> a, do a; a)`.
+    try std.testing.expect(columns.open(9));
+    try std.testing.expect(bracketed(&columns));
+}
+
+test "writ: a bracket with nothing open inside it closes nothing" {
+    var columns: offside.Columns = .{};
+    try std.testing.expect(columns.open(fenced));
+    // The bracket is the top, so there is no layout for a delimiter to end -
+    // the delimiter's own order pops the bracket instead.
+    try std.testing.expect(!bracketed(&columns));
+}
+
+test "writ: an explicit block walls a delimiter off from the bracket" {
+    var columns: offside.Columns = .{};
+    try std.testing.expect(columns.open(fenced));
+    try std.testing.expect(columns.open(sealed));
+    try std.testing.expect(columns.open(4));
+    // The `}` owes this close, not the `)`. Reaching past the wall would end a
+    // block the file explicitly bracketed.
+    try std.testing.expect(!bracketed(&columns));
+}
+
+test "writ: a layout with no bracket under it is the ordinary case" {
+    var columns: offside.Columns = .{};
+    try std.testing.expect(columns.open(0));
+    try std.testing.expect(columns.open(4));
+    try std.testing.expect(!bracketed(&columns));
+}
+
+test "writ: every marker suspends the column rule, not only the sealed one" {
+    for ([_]u16{ braced, fenced, sealed }) |frame| {
+        var columns: offside.Columns = .{};
+        try std.testing.expect(columns.open(frame));
+        try std.testing.expectEqual(Standing.inside, standing(&columns, 0, true));
+    }
 }
 
 test "writ: a sealed frame is never closed by a column" {

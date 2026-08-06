@@ -867,7 +867,7 @@ pub const Scanner = struct {
             // rather than above and never competes with a token that would have
             // lexed. See `outside.ordered`.
             if (s.casts.len > 0) if (expected) |e| {
-                if (outside.ordered(s.casts, &s.carry, bytes, i, &e.wanted)) |h| {
+                if (outside.ordered(s.casts, &s.carry, bytes, i, &e.wanted, &e.named)) |h| {
                     return .{ .token = .{ .symbol = h.symbol, .start = i + h.skip, .len = h.len } };
                 }
             };
