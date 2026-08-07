@@ -298,19 +298,29 @@ quote:
 ```
 30 grammars · 17 reached whole (one root over every byte, no gap by construction)
               29 surveyed sound (every node reached once, inside its parent, in source order)
-              16 agreed whole (`trued` 100% - the oracle defends every byte), over the 29 row(s) it judged
-              16 whole on ALL THREE - coverage, shape and agreement are different questions and this is
+              17 agreed whole (`trued` 100% — the oracle defends every byte), over the 29 row(s) it judged
+              17 whole on ALL THREE — coverage, shape and agreement are different questions and this is
                 the only count that means what `17 parse whole` sounds like
 ```
 
-Read on `pin-shapelane` 2026-08-06 (binary `4c262974e`, oracle `d85e736fa`, 30
-attributed). **17 -> 16**: the hole this split was cut to size costs exactly one
-row, elixir, which builds every byte of its file into one root that surveys
-sound and whose derivation the oracle rejects over 22,089 bytes - 48% of the
-file. Every other row that reached whole also survives both interior questions.
-So the finding is a documentation fix in its magnitude and a real one in its
-kind: nothing was silently wrong at 100%/0 except elixir, and no column on this
-board could have told you that before now.
+Read on `pin-handoff` 2026-08-06: outliner `1885792a7` · tree `4f018b60f` (pin)
+· oracle `d85e736fa` (30 of 30 live, 30 attributed).
+
+**The gap this split was cut to expose has closed, and that is a fact about one
+row rather than about the split.** When the third axis first landed it read
+`17 -> 16`, and the single row it cost was elixir: every byte of its file under
+one root that surveyed sound, over a derivation the oracle rejected across
+22,089 bytes - 48% of the file. Elixir's crooked is now zero, so the same three
+questions return the same 17 and the fourth tally has nothing left to subtract.
+
+Which is the reading to be careful with. Three counts agreeing is not a
+redundant axis; it is a board with no row currently in the one state only this
+axis can see - whole, sound, and confidently wrong. That state cost a
+documentation-sized delta the first time it was looked for and it will come back
+the moment a row builds a file whole and builds it wrong, which is the failure
+mode `stand` and `shape` are both constitutionally unable to report. The
+constraint on this board is coverage: `29 surveyed sound` against `17 reached
+whole` says twelve rows walk a forest they have not finished building.
 
 Three assertions in `checks()` keep the third axis from going quiet, and all
 three redden when pointed at a binary from before the contract (measured against
@@ -1079,6 +1089,17 @@ is one table (`FAMILY`) rather than scattered conditionals, and anything shape
 cannot route is printed as an unassigned residue rather than pushed into the
 nearest bucket. `--from-json` reads a saved survey, since the classifier is pure
 and the survey costs twenty minutes.
+
+**It ranks on `on doc`, not on bytes.** Every wall carries `torn`, and a torn
+wall stands behind a fragment - a suffix whose openers the peel left behind,
+which is nobody's document. The board used to rank families by the undivided
+total, and **93% of that total is fragment**, so the ordering it printed was
+mostly an ordering of suffixes no parser reads: `bracket refused` led at 20,021
+bytes and is 66 on the document, while `unrunnable external` sat fourth at 5,629
+and is the real head at 3,284. Every family moved when the column was split.
+Both are printed, because a fragment wall is a provenance rather than a
+dismissal - but only `on doc` is an amount of work, which is what a work list is
+for.
 
 **`gate` is `board`'s claim, held.** It peels a fixed nine grammars for a fixed
 40 rounds, cold and warm, and fails when a wall belongs to **none** of the

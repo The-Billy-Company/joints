@@ -951,38 +951,58 @@ def main(argv: list[str]) -> int:
         cost = {(r.name, p.kind, p.who): p for r in rows for p in r.priced}
         seen = [(r, k, w) for r in rows for k, w in r.distinct]
 
-        def bytes_of(rows_in) -> int:
+        def bytes_of(rows_in, *, frag: bool | None = None) -> int:
             return sum(p.cost for r, k, w in rows_in
-                       if (p := cost.get((r.name, k, w))) is not None)
+                       if (p := cost.get((r.name, k, w))) is not None
+                       and (frag is None or bool(p.torn) is frag))
+
+        # What a family costs *on the document*, which is the only column that
+        # can be read as work. `run` computes `torn` and says in its own summary
+        # to subtract it before quoting a cost; the board used to rank on the
+        # total anyway, and 93% of that total is fragment - so the ordering it
+        # printed was mostly an ordering of suffixes nobody parses. Ranking on
+        # this instead moves `unrunnable external` from fourth to first.
+        def doc_of(rows_in) -> int:
+            return bytes_of(rows_in, frag=False)
 
         lanes = {f: (lane, why) for f, lane, why in FAMILY}
+        whole, doc = bytes_of(seen), doc_of(seen)
         print(f"\n{len(seen)} distinct (terminal, state) walls over "
               f"{len({r.name for r, _, _ in seen})} grammars, "
-              f"{bytes_of(seen):,} bytes, by family.\n")
-        print("| family | lane | bytes | walls | shapes | grammars |")
-        print("|---|---|---:|---:|---:|---|")
+              f"{doc:,} bytes on the document, by family.\n")
+        print(f"Ranked by `on doc`, because the other {whole - doc:,} of these walls' "
+              f"{whole:,} bytes ({100 * (whole - doc) / whole:.0f}%) stand behind a "
+              f"**fragment** - a suffix whose openers the peel left behind, which is "
+              f"not text this parser meets reading the file whole. `run` prints the "
+              f"same caution per grammar. Both columns are here because a fragment "
+              f"wall is a provenance rather than a dismissal, but only `on doc` is "
+              f"an amount of work.\n")
+        print("| family | lane | on doc | fragment | walls | shapes | grammars |")
+        print("|---|---|---:|---:|---:|---:|---|")
         packs = [(fam, [(r, k, w) for r, k, w in seen if family(k, w) == fam])
                  for fam in lanes]
-        for fam, mine in sorted(packs, key=lambda x: -bytes_of(x[1])):
+        for fam, mine in sorted(packs, key=lambda x: -doc_of(x[1])):
             if not mine:
                 continue
             shapes = {w.split(" in state ")[0] for _, k, w in mine}
             who = sorted({r.name for r, _, _ in mine})
-            print(f"| {fam} | **{lanes[fam][0]}** | {bytes_of(mine):,} | {len(mine)} | "
+            print(f"| {fam} | **{lanes[fam][0]}** | {doc_of(mine):,} | "
+                  f"{bytes_of(mine, frag=True):,} | {len(mine)} | "
                   f"{len(shapes)} | {len(who)}: {', '.join(who)} |")
         print()
-        for fam, mine in sorted(packs, key=lambda x: -bytes_of(x[1])):
+        for fam, mine in sorted(packs, key=lambda x: -doc_of(x[1])):
             if not mine:
                 continue
             shapes: dict[str, list[tuple]] = {}
             for r, k, w in mine:
                 shapes.setdefault(w.split(" in state ")[0], []).append((r, k, w))
             print(f"### {fam} - {lanes[fam][0]}\n\n{lanes[fam][1]}.\n")
-            print("| terminal | bytes | walls | grammars |")
-            print("|---|---:|---:|---|")
-            for shape, whos in sorted(shapes.items(), key=lambda s: -bytes_of(s[1])):
+            print("| terminal | on doc | fragment | walls | grammars |")
+            print("|---|---:|---:|---:|---|")
+            for shape, whos in sorted(shapes.items(), key=lambda s: -doc_of(s[1])):
                 tick = shape.replace("|", "\\|")
-                print(f"| `{tick}` | {bytes_of(whos):,} | {len(whos)} | "
+                print(f"| `{tick}` | {doc_of(whos):,} | {bytes_of(whos, frag=True):,} | "
+                      f"{len(whos)} | "
                       f"{', '.join(sorted({r.name for r, _, _ in whos}))} |")
             print()
         # `family` returns None on a shape no row claims, and that is the whole
@@ -995,9 +1015,9 @@ def main(argv: list[str]) -> int:
         print(f"**{len(seen)} walls, "
               f"{len({f for _, k, w in seen if (f := family(k, w)) is not None})} families, "
               f"{len({w.split(' in state ')[0] for _, _, w in seen})} distinct terminals.** "
-              f"{len(held)} sit in the unassigned residue ({bytes_of(held):,} bytes), which "
-              f"is the honest size of what shape alone cannot route"
-              + (f" - and {len(loose)} of those ({bytes_of(loose):,} bytes) no row "
+              f"{len(held)} sit in the unassigned residue ({doc_of(held):,} bytes on the "
+              f"document), which is the honest size of what shape alone cannot route"
+              + (f" - and {len(loose)} of those ({doc_of(loose):,} bytes) no row "
                  f"claims at all, which is what `walls.py gate` fails on."
                  if loose else "."))
         print(take(BIN).line())
