@@ -1,0 +1,63 @@
+# The wheel is pure metadata today. When the binding lands it stops being
+# `py3-none-any`, because the transport will be ctypes over a bundled `libjnt`,
+# which makes the wheel platform-tagged - see the sibling `irregex` package for
+# the shape that takes.
+
+[build-system]
+requires = [ "hatchling>=1.27" ]
+build-backend = "hatchling.build"
+
+[project]
+name = "joints"
+version = "0.0.0" # x-release-please-version
+# Says what the project is, then what this version is not, in that order. PyPI
+# renders this line in search results where a caveat further down never reaches
+# the reader deciding whether to install.
+description = "Incremental parsing built on composable stack effects - a tree-sitter alternative that packs every language into one mmap-able file. Reserved at 0.0.0: the engine is Zig and the Python binding is not written yet."
+readme = "README.md"
+# Not caution, and not the eventual binding's floor discovered by testing: it is
+# the floor the sibling packages hold, and admitting interpreters this project
+# will not test against is a promise nobody here intends to keep. It can only
+# move down later, which is the harmless direction.
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = [ "LICENSE", "NOTICE" ]
+authors = [ { name = "The Billy Company" } ]
+# PyPI scores name, summary and keywords together, so these are the words
+# somebody types when they have the problem this solves rather than a
+# restatement of the name.
+keywords = [ "parser", "parsing", "incremental", "tree-sitter", "cst", "syntax-tree" ]
+classifiers = [
+  # The one classifier that is load-bearing here. Everything else about this
+  # release is metadata; this is the field that tells a stranger not to plan
+  # around it yet.
+  "Development Status :: 1 - Planning",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Topic :: Software Development :: Compilers",
+  "Topic :: Text Processing :: General",
+]
+# No `Typing :: Typed` (there is no `py.typed`, because there is nothing to
+# type) and no language classifier for the engine: it is Zig, PyPI has no
+# classifier for Zig, and claiming Rust or C because a neighbouring field would
+# accept it is how metadata starts lying.
+# No `License ::` classifier: the SPDX `license` field above is PEP 639
+# metadata, and the two spellings together are an error in current tooling
+# rather than a belt and braces.
+
+[project.urls]
+# No source or documentation URL. `CONTRIBUTING.md` already tells people to
+# clone `The-Billy-Company/joints`, and the temptation was to put that here -
+# but the repository is not public yet, and a URL in project metadata is a
+# promise PyPI renders as a link. An absent row beats a 404 on the one page a
+# stranger lands on. Both go in with the release that ships beside the public
+# repository.
+Homepage = "https://github.com/The-Billy-Company"
+
+[tool.hatch.build.targets.wheel]
+packages = [ "joints" ]
+
+[tool.hatch.build.targets.sdist]
+# Explicit rather than "whatever is in the directory", so a stray virtualenv or
+# a build cache cannot ride along into a published artifact.
+include = [ "joints", "README.md", "LICENSE", "NOTICE", "pyproject.toml" ]

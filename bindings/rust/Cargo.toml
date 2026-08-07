@@ -1,0 +1,57 @@
+# Its own workspace root, deliberately. The crate has to lift out of this
+# repository as a standalone package, and an empty `[workspace]` table means a
+# Cargo.toml appearing above it later cannot silently absorb it and take over
+# its lockfile and lint configuration.
+[workspace]
+
+[package]
+# `joints`, spelled out. The C symbol prefix is `jnt_` and the shared library is
+# `libjnt`, so the short form would have agreed with them - but `jnt` is already
+# taken on the index and crate names are permanent, so it was never available.
+# `joints` was, which is the better outcome anyway: the registry entry is the one
+# surface a stranger reads first, and it should be a word.
+name = "joints"
+version = "0.0.0" # x-release-please-version
+edition = "2024"
+rust-version = "1.85"
+license = "Apache-2.0"
+# The description says what the project is and then says what this version is
+# not, in that order, because crates.io shows it in search results where there
+# is no room for a caveat further down. A reader deciding whether to depend on
+# this needs the second sentence more than the first.
+description = "Incremental parsing built on composable stack effects - a tree-sitter alternative that packs every language into one mmap-able file. Reserved at 0.0.0: the engine is Zig and the Rust binding is not written yet."
+readme = "README.md"
+homepage = "https://github.com/The-Billy-Company"
+authors = [ "The Billy Company" ]
+# No `repository` and no `documentation`. The sibling packages set both, and the
+# temptation here was to point at `The-Billy-Company/joints` because
+# CONTRIBUTING.md already tells people to clone it - but that repository is not
+# public yet, and a metadata field is a promise the registry renders as a link.
+# A 404 on the one page a stranger lands on is worse than an absent row. Both
+# fields go in with the version that ships alongside the public repository.
+#
+# crates.io allows five keywords, so each has to earn its slot. `parser` and
+# `parsing` are both here because the category is searched under both spellings;
+# `incremental` and `tree-sitter` are what somebody types when they have the
+# problem this is the answer to; `cst` is the output nobody else in this
+# category names.
+keywords = [ "parser", "parsing", "incremental", "tree-sitter", "cst" ]
+categories = [ "parsing", "text-processing", "development-tools" ]
+# Apache-2.0 section 4 wants the license text travelling with the copy, so the
+# files ship rather than resting on the SPDX identifier alone.
+include = [ "/src", "/README.md", "/LICENSE", "/NOTICE" ]
+
+[lib]
+# Nothing to configure, but the section is here as the marker for whoever wires
+# the real binding: the package is `joints`, so the library Cargo derives is
+# already `joints` and callers already type `use joints::…`.
+
+[lints.rust]
+missing_docs = "deny"
+# Trivially satisfied while the crate is documentation only, and load-bearing
+# from the first `extern "C"` block onward. Set now so it is never a diff that
+# has to argue for itself later.
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+undocumented_unsafe_blocks = "deny"
