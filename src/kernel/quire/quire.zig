@@ -605,6 +605,4 @@ pub const Quire = struct {
 test {
     std.testing.refAllDecls(@This());
     _ = @import("gather.zig");
-    _ = @import("gather_test.zig");
-    _ = @import("survey_test.zig");
 }

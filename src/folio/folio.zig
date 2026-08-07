@@ -196,5 +196,4 @@ test {
     _ = audit;
     _ = rebind;
     _ = codex;
-    _ = @import("folio_test.zig");
 }

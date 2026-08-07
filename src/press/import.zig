@@ -3,7 +3,7 @@
 //! This is the whole go-to-market. Three hundred maintained grammars with their
 //! highlight queries are person-decades of work that cannot be out-engineered,
 //! and `grammar.json` is the declarative data file most of those repositories
-//! already commit. So outliner does not ask anyone to rewrite a grammar; it
+//! already commit. So joints does not ask anyone to rewrite a grammar; it
 //! reads the one they have.
 //!
 //! This file is the door and the pass order; four siblings do the work, and the
@@ -182,8 +182,4 @@ pub fn treeSitter(gpa: std.mem.Allocator, source: []const u8) Error!g.Grammar {
 
     const conflicts = try muster.readConflicts(&imp, root.get("conflicts"));
     return builder.finish(name, start, extras, conflicts);
-}
-
-test {
-    _ = @import("import_test.zig");
 }

@@ -85,9 +85,9 @@ class Source(NamedTuple):
 def builds(rel: str) -> bool:
     """Whether editing this file could change a *product* binary.
 
-    A `*_test.zig` is reachable only from inside a `test {}` block - `src/root.zig`
-    imports `scanner_test.zig` and `lexicon_test.zig` exactly there - so it enters
-    the test binary and never the CLI. Letting one set `stale` made the warning
+    A `*_test.zig` is reachable only from `src/proof.zig`, the test build's own
+    root, which nothing but a test compilation is rooted at - so it enters the
+    test binary and never the CLI. Letting one set `stale` made the warning
     fire on a tree where nothing that could move the binary had moved, and with
     ten lanes editing tests continuously it fired most of the time, which is how a
     warning teaches people to ignore it.
@@ -128,7 +128,7 @@ def survey(root: Path) -> Source:
 def home(binary: Path) -> Path:
     """The tree a binary was built from. `zig build` installs to
     `<root>/zig-out/bin/`, so the root is three parents up - but only claim
-    that when a `build.zig` is actually sitting there, since OUTLINER_BIN can
+    that when a `build.zig` is actually sitting there, since JOINTS_BIN can
     point anywhere and a wrong guess here would make every other field lie."""
     try:
         guess = binary.resolve().parents[2]
@@ -139,7 +139,7 @@ def home(binary: Path) -> Path:
 
 def usual() -> Path:
     """The binary an instrument measures when nobody has said otherwise."""
-    return ROOT / "zig-out" / "bin" / "outliner"
+    return ROOT / "zig-out" / "bin" / "joints"
 
 
 def pinned(binary: Path) -> Source | None:
@@ -181,7 +181,7 @@ class Stamp(NamedTuple):
     dirty: int  # uncommitted files in the repo, for context
     stale: bool  # `newest` is newer than the binary
     drift: bool  # `tree` and `live` disagree
-    told: bool  # OUTLINER_BIN chose this binary rather than the default
+    told: bool  # JOINTS_BIN chose this binary rather than the default
     when: float
 
     def moved(self) -> tuple[bool, str]:
@@ -215,15 +215,15 @@ class Stamp(NamedTuple):
         Printing is where `moved` gets asked, so calling this at the end of a
         run is what makes the interval the run's own.
         """
-        out = [f"stamp: outliner {self.build[:9]} at {self.binary}"
+        out = [f"stamp: joints {self.build[:9]} at {self.binary}"
                f" built {iso(self.built)} from {self.source} {self.tree[:9]}"
                f" · repo {self.commit[:9]}+{self.dirty} · run {iso(self.when)}"]
         if self.told:
             # The press lane nearly published "rust regressed" off an exported
-            # OUTLINER_BIN left over from a scratch build. A deliberate override
+            # JOINTS_BIN left over from a scratch build. A deliberate override
             # is legitimate and this is not an error; it just has to be visible,
             # because the one thing it looks like otherwise is the default.
-            out.append(f"stamp: TOLD - OUTLINER_BIN chose this binary; the tree's"
+            out.append(f"stamp: TOLD - JOINTS_BIN chose this binary; the tree's"
                        f" own is {here(usual())}")
         if self.stale:
             out.append(f"stamp: STALE - {self.source}/{self.newest} is newer than"
@@ -267,7 +267,7 @@ def here(path: Path) -> str:
 def verdict(stderr: str, source: Path | str, reader=None) -> str:
     """What the parse said, with its own prefix stripped rather than guessed at.
 
-    The line is `outliner: <path>: <verdict>` and *both* halves of the prefix
+    The line is `joints: <path>: <verdict>` and *both* halves of the prefix
     can be followed by more of the same delimiter, because a verdict can name
     the token it refused: python's reads `unexpected : at 482 in state 880`.
     Four instruments took the tail after the last `": "` and so reported that
@@ -311,7 +311,7 @@ def verdict(stderr: str, source: Path | str, reader=None) -> str:
 
 
 def behind(line: str, source: Path | str) -> str | None:
-    """What one `outliner: <path>: ` line says, or None if it is not one.
+    """What one `joints: <path>: ` line says, or None if it is not one.
 
     The prefix is never a thing to *infer* - the caller passed the path in and
     the binary echoes it back verbatim. Three readers inferred it anyway, two
@@ -335,7 +335,7 @@ def behind(line: str, source: Path | str) -> str | None:
     keeps this from becoming "trust any prefix" - the `./a.md` against `/a.md`
     row in `STOPS` is exactly that control and still reads None.
     """
-    head = f"outliner: {source}: "
+    head = f"joints: {source}: "
     if line.startswith(head):
         return line[len(head):]
     if not line.startswith(SAYS):
@@ -347,7 +347,7 @@ def behind(line: str, source: Path | str) -> str | None:
     return None
 
 
-SAYS = "outliner: "
+SAYS = "joints: "
 
 
 def same(path: Path | str) -> str:
@@ -381,7 +381,7 @@ BLIND = re.compile(r"blind to (\d+)")
 # It is read here and lifted off the verdict in one pattern, so a caller gets
 # the stop and the soundness as two answers instead of one string it has to
 # slice. Searched over the whole stderr rather than over the verdict, because
-# the last `outliner:` line is the *owner*'s on every grammar that hit a wall -
+# the last `joints:` line is the *owner*'s on every grammar that hit a wall -
 # so on twelve of the thirty the clause is not on the line a verdict comes from.
 UNSOUND = re.compile(r", UNSOUND: (.*)")
 # `, surveyed 731 of 731 nodes` - the POSITIVE half of the same clause, printed
@@ -795,7 +795,7 @@ def ask(binary: Path | str, grammar: Path | str, src: Path | str, *,
         size: int | None = None, tree: bool | None = None,
         patience: float = PATIENCE, extra: tuple[str, ...] = ()) -> Outcome:
     """Run one parse and say what it did. **The only place an instrument reads
-    outliner's stderr**, which is the point of it existing.
+    joints's stderr**, which is the point of it existing.
 
     Four instruments each ran the binary and read the answer back themselves,
     and three of them got a different answer out of the same bytes. Consolidating
@@ -890,57 +890,57 @@ def take(binary: Path) -> Stamp:
 # gate could not see it because the gate had never been shown one. The last
 # four rows are that shape, in each of the four voices `inquest` speaks with.
 SHAPES: tuple[tuple[str, str, str, str], ...] = (
-    ("plain", "/c/ledger.c", "outliner: /c/ledger.c: stray byte at 1354, 28 roots",
+    ("plain", "/c/ledger.c", "joints: /c/ledger.c: stray byte at 1354, 28 roots",
      "stray byte at 1354, 28 roots"),
     ("colon in the verdict", "/p/ledger.py",
-     "outliner: /p/ledger.py: unexpected : at 482 in state 880, 52 roots",
+     "joints: /p/ledger.py: unexpected : at 482 in state 880, 52 roots",
      "unexpected : at 482 in state 880, 52 roots"),
-    ("colon token, no state", "/p/x.py", "outliner: /p/x.py: unexpected : at 7",
+    ("colon token, no state", "/p/x.py", "joints: /p/x.py: unexpected : at 7",
      "unexpected : at 7"),
-    ("colon in the path", "/o: dd/l.c", "outliner: /o: dd/l.c: stray byte at 9",
+    ("colon in the path", "/o: dd/l.c", "joints: /o: dd/l.c: stray byte at 9",
      "stray byte at 9"),
     ("a warning above it", "/r/ledger.rs",
-     "outliner: rust: blind to 6 externally scanned terminal(s)\n"
-     "outliner: /r/ledger.rs: accepted, 1 root", "accepted, 1 root"),
-    ("trailing blank lines", "/j/l.json", "outliner: /j/l.json: accepted, 1 root\n\n  \n",
+     "joints: rust: blind to 6 externally scanned terminal(s)\n"
+     "joints: /r/ledger.rs: accepted, 1 root", "accepted, 1 root"),
+    ("trailing blank lines", "/j/l.json", "joints: /j/l.json: accepted, 1 root\n\n  \n",
      "accepted, 1 root"),
     ("no verdict at all", "/j/l.json", "", "(silent)"),
-    ("no colon in the verdict", "/j/l.json", "outliner: /j/l.json: truncated", "truncated"),
+    ("no colon in the verdict", "/j/l.json", "joints: /j/l.json: truncated", "truncated"),
     # Real stderr, copied off the binary. `inquest`'s prose is another lane's
     # and moves, so each trailing line here is cut at its first sentence: what
-    # this table pins is the *shape* - `outliner: <grammar>: ` below the stop,
+    # this table pins is the *shape* - `joints: <grammar>: ` below the stop,
     # with a `: ` inside its own payload, so a reader that falls through to the
     # two-field split does not merely take the wrong line, it takes a fragment
     # of one.
     ("inquest below it", "upstream/sources/Maps.kt",
-     "outliner: kotlin: blind to 8 externally scanned terminal(s)\n"
-     "outliner: upstream/sources/Maps.kt: unexpected (?:[^\\r\\n]*) at 270 in state"
+     "joints: kotlin: blind to 8 externally scanned terminal(s)\n"
+     "joints: upstream/sources/Maps.kt: unexpected (?:[^\\r\\n]*) at 270 in state"
      " 433, 419 roots, mended 142 over 142B\n"
-     "outliner: kotlin: lexer on (?:[^\\r\\n]*) in state 433 [no stand-in for"
+     "joints: kotlin: lexer on (?:[^\\r\\n]*) in state 433 [no stand-in for"
      " _string_start, admitted by shift]: this state admits a terminal the grammar"
      " hands to an external scanner we cannot run",
      "unexpected (?:[^\\r\\n]*) at 270 in state 433, 419 roots, mended 142 over 142B"),
     ("press? below it", "upstream/sources/picorv32.v",
-     "outliner: upstream/sources/picorv32.v: unexpected ` at 3712 in state 3438,"
+     "joints: upstream/sources/picorv32.v: unexpected ` at 3712 in state 3438,"
      " 3544 roots, mended 2109 over 32992B\n"
-     "outliner: verilog: press? on ` in state 3438 (0 dropped, 24 misfolded): a"
+     "joints: verilog: press? on ` in state 3438 (0 dropped, 24 misfolded): a"
      " merge damaged this terminal's cell elsewhere, and no fold chain was"
      " supplied to say whether this wall is downstream of it",
      "unexpected ` at 3712 in state 3438, 3544 roots, mended 2109 over 32992B"),
     # Two owner lines above and one below, so the search cannot be an off-by-one
     # from the bottom any more than it can be one from the top.
     ("unlexed byte below it", "research/joinery/corpus/README.md",
-     "outliner: markdown: blind to 47 externally scanned terminal(s)\n"
-     "outliner: markdown: 1 pattern(s) the engine would not build: entity_reference\n"
-     "outliner: research/joinery/corpus/README.md: stray byte at 44, 366 roots,"
+     "joints: markdown: blind to 47 externally scanned terminal(s)\n"
+     "joints: markdown: 1 pattern(s) the engine would not build: entity_reference\n"
+     "joints: research/joinery/corpus/README.md: stray byte at 44, 366 roots,"
      " mended 66 over 66B\n"
-     "outliner: markdown: lexer? at byte 44 (unlexed): no terminal in the grammar"
+     "joints: markdown: lexer? at byte 44 (unlexed): no terminal in the grammar"
      " matches here even with the row's restriction lifted, so no table was consulted",
      "stray byte at 44, 366 roots, mended 66 over 66B"),
     # yaml. No line names the source at all, because the refusal happens before
     # a parse exists to name one - so the fallback still has to answer.
     ("no line names the file", "/y/ci.yml",
-     "outliner: yaml has no lexable terminal at all",
+     "joints: yaml has no lexable terminal at all",
      "yaml has no lexable terminal at all"),
     # The soundness pair riding a stop, with an inquest line beneath it - the
     # real shape twelve of the thirty rows arrive in. `verdict` hands back the
@@ -949,9 +949,9 @@ SHAPES: tuple[tuple[str, str, str, str], ...] = (
     # line grown two clauses longer is still found, on the side of the file the
     # fallback has to search.
     ("surveyed, below a mend, inquest under it", "upstream/sources/Maps.kt",
-     "outliner: upstream/sources/Maps.kt: unexpected (?:[^\\r\\n]*) at 270 in state"
+     "joints: upstream/sources/Maps.kt: unexpected (?:[^\\r\\n]*) at 270 in state"
      " 433, 419 roots, mended 142 over 142B, surveyed 5077 of 5077 nodes\n"
-     "outliner: kotlin: lexer on (?:[^\\r\\n]*) in state 433 [no stand-in for"
+     "joints: kotlin: lexer on (?:[^\\r\\n]*) in state 433 [no stand-in for"
      " _string_start, admitted by shift]: this state admits a terminal the grammar"
      " hands to an external scanner we cannot run",
      "unexpected (?:[^\\r\\n]*) at 270 in state 433, 419 roots, mended 142 over 142B,"
@@ -972,31 +972,31 @@ SHAPES: tuple[tuple[str, str, str, str], ...] = (
 # (name, stderr, verdict, surveyed, arena, unsound)
 SURVEYS: tuple[tuple[str, str, str, int, int, str], ...] = (
     ("sound, both numbers lifted off the stop",
-     "outliner: /t/a.toml: accepted, 1 root, surveyed 731 of 731 nodes",
+     "joints: /t/a.toml: accepted, 1 root, surveyed 731 of 731 nodes",
      "accepted, 1 root", 731, 731, ""),
     ("unsound, and the stop keeps neither clause",
-     "outliner: /t/a.toml: accepted, 1 root, surveyed 731 of 731 nodes,"
+     "joints: /t/a.toml: accepted, 1 root, surveyed 731 of 731 nodes,"
      " UNSOUND: 1 loose, 0 disorder, 0 torn [child outside its parent:"
      " comment [17, 20) in pair [8, 15)]",
      "accepted, 1 root", 731, 731,
      "1 loose, 0 disorder, 0 torn [child outside its parent:"
      " comment [17, 20) in pair [8, 15)]"),
     ("a mended stop still reads its mend after the lift",
-     "outliner: /v/p.v: unexpected ` at 3712 in state 3438, 3544 roots,"
+     "joints: /v/p.v: unexpected ` at 3712 in state 3438, 3544 roots,"
      " mended 2109 over 32992B, surveyed 41205 of 41205 nodes",
      "unexpected ` at 3712 in state 3438, 3544 roots, mended 2109 over 32992B",
      41205, 41205, ""),
     ("a walk that reached less than the arena holds says so",
-     "outliner: /x/a.json: accepted, 1 root, surveyed 9 of 11 nodes",
+     "joints: /x/a.json: accepted, 1 root, surveyed 9 of 11 nodes",
      "accepted, 1 root", 9, 11, ""),
     ("an empty forest surveyed nothing, which is not nothing surveyed",
-     "outliner: /x/a.json: accepted, 0 roots, surveyed 0 of 0 nodes",
+     "joints: /x/a.json: accepted, 0 roots, surveyed 0 of 0 nodes",
      "accepted, 0 roots", 0, 0, ""),
     # The control, and the whole reason the clause exists. Same absent
     # complaint, same `sound`-looking row - and `surveyed` is -1, so a gate can
     # refuse it instead of counting it clean.
     ("no clause at all is UNASKED, and must not read as sound",
-     "outliner: /x/a.json: accepted, 1 root",
+     "joints: /x/a.json: accepted, 1 root",
      "accepted, 1 root", -1, -1, ""),
 )
 
@@ -1059,19 +1059,19 @@ def surveys() -> int:
 # (name, source, stderr, wall, stray)
 STOPS: tuple[tuple[str, str, str, tuple[str, int] | None, int | None], ...] = (
     ("table stop, plain", "/a.c",
-     "outliner: /a.c: unexpected , at 1354 in state 822, 28 roots", (",", 822), None),
+     "joints: /a.c: unexpected , at 1354 in state 822, 28 roots", (",", 822), None),
     ("table stop, colon token", "/a.py",
-     "outliner: /a.py: unexpected : at 482 in state 880", (":", 880), None),
+     "joints: /a.py: unexpected : at 482 in state 880", (":", 880), None),
     ("lexical stop", "/a.md",
-     "outliner: /a.md: stray byte at 20, 430 roots, mended 79 over 79B", None, 20),
+     "joints: /a.md: stray byte at 20, 430 roots, mended 79 over 79B", None, 20),
     ("lexical stop, inquest below", "/a.ml",
-     "outliner: /a.ml: stray byte at 1996, 167 roots, mended 28 over 28B\n"
-     "outliner: ocaml: lexer? at byte 1996 (unlexed): no terminal matches here",
+     "joints: /a.ml: stray byte at 1996, 167 roots, mended 28 over 28B\n"
+     "joints: ocaml: lexer? at byte 1996 (unlexed): no terminal matches here",
      None, 1996),
     # The one shape where both must be None: a stop with neither a state nor a
     # byte. Without it a `stray` that simply returned `at` unconditionally would
     # pass every row above.
-    ("neither", "/a.json", "outliner: /a.json: truncated", None, None),
+    ("neither", "/a.json", "joints: /a.json: truncated", None, None),
     # The three spellings the hazard was about, each against a stop the reader
     # has to recover. Every one of these returned None - and therefore handed
     # back the `inquest` line under it - until `behind` compared paths.
@@ -1081,16 +1081,16 @@ STOPS: tuple[tuple[str, str, str, tuple[str, int] | None, int | None], ...] = (
     # over an invented path would test the lexical half twice and the disk half
     # never. The stops are synthetic; only the prefix is real.
     ("same file, dot segment", "tool/./stamp.py",
-     "outliner: tool/stamp.py: unexpected , at 1354 in state 822, 28 roots\n"
-     "outliner: python: press? on , in state 822: this cell is one a merge invented",
+     "joints: tool/stamp.py: unexpected , at 1354 in state 822, 28 roots\n"
+     "joints: python: press? on , in state 822: this cell is one a merge invented",
      (",", 822), None),
     ("same file, doubled slash", "tool//stamp.py",
-     "outliner: tool/stamp.py: stray byte at 20, 430 roots, mended 79 over 79B\n"
-     "outliner: python: lexer? at byte 20 (unlexed): no terminal matches here",
+     "joints: tool/stamp.py: stray byte at 20, 430 roots, mended 79 over 79B\n"
+     "joints: python: lexer? at byte 20 (unlexed): no terminal matches here",
      None, 20),
     ("same file, absolute against relative", str(ROOT / "tool" / "stamp.py"),
-     "outliner: tool/stamp.py: unexpected : at 482 in state 880\n"
-     "outliner: python: weave? on : in state 880: refused under every split",
+     "joints: tool/stamp.py: unexpected : at 482 in state 880\n"
+     "joints: python: weave? on : in state 880: refused under every split",
      (":", 880), None),
     # And the control, which must stay None: two spellings that name **different
     # files**. `./a.md` is under this process's cwd and `/a.md` is at the root, so
@@ -1098,8 +1098,8 @@ STOPS: tuple[tuple[str, str, str, tuple[str, int] | None, int | None], ...] = (
     # and would then read `inquest`'s line as a stop wherever the binary's own
     # grammar-prefixed line came last, which is twelve of the thirty rows.
     ("different files, not read", "./a.md",
-     "outliner: /a.md: stray byte at 20, 430 roots, mended 79 over 79B\n"
-     "outliner: markdown: lexer? at byte 20 (unlexed): no terminal matches here",
+     "joints: /a.md: stray byte at 20, 430 roots, mended 79 over 79B\n"
+     "joints: markdown: lexer? at byte 20 (unlexed): no terminal matches here",
      None, None),
 )
 
@@ -1113,7 +1113,7 @@ def verbatim_rule(line: str, source: Path | str) -> str | None:
     suspect of having been written to pass. Under this rule they read an
     `inquest` line as the stop, which is the whole defect in person.
     """
-    head = f"outliner: {source}: "
+    head = f"joints: {source}: "
     return line[len(head):] if line.startswith(head) else None
 
 
@@ -1252,7 +1252,7 @@ def plumbed() -> int:
         FED.clear()
         _settled = None
         import order
-        # Its own private `OUTLINER_WORK`, which is what every pinned arm
+        # Its own private `JOINTS_WORK`, which is what every pinned arm
         # already gets: minting into the cache ten agents share to have
         # something to look at is how an instrument earns being switched off.
         # One small grammar, pressed twice - the first call takes the re-mint
@@ -1352,4 +1352,4 @@ if __name__ == "__main__":
     if "--plumbed" in sys.argv:
         raise SystemExit(plumbed())
     print(take(Path(os.environ.get(
-        "OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))).line())
+        "JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))).line())

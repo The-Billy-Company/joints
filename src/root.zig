@@ -1,6 +1,6 @@
-//! outliner — parsing as algebra.
+//! joints — parsing as algebra.
 //!
-//! Tree-sitter treats a grammar as a program to generate. outliner treats it as
+//! Tree-sitter treats a grammar as a program to generate. joints treats it as
 //! a monoid presentation to evaluate, which is why a grammar here becomes a
 //! file rather than a shared library. The consequences — position-independent
 //! incremental reparse, parallel parse as a prefix scan, GLR paid only where an
@@ -13,30 +13,29 @@
 //!               construction, and eventually the quotient and the folio writer.
 //!   kernel/   — run time: pure compute over bytes and tables, no I/O.
 //!   folio/    — the artifact between them: tables as bytes, both ways.
-//!   surface/  — the CLI and the C ABI (`libotl`, `otl_*`).
+//!   surface/  — the CLI and the C ABI (`libjnt`, `jnt_*`).
 //!
 //! Nothing here is stable. The package exists to answer one question first —
 //! whether stack effects converge (`research/joinery/TESTING.md`, rung 1) — and
 //! the shape above is what that measurement needs, not a finished design.
 
-const std = @import("std");
 const irregex = @import("irregex");
 
-/// Who outliner is when it speaks. The engine underneath is embeddable and four
+/// Who joints is when it speaks. The engine underneath is embeddable and four
 /// programs already ride it, so a diagnostic used to open with the name of the
 /// binary that happened to be first — `gist:` — and its knobs lived in `GIST_*`.
 /// Declaring this here is how the whole package signs its own name instead, and
 /// it is read at comptime, so a knob is still a string literal by the time
 /// `getenv` sees it.
 pub const irgx_brand: irregex.Brand = .{
-    .name = "outliner",
-    .env_prefix = "OUTLINER_",
-    .artifact_dir = ".outliner",
+    .name = "joints",
+    .env_prefix = "JOINTS_",
+    .artifact_dir = ".joints",
 };
 
-/// What outliner has to say through `OUTLINER_TRACE`, one lens per subsystem
+/// What joints has to say through `JOINTS_TRACE`, one lens per subsystem
 /// above — so the vocabulary is the package's own shape rather than a list that
-/// drifts from it. Dark by default; `OUTLINER_TRACE=press,joint` lights two, and
+/// drifts from it. Dark by default; `JOINTS_TRACE=press,joint` lights two, and
 /// `all` adds the engine's own lenses underneath for a question that turns out
 /// to be irregex's.
 ///
@@ -50,7 +49,7 @@ pub const irgx_lenses = enum { press, lex, joint, weave, folio, quire };
 
 /// Time, counters, and the one diagnostic channel, re-exported so the face
 /// reaches instrumentation through the package it already imports. Every emit
-/// routes through a thread-local sink, which is what will let `libotl` hold its
+/// routes through a thread-local sink, which is what will let `libjnt` hold its
 /// never-writes-your-stderr contract by construction rather than by audit.
 pub const assay = irregex.assay;
 
@@ -142,32 +141,3 @@ pub const kernel = struct {
 
 /// The artifact: a pressed grammar as bytes, mmap-able, versioned, checked.
 pub const folio = @import("folio/folio.zig");
-
-test {
-    std.testing.refAllDecls(@This());
-    _ = @import("kernel/lex/scanner.zig");
-    _ = @import("kernel/lex/scanner_test.zig");
-    _ = @import("kernel/lex/lexicon_test.zig");
-    _ = @import("kernel/joint/effect.zig");
-    _ = @import("kernel/joint/stack.zig");
-    _ = @import("kernel/joint/roster.zig");
-    _ = @import("kernel/joint/ledger.zig");
-    _ = @import("kernel/joint/reverse.zig");
-    _ = @import("kernel/joint/cursor.zig");
-    _ = @import("kernel/walk/drive.zig");
-    _ = @import("kernel/spine/spine.zig");
-    _ = @import("kernel/quire/quire.zig");
-    _ = @import("kernel/weave/weave.zig");
-    _ = @import("folio/folio.zig");
-    _ = @import("press/press.zig");
-    _ = @import("press/grammar.zig");
-    _ = @import("press/import.zig");
-    _ = @import("press/lexeme.zig");
-    _ = @import("press/fold.zig");
-    _ = @import("press/lalr.zig");
-    _ = @import("press/settle.zig");
-    _ = @import("press/lr0.zig");
-    _ = @import("press/retrace.zig");
-    _ = @import("press/first.zig");
-    _ = @import("press/sets.zig");
-}

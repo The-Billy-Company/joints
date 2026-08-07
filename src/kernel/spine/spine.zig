@@ -81,6 +81,4 @@ test "the joint binds to the spine without an adapter" {
 
 test {
     _ = @import("toy.zig");
-    _ = @import("tree_test.zig");
-    _ = @import("stream_test.zig");
 }

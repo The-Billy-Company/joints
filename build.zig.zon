@@ -1,7 +1,7 @@
 .{
-    .name = .outliner,
+    .name = .joints,
     .version = "0.0.0", // x-release-please-version
-    .fingerprint = 0xbc2e9638f690b0ae,
+    .fingerprint = 0x85f7afd4d1dc33e6,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         // The shard-aware test runner (build-time only, no artifact, no ABI).
@@ -12,7 +12,7 @@
             .hash = "brigade-0.1.0-1n1fSewLAQBenqvI3An0VUw24_TsuaT3mt1_4TfqWZwG",
         },
         // The regex engine and the shared search-math floor. A path dep on the
-        // sibling checkout while both move together: outliner is the first
+        // sibling checkout while both move together: joints is the first
         // consumer to ask irregex for an anchored longest-match slate, and the
         // two halves of that conversation should be editable in one sitting.
         // It becomes a pinned URL the moment either side stops changing.

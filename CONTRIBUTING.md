@@ -6,8 +6,8 @@ residual conflicts on eleven real grammars), the stack-effect monoid and the
 cursor that composes it, a terminal scanner, a single-stack reference walk to
 check the algebra against, a GLR parse loop in [`src/kernel/quire/`](src/kernel/quire)
 that hands back a forest and mends past what it cannot read, the folio those
-tables ship as, and the CLI that measures all of it. The quotient and `libotl`
-are still ahead.
+tables ship as, the CLI that measures all of it, and `libjnt`, the C ABI. The
+quotient is still ahead.
 
 How much of that works is deliberately not written here. It moves most days, and
 a count pasted into a page is a count that ages into a lie - which is the same
@@ -28,8 +28,8 @@ halves of the lexer conversation are still moving together.
 
 ```sh
 git clone https://github.com/The-Billy-Company/irregex
-git clone https://github.com/The-Billy-Company/outliner
-cd outliner
+git clone https://github.com/The-Billy-Company/joints
+cd joints
 zig build check     # compile, install nothing - the fastest red
 zig build test
 ```
@@ -61,7 +61,7 @@ Rung 1 is the falsifier for the whole design, and it needs no parser. One
 grammar, one file, one line per segmentation:
 
 ```sh
-zig-out/bin/outliner joints upstream/grammars/json.json research/joinery/corpus/ledger.json
+zig-out/bin/joints survey upstream/grammars/json.json research/joinery/corpus/ledger.json
 ```
 
 That should end with `worst p99 rank 42 · widest residue 2 · 8/8 chains held`,
@@ -77,13 +77,13 @@ the residue gets past two. It does *not* fail on refusals - thirty of those are
 documented and owned, and they are the lexer and the fork rather than the
 monoid.
 
-`joints` exits 1 whenever anything refused, so nine grammars out of eleven
+`survey` exits 1 whenever anything refused, so nine grammars out of eleven
 "fail" on their own today. Read what a run says, not what it returns.
 
 ## Measure against a pinned binary, never against a path
 
 Everyone builds into the same `zig-out`, so a before/after comparison that
-names `zig-out/bin/outliner` is naming *whatever is there when each half runs*.
+names `zig-out/bin/joints` is naming *whatever is there when each half runs*.
 That is not a hypothetical. One lane's reference arm was silently rebuilt
 mid-measurement with that lane's own fix in it, turning the "before" binary
 into an "after" binary and producing a clean thirty-of-thirty for entirely the
@@ -98,11 +98,11 @@ that produced it:
 python3 tool/pin.py build --name before    # zig build -p .local/pin/before, and write down the tree
 # … land your change …
 python3 tool/pin.py build --name after
-OUTLINER_BIN=$(python3 tool/pin.py path before) python3 research/press/wobble.py --reps 6
+JOINTS_BIN=$(python3 tool/pin.py path before) python3 research/press/wobble.py --reps 6
 python3 tool/pin.py verify                 # do both pins still hold the bytes they recorded?
 ```
 
-Every instrument here reads `OUTLINER_BIN`, and `tool/stamp.py` reads the pin's
+Every instrument here reads `JOINTS_BIN`, and `tool/stamp.py` reads the pin's
 record, so a run against a pin whose tree has since moved prints `DRIFT` and
 says which file moved. Without the record it cannot: `stamp` otherwise infers
 the source tree by walking up from the binary looking for a `build.zig`, finds
@@ -118,7 +118,7 @@ tree as it stands now.
   `highlights.scm` in the world is keyed on them and that compatibility is the
   entire point, so never invent, prettify or re-case one. If a name you need is
   not in the imported grammar, that is a bug to report, not a name to synthesize.
-- **outliner never links tree-sitter and never shells its runtime.** Its CLI may
+- **joints never links tree-sitter and never shells its runtime.** Its CLI may
   appear in a comparison harness, and any such call skips when the CLI is
   absent: a missing baseline tool skips a test, it never fails one.
 - **A number is not a result until it is timed against bytes**, and you have to
@@ -136,7 +136,7 @@ tree as it stands now.
 
   ```sh
   python3 tool/standing.py --cite            # 188 ms, one markdown line
-  # outliner `a525dc9b8` · tree `3d0d2e481` (live) · **no oracle** — outliner's own words
+  # joints `a525dc9b8` · tree `3d0d2e481` (live) · **no oracle** — joints's own words
 
   # or, when the figure came off a board you saved, so the two cannot drift:
   python3 tool/standing.py --cite=board.json --quote=built
@@ -167,7 +167,7 @@ tree as it stands now.
   do differ byte-wise before asserting they compare equal. Both halves of this
   were learned the hard way in `irregex`'s `intern.zig` and `dag_test.zig`.
 - **Never spell a harness's control arm as an empty environment variable.**
-  `OUTLINER_X= cmd` sets `OUTLINER_X` to `""`, and `getenv` answers that with a
+  `JOINTS_X= cmd` sets `JOINTS_X` to `""`, and `getenv` answers that with a
   pointer to an empty string rather than null - so a gate written as
   `getenv(name) != null` reads the *control* arm as on and runs the treatment in
   both. The board that measured the composite-literal fix did this and printed
@@ -175,6 +175,15 @@ tree as it stands now.
   confidently wrong report rather than an error, and the arms agreeing is what
   it looks like. Either unset the variable in the control arm, or test the first
   byte: `got != null and got.?[0] != 0`.
+- **A new `*_test.zig` has to be named in [`src/proof.zig`](src/proof.zig)**, and
+  no production file may name one. `zig build test` reaches a test only if
+  something imports it, and while that something was production code the arrow
+  `press/press.zig -> press/carry_test.zig -> folio` made five directories one
+  indivisible zone over a cycle that was never in the program. The test build has
+  its own root now, so the list is hand-written — which means a file nobody added
+  to it compiles into nothing and takes its assertions with it, and a suite that
+  quietly shrank is indistinguishable from a green one. `python3 tool/roll.py`
+  refuses both halves, and CI runs it beside `zoning verify`.
 - **Files stay under 500 lines**, and a new leaf folder gets a `README.md`.
 - **Comments say why this shape and what breaks otherwise**, ideally naming the
   case that forced it. Not what the next line does, and never a line count.
@@ -185,11 +194,11 @@ tree as it stands now.
 ## Releasing
 
 Not yet - this package has no `release.yml`, no release-please, and no
-registry it publishes to, deliberately: most of the design (the tree,
-repair, the quotient, `libotl`) doesn't exist yet, and wiring release
-automation onto a `0.0.0` package would document a promise the code doesn't
-keep. When it does ship something worth versioning, it graduates onto the
-shared model every other Billy-Company OSS package follows - see
+registry it publishes to, deliberately: parts of the design (gloss, vellum,
+the quotient) are still ahead, and wiring release automation onto a `0.0.0`
+package would document a promise the code doesn't keep. When it does ship
+something worth versioning, it graduates onto the shared model every other
+Billy-Company OSS package follows - see
 [RELEASING.md](https://github.com/The-Billy-Company/.github/blob/main/RELEASING.md).
 
 ## What CI will run
@@ -200,7 +209,7 @@ the grammar fetch and its hash check, then the rung-1 sweep as a gate. The
 network comes last because only the sweep needs it, so a press regression is
 never downstream of somebody else's repository being reachable. A second job
 checks the pins on a bare checkout with no toolchain at all. A third checks the
-import topology against `contract/outliner.zone`. A fourth, `record`, asks
+import topology against `charter.zone`. A fourth, `record`, asks
 whether the pages you changed still say which tree their numbers are true of —
 it is the only job that clones with history, because a forward ratchet needs a
 diff. No credentials, no GPU, no tree-sitter.

@@ -1,0 +1,89 @@
+// joints — import topology, drafted by `zoning draft` from the real
+// @import graph. Every line below is TRUE of the tree as it stands: this is
+// a description, not a wish. Read it once, then start tightening it —
+// merging two zones or sealing a directory is where the value is.
+
+package joints {
+    root     src
+    language zig
+    facade   root.zig
+}
+
+// Zones, low to high: an import may not point up the page. The order is a
+// topological sort of what imports what today, so nothing points up yet.
+zones {
+    // The generator, and the floor of the package: `press` reads nothing above
+    // it. Every zone from here up to `folio` reads it for the grammar, the LALR
+    // tables, and the LR(0) core.
+    press        press/**
+    lex          kernel/lex/**
+    walk         kernel/walk/**
+    quire        kernel/quire/**
+    // Above `lex` as well as `press`: `impose` reads the scanner to lay a
+    // lexer out on the page.
+    folio        folio/**
+    joint        kernel/joint/**
+    spine        kernel/spine/**
+    weave        kernel/weave/**
+    // `root.zig`, the facade, and `proof.zig`, the test build's root. Both sit
+    // at the module root and both read downward only.
+    facade       *.zig
+    abi          surface/abi/**
+    face_joints  surface/face/joints/**
+}
+
+// Outside modules, and who carries them.
+use build_options by abi face_joints
+// The lexer's engine, and — through `irregex.assay` — the instrumentation floor
+// this package times, counts, and reports on. Unscoped, because the facade
+// itself re-exports `irregex.assay` and declares the package's brand to the
+// engine, and a facade has no zone a scoped grant could name: the public entry
+// point carrying the dependency IS the package carrying it. (`press` and `lex`
+// need the regex engine, `joint` the diagnostic channel, `weave` both.)
+use irregex
+use joints by abi face_joints
+
+// Structural laws. The reach ceiling is what the tree needs today — lower it
+// when a file moves nearer what it depends on; never raise it to go green.
+limit  reach to 2 hops
+forbid cycles across directories
+
+// Ratified exceptions. Each carries the fix that would retire it; an exception
+// that stops matching is a hard failure, so paying the debt means deleting the
+// entry rather than leaving it behind as folklore.
+//
+// The five-way `variance cycle` this file used to carry is gone: `folio ->
+// press/press.zig -> press/carry_test.zig -> folio` was never a cycle in the
+// program, only in how Zig finds tests, since a test is reachable to `zig build
+// test` only if something imports it and the only importer on offer was
+// production code. `src/proof.zig` is that importer now and `tool/roll.py` is
+// the gate that it stays complete, so `press/**` production files are held to
+// reading nothing above them — which is what the four edges below are the
+// remainder of.
+//
+// All four are one direction out of two test files, and both are integration
+// tests wearing a unit test's address. Retiring them means moving those two
+// files to a zone of their own above `folio`, which today costs the colocation
+// that makes a test findable from the code it checks: zone paths must partition
+// the module, so a test cannot be zoned by what it is while it sits beside what
+// it tests. Worth doing the day a third file joins them.
+
+variance zone press/carry_test.zig -> folio/folio.zig because
+        \\What this test protects is a press invariant: the IR `press.zig`
+        \\computes has to arrive at a parse intact, and the folio is the only
+        \\place it can quietly not. A check for that cannot stop at the zone
+        \\that computes the thing being checked.
+
+variance zone press/census_test.zig -> kernel/lex/scanner.zig because
+        \\The census answers "who owns each stop" over a real corpus, which means
+        \\running the whole pipeline the press feeds rather than the press alone:
+        \\scan, then parse, then walk. A generator's census that stopped at the
+        \\generator would be recording the generator's opinion of itself.
+
+variance zone press/census_test.zig -> kernel/quire/quire.zig because
+        \\The parse half of that same corpus run — see the `scanner.zig` edge.
+
+variance zone press/census_test.zig -> kernel/walk/drive.zig because
+        \\The walk half of that same corpus run — see the `scanner.zig` edge.
+
+// `zoning status` lists the directories that could be sealed next.

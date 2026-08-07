@@ -1,4 +1,4 @@
-# outliner: One Binary, One File, Every Language
+# joints: One Binary, One File, Every Language
 
 - [Status](#status)
 - [Overview](#overview)
@@ -20,7 +20,7 @@ spine), the concrete syntax tree a parse yields (the quire, with delete-and-
 supply repair at every refusal), the weave that holds a file open and re-parses
 across edits, the folio artifact - including the codex form that packs N
 languages into one mmap-able file - the CLI that drives all of it (`parse`,
-`amend`, `mint`, and the measurement verbs), and `libotl`, the C ABI.
+`amend`, `mint`, and the measurement verbs), and `libjnt`, the C ABI.
 
 That order is on purpose: the central claim has a falsifier measurable *before* a
 parser exists, so the measurement came first. It says the product of segment
@@ -44,7 +44,7 @@ quotient (M5) - which is where the size claim lives, so the size claim is
 still a target. The table below marks each monoid's real state.
 
 Every number quoted about tree-sitter below was read out of its source, its
-issue tracker, or a measurement taken on 2026-08-02. Every number about outliner
+issue tracker, or a measurement taken on 2026-08-02. Every number about joints
 is a target with a kill condition attached, and it is labelled as one.
 
 ## What an external scanner costs us
@@ -52,7 +52,7 @@ is a target with a kill condition attached, and it is labelled as one.
 A tree-sitter grammar can declare an **external scanner** - a hand-written C
 function that lexes what a regex cannot: Python's indentation, Ruby's heredocs,
 OCaml's nested comments. Shipping per-language C is the one thing this package
-exists not to do, so outliner reimplements the *mechanisms* instead. A column
+exists not to do, so joints reimplements the *mechanisms* instead. A column
 stack covers the offside rule; a mark stack covers delimited spans. A grammar
 gets one of those only when its own declarations prove it follows that
 convention - never because a token happens to be spelled the way some other
@@ -77,7 +77,7 @@ would be a lie, and the title of this README is a goal rather than a status line
 
 ## Overview
 
-outliner is a parsing system for editors and agents: give it a file, get back a
+joints is a parsing system for editors and agents: give it a file, get back a
 concrete syntax tree that survives edits, tolerates broken code, and answers
 structural queries. Same job as tree-sitter.
 
@@ -121,7 +121,7 @@ so opening a block comment at the top of a file re-parses the file. Because a
 segment here stores a *function* rather than a *state*, that edit costs
 `O(log n)`.
 
-Do not reach for outliner over tree-sitter for throughput. Tree-sitter's
+Do not reach for joints over tree-sitter for throughput. Tree-sitter's
 throughput is fine, and nobody is waiting on a parser.
 
 ## The idea
@@ -137,7 +137,7 @@ That third property is the one tree-sitter gives up, and it is where the suffix
 invalidation comes from. A state must be recomputed when its predecessor
 changes. A function need not.
 
-outliner runs five monoids over one balanced tree:
+joints runs five monoids over one balanced tree:
 
 | | The monoid | What it buys | State |
 |---|---|---|---|
@@ -176,8 +176,8 @@ gloss answers questions, and the result settles from quire into vellum.**
 | **quire** / **vellum** | the live editable tree, and its settled succinct encoding |
 | **gloss** | the query engine |
 
-The C ABI is `libotl`, symbols prefixed `otl_`, matching irregex's `libirgx` /
-`irgx_`. It is real: 32 exports behind [`include/otl.h`](include/otl.h), built
+The C ABI is `libjnt`, symbols prefixed `jnt_`, matching irregex's `libirgx` /
+`irgx_`. It is real: 32 exports behind [`include/jnt.h`](include/jnt.h), built
 as both a shared library (which owns the header install) and a static archive
 that links standing alone. `zig build` installs all three under `zig-out/`.
 
@@ -193,8 +193,8 @@ research/          the argument, and the claim that has to be earned
 grammars.toml      the eleven tree-sitter grammars every number is measured over, pinned
 tool/              fetch and check those grammars; run rung 1 as a gate
 test/grammar/      the one grammar committed, so the test build needs no network
-contract/          the zoning import topology (`outliner.zone`)
-include/           `otl.h`, the normative statement of the C ABI
+charter.zone       the zoning import topology, judged against the real `@import` graph
+include/           `jnt.h`, the normative statement of the C ABI
 src/press/         the compiler: grammar.json in, LR(0) → LALR → resolved tables out
 src/folio/         the artifact: write, map, verify, slice - and the codex of many
 src/kernel/lex/    the terminal scanner (M1)
@@ -203,8 +203,8 @@ src/kernel/walk/   a single-stack reference LR walk, to check the algebra agains
 src/kernel/spine/  the monoid-annotated balanced tree everything binds to (M3)
 src/kernel/quire/  the tree a parse yields, with mend at every refusal
 src/kernel/weave/  a file held open: spine and quire maintained across an edit
-src/surface/face/  the CLI: grammar · lex · state · joints · parse · amend · mint
-src/surface/abi/   libotl's bodies and its `export fn` root
+src/surface/face/  the CLI: grammar · lex · state · survey · parse · amend · mint
+src/surface/abi/   libjnt's bodies and its `export fn` root
 ```
 
 Still to come:
@@ -223,7 +223,7 @@ unmodified.
 
 ## Where this came from
 
-outliner is the fifth package in a family built on
+joints is the fifth package in a family built on
 [irregex](https://github.com/The-Billy-Company/irregex), the regex engine and
 C-ABI floor the others stand on. Its siblings are
 [gist](https://github.com/The-Billy-Company/gist) (indexed ripgrep-parity
@@ -232,7 +232,7 @@ search), [relate](https://github.com/The-Billy-Company/relate)
 [blast](https://github.com/The-Billy-Company/blast) (provenance and live blast
 radius).
 
-Most of what outliner needs already exists down there: mmap portals, BLAKE3
+Most of what joints needs already exists down there: mmap portals, BLAKE3
 signets, atomic artifact publishing, the dual-clock freshness model, bitsets,
 hash-consing, union-find, byte-balanced parallel fan-out, and the succinct
 rank/select and wavelet structures. Seven pieces are missing - a monoid concept

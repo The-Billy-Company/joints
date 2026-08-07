@@ -82,7 +82,7 @@ pub fn setGrowth(n: u32) void {
 
 /// Say what each round cost and bought. Off unless someone asks — and there are
 /// two ways to ask, because there are two people asking: `--trace` for whoever
-/// is running the verb, `OUTLINER_TRACE=press` for whoever is debugging a press
+/// is running the verb, `JOINTS_TRACE=press` for whoever is debugging a press
 /// buried under one. The loop is the part of the press whose behaviour is least
 /// obvious from its output, and "why did this grammar not unfold" has no other
 /// answer.
@@ -922,15 +922,5 @@ fn eqOf(gr: *const g.Grammar) u32 {
 }
 
 test {
-    // Reached from here rather than from `root`, because what it protects is a
-    // press invariant: the IR this file computes has to arrive at a parse
-    // intact, and the folio is the only place it can quietly not.
-    _ = @import("carry_test.zig");
     _ = @import("inquest.zig");
-    // The census over a verdict list, which `zig build census` narrows to. Also
-    // inert without its request file, so being in the suite costs a no-op.
-    _ = @import("census_test.zig");
-    // An instrument rather than an assertion: it answers "which cell decided
-    // this" over a real grammar, and returns immediately unless asked.
-    _ = @import("wall_test.zig");
 }

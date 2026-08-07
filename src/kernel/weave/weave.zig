@@ -425,12 +425,12 @@ pub const Weave = struct {
         // nominated and the ceiling is nomination; a large number means the
         // ordering or the break is losing answers that were on the table.
         if (gr) |it| assay.trace(.weave, "lifts={d} taken={d}B widest={d}B offered={d} passed={d} (shape={d} goto={d} break={d}) asked={d} probes={d} turned(fork={d} align={d})\n", .{
-            it.lifts,        it.taken,
-            it.widest,       it.offered,
-            it.passed,       it.passed_shape,
-            it.passed_goto,  it.passed_break,
-            it.asked,        it.probes,
-            it.turned_fork,  it.turned_align,
+            it.lifts,       it.taken,
+            it.widest,      it.offered,
+            it.passed,      it.passed_shape,
+            it.passed_goto, it.passed_break,
+            it.asked,       it.probes,
+            it.turned_fork, it.turned_align,
         });
         if (!w.spun) {
             _ = try w.spine.build(w.arena(), w.leaves.items);
@@ -562,10 +562,10 @@ pub const Weave = struct {
                     // length of the file.
                     .prove => w.held_in.items[j] == w.entries.items[i] and
                         head != null and rejoins: {
-                            const tail = try w.spine.between(w.arena(), @intCast(j), @intCast(was.len));
-                            break :rejoins tail != null and
-                                try effect.compose(w.arena(), head.?, tail.?) != null;
-                        },
+                        const tail = try w.spine.between(w.arena(), @intCast(j), @intCast(was.len));
+                        break :rejoins tail != null and
+                            try effect.compose(w.arena(), head.?, tail.?) != null;
+                    },
                     .whole => unreachable,
                 };
                 if (stops) return .{ .from = from, .to = i, .was = @intCast(j) };
@@ -703,13 +703,12 @@ pub const Weave = struct {
         // on a *clean* parse - which is why an incremental path they have never
         // once been on never looked like a failure. Round 15.
         assay.trace(.weave, "spun={} aligned={} torn={} rifts={d} roosts={d} merges={d} rings={d} tokens={d} stood={d} roots={d} mends={d} stop={s}\n", .{
-            w.spun,          aligned,
-            w.gather.torn,   w.gather.rifts,
-            w.gather.roosts, w.gather.merges,
-            w.bough.rings.items.len, w.gather.tokens.items.len,
-            if (stood) |r| r.at else 0,
-            q.roots.len,     q.mends,
-            @tagName(q.stop),
+            w.spun,                     aligned,
+            w.gather.torn,              w.gather.rifts,
+            w.gather.roosts,            w.gather.merges,
+            w.bough.rings.items.len,    w.gather.tokens.items.len,
+            if (stood) |r| r.at else 0, q.roots.len,
+            q.mends,                    @tagName(q.stop),
         });
         w.unspun = .none;
         if (!w.spun) {
@@ -892,9 +891,8 @@ pub const Weave = struct {
     fn torn(w: *Weave, move: usize, at: u32, what: []const u8, left: Effect, right: Effect) error{TrailRefused} {
         assay.trace(.weave, "trail refused: move {d} of {d} at byte {d}: {s}," ++
             " left.entry={d} right.entry={d}, leaves={d} era={d}\n", .{
-            move,             w.trail.items.len, at,   what,
-            left.entry,       right.entry,       w.leaves.items.len,
-            w.era,
+            move,       w.trail.items.len, at,                 what,
+            left.entry, right.entry,       w.leaves.items.len, w.era,
         });
         return error.TrailRefused;
     }
@@ -918,7 +916,6 @@ pub const Weave = struct {
         try w.gens.append(w.gpa, w.era);
         try w.leaves.append(w.gpa, .{ .bytes = bytes, .element = e });
     }
-
 };
 
 /// Where an offset sits in a sorted list of them, exactly. Null when nothing
@@ -931,8 +928,4 @@ fn seek(at: []const u32, want: u32) ?usize {
         if (at[mid] < want) lo = mid + 1 else hi = mid;
     }
     return if (lo < at.len and at[lo] == want) lo else null;
-}
-
-test {
-    _ = @import("amend_test.zig");
 }

@@ -1,6 +1,6 @@
-//! outliner build graph — parsing as algebra.
+//! joints build graph — parsing as algebra.
 //!
-//! One binary, `outliner`. Today it carries the rung-1 instrument: import a
+//! One binary, `joints`. Today it carries the rung-1 instrument: import a
 //! tree-sitter `grammar.json`, build the LR automaton, and measure whether the
 //! stack effects real files induce actually collapse toward rank one. That
 //! measurement is the falsifier for the whole design
@@ -26,7 +26,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.option(
         std.builtin.OptimizeMode,
         "cli-optimize",
-        "optimize mode for the installed outliner CLI (default ReleaseFast)",
+        "optimize mode for the installed joints CLI (default ReleaseFast)",
     ) orelse .ReleaseFast;
 
     // `build.zig.zon`'s `.version` is the single authority; the face reads it
@@ -40,7 +40,7 @@ pub fn build(b: *std.Build) void {
     version.addOption([:0]const u8, "version", zon.version);
     version.addOption([:0]const u8, "package", @tagName(zon.name));
 
-    // The engine outliner's lexer stands on. Named here rather than inside the
+    // The engine joints's lexer stands on. Named here rather than inside the
     // module list twice, because the test build needs the identical dependency
     // and a second `b.dependency` call for a different optimize mode would
     // build irregex twice.
@@ -52,7 +52,7 @@ pub fn build(b: *std.Build) void {
     // quietly become something an embedder must link. PIC for the same reason
     // irregex's public module is: the module underneath a shared C-ABI object
     // has to be relocatable, and macOS was building it that way regardless.
-    const lib = b.addModule("outliner", .{
+    const lib = b.addModule("joints", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
@@ -60,23 +60,23 @@ pub fn build(b: *std.Build) void {
         .imports = &.{.{ .name = "irregex", .module = irregex_mod }},
     });
 
-    const root = b.path("src/surface/face/outliner/main.zig");
+    const root = b.path("src/surface/face/joints/main.zig");
     const face = b.createModule(.{
         .root_source_file = root,
         .target = target,
         .optimize = optimize,
-        .imports = &.{.{ .name = "outliner", .module = lib }},
+        .imports = &.{.{ .name = "joints", .module = lib }},
     });
     face.addOptions("build_options", version);
-    const exe = b.addExecutable(.{ .name = "outliner", .root_module = face });
+    const exe = b.addExecutable(.{ .name = "joints", .root_module = face });
     b.installArtifact(exe);
 
     const run = b.addRunArtifact(exe);
     run.step.dependOn(b.getInstallStep());
     if (b.args) |args| run.addArgs(args);
-    b.step("run", "Run the outliner CLI").dependOn(&run.step);
+    b.step("run", "Run the joints CLI").dependOn(&run.step);
 
-    // ── libotl: the C ABI (`otl_*` + include/otl.h) ──
+    // ── libjnt: the C ABI (`jnt_*` + include/jnt.h) ──
     // Rooted at the export shims, NOT at `src/root.zig` — a Zig `export fn` is
     // emitted by every compilation that reaches it, so shims living in the
     // library module would be duplicated into every downstream artifact that
@@ -87,14 +87,14 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .pic = true,
         .link_libc = true,
-        .imports = &.{.{ .name = "outliner", .module = lib }},
+        .imports = &.{.{ .name = "joints", .module = lib }},
     });
     abi.addOptions("build_options", version);
 
     // Dynamic (a Python cffi / dlopen consumer) owns the header install;
     // static is what Go cgo and a Rust build.rs link.
-    const dynamic_lib = b.addLibrary(.{ .name = "otl", .linkage = .dynamic, .root_module = abi });
-    dynamic_lib.installHeader(b.path("include/otl.h"), "otl.h");
+    const dynamic_lib = b.addLibrary(.{ .name = "jnt", .linkage = .dynamic, .root_module = abi });
+    dynamic_lib.installHeader(b.path("include/jnt.h"), "jnt.h");
     b.installArtifact(dynamic_lib);
 
     // The archive must stand alone. `addLibrary(.static)` would archive only
@@ -106,21 +106,37 @@ pub fn build(b: *std.Build) void {
     // members non-8-byte-aligned, which ld64 rejects) and `zig ar` elsewhere
     // — the exact lesson irregex's build carries, inherited rather than
     // relearned. Installed as a plain file because the shared library above
-    // already owns the artifact name `otl`, and a second registration
+    // already owns the artifact name `jnt`, and a second registration
     // panicked dependents' `dep.artifact()` lookups over there.
     const repack = switch (target.result.ofmt) {
         .macho => b.addSystemCommand(&.{ "libtool", "-static", "-o" }),
         else => b.addSystemCommand(&.{ b.graph.zig_exe, "ar", "rcs" }),
     };
-    const merged = repack.addOutputFileArg("libotl.a");
-    repack.addArtifactArg(b.addObject(.{ .name = "otl", .root_module = abi }));
-    b.getInstallStep().dependOn(&b.addInstallLibFile(merged, "libotl.a").step);
-    b.addNamedLazyPath("libotl.a", merged);
+    const merged = repack.addOutputFileArg("libjnt.a");
+    repack.addArtifactArg(b.addObject(.{ .name = "jnt", .root_module = abi }));
+    b.getInstallStep().dependOn(&b.addInstallLibFile(merged, "libjnt.a").step);
+    b.addNamedLazyPath("libjnt.a", merged);
 
     // Debug regardless of the CLI's ReleaseFast posture, since a release build
-    // elides the safety checks a test is partly there to trip.
+    // elides the safety checks a test is partly there to trip. Rooted at the
+    // real facade because this is the library as the face and the ABI import
+    // it: the library's own tests come from `proof` below, which is a second
+    // module rather than a re-rooting of this one, since pointing this at
+    // `src/proof.zig` would resolve every `@import("joints")` in the face to a
+    // file that has no API — only a test block.
     const test_lib = b.createModule(.{
         .root_source_file = b.path("src/root.zig"),
+        .target = target,
+        .optimize = .Debug,
+        .imports = &.{.{ .name = "irregex", .module = irregex_mod }},
+    });
+
+    // The library's tests, rooted at the test-only root that names every module
+    // and every `*_test.zig` by hand. `src/proof.zig` carries the reason
+    // production files may not name a test, and `tool/roll.py` is the gate that
+    // nothing went unnamed.
+    const proof = b.createModule(.{
+        .root_source_file = b.path("src/proof.zig"),
         .target = target,
         .optimize = .Debug,
         .imports = &.{.{ .name = "irregex", .module = irregex_mod }},
@@ -134,14 +150,14 @@ pub fn build(b: *std.Build) void {
     // … file_hash FileNotFound` before it compiles a line. `test/grammar/`
     // says where the 13 KB came from; `tool/grammars.py verify` proves it still
     // hashes to the `json` pin.
-    test_lib.addAnonymousImport("json_grammar", .{
+    proof.addAnonymousImport("json_grammar", .{
         .root_source_file = b.path("test/grammar/json.json"),
     });
     const test_face = b.createModule(.{
         .root_source_file = root,
         .target = target,
         .optimize = .Debug,
-        .imports = &.{.{ .name = "outliner", .module = test_lib }},
+        .imports = &.{.{ .name = "joints", .module = test_lib }},
     });
     test_face.addOptions("build_options", version);
     // The ABI's bodies (`bank.zig`) are plain Zig and tested as plain Zig —
@@ -152,7 +168,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = .Debug,
         .link_libc = true,
-        .imports = &.{.{ .name = "outliner", .module = test_lib }},
+        .imports = &.{.{ .name = "joints", .module = test_lib }},
     });
     test_abi.addOptions("build_options", version);
     // The same committed fixture the library tests press, for the same
@@ -165,11 +181,11 @@ pub fn build(b: *std.Build) void {
     // A test build only collects the tests in its own root module's files, so
     // the library needs its own compilation. Naming it from the face's test
     // block silently collects nothing, which reads exactly like a green run.
-    for ([_]*std.Build.Module{ test_lib, test_face, test_abi }) |m| {
+    for ([_]*std.Build.Module{ proof, test_face, test_abi }) |m| {
         bg.shard(test_step, b.addTest(.{ .root_module = m, .test_runner = bg.runner() }), .{});
     }
 
-    const check = b.step("check", "Compile the outliner binary + libotl without installing");
+    const check = b.step("check", "Compile the joints binary + libjnt without installing");
     check.dependOn(&exe.step);
     check.dependOn(&dynamic_lib.step);
 
@@ -179,17 +195,17 @@ pub fn build(b: *std.Build) void {
     // request file it returns immediately, so wiring it into the suite would only
     // buy a no-op. ReleaseFast because the work is thirty presses and scala's is
     // eleven thousand states; the answer is identical either way.
-    const survey = b.createModule(.{
-        .root_source_file = b.path("src/root.zig"),
+    const census_lib = b.createModule(.{
+        .root_source_file = b.path("src/proof.zig"),
         .target = target,
         .optimize = .ReleaseFast,
         .imports = &.{.{ .name = "irregex", .module = irregex_mod }},
     });
-    survey.addAnonymousImport("json_grammar", .{
+    census_lib.addAnonymousImport("json_grammar", .{
         .root_source_file = b.path("test/grammar/json.json"),
     });
     const census = b.addRunArtifact(b.addTest(.{
-        .root_module = survey,
+        .root_module = census_lib,
         .filters = &.{"census:"},
         .test_runner = bg.runner(),
     }));
