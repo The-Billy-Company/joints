@@ -10,12 +10,17 @@
 
 ## Status
 
-**The falsifier has been run, and it did not kill the design.** There is no
-parser yet - what exists is the press (a tree-sitter `grammar.json` importer, an
+**The falsifier has been run, and it did not kill the design - and there is a
+parser now.** What exists: the press (a tree-sitter `grammar.json` importer, an
 LR(0) collection, LALR lookaheads, and conflict resolution that reaches zero
 residual conflicts on eleven real grammars), the stack-effect monoid M2 with the
 cursor that composes it, a terminal scanner, a single-stack reference walk to
-check the algebra against, and the CLI that measures all of it.
+check the algebra against, the balanced tree the joints hang from (M3, the
+spine), the concrete syntax tree a parse yields (the quire, with delete-and-
+supply repair at every refusal), the weave that holds a file open and re-parses
+across edits, the folio artifact - including the codex form that packs N
+languages into one mmap-able file - the CLI that drives all of it (`parse`,
+`amend`, `mint`, and the measurement verbs), and `libotl`, the C ABI.
 
 That order is on purpose: the central claim has a falsifier measurable *before* a
 parser exists, so the measurement came first. It says the product of segment
@@ -32,9 +37,11 @@ the eleven-grammar sweep needs the grammars, so fetch them first:
 `python3 tool/grammars.py fetch`, then `zig build && python3 tool/rung1.py`.
 [CONTRIBUTING.md](CONTRIBUTING.md) has the rest.
 
-What is *not* built is most of the product: the balanced tree the joints hang
-from (M3), the tree it yields, repair (M4), the quotient (M5), the folio
-artifact, and `libotl`. The table below marks each monoid's real state.
+What is *not* built: the SIMD first pass (grain), the query engine (gloss),
+vellum (the settled succinct encoding), the semiring abstraction repair should
+settle into (M4 as a *parameter* rather than one policy family), and the
+quotient (M5) - which is where the size claim lives, so the size claim is
+still a target. The table below marks each monoid's real state.
 
 Every number quoted about tree-sitter below was read out of its source, its
 issue tracker, or a measurement taken on 2026-08-02. Every number about outliner
@@ -89,8 +96,11 @@ inside another language's FFI, with no per-surface build story.
 
 ## Why this over tree-sitter?
 
-Honestly: today, nothing, because today it does not yet return a tree. When it
-does, the pitch is four things, and speed is not one of them.
+Honestly: today, reach and nothing else - it returns a tree now, from one
+binary and one file, but the grammars that lean hardest on external scanners
+still parse "whole except inside the heredocs" (see above), and gloss does not
+exist, so the query files that make a tree *useful* have nothing to run on yet.
+The pitch when it lands is four things, and speed is not one of them.
 
 **Size.** Tree-sitter's dense parse table is 64% of `parser.c` at 24.3% density.
 Predicate minterms plus action-bisimulation plus a DAFSA should land materially
@@ -133,8 +143,8 @@ outliner runs five monoids over one balanced tree:
 |---|---|---|---|
 | **M1** | lexical transition functions | data-parallel lexing; an edit does not invalidate downstream lexing | a scanner that tokenizes real files, still missing the externally-scanned terminals |
 | **M2** | LR stack effects, the **joints** | position-independent reparse; parallel parse; GLR paid only where the element is multi-valued | built and measured - rung 1 |
-| **M3** | balanced parentheses | the tree itself, at 2n+o(n) bits, navigated by range min-max | not built |
-| **M4** | a semiring parameter | least-cost repair, ranking, ambiguity counting - one walk, different `⊕` | not built |
+| **M3** | balanced parentheses | the tree itself, at 2n+o(n) bits, navigated by range min-max | the spine is built - generic over the monoid, verified against random edit streams; the succinct 2n+o(n) settling (vellum) is not |
+| **M4** | a semiring parameter | least-cost repair, ranking, ambiguity counting - one walk, different `⊕` | repair ships as mend: delete-and-supply at the refusal, four author-facing policies; the semiring it should be a parameter of is not built |
 | **M5** | Myhill-Nerode quotients | the size win: coarser alphabets, minimized tables | not built |
 
 Four features, one splice implementation, one set of tests. That economy is the
@@ -157,7 +167,8 @@ gloss answers questions, and the result settles from quire into vellum.**
 |---|---|
 | **rubric** | the grammar source you write (`.rubric`) |
 | **press** | the compiler: rubric to LR(1) to quotient to DAFSA to folio |
-| **folio** | the artifact: N languages, one mmap-able file |
+| **folio** | the artifact: one pressed grammar, one mmap-able file |
+| **codex** | several folios under one cover: N languages, one mmap-able file, one sealed directory |
 | **grain** | the SIMD first pass - strings, comments, brackets, indent columns |
 | **joint** | one stack-effect element |
 | **spine** | the monoid-annotated balanced tree everything is bound to |
@@ -166,7 +177,9 @@ gloss answers questions, and the result settles from quire into vellum.**
 | **gloss** | the query engine |
 
 The C ABI is `libotl`, symbols prefixed `otl_`, matching irregex's `libirgx` /
-`irgx_`.
+`irgx_`. It is real: 32 exports behind [`include/otl.h`](include/otl.h), built
+as both a shared library (which owns the header install) and a static archive
+that links standing alone. `zig build` installs all three under `zig-out/`.
 
 ## Layout
 
@@ -180,23 +193,26 @@ research/          the argument, and the claim that has to be earned
 grammars.toml      the eleven tree-sitter grammars every number is measured over, pinned
 tool/              fetch and check those grammars; run rung 1 as a gate
 test/grammar/      the one grammar committed, so the test build needs no network
+contract/          the zoning import topology (`outliner.zone`)
+include/           `otl.h`, the normative statement of the C ABI
 src/press/         the compiler: grammar.json in, LR(0) → LALR → resolved tables out
+src/folio/         the artifact: write, map, verify, slice - and the codex of many
 src/kernel/lex/    the terminal scanner (M1)
 src/kernel/joint/  the stack-effect monoid (M2) and the cursor that composes it
 src/kernel/walk/   a single-stack reference LR walk, to check the algebra against
-src/surface/       the CLI: grammar · lex · state · joints
+src/kernel/spine/  the monoid-annotated balanced tree everything binds to (M3)
+src/kernel/quire/  the tree a parse yields, with mend at every refusal
+src/kernel/weave/  a file held open: spine and quire maintained across an edit
+src/surface/face/  the CLI: grammar · lex · state · joints · parse · amend · mint
+src/surface/abi/   libotl's bodies and its `export fn` root
 ```
 
 Still to come:
 
 ```
-src/kernel/spine/  the monoid-annotated balanced tree everything binds to (M3)
-src/kernel/quire/  the live editable tree, and vellum, its settled encoding
 src/kernel/grain/  the SIMD first pass
-src/kernel/mend/   least-cost repair (M4)
 src/kernel/gloss/  the query engine
-src/folio/         the artifact: pack, read, verify, slice
-contract/          the prose contract and the ward import topology
+vellum             the settled succinct encoding (inside quire when it lands)
 ```
 
 The importer is not a nice-to-have. Three hundred maintained grammars with
