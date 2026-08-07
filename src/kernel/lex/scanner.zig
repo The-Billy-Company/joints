@@ -216,8 +216,16 @@ pub const Scanner = struct {
     ///
     /// Separate because the two have different owners. A blind terminal is
     /// someone else's C to reimplement; a declined one is our own engine
-    /// refusing a pattern, which is ours to fix - and it is far more common
-    /// than anyone assumed while the two were one number.
+    /// refusing a pattern, which is ours to fix - and it was far more common
+    /// than anyone assumed while the two were one number. Splitting them is
+    /// what let it be counted, and counting it is what closed it: **the whole
+    /// thirty-grammar corpus now declines nothing**. The last one was
+    /// markdown's `entity_reference`, which needed 5,991 DFA states against a
+    /// ceiling of 4,096 that no other grammar came within a quarter of; irregex
+    /// gives a lexer slate its own size budget now. `blind` is 167 over fifteen
+    /// grammars and is not ours. Keep the field at zero rather than deleting
+    /// it: it is the one of the two that a reader can act on, and a population
+    /// nobody counts is how it got to eighty-seven unnoticed the first time.
     declined: []const g.Symbol,
     /// Extras this scanner cannot step over: the grammar declared them, but they
     /// are rules rather than terminals, so there is no token to skip and no seat
@@ -403,11 +411,14 @@ pub const Scanner = struct {
         // lexer quietly reporting the wrong token forever.
         // Kept apart from `blind`, and the reason is that folding them together
         // was actively misleading: three readers print `blind` as "externally
-        // scanned terminal(s)", and php declares twelve externals against
-        // ninety-nine blind, of which eighty-seven are patterns the engine
+        // scanned terminal(s)", and php declared twelve externals against
+        // ninety-nine blind, of which eighty-seven were patterns the engine
         // would not build. A reader of this lane believed that number was
         // externals and reported it. Two populations, two fields, and the
-        // sentence each reader already prints becomes true.
+        // sentence each reader already prints becomes true. php now declines
+        // none of them, and neither does anything else; the corpus total is
+        // zero, and it only got there because the fields were split before
+        // anyone went looking.
         var declined: std.ArrayList(g.Symbol) = .empty;
         errdefer declined.deinit(gpa);
         for (munch.declined) |ordinal| try declined.append(gpa, owners.items[ordinal]);
@@ -482,6 +493,38 @@ pub const Scanner = struct {
                     try stack.append(arena, sym);
                 }
             };
+
+            // "An ordinary rule" is the closure from the start symbol, and it
+            // has to be computed rather than inferred from the complement of
+            // `within`. An extra's closure is only small for the extras that
+            // motivated this - a comment reaches nothing - and the complement
+            // stops standing in for reachability the moment one is not:
+            // ocaml's `attribute` extra carries a payload of `_structure`, so
+            // its closure is every nonterminal in the grammar, no production is
+            // left outside it, `elsewhere` comes back empty, and every terminal
+            // is orphaned. That empties both cuts, which costs `blame` its
+            // second tier and files every ocaml wall as a stray byte no token
+            // could be deleted at.
+            //
+            // A nonterminal the parse can reach on its own is named by some
+            // state whatever an extra also does with it, so subtracting the
+            // reachable set leaves `within` holding only what is genuinely
+            // reachable through an extra and nowhere else. An extra that is
+            // also spelled in an ordinary rule keeps its terminals for the same
+            // reason, without needing a case of its own.
+            var ordinary: std.DynamicBitSetUnmanaged = try .initEmpty(arena, gr.symbolCount());
+            ordinary.set(gr.start);
+            try stack.append(arena, gr.start);
+            while (stack.pop()) |lhs| for (gr.productionsOf(lhs)) |pi| {
+                for (gr.productions[pi].rhs) |sym| {
+                    if (sym < gr.terminal_count or ordinary.isSet(sym)) continue;
+                    ordinary.set(sym);
+                    try stack.append(arena, sym);
+                }
+            };
+            var reachable = ordinary.iterator(.{});
+            while (reachable.next()) |i| within.unset(i);
+
             var elsewhere: std.DynamicBitSetUnmanaged = try .initEmpty(arena, gr.terminal_count);
             for (gr.productions) |p| {
                 const inside = within.isSet(p.lhs);
