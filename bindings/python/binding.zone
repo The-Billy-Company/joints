@@ -1,0 +1,32 @@
+// joints-python — import topology of the Python binding.
+//
+// There is no binding yet. `joints/__init__.py` is a docstring and a version:
+// the wheel exists to hold the name on PyPI while the engine is still Zig
+// only, and it deliberately imports nothing, because there is nothing to
+// import. The contract is here so that stays true by accident of nobody
+// noticing — the first real module lands against a stated shape rather than
+// inventing one.
+//
+// Named `joints-python` because the Zig package next door already answers to
+// `joints` in `charter.zone`. One tree, two contracts, two names.
+//
+// Judged by `zoning verify` under the `python` dialect, from the repository
+// root.
+
+package joints-python {
+    root     .
+    language python
+}
+
+// One tier, because there is one file.
+zones {
+    // The reserved surface. When the binding is written it will grow a
+    // runtime tier below this one and tests above it, and this zone becomes
+    // the facade it is currently only pretending to be.
+    binding  joints/**
+}
+
+// Structural laws. Nothing imports anything, so the ceiling is zero and the
+// day it has to move is the day this file gets rewritten properly.
+limit  reach to 0 hops
+forbid cycles across directories

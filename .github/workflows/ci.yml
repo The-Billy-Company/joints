@@ -289,7 +289,7 @@ jobs:
       # the imports happen to do today. `--complete` adds the claim no law can
       # make: every package here carries a contract, including the next one.
       - name: Import topology
-        run: uv run --no-project --with zoning==1.3.0 zoning verify --complete
+        run: uv run --no-project --with zoning==1.3.1 zoning verify --complete
       # The other half of that topology, and the half no import graph can see.
       # `src/proof.zig` is the only importer of a `*_test.zig` now, which is what
       # holds `press/**` to reading nothing above it - but it is a hand-written
