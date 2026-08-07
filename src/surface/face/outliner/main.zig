@@ -43,14 +43,28 @@ const usage =
     \\  outliner state <grammar.json> --census <terminal>...  count those terminals over every state
     \\  outliner state <grammar.json> --holding <item>  name the states holding a reading
     \\  outliner state <grammar.json> --chain <n>  how a parse reaches n, and where a fold there goes
-    \\  outliner parse <grammar.json> <file>...  parse a file, print the tree
-    \\  outliner amend <grammar.json> <file> FROM..TO=TEXT...  re-parse across edits
-    \\  outliner mint <grammar.json|folio> [-o P]  press a grammar into a folio, or read one back
+    \\  outliner parse <grammar.json|folio> <file>...  parse a file, print the tree
+    \\  outliner amend <grammar.json|folio> <file> FROM..TO=TEXT...  re-parse across edits
+    \\  outliner mint <grammar.json|folio>... [-o P]  press grammars into a folio
+    \\                (several press into one codex), or read one back
     \\  outliner --version
+    \\
+    \\a <file> of - is stdin
+    \\
+    \\parse flags:
+    \\  --all       keep the anonymous nodes in the tree
+    \\  --ranges    one node per line with the bytes it covers
+    \\  --scars     the repair sites instead of the tree
+    \\  --json      the whole answer as one JSON object per file
+    \\  --quiet     the verdict only, no stdout
+    \\  --mend=P    what to do at a refusal: fell (default), none, keep, relent
+    \\  --no-supply delete-only repair, the control arm
+    \\  --language=NAME  which grammar, when the folio holds several
     \\
     \\amend flags:
     \\  --cold      re-read the whole file per edit, for the comparison
     \\  --policy=P  how far the re-mint window widens: prove, snap, whole
+    \\  --language=NAME  which grammar, when the folio holds several
     \\
     \\joints flags:
     \\  --exact     fuse two limbs only on identical claims, never by depth

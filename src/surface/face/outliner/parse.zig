@@ -18,9 +18,9 @@
 //! outliner" into "malformed grammar" and bury the one fact worth having.
 //!
 //! Thin on purpose. The parse belongs to `kernel/quire`, and the tree comes
-//! back from one call; what is here is presentation and a verdict. Five flags,
-//! each adding information rather than decoration, and each written *after* the
-//! grammar path, which is the first positional:
+//! back from one call; what is here is presentation and a verdict. Seven
+//! flags, each adding information rather than decoration, and each written
+//! *after* the grammar path, which is the first positional:
 //!
 //!   --all      keep the anonymous nodes. `.named` is what `tree-sitter parse`
 //!              prints and what a test corpus is written in; `.all` is the tree
@@ -38,7 +38,18 @@
 //!              because a caller piping the tree into a diff must not find
 //!              status in it - the same rule that keeps the verdict on stderr.
 //!   --quiet    the verdict without the tree, for a run that only wants the
-//!              exit code. Suppresses `--scars` too: it means no stdout.
+//!              exit code. Suppresses `--scars` and `--json` too: it means no
+//!              stdout.
+//!   --json     the whole answer as one JSON object per file - tree, stop,
+//!              repairs, survey - for a caller that is a program. Refuses to
+//!              combine with `--ranges` or `--scars`, which are other shapes
+//!              of the same stdout.
+//!   --language=<name>
+//!              which grammar to parse with, when the folio is a codex of
+//!              several. A codex of one and a lone folio pick themselves; a
+//!              codex of several without this flag is refused with its
+//!              roster, because a python file parsed with the rust tables
+//!              hands back a tree that looks fine and is wrong.
 //!   --mend=P   what to do about a token the parse cannot read. `fell`, the
 //!              default, closes the standing stack into roots and begins again
 //!              in state zero past the break; `none` stops there, which is
@@ -95,7 +106,7 @@ const quire = outliner.kernel.quire;
 /// what they cost to obtain differs, and that difference is the whole reason
 /// the folio exists.
 pub const Parser = union(enum) {
-    minted: struct { mapped: folio.Mapped, bound: folio.Bound },
+    minted: struct { mapped: folio.MappedVolume, bound: folio.Bound },
     pressed: struct { grammar: g.Grammar, built: press.Result },
 
     pub fn deinit(p: *Parser) void {
@@ -144,6 +155,8 @@ pub fn run(
     var ranges = false;
     var quiet = false;
     var scars = false;
+    var json = false;
+    var language: ?[]const u8 = null;
     var mend: quire.Mend = .fell;
     var supplying = true;
     var paths: std.ArrayList([]const u8) = .empty;
@@ -153,7 +166,9 @@ pub fn run(
         else if (std.mem.eql(u8, a, "--ranges")) ranges = true //
         else if (std.mem.eql(u8, a, "--quiet")) quiet = true //
         else if (std.mem.eql(u8, a, "--scars")) scars = true //
+        else if (std.mem.eql(u8, a, "--json")) json = true //
         else if (std.mem.eql(u8, a, "--no-supply")) supplying = false //
+        else if (std.mem.startsWith(u8, a, "--language=")) language = a["--language=".len..] //
         else if (std.mem.startsWith(u8, a, "--mend=")) {
             mend = std.meta.stringToEnum(quire.Mend, a["--mend=".len..]) orelse {
                 try w.print("outliner: --mend wants none, keep, fell or relent, not '{s}'\n", .{
@@ -167,13 +182,20 @@ pub fn run(
         try w.writeAll("outliner: parse needs at least one source file\n");
         return 2;
     }
+    // Refused rather than ranked: a caller that asked for two shapes of stdout
+    // at once should learn so now, not discover which one silently won.
+    if (json and (ranges or scars)) {
+        try w.writeAll("outliner: --json is a whole answer; it does not combine" ++
+            " with --ranges or --scars\n");
+        return 2;
+    }
 
     var buf: [4096]u8 = undefined;
     var stderr = std.Io.File.stderr().writer(io, &buf);
     const e = &stderr.interface;
     defer e.flush() catch {};
 
-    var parser = (try load(gpa, io, e, grammar_path)) orelse return 2;
+    var parser = (try load(gpa, io, e, grammar_path, language)) orelse return 2;
     defer parser.deinit();
     const gr = parser.grammar();
 
@@ -238,8 +260,17 @@ pub fn run(
         var q = try gather.run(text);
         defer q.deinit();
 
+        // Asked of every parse, not of a fuzz, and asked before anything
+        // prints because the machine answer carries it inline. `Quire.survey`
+        // demands exactly the invariant toml's 731st node violates, and until
+        // 2026-08-05 its only caller was the amend fuzz - so a tree that was
+        // not a tree printed, scored and reported as one, and the violation
+        // was known only because a census kept a second copy of the walk. A
+        // check nothing runs is a check nobody has.
+        const found = try q.survey(gpa);
         if (!quiet) {
-            if (scars) try seams(&q, w, gr) else for (q.roots) |r| {
+            if (json) try machine(&q, w, gr, path, show, found) //
+            else if (scars) try seams(&q, w, gr) else for (q.roots) |r| {
                 if (ranges) try outline(&q, w, r, show, 0) else {
                     const one = try q.sexp(gpa, r, show);
                     defer gpa.free(one);
@@ -250,13 +281,6 @@ pub fn run(
         // Flushed before the verdict so the two streams read in the order the
         // work happened when both land on one terminal.
         try w.flush();
-        // Asked of every parse, not of a fuzz. `Quire.survey` demands exactly
-        // the invariant toml's 731st node violates, and until 2026-08-05 its
-        // only caller was the amend fuzz - so a tree that was not a tree
-        // printed, scored and reported as one, and the violation was known only
-        // because a census kept a second copy of the walk. A check nothing runs
-        // is a check nobody has.
-        const found = try q.survey(gpa);
         try verdict(e, gr, path, &q, parser.tables(), sc.blind, found);
         if (q.stop != .accepted and worst == 0) worst = 1;
         // The exit code is deliberately NOT moved by this. The family is
@@ -274,11 +298,35 @@ pub fn run(
 
 /// The grammar argument, whichever of the two things it is. Null means it was
 /// neither and the reason is already on stderr.
-pub fn load(gpa: std.mem.Allocator, io: std.Io, e: *std.Io.Writer, path: []const u8) !?Parser {
-    if (folio.map(io, std.Io.Dir.cwd(), path)) |opened| {
+///
+/// `language` picks a title out of a folio that carries several. Null means
+/// "the obvious one", which exists only when the file holds exactly one; a
+/// codex of several is refused with its roster rather than guessed at,
+/// because a python file parsed with the rust tables hands back a tree that
+/// looks fine and is wrong. Against a lone folio or a grammar.json the name
+/// still has to match - a flag that silently did nothing would be worse than
+/// no flag.
+pub fn load(
+    gpa: std.mem.Allocator,
+    io: std.Io,
+    e: *std.Io.Writer,
+    path: []const u8,
+    language: ?[]const u8,
+) !?Parser {
+    if (folio.mapVolume(io, std.Io.Dir.cwd(), path)) |opened| {
         var mapped = opened;
         errdefer mapped.close();
-        const bound = folio.bind(gpa, &mapped.folio) catch |err| {
+        const f = mapped.volume.pick(language) catch |err| switch (err) {
+            error.TitleUnknown, error.TitleAmbiguous => {
+                try roster(e, path, &mapped.volume, language, err == error.TitleAmbiguous);
+                return null;
+            },
+            else => {
+                try e.print("outliner: cannot open {s}: {s}\n", .{ path, @errorName(err) });
+                return null;
+            },
+        };
+        const bound = folio.bind(gpa, &f) catch |err| {
             try e.print("outliner: cannot bind {s}: {s}\n", .{ path, @errorName(err) });
             return null;
         };
@@ -299,11 +347,41 @@ pub fn load(gpa: std.mem.Allocator, io: std.Io, e: *std.Io.Writer, path: []const
         return null;
     };
     errdefer gr.deinit();
+    if (language) |want| {
+        if (!std.mem.eql(u8, gr.name, want)) {
+            try e.print("outliner: {s} is the grammar for {s}, not {s}\n", .{
+                path, gr.name, want,
+            });
+            return null;
+        }
+    }
     const built = press.tables(gpa, &gr) catch |err| {
         try e.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(err) });
         return null;
     };
     return .{ .pressed = .{ .grammar = gr, .built = built } };
+}
+
+/// The refusal that lists what the file actually holds, so the retry can be
+/// typed off the message instead of discovered by `mint`.
+fn roster(
+    e: *std.Io.Writer,
+    path: []const u8,
+    v: *const folio.Volume,
+    language: ?[]const u8,
+    ambiguous: bool,
+) !void {
+    if (ambiguous) {
+        try e.print("outliner: {s} holds {d} languages; say --language=<name>:", .{
+            path, v.count(),
+        });
+    } else {
+        try e.print("outliner: {s} holds no language named {s}; it holds:", .{
+            path, language.?,
+        });
+    }
+    for (0..v.count()) |i| try e.print(" {s}", .{v.titleAt(@intCast(i))});
+    try e.writeAll("\n");
 }
 
 /// One node per line: `field: name [start, end)`, indented two spaces a level.
@@ -375,6 +453,115 @@ fn seams(q: *const quire.Quire, w: *std.Io.Writer, gr: *const g.Grammar) !void {
         try w.print(", {d} heads, +{d} tokens\n", .{ s.heads, s.shifted - shifted });
         shifted = s.shifted;
     }
+}
+
+/// The whole answer as one JSON object per file, one line each, for a caller
+/// that is a program rather than a diff. Everything the human run spreads over
+/// two streams and three flags rides in the one object - the tree, the stop,
+/// the repairs, the survey - because a machine cannot be told "the verdict is
+/// on stderr" and a flag per fact would put the caller back in the parsing
+/// business this flag exists to end.
+///
+/// The shape is deliberately flat and closed:
+///
+///   {"language":…,"path":…,"stop":{"kind":…},"roots":N,
+///    "mends":N,"skipped":N,"supplied":N,"spurned":N,
+///    "scars":[{"at":…,"over":…,…}],
+///    "survey":{"walked":N,"held":N,"sound":B,"loose":N,"disorder":N,"torn":N},
+///    "tree":[{"name":…,"named":B,"start":N,"end":N,"kids":[…]}]}
+///
+/// `tree` is an array because a stopped parse leaves a forest, and pretending
+/// otherwise is how a consumer learns about partial parses in production.
+/// A field name appears on a child as `"field"` only when the grammar filed
+/// it, so its absence is meaningful and cheap to test. Node names are written
+/// through the same escaping rules as everything else in the object - JSON's,
+/// not the s-expression's - so a grammar spelling a token `"` cannot break the
+/// frame.
+fn machine(
+    q: *const quire.Quire,
+    w: *std.Io.Writer,
+    gr: *const g.Grammar,
+    path: []const u8,
+    show: quire.Show,
+    found: quire.Quire.Survey,
+) !void {
+    try w.writeAll("{\"language\":");
+    try jstring(w, gr.name);
+    try w.writeAll(",\"path\":");
+    try jstring(w, path);
+    try w.writeAll(",\"stop\":");
+    switch (q.stop) {
+        .accepted => try w.writeAll("{\"kind\":\"accepted\"}"),
+        .stray => |off| try w.print("{{\"kind\":\"stray\",\"at\":{d}}}", .{off}),
+        .unexpected => |u| {
+            try w.writeAll("{\"kind\":\"unexpected\",\"symbol\":");
+            try jstring(w, gr.nameOf(u.symbol));
+            try w.print(",\"at\":{d},\"state\":{d}}}", .{ u.at, u.state });
+        },
+        .truncated => try w.writeAll("{\"kind\":\"truncated\"}"),
+    }
+    try w.print(",\"roots\":{d},\"mends\":{d},\"skipped\":{d},\"supplied\":{d},\"spurned\":{d}", .{
+        q.roots.len, q.mends, q.skipped, q.supplied, q.spurned,
+    });
+    try w.writeAll(",\"scars\":[");
+    for (q.scars, 0..) |s, i| {
+        if (i > 0) try w.writeByte(',');
+        try w.print("{{\"at\":{d},\"over\":{d}", .{ s.at, s.over });
+        if (s.gave) |sym| {
+            try w.writeAll(",\"gave\":");
+            try jstring(w, gr.nameOf(sym));
+        }
+        try w.print(",\"felled\":{},\"heads\":{d},\"shifted\":{d}}}", .{
+            s.felled, s.heads, s.shifted,
+        });
+    }
+    try w.print("],\"survey\":{{\"walked\":{d},\"held\":{d},\"sound\":{},\"loose\":{d},\"disorder\":{d},\"torn\":{d}}}", .{
+        found.walked, found.held, found.sound(), found.loose, found.disorder, found.torn,
+    });
+    try w.writeAll(",\"tree\":[");
+    for (q.roots, 0..) |r, i| {
+        if (i > 0) try w.writeByte(',');
+        try limb(q, w, r, show);
+    }
+    try w.writeAll("]}\n");
+}
+
+/// One node of the JSON tree. Same skip rule as the s-expression - under
+/// `.named` an anonymous child is skipped whole, not descended through - so
+/// the two renders of one parse always agree about what is in the tree.
+fn limb(q: *const quire.Quire, w: *std.Io.Writer, ref: quire.Ref, show: quire.Show) !void {
+    const n = q.nodes[ref];
+    try w.writeAll("{\"name\":");
+    try jstring(w, q.name(ref));
+    if (q.field(ref)) |f| {
+        try w.writeAll(",\"field\":");
+        try jstring(w, f);
+    }
+    try w.print(",\"named\":{},\"start\":{d},\"end\":{d},\"kids\":[", .{
+        q.isNamed(ref), n.start, n.end(),
+    });
+    var first = true;
+    for (q.children(ref)) |c| {
+        if (show == .named and !q.isNamed(c)) continue;
+        if (!first) try w.writeByte(',');
+        first = false;
+        try limb(q, w, c, show);
+    }
+    try w.writeAll("]}");
+}
+
+/// A JSON string, escaped by JSON's rules rather than the s-expression's.
+fn jstring(w: *std.Io.Writer, s: []const u8) !void {
+    try w.writeByte('"');
+    for (s) |ch| switch (ch) {
+        '"' => try w.writeAll("\\\""),
+        '\\' => try w.writeAll("\\\\"),
+        '\n' => try w.writeAll("\\n"),
+        '\r' => try w.writeAll("\\r"),
+        '\t' => try w.writeAll("\\t"),
+        else => if (ch < 0x20) try w.print("\\u{x:0>4}", .{ch}) else try w.writeByte(ch),
+    };
+    try w.writeByte('"');
 }
 
 /// An anonymous node, spelled as itself. Same escaping as the s-expression

@@ -13,6 +13,12 @@
 //! Hand it a folio and it skips straight to the reading, which is the half an
 //! editor actually pays for.
 //!
+//! Hand it **several** - grammar.jsons, minted folios, any mixture - with `-o`
+//! and it binds them into one codex: the "N languages, one file" artifact.
+//! Each grammar pressed here still gets the cell-by-cell read-back check; a
+//! member that arrived as a folio is embedded as it stands. Hand it a codex
+//! and it reads every member back, seal and bind, one line per language.
+//!
 //! The sizes are printed and not editorialized. Tree-sitter's dense table is
 //! 64% of a 30 MB `parser.c` at 24.3% density; the number here is the argument,
 //! so it gets stated and left alone.
@@ -35,7 +41,8 @@ pub fn run(
     args: []const []const u8,
 ) !u8 {
     var out: ?[]const u8 = null;
-    var path: ?[]const u8 = null;
+    var paths: std.ArrayList([]const u8) = .empty;
+    defer paths.deinit(gpa);
     var rest = args;
     while (rest.len > 0) : (rest = rest[1..]) {
         const a = rest[0];
@@ -46,12 +53,19 @@ pub fn run(
             }
             rest = rest[1..];
             out = rest[0];
-        } else path = a;
+        } else try paths.append(gpa, a);
     }
-    if (path == null) {
+    if (paths.items.len == 0) {
         try w.writeAll("outliner: mint needs a grammar.json or a folio\n");
         return 2;
     }
+    // Several grammars are one codex, and that is the whole sentence: until
+    // 2026-08-07 this loop kept the last path and pressed it alone, so
+    // `mint python.json rust.json -o both.folio` reported success and wrote a
+    // rust-only folio. A silent drop in the verb whose one job is publishing
+    // the artifact is the worst bug this CLI has had.
+    if (paths.items.len > 1) return gathering(gpa, io, w, paths.items, out);
+    const path = paths.items[0];
 
     // Which of the two jobs this is gets answered by trying the cheap one. A
     // path that is not a folio says so in its first eight bytes and costs a
@@ -59,33 +73,259 @@ pub fn run(
     // failing, and reporting *that* as "cannot import a grammar" would be the
     // wrong sentence about the right file.
     const at = std.Io.Clock.awake.now(io);
-    if (folio.map(io, std.Io.Dir.cwd(), path.?)) |opened| {
+    if (folio.mapVolume(io, std.Io.Dir.cwd(), path)) |opened| {
         var mapped = opened;
         defer mapped.close();
-        // Bound, not merely mapped. What an editor pays to open a language is
-        // map plus verify plus the table laid back out, and timing the first
-        // two would be quoting a number nothing can parse from.
-        var bound = folio.bind(gpa, &mapped.folio) catch |e| {
-            try w.print("outliner: cannot bind {s}: {s}\n", .{ path.?, @errorName(e) });
-            return 2;
-        };
-        defer bound.deinit();
-        try report(w, &mapped.folio, &bound, .{
-            .source = null,
-            .folio = mapped.bytes.len,
-            .memory = null,
-            .path = path.?,
-            .load_us = since(io, at),
-        });
+        switch (mapped.volume) {
+            .one => |f| {
+                // Bound, not merely mapped. What an editor pays to open a
+                // language is map plus verify plus the table laid back out,
+                // and timing the first two would be quoting a number nothing
+                // can parse from.
+                var lone = f;
+                var bound = folio.bind(gpa, &lone) catch |e| {
+                    try w.print("outliner: cannot bind {s}: {s}\n", .{ path, @errorName(e) });
+                    return 2;
+                };
+                defer bound.deinit();
+                try report(w, &lone, &bound, .{
+                    .source = null,
+                    .folio = mapped.bytes.len,
+                    .memory = null,
+                    .path = path,
+                    .load_us = since(io, at),
+                });
+            },
+            .many => |*c| return contents(gpa, io, w, c, mapped.bytes.len, path, at),
+        }
         return 0;
     } else |e| switch (e) {
         error.FolioBadMagic, error.FolioTooSmall, error.FileNotFound => {},
         else => {
-            try w.print("outliner: {s} does not load: {s}\n", .{ path.?, @errorName(e) });
+            try w.print("outliner: {s} does not load: {s}\n", .{ path, @errorName(e) });
             return 1;
         },
     }
-    return write(gpa, io, w, path.?, out);
+    return write(gpa, io, w, path, out);
+}
+
+/// Read a codex back: every member opened - which proves its seal - and bound,
+/// because "read one back" means proving what an editor would pay for, not
+/// admiring the directory. One line per language rather than the full folio
+/// report per member; `mint <codex> --language=X` is not a verb, `mint` on the
+/// member's own folio is how you get the long form.
+fn contents(
+    gpa: std.mem.Allocator,
+    io: std.Io,
+    w: *std.Io.Writer,
+    c: *const folio.Codex,
+    file_len: usize,
+    path: []const u8,
+    at: std.Io.Timestamp,
+) !u8 {
+    try w.print("codex of {d} languages, {d} bytes  {s}\n", .{ c.count, file_len, path });
+    var worst: u8 = 0;
+    for (0..c.count) |i| {
+        const title = c.titleAt(@intCast(i));
+        const slice = c.sliceAt(@intCast(i));
+        var f = c.openAt(@intCast(i)) catch |e| {
+            try w.print("  {s: <16} {d: >12} bytes  UNREADABLE: {s}\n", .{
+                title, slice.len, @errorName(e),
+            });
+            worst = 1;
+            continue;
+        };
+        var bound = folio.bind(gpa, &f) catch |e| {
+            try w.print("  {s: <16} {d: >12} bytes  UNBINDABLE: {s}\n", .{
+                title, slice.len, @errorName(e),
+            });
+            worst = 1;
+            continue;
+        };
+        defer bound.deinit();
+        try w.print("  {s: <16} {d: >12} bytes  {d} symbols, {d} productions, {d} states\n", .{
+            title, slice.len, f.head.symbol_count, f.head.production_count, f.head.state_count,
+        });
+    }
+    if (worst == 0) {
+        try w.print("\n  every member sealed, opened and bound in {d} us\n", .{since(io, at)});
+    }
+    return worst;
+}
+
+/// Press several grammars - or take folios already minted, in any mixture -
+/// and bind them into one codex at `-o`. Each member pressed here is checked
+/// cell by cell against the read-back, same as the single-grammar mint; a
+/// member that arrived as a folio was proven when it was packed and is proven
+/// again by the read-back's open, so it is embedded as it stands rather than
+/// re-pressed from a grammar.json this command was never handed.
+fn gathering(
+    gpa: std.mem.Allocator,
+    io: std.Io,
+    w: *std.Io.Writer,
+    paths: []const []const u8,
+    out: ?[]const u8,
+) !u8 {
+    const target = out orelse {
+        try w.writeAll("outliner: minting several grammars into one file needs -o <codex path>\n");
+        return 2;
+    };
+
+    const Member = struct {
+        path: []const u8,
+        bytes: []align(leaf.section_align) const u8,
+        /// Set when the member was pressed here, absent for one embedded as a
+        /// ready folio - which is also the read-back check's dispatch: only a
+        /// press leaves tables in memory to disagree with.
+        gr: ?g.Grammar = null,
+        built: ?press.Result = null,
+        press_us: i64 = 0,
+    };
+    var members: std.ArrayList(Member) = .empty;
+    defer {
+        for (members.items) |*m| {
+            gpa.free(m.bytes);
+            if (m.built) |*b| b.deinit();
+            if (m.gr) |*have| have.deinit();
+        }
+        members.deinit(gpa);
+    }
+
+    for (paths) |path| {
+        // Same sniff as the single-path flow: the first eight bytes say what
+        // this member is, and only a genuine folio failure is reported as one.
+        if (folio.mapVolume(io, std.Io.Dir.cwd(), path)) |opened| {
+            var mapped = opened;
+            defer mapped.close();
+            switch (mapped.volume) {
+                .one => {
+                    // Copied out of the mapping rather than kept mapped,
+                    // because the codex packer wants every part in memory at
+                    // once and a small aligned copy outlives the file handle.
+                    const copy = try gpa.alignedAlloc(
+                        u8,
+                        comptime .fromByteUnits(leaf.section_align),
+                        mapped.bytes.len,
+                    );
+                    @memcpy(copy, mapped.bytes);
+                    try members.append(gpa, .{ .path = path, .bytes = copy });
+                    continue;
+                },
+                .many => {
+                    // Nesting would make `pick` a tree walk and give one
+                    // language two spellings of its address. Flatten instead.
+                    try w.print("outliner: {s} is already a codex; mint its members' folios" ++
+                        " or grammar.jsons directly\n", .{path});
+                    return 2;
+                },
+            }
+        } else |e| switch (e) {
+            error.FolioBadMagic, error.FolioTooSmall, error.FileNotFound => {},
+            else => {
+                try w.print("outliner: {s} does not load: {s}\n", .{ path, @errorName(e) });
+                return 2;
+            },
+        }
+
+        const source = intake.slurp(gpa, io, w, path) orelse return 2;
+        defer gpa.free(source);
+        var gr = import.treeSitter(gpa, source) catch |e| {
+            try w.print("outliner: cannot import {s}: {s}\n", .{ path, @errorName(e) });
+            return 2;
+        };
+        const pressed_at = std.Io.Clock.awake.now(io);
+        var built = press.tables(gpa, &gr) catch |e| {
+            try w.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
+            gr.deinit();
+            return 2;
+        };
+        const bytes = folio.pack(gpa, &gr, &built) catch |e| {
+            try w.print("outliner: cannot pack {s}: {s}\n", .{ gr.name, @errorName(e) });
+            built.deinit();
+            gr.deinit();
+            return 2;
+        };
+        try members.append(gpa, .{
+            .path = path,
+            .bytes = bytes,
+            .gr = gr,
+            .built = built,
+            .press_us = since(io, pressed_at),
+        });
+    }
+
+    var parts: std.ArrayList([]align(leaf.section_align) const u8) = .empty;
+    defer parts.deinit(gpa);
+    for (members.items) |m| try parts.append(gpa, m.bytes);
+
+    const packed_at = std.Io.Clock.awake.now(io);
+    const bytes = folio.codex.pack(gpa, parts.items) catch |e| switch (e) {
+        error.TitleRepeated => {
+            try w.writeAll("outliner: two of those grammars share a name;" ++
+                " a codex holds each language once\n");
+            return 2;
+        },
+        else => {
+            try w.print("outliner: cannot bind the codex: {s}\n", .{@errorName(e)});
+            return 2;
+        },
+    };
+    defer gpa.free(bytes);
+    const pack_us = since(io, packed_at);
+
+    folio.writeTo(io, std.Io.Dir.cwd(), target, bytes) catch |e| {
+        try w.print("outliner: cannot write {s}: {s}\n", .{ target, @errorName(e) });
+        return 2;
+    };
+
+    // Read back the file that was just published, not the buffer it came
+    // from - the same rule as the single mint, for the same reason.
+    const loaded_at = std.Io.Clock.awake.now(io);
+    var mapped = folio.mapVolume(io, std.Io.Dir.cwd(), target) catch |e| {
+        try w.print("outliner: {s} does not load: {s}\n", .{ target, @errorName(e) });
+        return 1;
+    };
+    defer mapped.close();
+    const c: *const folio.Codex = switch (mapped.volume) {
+        .many => |*x| x,
+        .one => {
+            try w.print("outliner: {s} read back as a lone folio, not a codex\n", .{target});
+            return 1;
+        },
+    };
+    const load_us = since(io, loaded_at);
+
+    try w.print("codex of {d} languages, {d} bytes  {s}\n", .{ c.count, bytes.len, target });
+    var total_press: i64 = 0;
+    for (members.items, 0..) |*m, i| {
+        var f = c.openAt(@intCast(i)) catch |e| {
+            try w.print("  MISMATCH: {s} does not open back: {s}\n", .{ m.path, @errorName(e) });
+            return 1;
+        };
+        var bound = folio.bind(gpa, &f) catch |e| {
+            try w.print("  MISMATCH: {s} does not bind back: {s}\n", .{ m.path, @errorName(e) });
+            return 1;
+        };
+        defer bound.deinit();
+        if (m.gr != null) {
+            if (disagrees(&f, &bound, &m.gr.?, &m.built.?)) |what| {
+                try w.print("  MISMATCH in {s}: {s}\n", .{ c.titleAt(@intCast(i)), what });
+                return 1;
+            }
+        }
+        try w.print("  {s: <16} {d: >12} bytes  {d} symbols, {d} states  {s}\n", .{
+            c.titleAt(@intCast(i)),
+            c.sliceAt(@intCast(i)).len,
+            f.head.symbol_count,
+            f.head.state_count,
+            if (m.gr != null) "pressed, reloaded, identical" else "embedded as it was",
+        });
+        total_press += m.press_us;
+    }
+    try w.print("\n  pressed in {d} us, packed in {d} us, loaded in {d} us\n", .{
+        total_press, pack_us, load_us,
+    });
+    return 0;
 }
 
 fn write(

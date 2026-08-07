@@ -47,6 +47,7 @@ pub fn run(
     var show: quire.Show = .named;
     var quiet = false;
     var cold = false;
+    var language: ?[]const u8 = null;
     var policy: weave.Policy = .prove;
     var path: ?[]const u8 = null;
     var script: std.ArrayList([]const u8) = .empty;
@@ -61,6 +62,7 @@ pub fn run(
         if (std.mem.eql(u8, a, "--all")) show = .all //
         else if (std.mem.eql(u8, a, "--quiet")) quiet = true //
         else if (std.mem.eql(u8, a, "--cold")) cold = true //
+        else if (std.mem.startsWith(u8, a, "--language=")) language = a["--language=".len..] //
         else if (std.mem.startsWith(u8, a, "--policy=")) {
             policy = std.meta.stringToEnum(weave.Policy, a["--policy=".len..]) orelse {
                 try e.print("outliner: no such re-mint policy: {s}\n", .{a["--policy=".len..]});
@@ -86,7 +88,7 @@ pub fn run(
         return 2;
     }
 
-    var parser = (try parse.load(gpa, io, e, grammar_path)) orelse return 2;
+    var parser = (try parse.load(gpa, io, e, grammar_path, language)) orelse return 2;
     defer parser.deinit();
     const gr = parser.grammar();
 
