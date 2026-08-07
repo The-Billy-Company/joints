@@ -19,16 +19,19 @@ zones {
     spine          kernel/spine/**
     weave          kernel/weave/**
     face_outliner  surface/face/outliner/**
+    abi            surface/abi/**
 }
 
 // Outside modules, and who carries them.
-use build_options by face_outliner
+use build_options by face_outliner abi
 // The lexer's engine, and — through `irregex.assay` — the instrumentation floor
-// this package times, counts, and reports on. Two different reasons to reach for
-// the same module: `tangle` needs the regex engine, `joint` needs only the
-// diagnostic channel. Widen this the day another zone starts tracing.
-use irregex by tangle joint
-use outliner by face_outliner
+// this package times, counts, and reports on. Unscoped, because the facade
+// itself re-exports `irregex.assay` and declares the package's brand to the
+// engine, and a facade has no zone a scoped grant could name: the public entry
+// point carrying the dependency IS the package carrying it. (`tangle` needs
+// the regex engine, `joint` the diagnostic channel, `weave` both.)
+use irregex
+use outliner by face_outliner abi
 
 // Structural laws. The reach ceiling is what the tree needs today — lower it
 // when a file moves nearer what it depends on; never raise it to go green.
@@ -49,6 +52,7 @@ variance cycle {
     kernel/quire/gather_test.zig
     kernel/quire/graft.zig
     kernel/quire/quire.zig
+    kernel/quire/survey_test.zig
     kernel/walk/drive.zig
     press/carry_test.zig
     press/census_test.zig
