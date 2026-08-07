@@ -47,7 +47,7 @@ shape and **essentially all of the non-php wrong shape** (39,110 of 43,039).
 The part I would not defend. An `extra` (a comment, a blank line) attaches
 wherever a parser chooses, and my walk charges every byte of it to whichever
 spine it isn't on. tree-sitter swallows a leading scaladoc into the
-`function_definition` it precedes; outliner keeps it a sibling. Neither has
+`function_definition` it precedes; joints keeps it a sibling. Neither has
 misread anything.
 
 | | crooked | soft | **hard** |
@@ -92,7 +92,7 @@ finding.
 `print(x)` derives as Python 2's print **statement**:
 
 ```
-outliner                      tree-sitter
+joints                      tree-sitter
 print_statement [0, 8)        call [0, 8)
   "print"                       identifier "print"
   parenthesized_expression      argument_list
@@ -120,7 +120,7 @@ end
 ```
 
 ```
-outliner                      tree-sitter
+joints                      tree-sitter
 call [0, 20)                  call [0, 20)
   identifier "defp"             identifier "defp"
   arguments [5, 20)  <-- 20     arguments [5, 9)   <-- 9
@@ -131,7 +131,7 @@ call [0, 20)                  call [0, 20)
 ```
 
 `defp f(x) do ... end` is `defp(f(x), do: ...)`; the block is an argument of
-`defp`. Outliner hangs it inside the call being *defined*.
+`defp`. Joints hangs it inside the call being *defined*.
 
 **Every leaf is identical.** All seven tokens, all seven extents, agreed.
 `plumb` scores this file **0 misread bytes** — there is no leaf to index.
@@ -190,7 +190,7 @@ and javascript read exactly 0 on the first numeric run. The instrument lied
 anyway, by two routes I had not imagined:
 
 1. **Zig, 11,914 bytes — 81.3% of the grammar — charged to a spine that was
-   otherwise identical rung for rung.** Outliner's root stops at the last token
+   otherwise identical rung for rung.** Joints's root stops at the last token
    (`source_file [4163, 16124)`), tree-sitter's reaches EOF (`[0, 16125)`). My
    first containment rule dropped theirs for overreaching and kept ours, so
    every byte beneath disagreed. **The bracket-recall column read 99.9% at the
@@ -199,7 +199,7 @@ anyway, by two routes I had not imagined:
 2. **`inorder` broke same-extent ties alphabetically by name.** A parent and its
    only child routinely share an extent — tree-sitter's `expression_statement
    [23, 35)` over `call_expression [23, 35)` — and `call_expression` sorts
-   above its own parent while outliner's pair happened to sort right. It moved
+   above its own parent while joints's pair happened to sort right. It moved
    **340 bytes** between `askew` and `racked` corpus-wide and **left the total
    untouched**, so nothing else here would have caught it.
 
@@ -225,7 +225,7 @@ one**, watched both ways.
 **3. It decides which of two trees is wrong, and on toml I think it decides
 wrong.** Every `crooked` byte is charged on the premise that tree-sitter is
 right. For toml's 29 bytes that premise is doing all the work: the disagreement
-is a declared `extra`, and outliner keeping the comment a sibling of `pair` is
+is a declared `extra`, and joints keeping the comment a sibling of `pair` is
 at least as defensible as tree-sitter swallowing it. I report toml as one of the
 three dirty whole grammars because that is what the measurement says, and I am
 telling you I would not defend it.
@@ -274,7 +274,7 @@ misattributed — `Chunked.swift` has no `/*`. Not chased; a lane classifying al
 
 ### The specimen hazard, closed
 
-`tool/specimen.py` fell back to the shared `zig-out` when `OUTLINER_BIN` was
+`tool/specimen.py` fell back to the shared `zig-out` when `JOINTS_BIN` was
 unset and said nothing. A lane got **7 of 20 sound from a tree that builds 14 of
 20** because a sibling rebuilt the prefix mid-run.
 
@@ -283,7 +283,7 @@ it is both unattributed *and* the binary does not match the tree (`stale` or
 `drift`). Narrowly: a deliberate pin drifts by design, and a fresh `zig build`
 passes untouched — only the exact failure is refused. `--anyway` downgrades it
 to a printed hazard. **It fired on its first run in this tree**, on a `zig-out`
-older than `src/surface/face/outliner/state.zig`.
+older than `src/surface/face/joints/state.zig`.
 
 **It caught my own work.** My earlier specimen pass read 7 of 22; on a pin built
 from the current tree it reads **15 of 22**. Everything above is retaken.

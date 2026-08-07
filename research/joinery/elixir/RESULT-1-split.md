@@ -100,7 +100,7 @@ wrong, both are wrong together. This checks a sampling claim and nothing else.
 ## Provenance
 
 Arm `.local/lane-elixir/base` (`zig build -Dcli-optimize=ReleaseFast` from a
-snapshot of the tree, its own `OUTLINER_WORK`), oracle frozen with
+snapshot of the tree, its own `JOINTS_WORK`), oracle frozen with
 `attest.py freeze elixirlane` — `d85e736fa` over 30 grammars, tree-sitter
 0.26.11 — so both halves of every comparison in this dossier saw the same
 oracle. `rack.py verify` reads 38 of 38 on this arm.

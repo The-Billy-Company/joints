@@ -24,7 +24,7 @@ element [0, 8)
     erroneous_end_tag_name [6, 7)
 ```
 
-outliner produces three roots and no `element` at all:
+joints produces three roots and no `element` at all:
 
 ```
 start_tag [0, 3)
@@ -41,7 +41,7 @@ hold - the lexing is right and nothing was repaired. `roots 1` and
 `holds element` fail, and they are the entire defect.
 
 `_erroneous_end_tag_name` is declared external precisely so that a mismatched
-close is a *named thing* rather than damage. outliner names it correctly and
+close is a *named thing* rather than damage. joints names it correctly and
 then cannot close the element over it.
 
 ## Why nothing else sees it

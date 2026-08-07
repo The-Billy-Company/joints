@@ -1,10 +1,10 @@
 # A right leaf under a wrong parent, in 21 bytes, with every token agreed.
 #
-# `defp f(x) do x end` defines f. Outliner reads it as f being CALLED with a
+# `defp f(x) do x end` defines f. Joints reads it as f being CALLED with a
 # do-block: it hangs the `do_block` inside `arguments`, and stretches the inner
 # `call` over it.
 #
-#   outliner                      tree-sitter
+#   joints                      tree-sitter
 #   call [0, 20)                  call [0, 20)
 #     identifier  "defp"            identifier  "defp"
 #     arguments [5, 20)  <-- 20     arguments [5, 9)   <-- 9
@@ -14,7 +14,7 @@
 #         do_block [10, 20)         do_block [10, 20)  <-- sibling of arguments
 #
 # Elixir's `defp f(x) do ... end` is `defp(f(x), do: ...)`: the do-block is an
-# argument of `defp`, not of `f`. Outliner's reading says the block belongs to
+# argument of `defp`, not of `f`. Joints's reading says the block belongs to
 # the call being defined.
 #
 # EVERY LEAF IS IDENTICAL. Both parsers agree on all seven tokens and on all

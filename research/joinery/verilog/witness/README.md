@@ -46,7 +46,7 @@ and folds to `primary` on every lookahead **except** `,`, `=` and `}`, where
 are precisely the tokens that follow an element of a concatenation.
 
 Dynamically — and this is what the 56-byte witness actually executes —
-`OUTLINER_TRACE=quire` never reaches 1701 at all:
+`JOINTS_TRACE=quire` never reaches 1701 at all:
 
 ```text
 split: state 2979 on ] at 729 rank 0 - keeps fold constant_primary #4021,

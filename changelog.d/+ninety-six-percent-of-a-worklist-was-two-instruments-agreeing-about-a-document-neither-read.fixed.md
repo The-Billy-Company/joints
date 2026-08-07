@@ -52,7 +52,7 @@ lexer fix renamed them, and the three `macro_text` walls that replaced them tota
 share of 6,591, corroborated to the byte by an independent run, and every byte of
 it `alias` or `torn`.
 
-Measured under one pinned binary with separate `OUTLINER_WORK` for the two arms;
+Measured under one pinned binary with separate `JOINTS_WORK` for the two arms;
 predictions and scores in `research/joinery/reprice/`, eight of eleven, and the
 miss that mattered was the join I had built and would have published before
 asking what it was matching.

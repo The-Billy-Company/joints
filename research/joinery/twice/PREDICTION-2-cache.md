@@ -7,11 +7,11 @@ Written before measuring. Scored in [`RESULT-2-cache.md`](RESULT-2-cache.md).
 `order.miss` decides a cached folio is usable when
 `folio.st_mtime >= BIN.st_mtime`. That answers *was this made before the binary*
 and it is asked of a **path**, not of a version. Two pinned binaries sharing one
-`OUTLINER_WORK` are **both** older than a folio either of them minted five
+`JOINTS_WORK` are **both** older than a folio either of them minted five
 minutes ago, so the freshness rule never fires for either and both arms read
 whichever folio was written last.
 
-> **Prediction.** Point pin A and pin B at one `OUTLINER_WORK`, let A mint, then
+> **Prediction.** Point pin A and pin B at one `JOINTS_WORK`, let A mint, then
 > run B. B reports `cache: kept 30`, reads thirty folios A minted, and the board
 > moves on at least one row — while every stamp on the page reads clean.
 

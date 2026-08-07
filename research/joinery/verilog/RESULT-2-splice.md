@@ -70,7 +70,7 @@ its own* — `if (last.prec == .none) last.prec = host.prec`.
 carrying an authored zero and the host's authored 37 is dropped. Upstream never
 inlines a hidden rule, so upstream never has to choose between the two.
 
-**Two authored ranks meet at a boundary that only exists because outliner
+**Two authored ranks meet at a boundary that only exists because joints
 inlines. Whichever survives, it is not what anybody wrote.** That is the shape,
 and it is not verilog's: any grammar with a `prec` wrapper around a reference to
 a hidden rule that carries its own `prec` has it.
@@ -78,7 +78,7 @@ a hidden rule that carries its own `prec` has it.
 ## Four repairs, all measured, all rejected
 
 Every row below is a **pinned binary either side** (`tool/pin.py`), its own
-folio cache (`OUTLINER_WORK`), the full board, and a tree-by-tree comparison of
+folio cache (`JOINTS_WORK`), the full board, and a tree-by-tree comparison of
 all thirty grammars — never a folio digest. Baseline: corpus damage **142,083**,
 `describes` **97,898** nodes, verilog damage **63,937**.
 
@@ -201,12 +201,12 @@ own before/after rows are identical to the byte.
 
 ## The instrument I trust least
 
-**`outliner parse`'s failure state**, and not as a hedge — the brief already
+**`joints parse`'s failure state**, and not as a hedge — the brief already
 warns it is "a location, not a diagnosis" and the warning is too gentle. Here is
 the demonstration:
 
 ```
-$ outliner state upstream/grammars/verilog.json 701
+$ joints state upstream/grammars/verilog.json 701
 state 701 of verilog
   items:
     casting_type -> constant_primary .
@@ -233,13 +233,13 @@ The repair is not to distrust the number harder, it is to have the inverse
 query. So the one thing this lane ships is:
 
 ```
-outliner state <grammar.json> --holding <item>
+joints state <grammar.json> --holding <item>
 ```
 
 which names every state whose kernel spells the item, dot included:
 
 ```
-$ outliner state upstream/grammars/verilog.json --holding 'variable_lvalue -> _identifier .'
+$ joints state upstream/grammars/verilog.json --holding 'variable_lvalue -> _identifier .'
 710: variable_lvalue -> _identifier . select1
 1184: variable_lvalue -> _identifier . select1
 …

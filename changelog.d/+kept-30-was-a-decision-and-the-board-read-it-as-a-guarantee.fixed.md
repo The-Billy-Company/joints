@@ -26,7 +26,7 @@ reason to terminate.
 
 Reproduced before it was fixed, and the reproduction is the argument.
 `research/generation/stage.py blind` runs **three** re-minting agents driving the
-older `.local/ink/base/bin/outliner` over one warm cache, and starts **two**
+older `.local/ink/base/bin/joints` over one warm cache, and starts **two**
 boards against that cache at the same instant - one on `tool/` as it stands, one
 on a scratch copy with the old stat-and-forget rule appended back on, restored
 explicitly rather than broken and called equivalent. Same seconds, same cache,

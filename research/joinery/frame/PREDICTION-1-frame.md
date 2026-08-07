@@ -11,7 +11,7 @@ Written before any of it was measured. Pin `frame` (`cf697da9f577`, tree
 `within()` drops every rung as wide as the window or wider on both sides. That
 drop is load-bearing - it is what stopped zig charging 11,914 bytes to a frame
 disagreement the two parsers have by construction - and it is also the hole. A
-node outliner never built is in no window, so it is dropped from the oracle's
+node joints never built is in no window, so it is dropped from the oracle's
 side and nothing on ours ever stood where it was.
 
 `research/joinery/specimen/html/erroneous-end-tag.html`, nine bytes, reproduced
@@ -21,7 +21,7 @@ today on this pin:
 built 7 · square 7 · askew 0 · racked 0 · brackets 6/6 · frames 2 · framed 0
 ```
 
-The oracle reads one `element [0, 8)` over three children; outliner reads the
+The oracle reads one `element [0, 8)` over three children; joints reads the
 three children as three roots and no `element`. `framed` reads 0 because
 `their_frame` is the *tightest* oracle bracket containing each window, which is
 `start_tag [0, 3)` - the same name we have. So the column that looks like it
@@ -30,14 +30,14 @@ should notice is looking at something else, correctly.
 ## The rule I am going to add
 
 **A frame is missing when the oracle has a bracket, other than its own root,
-that wholly contains two or more of outliner's built roots, and outliner has no
+that wholly contains two or more of joints's built roots, and joints has no
 node with that extent.** Its built bytes are charged to a new bucket,
 `unframed`, taken **only** from `square` and `renamed`.
 
 Three deliberate narrownesses, each of which can be wrong in the direction that
 makes me look good, so each gets a prediction:
 
-- **depth 0 is excluded.** tree-sitter always returns one tree and outliner
+- **depth 0 is excluded.** tree-sitter always returns one tree and joints
   returns a forest on 18 of 30 grammars; the oracle's own root is that
   difference and nothing else. `orphan`, `rubble` and `spoil` price it already.
 - **wholly contains two roots**, not overlaps two. A bracket that covers one
@@ -71,7 +71,7 @@ measurement will actually establish.
 ## What would make me distrust the result
 
 A grammar charging its whole file to one depth-1 wrapper node. If tree-sitter's
-root has a single `program`-shaped child covering everything and outliner hands
+root has a single `program`-shaped child covering everything and joints hands
 back a forest, my rule charges the entire file for what is really the
 forest-versus-tree difference wearing a new name. I will look for exactly that
 shape before quoting any total, and if it is there I will name it and hold it

@@ -25,7 +25,7 @@ also failed to build over. What a fragment manufactures is the **attribution**: 
 terminal, the state, and therefore the owner, the family and the price.
 
 Which names the one number missing from this repository: **a whole-file parse that
-enumerates its mend sites.** `outliner parse` gives the first stop, `--ranges --all`
+enumerates its mend sites.** `joints parse` gives the first stop, `--ranges --all`
 gives a forest that shows a hole without saying what refused in it, and `amend` takes
 an edit and answers a different question. Every instrument in `tool/` is downstream
 of that verdict, so cold, warm and canopy are three ways of working around one

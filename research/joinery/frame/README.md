@@ -5,7 +5,7 @@ not close, plus one hole neither author knew about.
 
 ## The hole neither knew about: the oracle had no name
 
-`rack` stamped fourteen fields and all fourteen were about outliner. The oracle
+`rack` stamped fourteen fields and all fourteen were about joints. The oracle
 is half of every number it prints. A sibling lane caught the cost — **scala read
 1,278 crooked in one run and 9,087 in the next, same pin, same unedited script,
 stamp byte-identical** — because three oracle libraries were rebuilt mid-session
@@ -22,7 +22,7 @@ tree-sitter 0.26.11.
 
 ## rack: the frame
 
-`<p>x</q>`, nine bytes. tree-sitter reads one `element [0, 8)`. outliner reads
+`<p>x</q>`, nine bytes. tree-sitter reads one `element [0, 8)`. joints reads
 two roots and no `element`, and the rule `rack` shipped with scored that **7
 square, 0 crooked — a perfect row**, because `rack` compares spines inside built
 windows and a node we never built is in no window.
@@ -63,7 +63,7 @@ adjudicated toml properly — zero declared conflicts, zero contested cells acro
 `standing.py` has been printing `UNSOUND — child outside its parent` on the toml
 row the whole time, on a grammar the board scores 100.0% and `whole`.
 `rack board` now reprints every such row under the table. **One row carries one
-today.** It is the moved-edge defect arrived at from the other side: outliner
+today.** It is the moved-edge defect arrived at from the other side: joints
 said so about its own forest before any oracle was consulted. The note for that
 lane is [`HANDOVER-standing.md`](HANDOVER-standing.md).
 

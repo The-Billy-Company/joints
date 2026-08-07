@@ -6,9 +6,9 @@
 # row above zero is money the corner is leaving on the floor. The pair is read
 # from the parse's own trace rather than rebuilt, so an arm costs a second.
 #
-#   OUTLINER_BIN=<pin> research/joinery/fuses/denied.sh
+#   JOINTS_BIN=<pin> research/joinery/fuses/denied.sh
 set -u
-BIN="${OUTLINER_BIN:?set OUTLINER_BIN to a pin binary}"
+BIN="${JOINTS_BIN:?set JOINTS_BIN to a pin binary}"
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT" || exit 2
 
@@ -18,7 +18,7 @@ while IFS='|' read -r gr src; do
   [ -z "$gr" ] && continue
   case "$gr" in \#*) continue ;; esac
   name=$(basename "$gr" .json)
-  out=$(OUTLINER_TRACE=quire timeout 600 "$BIN" parse "$gr" "$src" 2>&1 >/dev/null)
+  out=$(JOINTS_TRACE=quire timeout 600 "$BIN" parse "$gr" "$src" 2>&1 >/dev/null)
   s=$(printf '%s' "$out" | grep -c '^split:')
   d=$(printf '%s' "$out" | grep -c '^denied:')
   [ "$s" = 0 ] && [ "$d" = 0 ] && continue

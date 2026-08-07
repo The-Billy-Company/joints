@@ -190,7 +190,7 @@ Aggregate per grammar, which is all the seal permits and all that is needed.
 
 **And the dominant failure is not a wrong leaf — it is no parent at all.**
 `unframed` is rack's column for bytes whose derivation agrees rung for rung
-*under a frame outliner never built*. Same run, same rack:
+*under a frame joints never built*. Same run, same rack:
 
     holdout    45,284 of 103,358 built bytes are unframed   43.8%
     corpus     60,067 of 350,028                            17.2%

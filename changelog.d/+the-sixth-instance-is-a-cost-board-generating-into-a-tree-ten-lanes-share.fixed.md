@@ -1,4 +1,4 @@
-`collate.py cost` prices outliner's mint against tree-sitter's generate-and-
+`collate.py cost` prices joints's mint against tree-sitter's generate-and-
 compile, and to do it honestly with `--fresh` it deletes the built artifacts
 first so the build time is a build rather than a cache read. It deletes
 `lang/<name>/src/parser.c` and the seat's `<name>.dylib`, then shells

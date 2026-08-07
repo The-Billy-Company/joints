@@ -247,5 +247,5 @@ better evidence.
 
 ```sh
 python3 tool/differential.py scanners        # 28 same, 0 wrote — was 28 wrote every run
-OUTLINER_LANE=probe python3 tool/attest.py verify
+JOINTS_LANE=probe python3 tool/attest.py verify
 ```

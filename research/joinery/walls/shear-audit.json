@@ -1,13 +1,13 @@
 {
   "what": "shear",
   "stamp": {
-    "binary": "/Users/griffinstrier/Billy-Company/outliner/.local/lane-report/out/bin/outliner",
+    "binary": "/Users/griffinstrier/Billy-Company/joints/.local/lane-report/out/bin/joints",
     "build": "8e69456aa186",
     "built": "2026-08-05T10:21:47Z",
     "source": ".",
     "tree": "e08158a82182",
     "live": "e08158a82182",
-    "newest": "src/surface/face/outliner/main.zig",
+    "newest": "src/surface/face/joints/main.zig",
     "commit": "f7ba40004774",
     "dirty": 57,
     "stale": true,

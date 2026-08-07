@@ -198,7 +198,7 @@ fn ask(
 /// So the id stays for whoever is reading this press, and the kernel goes beside
 /// it for whoever quotes the row into another one. Two items is the whole budget;
 /// a wide kernel is summarised rather than dumped, since the point is a citation
-/// and not a state listing - `outliner state <n>` is where the rest lives.
+/// and not a state listing - `joints state <n>` is where the rest lives.
 fn anchor(
     gr: *const g.Grammar,
     c: *const lr0.Collection,

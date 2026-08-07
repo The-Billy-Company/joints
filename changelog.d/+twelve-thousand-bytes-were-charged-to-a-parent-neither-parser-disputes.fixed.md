@@ -16,7 +16,7 @@ inside a moved `pair` is subtracted twice and toml's HARD goes negative.
 
 **toml is the whole class and the clean confirmation.** A sibling lane
 adjudicated it properly — zero declared conflicts, zero contested cells across
-175 states, both parsers hanging the `comment` under the same `pair`, outliner's
+175 states, both parsers hanging the `comment` under the same `pair`, joints's
 `pair` merely ending at byte 7 with a child starting at 9 — and the verdict was
 against the instrument, not the parser. `soft` now reads toml at **29 crooked,
 100.0% soft, 0 HARD**. It is 96% of latex and 80% of zig as well.
@@ -38,7 +38,7 @@ UNSOUND: 1 loose, 0 disorder, 0 torn
 ```
 
 on the toml row the whole time, on a grammar the board scores **100.0%
-standing** and `whole`, and no board read it. That is outliner's own words about
+standing** and `whole`, and no board read it. That is joints's own words about
 its own forest, and it is the same defect arrived at from the other side — the
 parser said so before any oracle was consulted. `rack board` now reprints every
 row carrying a soundness complaint underneath the table, with the complaint's

@@ -67,10 +67,10 @@ it is why the guard I built is keyed on sources.
 
 | Half | What | Digest |
 |---|---|---|
-| A | `.local/pin/tenon/bin/outliner` | `fa7fcaee5e14`, built 2026-08-06T00:05:08Z |
-| B | `.local/pin/derive-only/bin/outliner` | the second arm of the two-pin cache staging |
+| A | `.local/pin/tenon/bin/joints` | `fa7fcaee5e14`, built 2026-08-06T00:05:08Z |
+| B | `.local/pin/derive-only/bin/joints` | the second arm of the two-pin cache staging |
 | oracle | seat `twice` | `d952e2aa2c90` / tree-sitter 0.26.11 |
 | oracle | seat `twice2` | same sources, a **separately built** `scala.dylib` — the P5 falsifier |
 
-Each arm ran in its own `OUTLINER_WORK`, from empty, which is the rule this lane
+Each arm ran in its own `JOINTS_WORK`, from empty, which is the rule this lane
 then made the cache enforce rather than ask for.

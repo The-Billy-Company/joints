@@ -1,7 +1,7 @@
 The lane before this one measured it and deliberately left it alone: `rack.survey`
 tested `not t_sp[k]` — *the oracle had nothing to say inside this window* — before
 it ever tested `missing[p]` — *is the frame overhead one we failed to build*. So a
-byte under a construct tree-sitter has and outliner never built was filed
+byte under a construct tree-sitter has and joints never built was filed
 `unwindowed`, which reads as the oracle's silence, **as soon as we put any
 structure of our own underneath it**. Same bytes, same missing frame; the column
 depended only on how much wrong structure we built under it. Building more moved

@@ -15,7 +15,7 @@
 # That is the whole argument that the one-argument case is a RESOLVED CONTEST
 # and not a lost production. Both readings are alive in the table, both are
 # carried, and the loser is picked at the end. On one argument neither dies, so
-# something has to break the tie - and outliner breaks it the other way from
+# something has to break the tie - and joints breaks it the other way from
 # tree-sitter, which spends `type_conversion_expression`'s declared
 # `prec.dynamic(-1)` over the finished subtrees.
 roots 1

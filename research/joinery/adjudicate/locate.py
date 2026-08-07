@@ -71,7 +71,7 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
 
     if not BIN.exists():
-        print(f"locate: no binary at {BIN}; set OUTLINER_BIN", file=sys.stderr)
+        print(f"locate: no binary at {BIN}; set JOINTS_BIN", file=sys.stderr)
         return 2
     work = ROOT / ".local" / "adjudicate"
     work.mkdir(parents=True, exist_ok=True)

@@ -42,7 +42,7 @@ ROOT = HERE.parents[2]
 sys.path.insert(0, str(ROOT / "research" / "joinery" / "vacuity"))
 import ablate  # noqa: E402
 
-SCRATCH = ROOT / ".local/aud-iso/outliner"
+SCRATCH = ROOT / ".local/aud-iso/joints"
 # A snapshot of its own, beside the one the pair arms were priced on rather than
 # over it: `base/` is the tree `RESULT-3` is about and deleting it would delete
 # the evidence for the correction this file is making.
@@ -93,7 +93,7 @@ def arm(rows: tuple[int, ...]) -> Path | None:
     not an isolation arm whatever its name says.
     """
     tag = "sc-" + ("base" if not rows else "r" + "-".join(str(r) for r in rows))
-    got = SCRATCH / f".local/pin/{tag}/bin/outliner"
+    got = SCRATCH / f".local/pin/{tag}/bin/joints"
     if got.exists():
         return got
     kept = CLEAN / TARGET
@@ -118,8 +118,8 @@ def arm(rows: tuple[int, ...]) -> Path | None:
 def env_for(binary: Path, tag: str) -> dict[str, str]:
     work = SCRATCH / f"work-{tag}"
     work.mkdir(parents=True, exist_ok=True)
-    return os.environ | {"OUTLINER_BIN": str(binary), "OUTLINER_WORK": str(work),
-                         "OUTLINER_LANE": f"clean-{tag}"}
+    return os.environ | {"JOINTS_BIN": str(binary), "JOINTS_WORK": str(work),
+                         "JOINTS_LANE": f"clean-{tag}"}
 
 
 def board(binary: Path, tag: str, audit: bool) -> dict:

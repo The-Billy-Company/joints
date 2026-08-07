@@ -8,7 +8,7 @@ a module's parameter port list. The parse builds `parameter_declaration
 builds is the row.
 
 ```bash
-outliner parse upstream/grammars/verilog.json --ranges \
+joints parse upstream/grammars/verilog.json --ranges \
   research/joinery/parameter/parameter-port-list.v | grep '\[128,'
 ```
 
@@ -47,7 +47,7 @@ the scanner, the keyword automaton for `parameter` never runs, and
 survived, the parse never refuses, so the mend that on `heft` rebuilt the
 declaration whole never runs either.
 
-`OUTLINER_TRACE=quire` says it in three lines - a `split` at 125, a `refuted` at
+`JOINTS_TRACE=quire` says it in three lines - a `split` at 125, a `refuted` at
 125, and on `heft` no third line at all.
 
 ## What has been ruled out

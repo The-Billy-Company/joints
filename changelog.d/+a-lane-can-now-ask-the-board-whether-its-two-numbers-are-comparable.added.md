@@ -28,9 +28,9 @@ because a binary is one third of one:
 eval "$(python3 tool/pin.py arm before)"
 ```
 
-`OUTLINER_BIN` is the pin. `OUTLINER_WORK` is a folio cache **under that pin** —
+`JOINTS_BIN` is the pin. `JOINTS_WORK` is a folio cache **under that pin** —
 a folio is a derived artifact of a binary, so a pin owning a binary should own
 what it presses into, and the alternative is the cache hazard fixed alongside
-this. `OUTLINER_LANE` is an oracle seat named after the pin, because without one
+this. `JOINTS_LANE` is an oracle seat named after the pin, because without one
 the seat is keyed on `os.getppid()` — *which shell you ran from* — and the
 oracle is the other parser in every audited column.

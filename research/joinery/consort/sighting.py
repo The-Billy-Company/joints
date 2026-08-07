@@ -30,7 +30,7 @@ the gate reads a **second, orthogonal axis**:
 
   `stamped`  the page names a tree or a binary somewhere on it - any digest of
              seven or more hex characters with a letter in it, which is how
-             every attributed page on this tree writes one (`outliner f6a34cd7c`,
+             every attributed page on this tree writes one (`joints f6a34cd7c`,
              `repo f7ba40004+55`, `tree c0cdbde69`, a `stamp:` line).
 
 A page can be sighted and unstamped (this morning's three), stamped and blind
@@ -143,7 +143,7 @@ MINE = re.compile(rf"\b(?:{OURS})\b", re.I)
 # that is all digits and buys back every byte count in the corpus.
 #
 # Deliberately not anchored to a keyword. `named` (a digest preceded by
-# `outliner`/`repo`/`tree`/...) refuses 203 of the 263 measuring pages where
+# `joints`/`repo`/`tree`/...) refuses 203 of the 263 measuring pages where
 # this refuses 184, and the 19 it adds are pages that carry a digest in a shape
 # the keyword list had not met yet - a list that has to be complete to avoid a
 # false refusal is the wrong shape for a gate lanes have to live under.
@@ -785,7 +785,7 @@ def check(rows: list[dict]) -> int:
     say("the stamp axis does block",
         bool(blocking(faults({"figures": 3, "state": "sighted", "stamp": 0}))))
     say(f"the sentence that started this is refused ({figure!r})",
-        bool(STAMP.search("outliner f6a34cd7c")) and not STAMP.search(figure))
+        bool(STAMP.search("joints f6a34cd7c")) and not STAMP.search(figure))
     # The tightening: `\b[0-9a-f]{7,}\b` alone reads a seven-digit number as a
     # digest, and this record is made of seven-digit numbers.
     say("a seven-digit number is not mistaken for a digest",
@@ -794,7 +794,7 @@ def check(rows: list[dict]) -> int:
     # --- the granularity, which one edit to an inventory table found.
     print("\n  is the ratchet asking about the bytes or about the file?")
     page = ("| grammar | damage |\n|---|---|\n| json | 4,150 |\n\n"
-            "outliner `f6a34cd7c` wrote this.\n")
+            "joints `f6a34cd7c` wrote this.\n")
     say("a row added to a table of contents asks nothing",
         not fresh("| `RESULT-12-refusal.md` | the gate's rate |", page))
     say("...and a data row added under an unchanged header does ask",

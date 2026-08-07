@@ -22,7 +22,7 @@ the recovery does not orphan the remainder, it **claims** it.
 ## The correction, and it is the brief's own warning coming true
 
 Prediction 1 said the node "stems from a single un-lexable `\"` at 26848".
-The refusal outliner actually prints is:
+The refusal joints actually prints is:
 
 ```
 unexpected / at 26849 in state 68

@@ -9,7 +9,7 @@ prints it as `MISSING: "kind"` in the CST render. Between them a consumer can
 ask both of the questions a repair raises: which bytes did nobody derive, and
 which tokens are here only because the parser said so.
 
-`outliner parse --scars` is the third answer, and this file is where it has to
+`joints parse --scars` is the third answer, and this file is where it has to
 say whether it is one. It reads both surfaces over the corpus roster and prints
 them beside each other:
 
@@ -153,7 +153,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--json", type=Path)
     args = ap.parse_args(argv)
 
-    work = Path(order.os.environ.get("OUTLINER_WORK", ROOT / ".local" / "work"))
+    work = Path(order.os.environ.get("JOINTS_WORK", ROOT / ".local" / "work"))
     picked = plumb.slate()
     warm(picked)
     rows = [r for case in picked if (r := row(case, work, order.BIN))]

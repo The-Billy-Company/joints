@@ -1,6 +1,6 @@
 # Result 3 — the class is one verdict, not one fix, and the real defect has nothing to partition
 
-outliner `beb695b5d` · tree `e973ce73c` (pin) · oracle `d85e736fa` (30 of 30
+joints `beb695b5d` · tree `e973ce73c` (pin) · oracle `d85e736fa` (30 of 30
 live, 30 attributed) — the same control arm Result 2 measured against. The oracle
 is seated but idle here: nothing on this page needs a verdict, because the floor
 is a property of the press rather than of anyone's judgement of its trees.
@@ -16,10 +16,10 @@ tally the binary has been printing the whole time.
 
 ## The instrument was already shipped
 
-`outliner grammar <g>` prints it. There is no new script on this page.
+`joints grammar <g>` prints it. There is no new script on this page.
 
 ```
-$ outliner grammar upstream/grammars/zig.json
+$ joints grammar upstream/grammars/zig.json
   frayed         2006 cells contested only by state merging (1 REFUSE a token)
                  0 agreed, 0 alone, 0 stuck, 1 open — 0 SEALED under any split
 ```
@@ -126,11 +126,11 @@ predecessor scheme today. It is not enough to say what will fix them.
 I also took the whole survey on one binary in one pass, and the tree moved
 underneath me twice while I worked - other lanes are editing `src/`, and a bare
 `--cite` reported a different digest each time I asked. Everything here was run
-against `.local/pin/scala-string/bin/outliner` by path, so it is reproducible
+against `.local/pin/scala-string/bin/joints` by path, so it is reproducible
 from that pin; it is not reproducible from `HEAD` unless `HEAD` is that commit.
 
 One trap worth recording, since it nearly put a wrong stamp on this page: a
-stale `OUTLINER_BIN` exported in an earlier session pointed at the `zero-strand`
-arm while `OUTLINER_WORK` pointed at `scala-string`, and `--cite` obligingly
+stale `JOINTS_BIN` exported in an earlier session pointed at the `zero-strand`
+arm while `JOINTS_WORK` pointed at `scala-string`, and `--cite` obligingly
 reported the mismatch as `0 of 30 held`. `stamp.py` caught it - `TOLD`, then
 `DRIFT` naming the tree that no longer exists. That gate earns its keep.

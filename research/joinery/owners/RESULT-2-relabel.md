@@ -3,11 +3,11 @@
 Predictions in [`PREDICTION-2-relabel.md`](PREDICTION-2-relabel.md), written
 before the fix was applied and before anything was run.
 
-**Pin.** `.local/relabel/outliner`, sha256 `7aa79135a2bb…`, built from tree
+**Pin.** `.local/relabel/joints`, sha256 `7aa79135a2bb…`, built from tree
 `5a91974c4`, repo `f7ba40004`+114 dirty, run 2026-08-06T01:39Z. It is a private
-copy: `zig-out/bin/outliner` is shared with ten lanes and a rebuild renumbers
+copy: `zig-out/bin/joints` is shared with ten lanes and a rebuild renumbers
 the LR(0) collection, so the binary was copied out and every command below ran
-under `OUTLINER_BIN`. `standing.py` stamps the run `TOLD` and `STALE` for
+under `JOINTS_BIN`. `standing.py` stamps the run `TOLD` and `STALE` for
 exactly that reason, and both are correct — `src/kernel/weave/weave.zig` is
 newer than my binary because another lane is editing it right now.
 
@@ -199,7 +199,7 @@ different terminal than `GAPS.md` named, and `verilog-sized` is named after a
 construct that parses whole. A wrong terminal makes the label, the price and
 the owner wrong together, and they agree with each other while being wrong.
 
-So I re-derived rather than inherited. `outliner state` prints the terminals a
+So I re-derived rather than inherited. `joints state` prints the terminals a
 state's row **admits** — those are cells, not opinions — and `unexpected T in
 state N` is the claim that `T` is not among them. Different code paths over the
 same table, so they can disagree.
@@ -250,7 +250,7 @@ its bar by one set member.
    still drops two `PATTERN` externals — bash's and haskell's `\n`, both walled
    grammars. 23 declarations across 9 grammars, not 21 across 8. Enumerating
    the shapes someone has already met is how the original line got it wrong.
-3. **`outliner state --holding` does not exist**, has never existed, and is the
+3. **`joints state --holding` does not exist**, has never existed, and is the
    named technique for the largest population I was asked to resolve.
 4. **Relabelling did not invert the split.** 524 bytes moved. The inversion is
    the adjudicating lane's over eighteen rows; extrapolating it to 72.6% of the

@@ -6,7 +6,7 @@ that sample from `rack.widest()`, which returns the widest runs *of each kind*,
 and subtracted from `askew + racked`.
 
 An `unframed` run qualifies as soft whenever the frame we failed to build is
-named `comment`, which is to say: the name of the node outliner never built was
+named `comment`, which is to say: the name of the node joints never built was
 being used to excuse not building it. The test that fires is `w.theirs in was` —
 tree-sitter built a comment, we built nothing, and nothing is what got the
 discount. `rack.widest`'s own docstring predicts this, and the other two copies

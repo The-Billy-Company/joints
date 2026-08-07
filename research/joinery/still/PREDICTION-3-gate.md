@@ -52,7 +52,7 @@ Two detectors inside the window, for the same reason the sweep has two:
   *something moved*, it says *your line moved it*.
 - **`seal`** — a manifest over the artifact set, taken on entry and re-taken
   before the verdict. This is the half that survives a child process, and
-  `tree-sitter generate` and `outliner mint` are the two that matter.
+  `tree-sitter generate` and `joints mint` are the two that matter.
 
 The two must be told apart in the output and not merged into one verdict. A
 `hand` finding is always the instrument's own bug. A `seal` finding with no

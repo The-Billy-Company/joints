@@ -40,7 +40,7 @@ sys.path.insert(0, str(ROOT / "tool"))
 
 import standing  # noqa: E402  (needs ROOT/tool on the path first)
 
-PINS = ROOT / ".local/aud-iso/outliner/.local/pin"
+PINS = ROOT / ".local/aud-iso/joints/.local/pin"
 GRAMMARS = ROOT / "upstream/grammars"
 
 
@@ -50,7 +50,7 @@ def built(arm: str, grammar: Path, src: Path) -> tuple[int, int, str]:
     `built` is the union of top-level spans carrying at least one child, which
     is `standing.ask`'s definition read off the same `--ranges --all` render.
     """
-    binary = PINS / arm / "bin/outliner"
+    binary = PINS / arm / "bin/joints"
     got = subprocess.run(
         [binary, "parse", grammar, src, "--ranges", "--all"],
         capture_output=True, text=True, timeout=120,
@@ -58,8 +58,8 @@ def built(arm: str, grammar: Path, src: Path) -> tuple[int, int, str]:
     text = got.stdout + got.stderr
     top = standing.tops(standing.rows(text))
     verdict = next(
-        (ln.split("outliner:", 1)[1].strip() for ln in reversed(text.splitlines())
-         if "outliner:" in ln), "")
+        (ln.split("joints:", 1)[1].strip() for ln in reversed(text.splitlines())
+         if "joints:" in ln), "")
     return standing.union([(a, b) for _, a, b, kid in top if kid]), len(top), verdict
 
 
@@ -67,7 +67,7 @@ def price(grammar: str, a: int, b: int, fixtures: list[Path]) -> int:
     """One row per fixture: the four arms, the two solos, the joint, the residual."""
     gram = GRAMMARS / f"{grammar}.json"
     arms = {"none": "aud-base", "a": f"aud-r{a}", "b": f"aud-r{b}", "both": f"aud-r{a}-{b}"}
-    missing = [n for n in arms.values() if not (PINS / n / "bin/outliner").exists()]
+    missing = [n for n in arms.values() if not (PINS / n / "bin/joints").exists()]
     if missing:
         print(f"gate: no retained pin for {', '.join(missing)}", file=sys.stderr)
         return 2

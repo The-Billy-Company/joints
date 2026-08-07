@@ -4,7 +4,7 @@ reader who has seen `crooked 0 → 0` has already formed the claim the refusal
 would have stopped.
 
 **square-silent** — no board on either side read a single square byte. Whatever
-moved below, both arms are outliner's own words about its own forest, and a
+moved below, both arms are joints's own words about its own forest, and a
 change can leave `built` untouched while moving every leaf to a different
 parent. **one-eyed** — one side read a square and the other did not. Worse and
 quieter: the delta between a measurement and a silence is neither of them, and

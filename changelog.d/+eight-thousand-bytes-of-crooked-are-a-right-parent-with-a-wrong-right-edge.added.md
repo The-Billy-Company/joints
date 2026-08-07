@@ -29,7 +29,7 @@ are now accumulated on `survey`'s own key with the span/shape class appended, an
 the soft total is 23,050 against `rack soft`'s 23,031.
 
 The instrument that lied, and it is still lying: `rack` stamps fourteen fields
-and all fourteen are about outliner — binary, tree, commit, dirty, drift. The
+and all fourteen are about joints — binary, tree, commit, dirty, drift. The
 oracle is half of every number it prints and is **unattributed**: no tree-sitter
 version, no grammar revision, no dylib hash, no seat. Three oracle libraries
 under `.local/differential/` were rebuilt by other lanes mid-session while this

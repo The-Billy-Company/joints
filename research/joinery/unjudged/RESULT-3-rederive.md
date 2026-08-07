@@ -1,7 +1,7 @@
 # Result 3 - the 611, re-derived without reading a column
 
 Scored against [PREDICTION-2](PREDICTION-2-rederive.md) P1.1–P1.5. Arm
-`unjudged` (`outliner 94d59d9ad`, tree `05a18fcd1`, repo `f7ba40004+132`,
+`unjudged` (`joints 94d59d9ad`, tree `05a18fcd1`, repo `f7ba40004+132`,
 tree-sitter 0.26.11, oracle `d85e736fa`). Tool:
 [`rederive.py`](rederive.py).
 

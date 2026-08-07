@@ -108,7 +108,7 @@ that disagree while everyone quotes whichever they ran is.
 
 22,179 B in states holding a completed item, unownable from the wall.
 
-**I predict that for ≥ 2 of the 5 dearest stranded walls, `outliner state
+**I predict that for ≥ 2 of the 5 dearest stranded walls, `joints state
 --holding <the completed item>` names exactly one state** — so the fold that
 could have left the parse there is unique and the defect has an address.
 Falsified at 0 of 5.

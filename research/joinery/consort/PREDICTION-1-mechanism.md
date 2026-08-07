@@ -7,7 +7,7 @@ re-derived by the next lane. This lane owes the mechanism, a resized claim
 wherever kotlin's seating is credited solo, and a verdict on swift's inert row.
 
 Everything below is written before I build or run anything. The retained pins
-under `.local/aud-iso/outliner/.local/pin/` make every arm re-derivable with no
+under `.local/aud-iso/joints/.local/pin/` make every arm re-derivable with no
 rebuild, so there is no excuse for scoring these generously.
 
 ## What is already arithmetic and is therefore not a prediction
@@ -97,10 +97,10 @@ board.** Two further blind spots follow from the same construction, and neither
 is about pairs:
 
 - **The audit family never populated `square`.** Every arm was given its own
-  `OUTLINER_WORK` by the third house rule, `standing.py`'s audit overlay is a
+  `JOINTS_WORK` by the third house rule, `standing.py`'s audit overlay is a
   per-work-dir `audit.json`, and nothing re-ran `--audit` per arm. So every row
   of `arms.json` and `pairs.json` is `graded: —`, `square 0`, `unaudited =
-  built`. The clearance is on outliner's own words about its own forest and
+  built`. The clearance is on joints's own words about its own forest and
   never on agreement with tree-sitter. I predict the retained base board shows
   `square = 0` on all thirty rows.
 - **Corpus silence is indistinguishable from no collateral.** A row whose

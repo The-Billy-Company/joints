@@ -64,10 +64,10 @@ tokens to **8,138µs and 1,333** while its shallow ones are unchanged, because
 ## And `abide` refuses it, on one keystroke
 
 ```
-outliner amend .local/standing/haskell.folio upstream/sources/Shared.hs '23548..23548=x'
+joints amend .local/standing/haskell.folio upstream/sources/Shared.hs '23548..23548=x'
 ```
 
-against `outliner parse` of the same bytes.
+against `joints parse` of the same bytes.
 
 | pin | warm vs cold |
 |---|---|
@@ -149,7 +149,7 @@ rather than shipping unmeasurable.
 did was kill the process:
 
 ```
-outliner amend .local/standing/verilog.folio upstream/sources/picorv32.v '20086..20086=x'
+joints amend .local/standing/verilog.folio upstream/sources/picorv32.v '20086..20086=x'
 → error: TrailRefused
 ```
 
@@ -187,7 +187,7 @@ will hit it first.
 The diagnostic beside it is the part I'd have wanted three hours earlier.
 `error.TrailRefused` names neither the move, the byte, nor the operands, and four
 sites raise it; finding out which one meant bisecting keystrokes. Under
-`OUTLINER_TRACE=weave` each site now says which pairing, at which move of how
+`JOINTS_TRACE=weave` each site now says which pairing, at which move of how
 many, at which byte, with both entry states.
 
 ## The gate, before and after

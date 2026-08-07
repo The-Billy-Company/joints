@@ -63,7 +63,7 @@ a byte under a node built in context. I predict that on the 30-grammar board,
 **over half of all `built` bytes sit downstream of the first scar in their
 file**. Falsifier: under 20%, which would make this a real but marginal hole
 rather than a headline. I am not predicting the board is *wrong* — `built` is
-outliner's own word about its own forest and it never claimed context — only
+joints's own word about its own forest and it never claimed context — only
 that it cannot currently be asked the question.
 
 **P10 — `tool/rack.py` is blind differently and worse.** `square` is a claim

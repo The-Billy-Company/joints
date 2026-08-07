@@ -32,7 +32,7 @@ record are unsupported and none of them is false.
 Two corrections landed on this lane the same day, both from `consort/`:
 
 - **Every arm on this lane read `square 0`** (`consort/RESULT-5-blindness.md`),
-  so "no other grammar by a single column" was thirty-one columns of outliner's
+  so "no other grammar by a single column" was thirty-one columns of joints's
   own words about its own forest. Re-taken with an oracle seated in all
   twenty-one arms, **the clearance holds** - 13,728 cells, zero movement, and
   byte-exact parse trees agreeing - which is `consort/RESULT-8-sighted.md`.
@@ -62,7 +62,7 @@ Two costs, both real:
 
 ## Where the evidence lives
 
-Fifteen pins under `.local/aud-iso/outliner/.local/pin/` - `aud-base` (the
+Fifteen pins under `.local/aud-iso/joints/.local/pin/` - `aud-base` (the
 control), `aud-iso` (the union arm), `aud-r0` … `aud-r13` (one per seating) -
 plus both control boards as `.local/aud-iso/{live,base}-board.json` and the
 snapshot the family was ablated from at `.local/aud-iso/base/src/`. Regenerable
@@ -103,7 +103,7 @@ Both of these narrow results above; neither was known when they were written.
 
 **Every arm in this family was blind to the oracle.** All fourteen singles and
 all five pairs read `square 0 · crooked 0 · graded —`, because the private
-`OUTLINER_WORK` that makes an arm an arm is where the oracle's verdicts live.
+`JOINTS_WORK` that makes an arm an arm is where the oracle's verdicts live.
 `square` is the only column that is a claim about agreement with a second
 parser, so **"fourteen rows, no collateral" was measured on `damage` alone** and
 a change can leave `built` untouched while moving every leaf to a different

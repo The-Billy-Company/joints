@@ -35,7 +35,7 @@ from stamp import furthest, take  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 BROKEN = ROOT / "research" / "joinery" / "broken"
 VALID = ROOT / "research" / "joinery" / "valid"
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
 
 USAGE = """\
 recover.py - what each parser does with a file that is broken
@@ -189,7 +189,7 @@ def valid(mark) -> int:
     picked = fixtures(where=VALID)
     D.warm([D.Case(n, g, la, s, "valid") for n, g, la, s in picked])
     rows = [measure(*f) for f in picked]
-    print(f"{'fixture':<32}{'bytes':>6}   {'tree-sitter':<26}outliner")
+    print(f"{'fixture':<32}{'bytes':>6}   {'tree-sitter':<26}joints")
     print("-" * 92)
     for r in rows:
         clean = r.their_errors == 0 and r.their_missing == 0 and r.their_covered >= r.size - 1
@@ -222,7 +222,7 @@ def show(name: str) -> int:
         print("## tree-sitter\n")
         print(body.rstrip())
         _, _, verdict, tree, _ = ours(grammar, src)
-        print(f"\n## outliner - {verdict}\n")
+        print(f"\n## joints - {verdict}\n")
         print(tree.rstrip() or "(nothing)")
     return 0
 
@@ -260,7 +260,7 @@ def main(argv: list[str]) -> int:
                           "fixture": [r.as_dict() for r in rows]}, indent=2))
         return 0
 
-    print(f"{'fixture':<30}{'bytes':>6}   {'tree-sitter':<38}outliner")
+    print(f"{'fixture':<30}{'bytes':>6}   {'tree-sitter':<38}joints")
     print(f"{'':<30}{'':>6}   {'root · covered · ERROR · MISSING':<38}"
           "verdict · forest covers · roots")
     print("-" * 112)
@@ -280,9 +280,9 @@ def main(argv: list[str]) -> int:
     tail = sum(1 for r in rows if r.our_furthest >= r.size - 2)
     dark = [r for r in rows if r.our_furthest < r.size - 2]
     print(f"\n{len(rows)} broken fixtures · tree-sitter returns one root spanning the "
-          f"whole file on {whole}, outliner on {one}")
+          f"whole file on {whole}, joints on {one}")
     print(f"tree-sitter repairs with {sum(r.their_missing for r in rows)} MISSING and "
-          f"{sum(r.their_errors for r in rows)} ERROR nodes; outliner emits neither and "
+          f"{sum(r.their_errors for r in rows)} ERROR nodes; joints emits neither and "
           f"hands back a forest of {min(r.our_roots for r in rows)}-"
           f"{max(r.our_roots for r in rows)} partial roots")
     print(f"the forest covers the code *after* the break on {tail} of {len(rows)} "

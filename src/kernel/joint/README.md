@@ -1,6 +1,6 @@
 # joint — the stack-effect monoid (M2)
 
-This is the part of outliner that has to be proved rather than cited. Everything
+This is the part of joints that has to be proved rather than cited. Everything
 else in the package is engineering over known results; this folder is the bet.
 
 ## The claim, in one paragraph
@@ -79,7 +79,7 @@ states, over real files. If those tables do not collapse toward rank one, an
 element costs `|Q|`, composition loses to tree-sitter's O(1)-per-token walk, and
 the honest outcome is to write that down and stop.
 
-Run it with `outliner joints <grammar.json> <file…>`. On tree-sitter-json over
+Run it with `joints survey <grammar.json> <file…>`. On tree-sitter-json over
 its own 12,913-byte `grammar.json` (2,166 tokens, 37 states, no unresolved
 conflicts), across six segmentations from 8 tokens to 16 KiB:
 
@@ -91,7 +91,7 @@ conflicts), across six segmentations from 8 tokens to 16 KiB:
   Every finer one has at least one segment where the oracle cannot finish,
   always the same way.
 
-The failure has a single shape, and `OUTLINER_CEILING=1` prints it: a segment
+The failure has a single shape, and `JOINTS_CEILING=1` prints it: a segment
 entered inside deep nesting reduces below its own base, and each dip has to
 guess which of two prefixes it uncovered (`{ string :` or
 `{ pair object_repeat2 , string :`). The guesses compound, so the pop strings

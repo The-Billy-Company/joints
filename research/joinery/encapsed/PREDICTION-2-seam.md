@@ -65,7 +65,7 @@ that `encapsed_string_chars` sits in, and LALR merging has every reason to fold
 those. Falsifiable directly:
 
 ```
-outliner state upstream/grammars/php.json --census \
+joints state upstream/grammars/php.json --census \
   encapsed_string_chars encapsed_string_chars_after_variable
 ```
 

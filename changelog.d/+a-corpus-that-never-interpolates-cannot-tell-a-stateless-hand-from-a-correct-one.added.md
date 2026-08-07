@@ -21,7 +21,7 @@ moves; `verify` asserts that against the live board file list.
 
 The larger half is the coverage gate, joining two facts that both existed and
 had never been put together - what a grammar declares in `externals[]`, and what
-outliner already knows it has no stand-in for. Across thirty grammars: **461
+joints already knows it has no stand-in for. Across thirty grammars: **461
 declared, 252 seated (55%), 21 exercised.** markdown declares 47 and seats
 **none**; latex, php and sql are also at zero, and those four have more to say
 about coverage than Kotlin does. Kotlin seats 2 of 10 with five of the eight
@@ -41,7 +41,7 @@ Swift's line strings work with all 33 externals blind - so `seated` is a floor
 on capability too, and only a specimen settles a given construct.
 
 The instrument that lied was this one, twice, both times understating. The first
-gate read `outliner grammar`'s closing `note: external scanner tokens cannot be
+gate read `joints grammar`'s closing `note: external scanner tokens cannot be
 lexed here: ...`, which reads exactly like the blind set and is not it - on
 julia that note names all sixteen declared externals where `lex` and `parse`
 both report **five**. It is a restatement of `externals[]` wearing a blindness

@@ -41,7 +41,7 @@ All five read through `standing.py`'s own `ranged`/`tops`/`ask`, so none of them
 can disagree with the board about what a root is. They want a binary:
 
 ```sh
-OUTLINER_BIN=$PWD/.local/pin/<pin>/bin/outliner \
+JOINTS_BIN=$PWD/.local/pin/<pin>/bin/joints \
   python3 research/joinery/orphan/ablate.py
 ```
 

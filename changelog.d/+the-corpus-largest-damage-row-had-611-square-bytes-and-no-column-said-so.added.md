@@ -1,6 +1,6 @@
 verilog carries the largest damage figure on the board - 63,937 bytes - and
 until today contributed **zero adjudicable bytes**. Three lanes worked it
-anyway, off `damage`, which is `size − built`: outliner's own words about its own
+anyway, off `damage`, which is `size − built`: joints's own words about its own
 forest, and a number a root stretched over a hole buys outright. Nothing on the
 board said the row could not be scored, because there was no column for it.
 

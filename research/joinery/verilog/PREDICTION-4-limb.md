@@ -7,7 +7,7 @@ so state numbers here are the after-fix numbers and match the handover's.
 
 Everything below is reproduced first, so the predictions are about a change and
 not about the tree as it stands. What I have already confirmed by reading and by
-`outliner state`, and am therefore not predicting:
+`joints state`, and am therefore not predicting:
 
 - The witness reproduces. `instr_mul = 0;` in an `always @* begin` reads
   `block_item_declaration (data_declaration …)`.
@@ -152,7 +152,7 @@ code. Every witness is judged by **diffing the printed tree**, and the four
 nodes and zero bytes, so `built`, `covered`, `spoil` and `damage` cannot see the
 fix either way. `rack --square` prints `THE GUARD CANNOT RUN HERE` for verilog.
 
-Each arm gets its **own `OUTLINER_WORK`**, and the folio shas get printed and
+Each arm gets its **own `JOINTS_WORK`**, and the folio shas get printed and
 compared, because `tool/order.py::miss` keys on a path and an mtime and two
 pinned binaries are both older than a folio either of them minted. I expect the
 shas to be *identical* across arms — `Forks` is built by the consumer and never

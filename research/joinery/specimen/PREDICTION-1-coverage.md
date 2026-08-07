@@ -13,7 +13,7 @@ Every claim below names the measurement that falsifies it.
 Four populations per grammar, each with one honest definition:
 
 - **declared** — the named entries of `externals[]` in `grammar.json`.
-- **blind** — the terminals outliner's own report says it has no stand-in for.
+- **blind** — the terminals joints's own report says it has no stand-in for.
 - **seated** = declared − blind. *"This tree can make that token."*
 - **exercised** — a seated external that some file in this tree actually
   reaches during a real parse. *"Something here would notice if it broke."*

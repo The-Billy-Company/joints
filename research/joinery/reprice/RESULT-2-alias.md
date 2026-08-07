@@ -93,8 +93,8 @@ therefore the owner, the family, and the price.
 
 Deciding whether swift's `} in state 681` is the document's wall or the cut's
 needs one thing this binary cannot do: **a whole-file parse that enumerates its
-mend sites.** `outliner parse` names the first stop; `--ranges --all` gives the
-forest, which shows a hole but not what refused in it; `outliner amend` takes an
+mend sites.** `joints parse` names the first stop; `--ranges --all` gives the
+forest, which shows a hole but not what refused in it; `joints amend` takes an
 edit and is a different question. Every instrument in `tool/` is downstream of
 that verdict, so all three of them — cold, warm, and canopy — are working around
 one missing number.

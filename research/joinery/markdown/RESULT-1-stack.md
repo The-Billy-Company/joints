@@ -12,10 +12,10 @@ The cheap rung was disproved before it was built. That is the whole result.
 `upstream/sources/README.md`, 3,304 bytes:
 
 ```
-outliner: markdown: blind to 47 externally scanned terminal(s)
-outliner: markdown: 1 pattern(s) the engine would not build: entity_reference
-outliner: ... stray byte at 20, 430 roots, mended 79 over 79B
-outliner: markdown: lexer? at byte 20 (unlexed): no terminal in the grammar
+joints: markdown: blind to 47 externally scanned terminal(s)
+joints: markdown: 1 pattern(s) the engine would not build: entity_reference
+joints: ... stray byte at 20, 430 roots, mended 79 over 79B
+joints: markdown: lexer? at byte 20 (unlexed): no terminal in the grammar
   matches here even with the row's restriction lifted, so no table was consulted
 ```
 
@@ -25,7 +25,7 @@ newline: 79 newlines, 79 mends. markdown is not parsed, it is enumerated.
 ## Why `scry` cannot have it
 
 The bar `scry.zig` sets is not "is the scanner small" - haskell's scanner has a
-struct too. It is that outliner "reads only the four functions that never touch
+struct too. It is that joints "reads only the four functions that never touch
 it", and the reason is stated in the same header, about haskell's layout:
 
 > a hand that compared columns and nothing else would not fall silent on them -
@@ -55,13 +55,13 @@ There is a tempting second move, and it is the one worth writing down because it
 is *nearly* right. Notice the C above only consults the stack **inside** a
 `valid_symbols[...]` test: where the table admits one newline terminal, the
 answer is forced by the table and the memory is never reached. tree-sitter must
-break the remaining tie with the stack because it is deterministic. outliner is
+break the remaining tie with the stack because it is deterministic. joints is
 GLR - it could decline to break it and fork, which is not guessing.
 
 So: how often does the table leave it open?
 
 ```
-outliner state upstream/grammars/markdown.json --census \
+joints state upstream/grammars/markdown.json --census \
   _line_ending _soft_line_ending _block_close block_continuation _blank_line_start
 ```
 
@@ -134,7 +134,7 @@ been corrected in place.
 ## Provenance
 
 ```
-stamp: outliner 40a520f18 at zig-out/bin/outliner built 2026-08-07T17:31:50Z
+stamp: joints 40a520f18 at zig-out/bin/joints built 2026-08-07T17:31:50Z
        from . 010af3c60 · repo fdda15a2a+29
 ```
 

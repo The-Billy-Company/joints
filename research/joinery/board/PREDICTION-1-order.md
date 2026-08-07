@@ -34,9 +34,9 @@ hits a wall the binary prints three lines, and the last is `inquest`'s owner
 line, not the stop line:
 
 ```
-outliner: kotlin: blind to 8 externally scanned terminal(s)
-outliner: …/Maps.kt: unexpected (?:[^\r\n]*) at 270 in state 433, 419 roots, mended 142 over 142B
-outliner: kotlin: lexer on … [no stand-in for _string_start]: …
+joints: kotlin: blind to 8 externally scanned terminal(s)
+joints: …/Maps.kt: unexpected (?:[^\r\n]*) at 270 in state 433, 419 roots, mended 142 over 142B
+joints: kotlin: lexer on … [no stand-in for _string_start]: …
 ```
 
 `MENDED` and `ROOTS` are searched over the verdict; `BLIND` and `UNSOUND` are
@@ -84,7 +84,7 @@ than I am claiming.
 
 ## P3 — the corrected ranking is a property of the tree, not of the pin
 
-Every number above came from `.local/pin/kdocA`. The live `zig-out/bin/outliner`
+Every number above came from `.local/pin/kdocA`. The live `zig-out/bin/joints`
 is a later build by an unrelated lane. My deliverable is a dispatch list, so it
 had better not be a fact about one frozen binary.
 

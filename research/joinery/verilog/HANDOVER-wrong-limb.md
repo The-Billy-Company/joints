@@ -38,7 +38,7 @@ declaration.
 
 ## The cell
 
-`outliner state upstream/grammars/verilog.json 1762`, on `=`:
+`joints state upstream/grammars/verilog.json 1762`, on `=`:
 
 ```
 before   =   fold  variable_lvalue -> _identifier   [prec 0 left]
@@ -87,7 +87,7 @@ which is the only reason the board did not move.
 whole-file effects in two grammars, mixed with everything else those files do.
 
 This is three lines, one state, one terminal, two named productions, and a
-verdict you can read straight out of `outliner state`. It also has no board
+verdict you can read straight out of `joints state`. It also has no board
 signal at all — `built`, `covered`, `spoil` and `damage` are identical either
 side because the spans are identical, and `rack --square` prints
 `THE GUARD CANNOT RUN HERE` for verilog. **If you fix this you will not be able

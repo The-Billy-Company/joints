@@ -65,7 +65,7 @@ def tree() -> str:
 
 def sighted() -> str:
     """Whether the arm on this shell has an oracle, or `square` is vacuous."""
-    work, binary = os.environ.get("OUTLINER_WORK"), os.environ.get("OUTLINER_BIN")
+    work, binary = os.environ.get("JOINTS_WORK"), os.environ.get("JOINTS_BIN")
     if not binary:
         return "zig-out (no pin — `pin.py arm <name>` first)"
     name = Path(binary).resolve().parents[1].name

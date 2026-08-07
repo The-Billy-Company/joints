@@ -1,6 +1,6 @@
 //! Ask the table what it decided at one symbol, across the whole automaton.
 //!
-//! A wall verdict names the state the parse died in, and `outliner state` will
+//! A wall verdict names the state the parse died in, and `joints state` will
 //! print that state - but the state a parse dies in is rarely the state that
 //! killed it. The damage is a cell *upstream*: some state held both a read and a
 //! fold on the same token, the fold won, and the reading that could have gone on

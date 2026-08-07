@@ -328,7 +328,7 @@ const Sprig = struct {
 /// waiting beside `keep` for the shift that files them both.
 const Grown = struct { ref: quire.Ref, start: u32 };
 
-/// One table action, spelled the way `outliner state` spells it, so a trace line
+/// One table action, spelled the way `joints state` spells it, so a trace line
 /// and a table row can be read against each other without translation. A fold
 /// carries its production index because the rule is the limb - two rules with
 /// the same left-hand side are two different answers.
@@ -855,7 +855,7 @@ pub const Gather = struct {
     ///
     /// ## Why `init` leaves it off and only the CLI turns it on
     ///
-    /// The one caller that was measured is `outliner parse`, and it is also the
+    /// The one caller that was measured is `joints parse`, and it is also the
     /// only one that reads a file once. The **incremental** path does not: an
     /// amend replays a recorded trail, and the trail's alignment marks are one
     /// per `read`, indexed by token count, offered to a later parse as "resume
@@ -1454,7 +1454,7 @@ pub const Gather = struct {
     /// could separate them. They are named here because naming them is the
     /// only place the distinction still exists - by the time `supply` returns,
     /// every one of them is the same `false`. Compiles out unless
-    /// `OUTLINER_TRACE=quire` is set.
+    /// `JOINTS_TRACE=quire` is set.
     fn declined(x: *const Gather, why: []const u8, tok: Token) bool {
         assay.trace(.quire, "stood down ({s}): {s} at {d} in state {d}\n", .{
             why, x.gr.nameOf(tok.symbol), tok.start, x.refused,
@@ -1602,7 +1602,7 @@ pub const Gather = struct {
     ///
     /// `abide` refuses it, and the witness is one keystroke:
     ///
-    ///     outliner amend haskell.folio Shared.hs '23548..23548=x'
+    ///     joints amend haskell.folio Shared.hs '23548..23548=x'
     ///
     /// against a cold parse of the same bytes. Baseline agrees; descending past
     /// the decline diverges, and diverges *above* the resume - `(wildcard)`
@@ -1912,14 +1912,14 @@ pub const Gather = struct {
         return best;
     }
 
-    /// One line per fork, under `OUTLINER_TRACE=quire`: which limb the reading
+    /// One line per fork, under `JOINTS_TRACE=quire`: which limb the reading
     /// in hand kept, which one it left standing beside it, and where.
     ///
     /// `rifts`, `denied` and `merges` say how *often* the parse split. None of
     /// them can say whether the tree that came back is the one the split was
     /// for, and that is the only question a wrong-limb defect asks. Verilog's
     /// cost the corpus a full afternoon of bisecting three-line modules against
-    /// `outliner state`, because the cell that chose was invisible from both
+    /// `joints state`, because the cell that chose was invisible from both
     /// ends: the table prints two actions and the tree prints one shape, with
     /// nothing in between saying which action produced it.
     fn said(

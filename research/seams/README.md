@@ -74,7 +74,7 @@ last installed there:
 
 ```sh
 python3 tool/pin.py build --name before   # zig build -p, and write the tree down
-OUTLINER_BIN=$(python3 tool/pin.py path before) OUTLINER_WORK=.local/mine/work \
+JOINTS_BIN=$(python3 tool/pin.py path before) JOINTS_WORK=.local/mine/work \
   python3 tool/standing.py --json
 ```
 

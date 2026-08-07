@@ -2,7 +2,7 @@
 
 **The candidate win is 30,959 bytes, it is one file, and hand adjudication
 splits it almost down the middle.** Of the verilog constructs I read against the
-language's own grammar, outliner is right on 8 and wrong on 6, and the two
+language's own grammar, joints is right on 8 and wrong on 6, and the two
 widest disputed spans are ones where **both parsers are confidently wrong**.
 
 The brief's strongest sentence about this lane — "tree-sitter produces nothing
@@ -23,7 +23,7 @@ verilog  picorv32.v   94,657B   ERROR = the root, 100% of the file
 sql      ledger.sql    6,390B   ERROR spans 554B, 8.7%
                                 ─────────
              ERROR bytes  95,211    of which one file is 99.4%
-   outliner builds inside     30,959    ← the candidate win, before adjudication
+   joints builds inside     30,959    ← the candidate win, before adjudication
 ```
 
 `yaml` is not in that count and is not a refusal: tree-sitter cannot **build**
@@ -45,9 +45,9 @@ tree-sitter's `ERROR` there is 554 bytes rather than the file.
 | P1 | ERROR on ≥5 of thirty | **FALSIFIED** — 2. The candidate win is not a corpus phenomenon; it is verilog |
 | P2 | named descendants under the root ERROR cover ≥50% of `picorv32.v` | **held** — 59,611B, 63.0% |
 | P3 | fewer than half the adjudicated sample is right | **split** — 8 of 14 by count (57%, falsified); 1,343 of 2,724 bytes (49.3%, held) |
-| P4 | outliner's self-report recall over its own misreadings is 0.00 by construction | **held, as an identity** — see below |
+| P4 | joints's self-report recall over its own misreadings is 0.00 by construction | **held, as an identity** — see below |
 | P5 | tree-sitter flags 0 bytes of php | **held** — 0 ERROR, 0 MISSING on all 67,845 |
-| P6 | ≥1 adjudicated-right outliner construct inside an oracle ERROR | **held** — 8 of them, 1,343 bytes |
+| P6 | ≥1 adjudicated-right joints construct inside an oracle ERROR | **held** — 8 of them, 1,343 bytes |
 | P7 | my instrument lies first, flatteringly | **held twice** — see "the instrument I trust least" |
 | P8 | the top two ERROR files are ≥80% of the total | **held** — verilog alone is 99.4% |
 
@@ -62,30 +62,30 @@ binary and the live oracle and excludes any row that no longer matches. **20 of
 20 still describe both trees** on this pin.
 
 ```
-ours        8 verdicts    1,343B   outliner is right
+ours        8 verdicts    1,343B   joints is right
 theirs      7 verdicts      166B   tree-sitter is right
 neither     2 verdicts    1,215B   both are wrong
 agree       3 verdicts    1,163B   both say the same thing (controls)
 ```
 
-By count outliner wins the sample. By bytes it does not, because one 1,188-byte
+By count joints wins the sample. By bytes it does not, because one 1,188-byte
 row is `neither`: the two module instantiations in `picorv32.v`, which **both
-parsers call a class type**. That is the widest built root outliner has on the
+parsers call a class type**. That is the widest built root joints has on the
 file and it is wrong, and it is equally wrong in tree-sitter.
 
-The sample is hand-picked, not random — I walked outliner's widest roots and the
+The sample is hand-picked, not random — I walked joints's widest roots and the
 commonest disagreement pairs. Treat 8-of-14 as "what a careful reader found",
 not as an estimate of the population.
 
-## Improvement — outliner sees verilog's module structure and tree-sitter does not
+## Improvement — joints sees verilog's module structure and tree-sitter does not
 
 **Consumer: an outline view, a symbol index, and go-to-definition.**
 
 Inside the root `ERROR`, tree-sitter's recovery has no node for the second
-module's header, its parameter port list, or its ports. Outliner names all
+module's header, its parameter port list, or its ports. Joints names all
 three. Concretely, on `picorv32.v`:
 
-| span | bytes | outliner | tree-sitter | what a consumer gains |
+| span | bytes | joints | tree-sitter | what a consumer gains |
 |---|---|---|---|---|
 | `[80092,81099)` | 1,007 | `parameter_port_list` | root `ERROR [0,94657)` | expand-selection from one parameter stops at the list, not the file |
 | `[80072,80091)` | 19 | `module_header` | `ERROR [79903,80128)` | `picorv32_axi` appears in the outline at all |
@@ -98,27 +98,27 @@ That last row generalises: `wire` (53 sites), `output` (17), `input` (11),
 `reg` (5) and `endtask` (1) are read the same way, **610 bytes of keyword that
 tree-sitter's recovery lexes as identifiers**. `simple_identifier` is a real
 PATTERN rule in the grammar, not a hidden wrapper, so this is a genuine
-disagreement about what the token is and outliner has it right.
+disagreement about what the token is and joints has it right.
 
 Tracked by `collate.py adjudicated`, which exits 1 the moment any of those spans
 stops reading the way this table says.
 
-## Gap — where outliner is confidently wrong inside the same region
+## Gap — where joints is confidently wrong inside the same region
 
 Same file, same instrument, other direction. Each is a smallest-failing-input
 handover.
 
-| span | outliner | tree-sitter | mechanism | owner |
+| span | joints | tree-sitter | mechanism | owner |
 |---|---|---|---|---|
 | `[14341,14359)` | `variable_decl_assignment` | `variable_lvalue` | the LHS of a nonblocking assignment read as a declaration with an initialiser; "find every write to this signal" reads it as a declaration site | verilog grammar lane |
-| `[16323,16328)` | `unpacked_dimension` | `select1` | a part-select inside an expression read as an array bound in a declaration — and outliner gets the *same shape* right at `[17707,17712)`, so this is an inconsistency, not a missing rule | verilog grammar lane |
+| `[16323,16328)` | `unpacked_dimension` | `select1` | a part-select inside an expression read as an array bound in a declaration — and joints gets the *same shape* right at `[17707,17712)`, so this is an inconsistency, not a missing rule | verilog grammar lane |
 | `[12060,12155)` | `net_declaration`, extent dropping the `assign` | `continuous_assign [11928,12155)` | `continuous_assign` is not reachable from `package_or_generate_item_declaration`; wrong name and wrong extent | verilog grammar lane |
-| `[4654,4676)` | `simple_identifier` starting one byte late | `simple_identifier [4653,4676)` | outliner cuts the leading `r` off `rvfi_csr_minstret_wmask`; a rename refactor driven by these extents corrupts the identifier | `src/kernel/lex/` |
+| `[4654,4676)` | `simple_identifier` starting one byte late | `simple_identifier [4653,4676)` | joints cuts the leading `r` off `rvfi_csr_minstret_wmask`; a rename refactor driven by these extents corrupts the identifier | `src/kernel/lex/` |
 
 And two where nobody wins: `[83841,85029)` (1,188B, module instantiation read as
 a class type by both) and `[8996,9023)` (a continuous assignment at module
-scope, called a declaration by outliner and a procedural statement by
-tree-sitter — both illegal there). 123 of outliner's roots on this file sit in
+scope, called a declaration by joints and a procedural statement by
+tree-sitter — both illegal there). 123 of joints's roots on this file sit in
 the second pairing.
 
 ## Gap — the honesty axis, and it is not close
@@ -130,24 +130,24 @@ a consumer more truthfully *where* and *how much* is untrustworthy?
 parser reads wrong, how many lie inside something it marks untrustworthy.
 
 ```
-26,203 bytes outliner reads wrong where the oracle is sound
+26,203 bytes joints reads wrong where the oracle is sound
      0 of them are flagged                              recall 0.00
 ```
 
 **That is an identity, not a score, and it is the worst possible answer.**
 Misread bytes are inside `built`; `damage` is everything outside `built`; the
-two sets cannot intersect. So outliner's structural channel can never mark a
+two sets cannot intersect. So joints's structural channel can never mark a
 misreading, on any grammar, at any time, for as long as the board is defined
 this way. `collate.py prove` asserts the intersection is empty rather than
 assuming it, so if the buckets ever overlap this lane says so instead of
 quietly reporting a better number.
 
 php is the exhibit. Tree-sitter flags **0 bytes** of `Str.php` — it does not
-need to, it parses the file. Outliner misreads **25,338** of them, marks none,
+need to, it parses the file. Joints misreads **25,338** of them, marks none,
 and the board reports **87.2% standing**. A consumer handed that tree has no
 signal at all that 37% of the file is fiction.
 
-The one place outliner is more honest is a channel no tree walker reads. On the
+The one place joints is more honest is a channel no tree walker reads. On the
 nine-byte specimen `double-quoted-string.php` it says, on stderr:
 
 ```
@@ -207,7 +207,7 @@ human who can be disagreed with, span by span.
 
 ```bash
 python3 tool/pin.py build collate                 # or use the pin recorded above
-export OUTLINER_BIN=.local/pin/collate/bin/outliner
+export JOINTS_BIN=.local/pin/collate/bin/joints
 python3 tool/collate.py refusal                   # the census, all thirty
 python3 tool/collate.py honesty                   # flag recall, both sides
 python3 tool/collate.py disputed --grammar=verilog --top=8

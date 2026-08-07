@@ -1,6 +1,6 @@
 # Result 1 — the remaining board is mostly one defect, and I could not reproduce it in miniature
 
-Measured on outliner `beb695b5d` · tree `e973ce73c` (pin) · oracle `d85e736fa`
+Measured on joints `beb695b5d` · tree `e973ce73c` (pin) · oracle `d85e736fa`
 (30 of 30 live, 30 attributed). Nothing in `src/` changed on this lane, so there
 is no treatment arm and no `still` comparison to run - the only files it adds
 are this page and the two beside it.
@@ -178,7 +178,7 @@ overturned my model:
 ```
 
 Byte-identical item sets, kept as **separate states** with different rows. So
-outliner does not merge coinciding LR(0) cores the way a textbook LALR does -
+joints does not merge coinciding LR(0) cores the way a textbook LALR does -
 and where it does hit the conflict, it keeps the *shift* and records a
 `residual`, which is the opposite of what zig's 208 does.
 

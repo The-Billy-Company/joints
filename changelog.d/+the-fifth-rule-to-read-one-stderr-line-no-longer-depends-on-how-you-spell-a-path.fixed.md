@@ -1,4 +1,4 @@
-`stamp.behind()` found the binary's verdict by matching `outliner: <source>: ` with
+`stamp.behind()` found the binary's verdict by matching `joints: <source>: ` with
 `<source>` spelled **exactly** as the caller spelled it. Every caller today passes
 the same object it invoked the binary with, so it holds - and nothing made it hold
 tomorrow. A caller that resolved the path first, or passed `tool/./stamp.py` where

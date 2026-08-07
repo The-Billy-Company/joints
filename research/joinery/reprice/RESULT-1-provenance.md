@@ -1,12 +1,12 @@
 # Result 1 — the peel re-priced, and what each prediction was worth
 
-One pinned binary (`strandprice`, `outliner 1b4e50ce0` built from `9d26ca82e`),
-separate `OUTLINER_WORK` for the cold and warm arms so neither read the other's
+One pinned binary (`strandprice`, `joints 1b4e50ce0` built from `9d26ca82e`),
+separate `JOINTS_WORK` for the cold and warm arms so neither read the other's
 folio. Every number below is from that run.
 
     eval "$(python3 tool/pin.py arm strandprice)"
-    OUTLINER_WORK=.local/reprice/coldwork python3 tool/walls.py run  --json > .local/owners/priced.json
-    OUTLINER_WORK=.local/reprice/warmwork python3 tool/walls.py warm --json > .local/reprice/warm2.json
+    JOINTS_WORK=.local/reprice/coldwork python3 tool/walls.py run  --json > .local/owners/priced.json
+    JOINTS_WORK=.local/reprice/warmwork python3 tool/walls.py warm --json > .local/reprice/warm2.json
     python3 research/joinery/owners/owners.py --warm .local/reprice/warm2.json --json > .local/owners/labelled.json
     python3 research/joinery/owners/cut.py --owner "" --warm .local/reprice/warm2.json
 

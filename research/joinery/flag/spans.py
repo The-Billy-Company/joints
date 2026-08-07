@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Every built byte, filed by what the ORACLE said and by what OUTLINER knew.
+"""Every built byte, filed by what the ORACLE said and by what JOINTS knew.
 
 `rack.py` answers "is this derivation right" against tree-sitter. That answer is
 not available at runtime, is not available on a grammar tree-sitter does not
 cover, and is not available on the 34,687 bytes where tree-sitter itself
-`ERROR`s. So the question this file exists for is the next one: **does outliner
+`ERROR`s. So the question this file exists for is the next one: **does joints
 already know?** If some signal the parse computes for its own reasons lines up
-with the regions rack calls misread, outliner can emit a calibrated
+with the regions rack calls misread, joints can emit a calibrated
 *untrustworthy* span - which is tree-sitter's `ERROR`, graded, and covering the
 case tree-sitter has no node for at all: a region that parses cleanly and is
 wrong.
@@ -43,7 +43,7 @@ non-blank run soft and quietly shrink the defended number.
     python3 research/joinery/flag/spans.py show go    the widest guilty runs and their flags
     python3 research/joinery/flag/spans.py prove      every check, asked to say no
 
-    OUTLINER_BIN=<path>   measure a pinned binary (`tool/pin.py`), not `zig-out`
+    JOINTS_BIN=<path>   measure a pinned binary (`tool/pin.py`), not `zig-out`
 
 Exit 0 measured, 1 a clean negative, 2 could not run.
 """
@@ -120,7 +120,7 @@ def externals(grammar: Path) -> set[str]:
 
     Read off the grammar's own `externals`, so this is the author's statement
     and not a guess. It conflates two things and the report says so: an
-    external outliner seats for real (`marrow`, `fence`, `caesura`) and one it
+    external joints seats for real (`marrow`, `fence`, `caesura`) and one it
     only has a spelling for. Both are "this token did not come from a rule in
     the grammar file", which is the question.
     """
@@ -160,7 +160,7 @@ def sites(mine: list[plumb.Node]) -> list[int]:
 
 def flags(sp: tuple[rack.Rung, ...], start: int, width: int,
           near: list[int], ext: set[str], said: set[str]) -> frozenset[str]:
-    """Everything outliner knew about these bytes, without asking the oracle."""
+    """Everything joints knew about these bytes, without asking the oracle."""
     out: set[str] = set()
     names = {r.name for r in sp}
     deep = sp[-1] if sp else None
@@ -194,7 +194,7 @@ def soften(saw: plumb.Read, seen: rack.Seen, was: set[str]) -> list[tuple[int, i
     """`rack.soft`'s rule, over every crooked run: which of them I would not defend.
 
     An extra attaches where a parser chooses. tree-sitter swallows a leading
-    doc comment into the definition it precedes and outliner keeps it a
+    doc comment into the definition it precedes and joints keeps it a
     sibling; neither has misread a byte, and a walk over the two spines charges
     every byte of the comment to whichever one it is not on.
     """
@@ -457,7 +457,7 @@ def score(sheets: list[Sheet], as_json: bool) -> int:
     best = max(rows, key=lambda r: r.lift, default=None)
     if best is not None and who.lift >= best.lift:
         print(f"\n  Knowing only which of 30 grammars a byte is in scores {who.lift:.2f} lift,"
-              f" against {best.lift:.2f}\n  for the best thing outliner actually knows"
+              f" against {best.lift:.2f}\n  for the best thing joints actually knows"
               f" (`{best.flag}`). The slate is measuring the\n  corpus's composition, not the"
               f" parse. Read every number above through that.")
     null(sheets, rows)

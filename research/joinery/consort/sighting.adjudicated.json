@@ -21,7 +21,7 @@
    "note": "`9,160 B priced as construct damage`, `73.7% of damage is unowned`; state attribution of walls, no oracle asked"},
   {"path": "changelog.d/+the-honest-form-of-an-attribution-now-costs-one-command-and-one-paste.added.md",
    "axis": "blind only", "verdict": "false",
-   "note": "its one `figure` is the phrase `the `damage 0` fix arriving in prose` - a sibling fix's NAME, not a measurement, and the page's own subject is the attribution line that reads `no oracle - outliner's own words`"},
+   "note": "its one `figure` is the phrase `the `damage 0` fix arriving in prose` - a sibling fix's NAME, not a measurement, and the page's own subject is the attribution line that reads `no oracle - joints's own words`"},
   {"path": "research/joinery/frame/RESULT-2-presence.md",
    "axis": "blind only", "verdict": "false",
    "note": "`same pin and same seated oracle as Result 1: frame (cf697da9f), oracle 800ede524, tree-sitter 0.26.11`, and every reading is over oracle-reachable population"},

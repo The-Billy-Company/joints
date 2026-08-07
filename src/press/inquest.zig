@@ -141,8 +141,8 @@ pub const Wall = union(enum) {
     /// parser's own verdict handed back to the press rather than a second
     /// vocabulary someone has to keep in step:
     ///
-    ///     outliner: f.c: unexpected , at 1354 in state 803, 2 roots
-    ///     outliner: x.rb: stray byte at 357, 4 roots
+    ///     joints: f.c: unexpected , at 1354 in state 803, 2 roots
+    ///     joints: x.rb: stray byte at 357, 4 roots
     ///
     /// A `stray` needs one fact the verdict does not carry - whether anything in
     /// the grammar lexes there at all - so `lexable` carries what the unrestricted
@@ -1041,25 +1041,25 @@ test "a wall reads back out of the words the CLI prints for it" {
     defer gr.deinit();
 
     // The whole line, path prefix and root count and all.
-    const one = Wall.read(&gr, "outliner: f.c: unexpected , at 1354 in state 803, 2 roots", .unasked);
+    const one = Wall.read(&gr, "joints: f.c: unexpected , at 1354 in state 803, 2 roots", .unasked);
     try testing.expectEqual(comma, one.?.refused.terminal);
     try testing.expectEqual(@as(u32, 803), one.?.refused.state);
     try testing.expectEqual(@as(?[]const Fold, null), one.?.refused.folded);
 
-    const two = Wall.read(&gr, "outliner: x.rb: stray byte at 357, 4 roots, mended 3", .nothing);
+    const two = Wall.read(&gr, "joints: x.rb: stray byte at 357, 4 roots, mended 3", .nothing);
     try testing.expectEqual(@as(u32, 357), two.?.stray.at);
     try testing.expectEqual(Lexable.nothing, two.?.stray.lexable);
 
-    try testing.expectEqual(Wall.whole, Wall.read(&gr, "outliner: a.c: accepted, 1 root", .unasked).?);
-    try testing.expectEqual(Wall.unclosed, Wall.read(&gr, "outliner: a.c: truncated, 3 roots", .unasked).?);
+    try testing.expectEqual(Wall.whole, Wall.read(&gr, "joints: a.c: accepted, 1 root", .unasked).?);
+    try testing.expectEqual(Wall.unclosed, Wall.read(&gr, "joints: a.c: truncated, 3 roots", .unasked).?);
 
     // A terminal this grammar does not have is not a wall in this grammar, and
     // guessing a column index would read some other terminal's table.
     try testing.expectEqual(
         @as(?Wall, null),
-        Wall.read(&gr, "outliner: f.c: unexpected ; at 3 in state 4", .unasked),
+        Wall.read(&gr, "joints: f.c: unexpected ; at 3 in state 4", .unasked),
     );
-    try testing.expectEqual(@as(?Wall, null), Wall.read(&gr, "outliner: f.c: no source fetched", .unasked));
+    try testing.expectEqual(@as(?Wall, null), Wall.read(&gr, "joints: f.c: no source fetched", .unasked));
 }
 
 test "a state waiting for a terminal the scanner cannot make is the lexer's" {

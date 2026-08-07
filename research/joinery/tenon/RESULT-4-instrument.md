@@ -55,14 +55,14 @@ docstring says why: the bytes are not the extra's, they are the siblings'.
 binary build built commit dirty drift live moved moved_at newest source stale told tree when
 ```
 
-Fourteen fields, all fourteen about outliner: which binary, which tree hash,
+Fourteen fields, all fourteen about joints: which binary, which tree hash,
 which commit, how dirty, whether it drifted, whether it was told. Every number
 `rack` prints is a comparison of two trees, and **the second tree is
 unattributed** — no tree-sitter version, no grammar revision, no dylib hash, no
 seat.
 
 That is not academic here. The oracle libraries are built into
-`.local/differential/seat/$OUTLINER_LANE/lib/`, and `.local/differential/lang/`
+`.local/differential/seat/$JOINTS_LANE/lib/`, and `.local/differential/lang/`
 underneath is shared by every lane on this machine. During this session:
 
 ```

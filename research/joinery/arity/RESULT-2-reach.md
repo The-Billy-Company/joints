@@ -26,7 +26,7 @@ population** — 16 of 5,241. Hypothesis 1's cheap answer is the wrong one.
 
 ## The arms
 
-Two pins one change apart, each with its own `OUTLINER_WORK` and its own oracle
+Two pins one change apart, each with its own `JOINTS_WORK` and its own oracle
 seat (`pin.py arm` reports both sighted, 30 of 30 verdicts).
 
 | arm | what it is |

@@ -99,8 +99,8 @@ difference between the two arms is the direction of one comparison.
 
 ## The arms
 
-Two isolation pairs. Every pin has its own `OUTLINER_BIN`, its own
-`OUTLINER_WORK` and its own oracle seat (`pin.py arm` reports 30 of 30 verdicts
+Two isolation pairs. Every pin has its own `JOINTS_BIN`, its own
+`JOINTS_WORK` and its own oracle seat (`pin.py arm` reports 30 of 30 verdicts
 live on all four). Each pair's two `world.json` manifests were diffed
 file-by-file and **differ in exactly `src/kernel/quire/gather.zig`** — which is
 the only reason these are comparisons at all, because four sibling lanes moved

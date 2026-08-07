@@ -2,7 +2,7 @@
 """Both trees for one authored witness, side by side, plus `rack`'s verdict.
 
 This lane's defects are places both parsers **succeed** and disagree about
-shape, so nothing stops, no wall is named, and `outliner parse` reports
+shape, so nothing stops, no wall is named, and `joints parse` reports
 `accepted` on every one of them. The only thing that can show the defect is the
 pair of trees, so the pair is what this prints - never one of them alone.
 
@@ -46,7 +46,7 @@ def look(name: str, src: Path) -> int:
 
     print(f"# {name}  {src.relative_to(ROOT)}  {len(blob)} bytes")
     print(f"  {blob.decode('utf-8', 'replace')!r}")
-    print(f"\n  -- outliner ({stop.verdict})")
+    print(f"\n  -- joints ({stop.verdict})")
     for root in ours:
         print("\n".join("    " + ln for ln in root.render()))
     print("\n  -- tree-sitter")

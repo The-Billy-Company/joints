@@ -8,7 +8,7 @@ number over those eleven can support the claim that this presses any language.
 was pressed, never tuned against - and this is the instrument that asks it four
 questions, in the order they can fail:
 
-  1. does it import           the front door, `outliner grammar`
+  1. does it import           the front door, `joints grammar`
   2. does it press            states, residual conflicts, frayed cells, and the
                               refusals partitioned - `open` is the only bucket
                               another unfolding round can reach, and bash's 329
@@ -55,7 +55,7 @@ from stamp import take  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 GRAMMARS = ROOT / "upstream" / "grammars"
 DEST = ROOT / "upstream" / "sources"
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
 RAW = "https://raw.githubusercontent.com/"
 LIB = Path.home() / ".cache" / "tree-sitter" / "lib"
 OUT = ROOT / ".local" / "breadth"
@@ -142,7 +142,7 @@ SOURCES: dict[str, tuple[str, str, str]] = {
         "da69803dffc9571f0c4f7ea452317433883c206aec5299788649c2623eda9452"),  # 16125 bytes
 }
 
-# `outliner grammar` prints one fact per line. Reading them by name rather than
+# `joints grammar` prints one fact per line. Reading them by name rather than
 # by position means a new line in that report cannot silently shift a column.
 SHAPE = {
     "symbols": re.compile(r"symbols\s+(\d+)\s+\((\d+) terminal, (\d+) nonterminal\)"),
@@ -208,7 +208,7 @@ def picked(argv_only: list[str]) -> list[str]:
 # ------------------------------------------------------------------- the steps
 
 def shape_of(name: str) -> tuple[dict[str, Any], str]:
-    """Import and press in one call, since `outliner grammar` does both."""
+    """Import and press in one call, since `joints grammar` does both."""
     got = run_out([str(BIN), "grammar", str(GRAMMARS / f"{name}.json")])
     if got is None:
         return {}, f"press did not finish inside {PATIENCE}s"

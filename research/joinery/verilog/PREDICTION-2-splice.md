@@ -11,7 +11,7 @@ handed to this lane with authored witnesses and standing controls:
 
 ## What I found before predicting
 
-None of the three named states is contested. `outliner state 701` holds one
+None of the three named states is contested. `joints state 701` holds one
 item, `casting_type -> constant_primary .`, and admits exactly one terminal,
 `'`. The same probe over 3772 and 2394 finds no cell the settle bench ever
 had to decide. The failure states are locations three constructs downstream,

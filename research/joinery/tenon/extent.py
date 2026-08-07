@@ -11,7 +11,7 @@ toml is the case that makes it visible, and `rack` already knew - it quotes
 `standing.py`'s `UNSOUND - child outside its parent` in `cover`'s docstring as
 the reason it filters by extent instead of popping a stack, then charges the
 bytes anyway. On `v = "1"  #:x` both parsers put `comment` **inside** `pair`;
-outliner's `pair` merely ends at the string and tree-sitter's ends after the
+joints's `pair` merely ends at the string and tree-sitter's ends after the
 comment. Nobody chose a different tree. `rack soft` cannot catch it either,
 because the bytes it charges are not the extra's - they are the siblings'.
 

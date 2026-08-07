@@ -25,7 +25,7 @@ structurally cannot: not *does the detector fire* but *is it ever shown the
 artifact*. Two temp files, one rewritten under the run and one republished with
 identical bytes and a new mtime, prove `moved` names the first with its row and
 `republished` tells the second apart. Then the real `order.folio_for` is driven
-twice against a private `OUTLINER_WORK` - once minting, once kept, never into
+twice against a private `JOINTS_WORK` - once minting, once kept, never into
 the cache ten agents share - and the folio must be in `FED`. Take the two new
 lines back out and exactly those two rows go red while the two detector rows
 stay green.

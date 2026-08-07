@@ -2,7 +2,7 @@
 
 Every rung that reports a per-language number reports it over this folder. It is
 the same little ledger - push a tagged row, cache the total, invalidate the cache
-on the next push, print a receipt - written once per grammar outliner imports, so
+on the next push, print a receipt - written once per grammar joints imports, so
 when a rank or a residue differs between two languages it differs because the
 *grammar* does and not because one file happened to be longer or knottier than
 the other.
@@ -43,7 +43,7 @@ one - cost **one file**: five of eleven read to the end before, four after, on
 one binary measured the same minute. That file is `ledger.rs`, and it is worth
 saying why rather than just counting it. Rust nests block comments, which no
 regex can match, so tree-sitter-rust hands `_block_comment_content` to its
-external scanner - and outliner is blind to six of rust's eleven externals. So
+external scanner - and joints is blind to six of rust's eleven externals. So
 rust does not stumble over the comment, it never starts: stray byte at 0.
 
 Everything else the widening exposed turned out to be cheaper. Java, JavaScript

@@ -59,7 +59,7 @@ is at 1,018, and it covers 57,698 bytes to Verible's 74,194, because inactive
 `` `ifdef `` branches and macro bodies leave no token behind. So slang
 *under*-covers and cannot price a byte — it would free bytes that are code in
 another configuration. Verible lexes the text as written, which is exactly what
-tree-sitter and `outliner` are both doing. Verible prices; slang certifies.
+tree-sitter and `joints` are both doing. Verible prices; slang certifies.
 
 ### What each one says about the file
 
@@ -109,7 +109,7 @@ charge until it was broken down by what the oracle covers them with:
 
 Every one is a byte **both** trees put under the same construct and **neither**
 leafs. Verible emits one `TK_StringLiteral` spanning quotes and body; tree-sitter
-and `outliner` both decompose a string into two quote-leaves around a bare
+and `joints` both decompose a string into two quote-leaves around a bare
 interior. Checked directly at `[53962, 54000)`: both trees carry
 `string_literal [53962,54000)` with leaves only at `[53962,53963)` and
 `[53999,54000)`. Charging these would be charging us for a tree-shape
@@ -128,13 +128,13 @@ token):
 
 | | leaf bytes | of token bytes | nodes | leaves |
 |---|---:|---:|---:|---:|
-| outliner | 44,911 | **60.5%** | 23,497 | 9,394 |
+| joints | 44,911 | **60.5%** | 23,497 | 9,394 |
 | tree-sitter | 73,357 | **98.8%** | 48,883 | 17,290 |
 
 | | bytes |
 |---|---:|
 | both stand a leaf | 44,867 |
-| **only outliner** | **0** |
+| **only joints** | **0** |
 | only tree-sitter | 28,417 |
 
 **Zero.** Checked over the whole file and not just the token bytes: there is no

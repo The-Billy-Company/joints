@@ -17,7 +17,7 @@ lexer and the fork rather than the monoid, so a gate on their count would fail
 the four people fixing them. json is gated on reading to the end, because it is
 the one grammar that does today and losing that is news.
 
-`outliner joints` exits 1 whenever anything refused, which is nine grammars out
+`joints survey` exits 1 whenever anything refused, which is nine grammars out
 of eleven right now - so a gate cannot just read its exit code, it has to read
 what it said. Exit 0 all three held, 1 one of them did not, 2 could not run.
 """
@@ -38,7 +38,7 @@ from stamp import take  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 GRAMMARS = ROOT / "upstream" / "grammars"
 CORPUS = ROOT / "research" / "joinery" / "corpus"
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
 
 HEAD = re.compile(r"^(\S+)\s+(\d+) states.*?\((\d+) declared, (\d+) residual\)")
 TAIL = re.compile(r"^worst p99 rank (\d+) · widest residue (\d+) · (.*)$")
@@ -83,7 +83,7 @@ def measure(name: str, filename: str) -> Result:
         if not p.exists():
             raise FileNotFoundError(p)
     out = subprocess.run(
-        [str(BIN), "joints", str(grammar), str(source)],
+        [str(BIN), "survey", str(grammar), str(source)],
         capture_output=True,
         text=True,
         cwd=ROOT,
@@ -105,9 +105,9 @@ def measure(name: str, filename: str) -> Result:
         held=f"{held[1]}/{held[2]}" if held else "0/0",
         refused=int(m[1]) if (m := REFUSED.search(verdict)) else 0,
         disagreed="DISAGREED" in verdict,
-        # sole: the `joints` verb's own report, not a parse verdict. The two
+        # sole: the `survey` verb's own report, not a parse verdict. The two
         # verbs share the word and nothing else - `stamp.outcome` reads what
-        # `parse` writes on stderr, and this is what `joints` writes on stdout.
+        # `parse` writes on stderr, and this is what `survey` writes on stdout.
         accepted=any("accepted" in ln for ln in lines),
         faults=[],
     )

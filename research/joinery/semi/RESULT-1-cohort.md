@@ -1,7 +1,7 @@
 # Result 1 — the cohort rule is not the wall, and never was
 
-Measured with the built binary, not by reading the file. `outliner grammar`
-prints the *declared* external count (`gr.externals`); `outliner parse` prints
+Measured with the built binary, not by reading the file. `joints grammar`
+prints the *declared* external count (`gr.externals`); `joints parse` prints
 the *post-provision* blind count (`sc.blind`). The gap between them is how many
 externals this lexer already stands in for.
 
@@ -58,7 +58,7 @@ somebody should re-run it.
 
 ## Instrument note
 
-`outliner grammar` and `outliner parse` print two different numbers with almost
+`joints grammar` and `joints parse` print two different numbers with almost
 the same words. `grammar` says "external scanner tokens cannot be lexed here"
 and lists **every declared external**, including the six bash and rust
 provisions that demonstrably *are* lexed here. Read alone it says bash is blind

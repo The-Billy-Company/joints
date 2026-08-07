@@ -126,7 +126,7 @@ extras are auto-admitted and would dilute a warrant they never earned.
 `refusing.py` reported **936 of 936 refusals in the `clear` bucket** on its first
 run - "no blind external was admitted by this state." That is a coherent-looking
 answer and it was entirely an artefact: `admitted()` was handing a compiled
-`.folio` to `outliner state`, which exits 2 and prints nothing, and an empty
+`.folio` to `joints state`, which exits 2 and prints nothing, and an empty
 stdout parsed cleanly into an empty admitted set.
 
 It was caught by a claim the data cannot make: **a state in which a refusal

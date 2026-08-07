@@ -92,8 +92,8 @@ Every landing today was pinned, and 76 pins survive under `.local/pin` with
 their binaries and their per-file tree manifests. So the arms are recoverable
 without rebuilding: `still against A B --mine <files>` re-judges a recorded pair
 against **today's** rules, including vacuity and the `--mine` predicate, and
-`standing.py --against` re-takes both boards under separate `OUTLINER_WORK` and
-`OUTLINER_LANE`.
+`standing.py --against` re-takes both boards under separate `JOINTS_WORK` and
+`JOINTS_LANE`.
 
 That is a reconstruction, not a live isolation arm, and it costs exactly one
 thing: the gap between a pair's two pins still contains whatever the siblings

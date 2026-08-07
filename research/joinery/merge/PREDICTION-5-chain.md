@@ -2,7 +2,7 @@
 
 Written before the change. Each claim carries the measurement that kills it.
 
-Control arm: outliner `beb695b5d` · tree `e973ce73c` (pin) · oracle `d85e736fa`
+Control arm: joints `beb695b5d` · tree `e973ce73c` (pin) · oracle `d85e736fa`
 (30 of 30 live, 30 attributed).
 
 ## The cell
@@ -24,7 +24,7 @@ walks the same states and keeps only the endpoints:
 .unexpected = .{ .symbol = tok.symbol, .at = tok.start, .state = x.refused },
 ```
 
-and `surface/face/outliner/parse.zig:496` faithfully carries that shortfall into
+and `surface/face/joints/parse.zig:496` faithfully carries that shortfall into
 the verdict:
 
 ```zig

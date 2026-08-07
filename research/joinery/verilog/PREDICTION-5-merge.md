@@ -14,7 +14,7 @@ What the same state row *does* offer is `<=`:
      [declared reduce_reduce, over fold variable_lvalue -> _identifier [prec 0 left]]
 ```
 
-**Declared.** So gather forks. And with `OUTLINER_TRACE=quire` on
+**Declared.** So gather forks. And with `JOINTS_TRACE=quire` on
 `always @* begin x <= 0; end`, the whole defect is two lines:
 
 ```
@@ -55,7 +55,7 @@ which no policy in gather can reconstruct.
 
 ## Predictions
 
-Measured with pinned binaries either side, each arm its own `OUTLINER_WORK`,
+Measured with pinned binaries either side, each arm its own `JOINTS_WORK`,
 folio shas checked to differ — Arm C is a quire change and mints no new folio,
 so the shas should be **identical**, and a differing sha is a bug in the harness
 rather than a finding.

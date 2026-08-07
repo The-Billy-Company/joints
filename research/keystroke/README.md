@@ -1,7 +1,7 @@
 # keystroke — why typing one character costs what opening the file costs
 
-The scoreboard next door found outliner's largest gap: tree-sitter's re-parse
-after an edit is 8x cheaper than re-opening the file, and outliner's is **1x**,
+The scoreboard next door found joints's largest gap: tree-sitter's re-parse
+after an edit is 8x cheaper than re-opening the file, and joints's is **1x**,
 on 17 of 29 grammars, with swift at 30,740 µs against tree-sitter's 73. It also
 found one grammar at a 65x gain - php - and read that as proof the machinery
 works and the rest is a re-mint policy. This folder was sent to generalize php.
@@ -46,10 +46,10 @@ verilog. `(1 − p)` is the ceiling; the ring spacing is the floor.
     python3 research/keystroke/abide.py [grammar…]     is the amended tree the cold tree
     python3 research/keystroke/abide.py --prove        the guard refusing on purpose
 
-Both take `OUTLINER_BIN` (use `tool/pin.py` - in this tree a path is not a
-version) and `OUTLINER_WORK` for the folio set.
+Both take `JOINTS_BIN` (use `tool/pin.py` - in this tree a path is not a
+version) and `JOINTS_WORK` for the folio set.
 
-`probe` reads the two halves out of the report line `outliner amend` already
+`probe` reads the two halves out of the report line `joints amend` already
 prints and nothing was reading that way: `lifts` is the suffix half, and `read`
 against the open's own `read` is the prefix half. Its `open` column is the
 **open** verdict and the lift gate reads the **previous edit's** verdict, which

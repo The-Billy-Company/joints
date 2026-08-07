@@ -11,14 +11,14 @@ guarantees no reader ever sees a torn byte to notice it by.
 Two real processes, because the hazard is ten interpreters on one directory and
 a thread would share the pid the temp filename is made unique with:
 
-- the board, over a **private cache** (`OUTLINER_WORK`), so the shared
+- the board, over a **private cache** (`JOINTS_WORK`), so the shared
   `.local/standing` that nine other agents read is never touched;
 - a re-minter that waits a beat and then republishes every folio in that cache
   through `order.press` - the real function, the real `os.replace`.
 
 The poison has to be a *different* generation, not the same bytes rewritten.
 Prediction 1 decides how to get one: if minting is deterministic the re-minter
-must run an **older pinned binary** (`.local/bench/pin/outliner`, built
+must run an **older pinned binary** (`.local/bench/pin/joints`, built
 2026-08-04), the way the previous lane used a real older binary rather than a
 staged corruption. If minting is not deterministic the same binary suffices.
 

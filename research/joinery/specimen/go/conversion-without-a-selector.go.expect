@@ -13,7 +13,7 @@
 # try, and the conversion rule is reserved for the shapes where a type is
 # syntactically forced.
 #
-# Which pins the guilty witness precisely. Outliner does not over-eagerly reach
+# Which pins the guilty witness precisely. Joints does not over-eagerly reach
 # for `type_conversion_expression`: on the one input that really is a
 # conversion it does not reach for it at all. It reaches for it only when a
 # `.` is in play, because that is the only place the rival derivation exists.

@@ -155,7 +155,7 @@ still true. A repair is not a stretched root, and this is the other question.
 `research/joinery/scars/against.py`, 29 of 30 grammars with a readable oracle
 (yaml's parser will not compile in this seat).
 
-| | tree-sitter | outliner |
+| | tree-sitter | joints |
 |---|---|---|
 | enumerate every repair site | `ERROR` nodes in the tree, `MISSING` on the CST render | `--scars`, one line each — **level, after this lane; before it, we could not** |
 | what each site carries | a span | byte range · refused terminal · refusing state · felled/kept · live heads · tokens since the last repair — **ahead** |

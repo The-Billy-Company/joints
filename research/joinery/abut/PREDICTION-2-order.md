@@ -17,7 +17,7 @@ From `upstream/grammars/julia.json`, not from a guess:
 Each is a zero-width marker sitting *between* the previous token and a
 delimiter, asserting the delimiter is glued on. `f(x)` is a call and `f (x)` is
 not, and the only difference is whitespace the marker refuses to step over. So
-the hand is `fresh` — outliner's `fresh` is exactly "no extra was stepped over
+the hand is `fresh` — joints's `fresh` is exactly "no extra was stepped over
 since the last token ended" — plus one byte test.
 
 ## The census contradiction

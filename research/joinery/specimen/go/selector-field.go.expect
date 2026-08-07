@@ -3,9 +3,9 @@
 # go is 1,189 bytes, 1,189 built, 0 orphan, 0 rubble, 0 spoil, 100.0%
 # standing, 0 damage. Every instrument in this repository scores it clean.
 #
-# `fmt.Print("x")` is a call. Outliner reads it as a conversion:
+# `fmt.Print("x")` is a call. Joints reads it as a conversion:
 #
-#   outliner                      tree-sitter
+#   joints                      tree-sitter
 #   type_conversion_expression    call_expression
 #     qualified_type                selector_expression
 #       package_identifier            operand: identifier

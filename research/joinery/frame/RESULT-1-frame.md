@@ -10,7 +10,7 @@ written, and it is the largest thing this lane produced.
 
 ## The oracle had no name, and it moved
 
-`rack` stamped fourteen fields and all fourteen were about outliner. The oracle
+`rack` stamped fourteen fields and all fourteen were about joints. The oracle
 is half of every number it prints, and a sibling lane caught what that costs:
 **scala read 1,278 crooked in one run and 9,087 in the next — same pin, same
 unedited script, stamp byte-identical.** Three oracle libraries under
@@ -71,7 +71,7 @@ The instrument agrees it was wrong.
 ### Delta two: +60,067 bytes, in a column that did not exist
 
 **A frame is missing when the oracle has a bracket, other than its own root,
-wholly containing two or more of outliner's built roots, and outliner has no
+wholly containing two or more of joints's built roots, and joints has no
 node with that extent.** Charged to a new `unframed` bucket, taken only from
 `square` and `renamed`.
 
@@ -98,7 +98,7 @@ author demonstrated and did not close:
 <p>x</q>
 ```
 
-The oracle reads one `element [0, 8)` over three children. Outliner reads two
+The oracle reads one `element [0, 8)` over three children. Joints reads two
 roots and no `element`. The rule this file shipped with scored that **7 square,
 0 crooked — a perfect row.** It now scores **7 of 7 unframed, 0 square**, and
 `verify` asserts the old scoring as a tripwire so the hole cannot reopen
@@ -167,7 +167,7 @@ UNSOUND: 1 loose, 0 disorder, 0 torn
   [child outside its parent: comment [47, 56) in pair [27, 45)]
 ```
 
-That is outliner's own words about its own forest, and no board read them.
+That is joints's own words about its own forest, and no board read them.
 `rack board` now surfaces every such row under the table. One row carries one
 today. It is the same defect the moved-edge class prices, arrived at from the
 other side — the parser said so itself before any oracle was consulted. The

@@ -4,7 +4,7 @@
 //! right to: those are what a parse reads, and none of them should grow a second
 //! spelling just because the bytes arrived from a file this time. So `bind`
 //! rebuilds exactly those three and the parse loop cannot tell where they came
-//! from, which is the whole trick behind `outliner parse x.folio` costing a map
+//! from, which is the whole trick behind `joints parse x.folio` costing a map
 //! instead of a press.
 //!
 //! **A bound grammar is a parser, not a re-pressable grammar.** A folio carries

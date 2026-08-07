@@ -1,6 +1,6 @@
 # `research/` - claim, ancestry, and falsification
 
-This is outliner's research record, not production code. Each dossier separates
+This is joints's research record, not production code. Each dossier separates
 three questions engineering prose usually collapses: **what useful thing is
 being claimed, what did the world already know, and what evidence could prove
 it wrong?**

@@ -52,7 +52,7 @@ Mechanical and cheap:
 - Read elixir's pinned scanner for `_newline_before_binary_operator`. If the
   answer has a **width greater than zero** and a **close computed from the
   bytes**, I am wrong and it is marrow.
-- Ask `outliner state elixir.json --holding` for the wall elixir actually stops
+- Ask `joints state elixir.json --holding` for the wall elixir actually stops
   at, and re-derive the refused terminal rather than trusting the name in the
   table — the same lane says four of eighteen witnesses refuse a terminal the
   gap list does not name.

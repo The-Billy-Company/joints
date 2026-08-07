@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT / "tool"))
 import standing  # noqa: E402
 from order import folio_for  # noqa: E402
 
-BIN = Path(os.environ["OUTLINER_BIN"])
+BIN = Path(os.environ["JOINTS_BIN"])
 SRC = ROOT / "upstream" / "sources" / "Maps.kt"
 text = SRC.read_text()
 if "strings" in sys.argv:

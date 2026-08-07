@@ -12,7 +12,7 @@ the commit, whether the tree was dirty, the flags, and the binary's own hash.
 `path`, `show`, `list`, and `verify` read it back; `verify` re-hashes the binary
 and re-surveys the tree, so a pin that a later `zig build -p` overwrote says so
 instead of being trusted. `CONTRIBUTING.md` gains the recipe next to the
-empty-`OUTLINER_WORK` trap, and a house rule: **a path is not a version** — say
+empty-`JOINTS_WORK` trap, and a house rule: **a path is not a version** — say
 which pin a number came from.
 
 A prefix alone would not have been enough, which is the part worth writing down.

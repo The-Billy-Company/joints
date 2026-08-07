@@ -2,7 +2,7 @@
 
 Both arms measured against **frozen oracle `encapsed`** (`attest.py freeze`,
 tree-sitter 0.26.11, php dylib `db2f75824`), each with **its own
-`OUTLINER_WORK`** — see the note at the bottom, which is a finding of its own.
+`JOINTS_WORK`** — see the note at the bottom, which is a finding of its own.
 
 ## `tool/standing.py`, php row
 
@@ -67,14 +67,14 @@ corpus unable to say so. Two of the four rows shipped are, on this corpus,
 unfalsifiable — which is why they ship as specimens or not at all
 (`RESULT-6`).
 
-## Measurement note — two pins sharing one `OUTLINER_WORK`
+## Measurement note — two pins sharing one `JOINTS_WORK`
 
 A sibling lane found that `tool/order.py::miss` compares a folio's mtime to the
 binary's, and two pinned binaries are both older than a folio either just
 minted, so two arms sharing a work directory can measure one side twice — and
 always flatteringly, since two runs of one table always agree.
 
-My first sweep did share one. I re-ran both arms with `OUTLINER_WORK` per arm,
+My first sweep did share one. I re-ran both arms with `JOINTS_WORK` per arm,
 from empty, and then diffed the two folio sets: **all 30 folios byte-identical,
 including php's.** So the seating lives in the binary, not in the pressed
 table, and this particular change could not have been laundered by the cache.

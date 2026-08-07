@@ -13,7 +13,7 @@ version**.
 
 `zig build -p <dir>` is the whole cure and has been available all along, so the
 useful thing here is not the flag. It is that a prefix is still a *path*: point
-at `.local/mine/bin/outliner` a day later and nothing on disk can tell you what
+at `.local/mine/bin/joints` a day later and nothing on disk can tell you what
 it was built from. So a pin is a prefix **plus a record** - the digest of the
 sources at build time, the commit, how dirty the tree was, and the sha256 of
 the bytes that came out. That record is what makes it a version, and it is what
@@ -27,7 +27,7 @@ to move underneath it is the one binary that could never report that it had.
   python3 tool/pin.py build --name before   ... and give it a name you'll recognise
   python3 tool/pin.py list                  every pin, newest first
   python3 tool/pin.py show before           one pin in full
-  python3 tool/pin.py path before           just the binary, for OUTLINER_BIN=$(...)
+  python3 tool/pin.py path before           just the binary, for JOINTS_BIN=$(...)
   python3 tool/pin.py arm before            binary + its own folio cache + its own
                                             oracle seat, as shell: eval "$(...)"
   python3 tool/pin.py oracle before         mint THIS arm's tree-sitter verdicts,
@@ -42,7 +42,7 @@ for what sharing either of the other two costs.
 The third one had no way to be *handed over*, only named, and that is the hole
 `oracle` closes. `square` - the only column on the board that is a claim about
 agreement with another parser - is read from an `audit.json` inside
-`OUTLINER_WORK`, so the private cache that stops two arms contaminating each
+`JOINTS_WORK`, so the private cache that stops two arms contaminating each
 other is also what leaves both of them with an empty oracle column reading `0`,
 which is indistinguishable from thirty grammars agreeing perfectly. `arm` now
 says which of the two it is, and `oracle` fixes it in one command.
@@ -67,7 +67,7 @@ from stamp import ROOT, digest, git, iso, survey  # noqa: E402
 
 PINS = ROOT / ".local" / "pin"
 RECORD = "pin.json"
-BINARY = Path("bin") / "outliner"
+BINARY = Path("bin") / "joints"
 
 
 def home(name: str) -> Path:
@@ -150,7 +150,7 @@ def build(name: str | None, args: list[str]) -> int:
         # because a pin taken across a moving tree is a pin of neither tree.
         print(f"pin: MOVED - {after.where} changed while this built; the pin"
               f" records the tree as it ended, not as it was asked for")
-    print(f"export OUTLINER_BIN={binary}")
+    print(f"export JOINTS_BIN={binary}")
     return 0
 
 
@@ -228,7 +228,7 @@ def verify(as_json: bool) -> int:
 
 
 def where_is(name: str) -> int:
-    """Just the path, for `OUTLINER_BIN=$(python3 tool/pin.py path before)`."""
+    """Just the path, for `JOINTS_BIN=$(python3 tool/pin.py path before)`."""
     got = resolve(name)
     if got is None:
         print(f"pin: no pin named {name}", file=sys.stderr)
@@ -241,8 +241,8 @@ def seat(where: Path) -> tuple[Path, dict[str, str]]:
     """One arm's three exports, as (work dir, environment)."""
     work = where / "work"
     work.mkdir(parents=True, exist_ok=True)
-    return work, {"OUTLINER_BIN": str(where / BINARY), "OUTLINER_WORK": str(work),
-                  "OUTLINER_LANE": f"pin-{where.name}"}
+    return work, {"JOINTS_BIN": str(where / BINARY), "JOINTS_WORK": str(work),
+                  "JOINTS_LANE": f"pin-{where.name}"}
 
 
 def oracled(where: Path) -> tuple[int, int]:
@@ -317,14 +317,14 @@ def arm(name: str) -> int:
 
         eval "$(python3 tool/pin.py arm before)"
 
-      OUTLINER_BIN    this pin's binary - a version, not a path
-      OUTLINER_WORK   .../work beside it, so `order.py` presses into a directory
+      JOINTS_BIN    this pin's binary - a version, not a path
+      JOINTS_WORK   .../work beside it, so `order.py` presses into a directory
                       only this arm writes. The ticket rule below `press` makes
                       a shared one *fail closed* rather than lie, but failing
                       closed still costs a re-mint of thirty folios per
                       alternating run; a private one costs nothing and cannot
                       raise the question.
-      OUTLINER_LANE   this pin's oracle seat, so `--audit` under two arms is two
+      JOINTS_LANE   this pin's oracle seat, so `--audit` under two arms is two
                       seats and neither is keyed on a parent process id.
 
     Printed rather than exported, because a tool cannot set a variable in the
@@ -332,7 +332,7 @@ def arm(name: str) -> int:
     hands you the line.
 
     **And it says whether the arm can see the oracle**, because the second
-    export is what blinds it. `OUTLINER_WORK` is where the `audit.json` behind
+    export is what blinds it. `JOINTS_WORK` is where the `audit.json` behind
     `square` and `crooked` lives, so a fresh arm has no verdicts, prints `0` in
     both columns, and `0` is what perfect agreement looks like too. Nineteen
     controlled comparisons were read as a clearance off that. The line is on

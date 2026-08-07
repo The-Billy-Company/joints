@@ -1,4 +1,4 @@
-`outliner state <grammar.json> --holding <item>` names every state whose kernel
+`joints state <grammar.json> --holding <item>` names every state whose kernel
 spells an item, dot position included, and exits 1 when none does. It is the
 inverse of the number a parse prints when it stops, and it exists because that
 number turned out to be worth less than the brief that warned about it said.

@@ -49,7 +49,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import ablate  # noqa: E402
 ROOT = HERE.parents[2]
-SCRATCH = ROOT / ".local/aud-iso/outliner"
+SCRATCH = ROOT / ".local/aud-iso/joints"
 BASE = ROOT / ".local/aud-iso/base"
 TARGET = "src/kernel/lex/outside.zig"
 
@@ -66,8 +66,8 @@ def plan() -> list[str]:
 
 
 def board(binary: Path, work: Path, lane: str) -> dict:
-    env = os.environ | {"OUTLINER_BIN": str(binary), "OUTLINER_WORK": str(work),
-                        "OUTLINER_LANE": lane}
+    env = os.environ | {"JOINTS_BIN": str(binary), "JOINTS_WORK": str(work),
+                        "JOINTS_LANE": lane}
     got = subprocess.run(["python3", "tool/standing.py", "--json"], cwd=ROOT,
                          capture_output=True, text=True, env=env, check=True)
     return json.loads(got.stdout)
@@ -102,7 +102,7 @@ def arm(rows: tuple[int, ...], names: list[str], kept: Path) -> Path | None:
     genuinely new subsets cost a build.
     """
     tag = "aud-r" + "-".join(str(r) for r in rows) if len(rows) > 1 else f"aud-r{rows[0]}"
-    got = SCRATCH / f".local/pin/{tag}/bin/outliner"
+    got = SCRATCH / f".local/pin/{tag}/bin/joints"
     if got.exists():
         return got
     shutil.copy2(kept, SCRATCH / TARGET)
@@ -245,7 +245,7 @@ def main(argv: list[str]) -> int:
         if built.returncode != 0:
             print(f"  {names[n]:<44}BUILD FAILED\n{built.stderr[-600:]}")
             continue
-        bin_ = SCRATCH / f".local/pin/aud-r{n}/bin/outliner"
+        bin_ = SCRATCH / f".local/pin/aud-r{n}/bin/joints"
         got = moved(board(bin_, SCRATCH / f".local/work-r{n}", f"aud-r{n}"), live)
         said = "  ".join(f"{g} {d0}→{d1}" for g, (d0, d1, _, _) in got.items())
         print(f"  {names[n]:<44}{len(got)} grammar(s)   {said}")

@@ -1,7 +1,7 @@
 Kotlin was two spellings short of a whole tree.
 
-Treatment `outliner d95f68e4a` · tree `b8757cdcc` (pin) · oracle `d85e736fa`
-(30 of 30 live, 30 attributed), against control `outliner 1885792a7` · tree
+Treatment `joints d95f68e4a` · tree `b8757cdcc` (pin) · oracle `d85e736fa`
+(30 of 30 live, 30 attributed), against control `joints 1885792a7` · tree
 `4f018b60f` on the same oracle. `still against` reads comparable: one file
 differs and this lane claims it.
 

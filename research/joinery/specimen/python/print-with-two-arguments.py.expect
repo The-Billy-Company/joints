@@ -4,7 +4,7 @@
 # second argument kills the wrong reading and the call survives. The same move
 # in python does not work.
 #
-#   outliner                      tree-sitter
+#   joints                      tree-sitter
 #   print_statement [0, 11)       call [0, 11)
 #     "print"                       function: identifier  "print"
 #     argument: tuple [5, 11)       arguments: argument_list [5, 11)

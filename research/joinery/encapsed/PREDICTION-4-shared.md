@@ -39,7 +39,7 @@ whether I widened a definition to get there.
 
 - If C's byte-841 stop turns out to be a `"` inside `printf(…)` whose content
   terminal is external after all, the README is wrong and so am I. Cheap to
-  check: `outliner parse` C and read the grammar's `externals`.
+  check: `joints parse` C and read the grammar's `externals`.
 - If bash's remaining damage is dominated by something other than the heredoc
   stack, the "carried state" claim is wrong.
 - If latex's eleven terminals need any memory — and `\end{name}` has to match

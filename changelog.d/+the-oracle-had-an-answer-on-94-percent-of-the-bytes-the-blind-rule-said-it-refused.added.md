@@ -45,7 +45,7 @@ Icarus Verilog (a simulator; no byte-offset tree) and Surelog/UHDM (heavy CMake,
 post-elaboration) were weighed and rejected.
 
 **And the premise this lane was sent to prove is false.** Against Verible's
-74,194 token bytes, tree-sitter stands a leaf on **98.8%** and outliner on
+74,194 token bytes, tree-sitter stands a leaf on **98.8%** and joints on
 **60.5%** (23,497 nodes / 9,394 leaves against 48,883 / 17,290). Bytes we leaf
 and tree-sitter does not, over the whole file: **0**. Our verilog leaf set is a
 strict subset of theirs, 44,911 ⊂ 73,357. **Verilog is not a place we beat

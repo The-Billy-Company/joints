@@ -12,7 +12,7 @@ The four instances I had all wrote. A fifth arrived mid-lane and did not:
 
 > A lane pinned its baseline, worked eight minutes, pinned its arm, read
 > `latex −1,185`. The lex lane had landed a latex fix inside those eight minutes.
-> Each arm had its own `OUTLINER_WORK`; the folio shas were checked and matched.
+> Each arm had its own `JOINTS_WORK`; the folio shas were checked and matched.
 
 Nothing wrote to anything being compared. Both arms were internally honest
 measurements of their own trees. **And the event is between two runs**, so there
@@ -34,7 +34,7 @@ failure**, and the failure is the thing to gate:
 **`witness`** — what world one arm was taken against, as a record: the binary's
 bytes; a **per-file manifest** of the tree it was built from; the oracle identity
 of every grammar read; the digest of every artifact `stamp.fed` recorded; and
-`OUTLINER_BIN`/`WORK`/`LANE`. `pin.py build` writes the manifest beside its own
+`JOINTS_BIN`/`WORK`/`LANE`. `pin.py build` writes the manifest beside its own
 record, because a pin is a frozen build and the tree it came from is knowable
 only while it is still the live tree.
 
@@ -76,7 +76,7 @@ the sixth instance of this shape.
 
 The three rows that must pass, pass: an honest before/after with one claimed
 file and its own cache and seat; a null arm; and a folio pressed into an arm's
-own `OUTLINER_WORK`.
+own `JOINTS_WORK`.
 
 ## P12 — two detectors, and the seal is honestly blind on three. **Held.**
 
@@ -95,7 +95,7 @@ tree and imported, then performed:
 4 restored · overwrite a shared grammar.json holding no lock    flaw.py:24 in unlocked
 4 repaired · the same write, under the lock oracle_build takes  read back, no complaint
 4 · a CHILD process writing it, which no interposition can see  flaw.py:29 in child
-private · press a folio into this arm's own OUTLINER_WORK       read back, no complaint
+private · press a folio into this arm's own JOINTS_WORK       read back, no complaint
 ```
 
 The separate module is load-bearing, not tidiness. `_site` skips its own frames,

@@ -4,7 +4,7 @@ of a **path** — and a before/after pair is two binaries, both of them older th
 a folio either one minted five minutes ago. So the stale check never fired and
 both arms read whichever folio was written last.
 
-Staged with two real pins sharing one `OUTLINER_WORK`: pin `tenon` mints
+Staged with two real pins sharing one `JOINTS_WORK`: pin `tenon` mints
 verilog's folio at `3ed97566244be7e3` and reads `nodes 22222`; pin `derive-only`
 mints `811e808412d78cbc` and reads `22210`. Run second into the shared
 directory, `derive-only` reports `cache: kept 30` and **22222** — the other

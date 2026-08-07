@@ -10,7 +10,7 @@ token's byte range and needs no parse tree to agree with. Against it:
 
 ```text
                      token bytes leafed   share
-outliner                        44,018   59.3%
+joints                        44,018   59.3%
 tree-sitter                     73,357   98.8%
 verible names                   74,194
 ```
@@ -58,7 +58,7 @@ defect at 21,535 bytes and the concatenation defect at 19,928, both read off
 worth +6.0 points and **nothing at all elsewhere** — 119 directive lines in one
 formally-verified core — while the concatenation half is general verilog.
 
-It has a 56-byte witness, and `OUTLINER_TRACE=quire` over it is three lines
+It has a 56-byte witness, and `JOINTS_TRACE=quire` over it is three lines
 long. The cell that chooses is not the one the earlier chapters hunted in 1701
 and 1184:
 

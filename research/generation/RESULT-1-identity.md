@@ -53,7 +53,7 @@ hash map, ugly but inert. Different lengths is a *different amount of data*
 being written for one grammar, which is not an ordering artefact and not
 cosmetic, and `stage.py mint` now reports the two separately for that reason.
 
-The older binary (`.local/ink/base/bin/outliner`, built out of this same tree at
+The older binary (`.local/ink/base/bin/joints`, built out of this same tree at
 08:35 today) presses different bytes for 16 of 30, but most of those are
 grammars whose press wobbles anyway, so the honest count of what a *different
 build* changes is the five over the reproducible set — `bash, c, julia, ruby,
@@ -105,7 +105,7 @@ control trial that is fourteen artifacts.
 
 > **Prediction:** a binary replaced mid-run with unchanged sources produces *no*
 > warning from today's stamp.
-> *Falsifier:* swap `zig-out/bin/outliner` mid-run without touching `src/` and
+> *Falsifier:* swap `zig-out/bin/joints` mid-run without touching `src/` and
 > see any of TOLD / STALE / DRIFT / MOVED / FED fire.
 
 `stage.py binary` swaps a real older binary over the running one at 0.5s of a
@@ -128,4 +128,4 @@ rule re-mints everything, and if the swap falls between a press and its
 read-back the previous lane's `Refused` guard stops the run outright (observed,
 first attempt at this trial). The gap is the other half — a binary installed
 without a fresher mtime, which is every pinned build, every `cp -p`, and every
-`OUTLINER_BIN` pointed at somebody else's tree.
+`JOINTS_BIN` pointed at somebody else's tree.

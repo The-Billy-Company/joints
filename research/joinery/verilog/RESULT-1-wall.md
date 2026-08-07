@@ -23,7 +23,7 @@ the paragraph I would keep if I could keep one.
 
 > **Re-pointed, not overturned, 2026-08-06 — and the paragraph above is the reason
 > it survives.** Every number on this page is `built`, `damage`, `describes`,
-> `stretch` or `standing`: outliner's own words about its own forest. The one
+> `stretch` or `standing`: joints's own words about its own forest. The one
 > question none of them asks is whether the bytes verilog puts under a construct
 > are under **tree-sitter's** construct. Sighted, they are mostly not:
 >
@@ -63,7 +63,7 @@ the paragraph I would keep if I could keep one.
 > quoted over 27,598 and not over 32,193.
 >
 > Numbers from the audited base arm of `../consort/RESULT-8-sighted.md`
-> (`.local/sighted/boards/base.json`, `outliner 68e8f0e395e8`). Deliberately not
+> (`.local/sighted/boards/base.json`, `joints 68e8f0e395e8`). Deliberately not
 > quoted off `crooked`, which is under repair tonight
 > (`../consort/HANDOFF-crooked.md`); both candidate fixes only move bytes among
 > `crooked`, `soft` and `unframed`, so `square / (built − unaudited)` is invariant

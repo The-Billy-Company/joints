@@ -1,5 +1,5 @@
 Four lanes are running before/after measurements and each was being told by hand
-to give every arm its own `OUTLINER_WORK`. The recipe now lives where a lane
+to give every arm its own `JOINTS_WORK`. The recipe now lives where a lane
 trips over it — `tool/README.md` under `pin.py`, and as the third house rule at
 the top of `research/joinery/TESTING.md`, beside the two about pricing both
 halves and naming your instrument:
@@ -13,10 +13,10 @@ python3 tool/standing.py --twice=3                # is this row stable at all?
 ```
 
 **A binary is one third of a measurement.** The other two thirds are each their
-own way to read one arm twice. `OUTLINER_WORK` belongs under the pin because a
+own way to read one arm twice. `JOINTS_WORK` belongs under the pin because a
 folio is a derived artifact of a binary; the ticket in `order.py` now refuses to
 serve one pin's folio to another, but a shared cache still costs both arms a
-full re-press on every alternation. `OUTLINER_LANE` belongs under the pin
+full re-press on every alternation. `JOINTS_LANE` belongs under the pin
 because without one the oracle seat is keyed on `os.getppid()` — *which shell
 you ran from* — and the oracle is the other parser in every audited column.
 

@@ -15,8 +15,8 @@ Two arms, both pinned, both judged by the same court:
 
 | arm | citation |
 |---|---|
-| before | outliner `03b61a184` · tree `eb08d2a2b` (pin) · oracle `d85e736fa` (30 of 30 live, 30 attributed) |
-| after | outliner `1885792a7` · tree `4f018b60f` (pin) · oracle `d85e736fa` (30 of 30 live, 30 attributed) |
+| before | joints `03b61a184` · tree `eb08d2a2b` (pin) · oracle `d85e736fa` (30 of 30 live, 30 attributed) |
+| after | joints `1885792a7` · tree `4f018b60f` (pin) · oracle `d85e736fa` (30 of 30 live, 30 attributed) |
 
 ## The arm, and why it is one change wide
 
@@ -135,7 +135,7 @@ someone to chase.
 Both were confidently wrong rather than broken, which is the local pattern.
 
 1. **`standing.py --cite` stamped every citation it ever minted `**no oracle** -
-   outliner's own words`.** It skips the survey by design - an attribution that
+   joints's own words`.** It skips the survey by design - an attribution that
    costs a 30-second board gets skipped - but the survey is also the only thing
    that seats a court, so the field was structurally absent rather than
    measured. The board printed `30 oracle(s) d85e736fa attributed` in the same

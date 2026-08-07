@@ -2,7 +2,7 @@
 """Which oracle answered.
 
 `stamp.py` records fourteen fields about a run and **all fourteen are about
-outliner**: the binary's digest, the tree it was built from, whether that tree
+joints**: the binary's digest, the tree it was built from, whether that tree
 has moved, which artifacts it was fed. Every one of those exists because a
 number was once published about a tree that no longer existed.
 
@@ -29,7 +29,7 @@ That is not a theoretical gap. Three facts, measured on this machine:
 So the identity of an oracle is the **bytes it is lowered from** - everything
 under its `src/`: the grammar json, the generated `parser.c`, the external
 scanner, the headers - plus the CLI version that lowered them. That is the same
-choice `stamp.survey` makes for outliner, for the same reason, and it is
+choice `stamp.survey` makes for joints, for the same reason, and it is
 reproducible where a library digest is not.
 
 Two things follow, and this file is both:
@@ -771,7 +771,7 @@ def under(tag: str, cases) -> list:
             else:
                 bad.append(f"{name}: pin moved ({row['tree'][:9]} → {got[:9]})")
             continue
-        # `grammar` stays the upstream file: it is what OUTLINER reads, and
+        # `grammar` stays the upstream file: it is what JOINTS reads, and
         # repointing it would quietly change the other parser's input while
         # claiming to pin this one. What the pin owes is a refusal when the two
         # have come apart, which is the check below rather than a substitution.

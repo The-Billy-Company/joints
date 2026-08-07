@@ -7,7 +7,7 @@ exercised that branch.
 Tree-sitter reads the same `grammar.json`, so every one of those rows was a
 falsifiable prediction. `research/joinery/adjudicate/` takes the 18
 real-construct gaps `GAPS.md` prices at **106,798 B**, authors one witness each
-plus an innocent control per grammar, and parses each three ways: outliner,
+plus an innocent control per grammar, and parses each three ways: joints,
 tree-sitter, and tree-sitter with a stub scanner that answers `false` to every
 external.
 

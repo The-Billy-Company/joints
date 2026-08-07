@@ -59,7 +59,7 @@ vocabulary narrows this gap; it does not close it.
 **P4 - three or more of the fifteen unexercised externals resist an authored
 input. FAILED.** One did. Thirteen of the fifteen lit up on first authorship,
 two were the P5 category, and the single holdout is yaml's, which resists for a
-reason no specimen can fix: `outliner parse upstream/grammars/yaml.json` exits
+reason no specimen can fix: `joints parse upstream/grammars/yaml.json` exits
 2 with `yaml has no lexable terminal at all`. yaml is 113 externals and zero
 literals; there is nothing for a lexer to be built out of.
 

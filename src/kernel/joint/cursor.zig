@@ -176,7 +176,7 @@ pub const Cursor = struct {
     fusion: Fusion = .depth,
     /// Print the standing limbs when a run hits the ceiling. Off, because a
     /// grammar that fans does it thousands of times and the interesting one is
-    /// the first. `OUTLINER_TRACE=joint` asks the same question without a field
+    /// the first. `JOINTS_TRACE=joint` asks the same question without a field
     /// to set; `confess` resolves the two.
     confessing: bool = false,
     /// How many limbs this cursor will carry. `limb_ceiling` unless a caller is
@@ -598,7 +598,7 @@ pub const Cursor = struct {
     ///
     /// Two ways to ask, one gate, and it lives here rather than at the call
     /// sites so the two of them cannot come to disagree about what turns this
-    /// on: `--confess` is a caller who wants it for this run, `OUTLINER_TRACE=
+    /// on: `--confess` is a caller who wants it for this run, `JOINTS_TRACE=
     /// joint` is the ambient way in for an embedder with no argv to set. The
     /// lines go through assay's channel rather than straight to stderr, so a
     /// host that scoped a dark sink stays quiet even here.

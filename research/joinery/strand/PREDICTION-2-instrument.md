@@ -4,7 +4,7 @@ Written before the query was repaired. Scored in `RESULT-2-instrument.md`.
 
 ## What was already here, and what the brief said about it
 
-The brief says `outliner state --holding <item>` "is **not in the binary and
+The brief says `joints state --holding <item>` "is **not in the binary and
 never has been**; `git log -S` finds no commit that added it", and
 `owners.py::stranded()` says the same sentence in the tree.
 
@@ -12,7 +12,7 @@ never has been**; `git log -S` finds no commit that added it", and
 `--holding` is in the working tree right now — `state.zig` implements
 `spelling()`, `main.zig` dispatches it, and the pinned binary answers it.
 `git log -S` finds no commit because **`state.zig` is untracked**: `git status`
-reports `?? src/surface/face/outliner/state.zig`. A history search cannot see a
+reports `?? src/surface/face/joints/state.zig`. A history search cannot see a
 file that has never been committed, and in a tree where ~90% of `src/` is
 uncommitted that is not an edge case.
 

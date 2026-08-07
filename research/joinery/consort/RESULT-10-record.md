@@ -220,7 +220,7 @@ the filename. **A sweep I can only audit by recognising my own filenames is a
 sweep I cannot audit at all**, and the tail of 102 contains no filenames I wrote.
 
 The general form is the one this repository keeps re-learning, and it now has a
-third instance beside `outliner state`'s row and `state --census`: **an instrument
+third instance beside `joints state`'s row and `state --census`: **an instrument
 that reduces a two-part fact to one number is reporting one of two facts and not
 saying which.** `onlydamage.py` reports "quotes an oracle column" and means
 "quotes one within 24 characters, on one side of a pipe". Both readings are

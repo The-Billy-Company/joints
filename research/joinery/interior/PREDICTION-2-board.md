@@ -2,7 +2,7 @@
 
 Written before any seating existed. The baseline is
 `.local/lane-strings/board-before.json`, taken 2026-08-05T19:34Z, binary
-`outliner 9e422a351`.
+`joints 9e422a351`.
 
 ## The baseline rows, as read
 

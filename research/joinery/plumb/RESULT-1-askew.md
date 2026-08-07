@@ -1,6 +1,6 @@
 # Result 1 — how much of `built` is built wrong
 
-**9.24% of `built` is regrouped** — 33,634 of 363,987 bytes that outliner and
+**9.24% of `built` is regrouped** — 33,634 of 363,987 bytes that joints and
 tree-sitter cut apart differently. **97% of it is one grammar**, and **97% of
 that grammar's share traces to one unlexable token.**
 
@@ -43,7 +43,7 @@ be the twenty-fourth instrument:
 | 33,634 / 257,720 | **13.05%** | of the bytes the oracle could actually adjudicate |
 | 33,634 / 526,798 | **6.38%** | of the corpus |
 
-The middle one is the least flattering to outliner and the most defensible:
+The middle one is the least flattering to joints and the most defensible:
 34,687 built bytes have no oracle verdict at all, and counting silence as
 agreement is the exact move this board has been caught on twice.
 
@@ -70,7 +70,7 @@ headline is one grammar wearing a corpus-sized number.
 
 php declares 12 externals and seats **none**. One of them is
 `encapsed_string_chars` — the *body of a double-quoted string*. So php cannot
-lex `"x"`. Outliner says so itself, unprompted:
+lex `"x"`. Joints says so itself, unprompted:
 
 ```
 unexpected (?:\?[^'\]+) at 12 in state 68
@@ -103,7 +103,7 @@ observation that opened this lane is sound as an observation and would have
 been a footnote as a finding.
 
 **And 1,096 of swift's 1,213 askew bytes are not defects at all.** They are
-method names outliner resolves to `type_identifier` where tree-sitter leaves
+method names joints resolves to `type_identifier` where tree-sitter leaves
 `simple_identifier`, and swift's own grammar declares that `ALIAS`. My first
 draft folded those in and swift came out second-worst in the corpus on a
 defect that misreads nothing. Splitting `renamed` off is the single change
@@ -177,15 +177,15 @@ seeing the data and then grading with the refinement is not a prediction.
    (3,967) refuse because tree-sitter's own parse contains `ERROR` — for
    `picorv32.v` the ERROR is the **root**, spanning the whole file. The
    corpus's #1 damage row is a file the oracle itself cannot parse with the
-   pinned grammar. That is a fact about the pin, not about outliner, and it
-   means outliner's 30,720 built bytes there are compared against nothing.
+   pinned grammar. That is a fact about the pin, not about joints, and it
+   means joints's 30,720 built bytes there are compared against nothing.
 2. **A byte-indexed comparison undercounts structural misreadings** — see
    below. This is the big one.
 3. **Interstitial bytes are not judged on name.** 71,580 bytes sit under an
-   oracle *interior* node rather than a leaf; outliner elides hidden rules and
+   oracle *interior* node rather than a leaf; joints elides hidden rules and
    invents alias nodes, so a difference there can be node shaping. They are
    reported separately (60,816 agree, 10,764 differ) and never folded in.
-4. **The oracle is a pin, not a truth.** Where outliner's `grammar.json` and
+4. **The oracle is a pin, not a truth.** Where joints's `grammar.json` and
    the generated tree-sitter parser came from different commits, a legitimate
    difference reads as a defect. The `renamed` class removes the one form of
    this I could detect mechanically; others may remain.
@@ -197,7 +197,7 @@ for a reason I can demonstrate rather than hedge about.**
 
 `research/joinery/specimen/go/selector-field.go` is the exhibit. go is 1,189
 bytes, 1,189 built, **100.0% standing, 0 damage** — every instrument here
-scores it perfect. Outliner reads `fmt.Print("x")` as a
+scores it perfect. Joints reads `fmt.Print("x")` as a
 `type_conversion_expression` over a `qualified_type`: not "call Print with x"
 but "convert x to the type fmt.Print". Tree-sitter reads `call_expression` over
 `selector_expression`. Opposite meanings, same file.
@@ -211,7 +211,7 @@ That is the structural blind spot, and it is the same shape as the one this
 lane was opened to expose. `built` cannot see a wrong tree because a wrong
 tree is still a tree. `plumb` cannot see a wrong *shape* because the leaves
 underneath it are still the right leaves. I chose byte-indexing deliberately —
-outliner returns a forest on 18 of 30 grammars and aligning 3,544 roots is a
+joints returns a forest on 18 of 30 grammars and aligning 3,544 roots is a
 guess — and the cost of that choice is that **9.24% is a floor whose ceiling I
 have not measured**. A tree-aligned comparison is the next lane, and it will
 report a larger number than this one.
@@ -225,7 +225,7 @@ right thing on the twenty-eight grammars in between.
 ## Handover
 
 Three specimens, all failing today, all carrying tree-sitter's answer rather
-than outliner's:
+than joints's:
 
 - **`php/double-quoted-string.php`** — 6 claims. php cannot lex `"x"`;
   `encapsed_string_chars` is blind. Fix this one and ~32,600 of the corpus's

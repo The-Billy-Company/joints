@@ -6,7 +6,7 @@ derived ratio, `gain`. That is enough to see that 17 grammars are not
 incremental and not enough to say which of the two reuse halves is missing,
 because both of them show up as time.
 
-The report line `outliner amend` prints already separates them, and nothing was
+The report line `joints amend` prints already separates them, and nothing was
 reading it that way:
 
     N lifts over B bytes    the suffix half. Subtrees taken out of the old tree
@@ -49,12 +49,12 @@ from collate import keystrokes  # noqa: E402
 from order import folio_for  # noqa: E402
 from walls import roster  # noqa: E402
 
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
-WORK = Path(os.environ.get("OUTLINER_WORK", ROOT / ".local" / "standing"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
+WORK = Path(os.environ.get("JOINTS_WORK", ROOT / ".local" / "standing"))
 GRAMMARS = ROOT / "upstream" / "grammars"
 OUT = ROOT / ".local" / "keystroke"
 
-# `outliner: <path>: opened: accepted, 274/274 leaves reminted at 0, height 9,
+# `joints: <path>: opened: accepted, 274/274 leaves reminted at 0, height 9,
 #  0 lifts over 0 bytes, 274 tokens read, 900 us`
 ROW = re.compile(
     r": (?P<what>opened|\d+\.\.\d+ \+\d+): (?P<verdict>.+?)"

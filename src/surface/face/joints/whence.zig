@@ -64,18 +64,18 @@
 //! new question.
 
 const std = @import("std");
-const outliner = @import("outliner");
+const joints = @import("joints");
 
-const Grammar = outliner.press.grammar.Grammar;
-const Collection = outliner.press.lr0.Collection;
-const Item = outliner.press.lr0.Item;
+const Grammar = joints.press.grammar.Grammar;
+const Collection = joints.press.lr0.Collection;
+const Item = joints.press.lr0.Item;
 
 /// The automaton read backwards. `press` already owns this — a CSR of inverted
 /// edges and an unwind that crosses only edges labelled by the body symbol at
 /// that position, so a handle origin is exact rather than a radius. This file
 /// asks the questions; it does not re-derive the walk that answers them.
-const Retrace = outliner.press.retrace.Retrace;
-const Step = outliner.press.retrace.Step;
+const Retrace = joints.press.retrace.Retrace;
+const Step = joints.press.retrace.Step;
 
 /// How many state ids a line will name before it stops counting out loud.
 const shown = 12;
@@ -149,7 +149,7 @@ pub fn holding(
     text: []const u8,
 ) !u8 {
     const q = Query.parse(gpa, text) catch |e| {
-        try w.print("outliner: cannot read {s} as an item: {s}\n", .{ text, @errorName(e) });
+        try w.print("joints: cannot read {s} as an item: {s}\n", .{ text, @errorName(e) });
         return 2;
     };
     defer gpa.free(q.body);
@@ -186,7 +186,7 @@ pub fn chain(
     at: u32,
 ) !u8 {
     if (at >= c.states.len) {
-        try w.print("outliner: {s} has {d} states\n", .{ gr.name, c.states.len });
+        try w.print("joints: {s} has {d} states\n", .{ gr.name, c.states.len });
         return 2;
     }
     var back = try Retrace.build(gpa, c);

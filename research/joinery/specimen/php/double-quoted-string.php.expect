@@ -2,13 +2,13 @@
 #
 # `encapsed_string_chars` is one of the twelve externals php declares and the
 # coverage gate reports php seating NONE of them. So the body of `"x"` is a
-# token no lexer in this tree can make, and outliner says so itself:
+# token no lexer in this tree can make, and joints says so itself:
 #
 #   unexpected (?:\\?[^'\\]+) at 12 in state 68
 #   [no stand-in for encapsed_string_chars, admitted by shift]
 #
 # The claims below are TREE-SITTER'S answer over these same bytes, not
-# outliner's. They fail today - 5 roots, 1 mend, no `encapsed_string`, and a
+# joints's. They fail today - 5 roots, 1 mend, no `encapsed_string`, and a
 # `text` node instead. That is the handover: this file passes when php can
 # lex a string, and until then it says exactly which token is missing.
 #

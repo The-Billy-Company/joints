@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Find the table cell that decides a wrong parent, and read what the press saw.
 
-A wrong-parent defect is one cell. Nothing in `outliner parse` will name it -
+A wrong-parent defect is one cell. Nothing in `joints parse` will name it -
 the parse **succeeds**, so there is no wall, no stop, no state number in any
 diagnostic, and `inquest` (which reports on walls) has nothing to say. The cell
 has to be found from the table.
@@ -23,7 +23,7 @@ associativity is consulted - written as a search instead of a predicate.
 Confirm a candidate with the press's own instrument rather than this file's
 inference:
 
-    OTL_DECIDE=<state> outliner parse <grammar> <any file>
+    JOINTS_DECIDE=<state> joints parse <grammar> <any file>
 
 `src/press/bench.zig` prints the whole `Survey` and the ladder's verdict for
 that state. What a report quotes should be that line, not this one.
@@ -38,7 +38,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-BIN = os.environ.get("OUTLINER_BIN", str(ROOT / "zig-out" / "bin" / "outliner"))
+BIN = os.environ.get("JOINTS_BIN", str(ROOT / "zig-out" / "bin" / "joints"))
 HOME = ROOT / ".local" / "tenon"
 ITEM = re.compile(r"^ {4}(\S+) -> (.*)$")
 CELL = re.compile(r"^ {4}(\S+)\s{2,}(read on|fold\b.*)$")
@@ -140,7 +140,7 @@ def find(name: str, shifts: list[str], complete: list[str], rule: str) -> int:
                "; ".join(f"{k} -> {v} ." for k, v in list(done.items())[:2])
         print(f"{s.n:>7} {len(s.items):>5} {'CONT' if tails else '—':<6} {note}")
     print(f"\n{hit} candidate cell(s). Confirm with"
-          f" `OTL_DECIDE=<state> outliner parse upstream/grammars/{name}.json <file>`.")
+          f" `JOINTS_DECIDE=<state> joints parse upstream/grammars/{name}.json <file>`.")
     return 0 if hit else 1
 
 

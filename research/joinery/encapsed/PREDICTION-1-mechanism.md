@@ -5,7 +5,7 @@ witness and before touching `src/kernel/lex/`.
 
 ## What I think is happening
 
-`upstream/sources/Str.php` is 67,845 bytes. `outliner parse --ranges --all`
+`upstream/sources/Str.php` is 67,845 bytes. `joints parse --ranges --all`
 prints exactly one node spanning `[26850, 67845)`:
 
 ```
@@ -59,7 +59,7 @@ Three, and each can kill it on its own.
 
 `standing.py` says php's stop is `unexpected / at 26849 in state 68`, and the
 brief warns that a reported state is a location and not a diagnosis. If
-`outliner state php.json --holding` says state 68 holds no item spelling
+`joints state php.json --holding` says state 68 holds no item spelling
 `encapsed_string_chars`, the byte is right and the state is a red herring — the
 diagnosis survives, the number 68 does not, and I should say so rather than
 quote it.

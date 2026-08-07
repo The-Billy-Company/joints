@@ -3,7 +3,7 @@
 `tool/field.py`. Roster pinned at
 `nvim-treesitter/nvim-treesitter@3d3321b560a63ff92a8692401f303a5123336b86`,
 `lua/nvim-treesitter/parsers.lua`, sha256 `4a8f2aac6a74…a92403`, **323 entries**.
-Binary `.local/pin/generalize/bin/outliner`, build `f6569f034413`, tree
+Binary `.local/pin/generalize/bin/joints`, build `f6569f034413`, tree
 `299964a876ee`. Two runs: the strict one, which pins every repository to a
 40-hex commit the roster itself states, and an addendum which resolves the ten
 entries the roster pins by tag.

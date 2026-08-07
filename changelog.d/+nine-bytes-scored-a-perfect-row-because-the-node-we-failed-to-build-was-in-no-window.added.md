@@ -4,7 +4,7 @@
 <p>x</q>
 ```
 
-tree-sitter reads one `element [0, 8)` over three children. outliner reads two
+tree-sitter reads one `element [0, 8)` over three children. joints reads two
 roots and no `element`. `rack.py` scored that **7 square, 0 crooked — a perfect
 row**, and its own author demonstrated the case and left the hole open. The
 reason is structural: `rack` compares spines inside built windows, one window
@@ -15,7 +15,7 @@ hole. A node we never built is in no window, so nothing on our side ever stood
 where it was.
 
 **A frame is missing when the oracle has a bracket, other than its own root,
-wholly containing two or more of outliner's built roots, and outliner has no
+wholly containing two or more of joints's built roots, and joints has no
 node with that extent.** Its built bytes go to a new `unframed` column, taken
 **only** from `square` and `renamed`, and never added to `crooked` — one column
 says the derivation over a byte differs, the other says there is a node above it

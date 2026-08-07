@@ -23,6 +23,6 @@ scala 1,277.
 The instrument that made this expensive was the error itself. `TrailRefused`
 names neither the move, the byte, nor the operands, and four sites raise it, so
 telling them apart meant bisecting keystrokes until the crash moved. Under
-`OUTLINER_TRACE=weave` each site now says which pairing refused, at which move
+`JOINTS_TRACE=weave` each site now says which pairing refused, at which move
 of how many, at which byte, with both entry states — and a declined splice says
 so in its own words rather than borrowing the fatal's.

@@ -1,7 +1,7 @@
 # Result 6 - haskell's 1,013 bytes were never unjudged
 
 Scored against [PREDICTION-2](PREDICTION-2-rederive.md) P4.1–P4.2. Same arm as
-[RESULT-3](RESULT-3-rederive.md) (`outliner 94d59d9ad`, oracle `d85e736fa`).
+[RESULT-3](RESULT-3-rederive.md) (`joints 94d59d9ad`, oracle `d85e736fa`).
 Tool: [`unwindowed.py`](unwindowed.py), which walks the same windows
 `rack.survey` walks and files each byte the same way, keeping the runs and the
 oracle's own frame over each one.
@@ -38,7 +38,7 @@ otherwise           →  askew / racked
 ```
 
 `unwindowed` is *"the oracle has nothing strictly inside this window here and
-outliner does"*, and its docstring is right that the oracle's silence inside a
+joints does"*, and its docstring is right that the oracle's silence inside a
 window is not a verdict. What the column cannot say is **why** the oracle has
 nothing inside: on every one of haskell's 295 runs the narrowest oracle bracket
 covering the window is the oracle's own root, `haskell`. `within` drops a rung

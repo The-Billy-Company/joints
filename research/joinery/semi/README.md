@@ -1,7 +1,7 @@
 # semi — the statement separator three languages hand to a scanner
 
 Swift, kotlin and scala each give their statement or member separator to an
-external scanner, and outliner could not read any of them. Together that was
+external scanner, and joints could not read any of them. Together that was
 16,809 unbound bytes, 12.5% of the board. This folder is the lane that seated
 two of the three and wrote down why the third could not be.
 

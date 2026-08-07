@@ -6,7 +6,7 @@ and unedited since. Scored at the bottom, failures included.
 
 Everything below is taken on **pin `tenon`** (`fa7fcaee5e14`, built
 2026-08-06T00:05:08Z) against **oracle `d952e2aa2c90` / tree-sitter 0.26.11**,
-seat `twice`, in a private `OUTLINER_WORK`. That second half of the stamp is the
+seat `twice`, in a private `JOINTS_WORK`. That second half of the stamp is the
 finding.
 
 ## The short answer
@@ -99,7 +99,7 @@ evidence the board wanders, and it is not evidence it does not.
 ### 1. The board's newest column had no generation guard at all
 
 `Held` carried three digests — folio, binary, source — and all three describe
-*outliner*. `crooked` is a comparison of two parsers and **the second one was
+*joints*. `crooked` is a comparison of two parsers and **the second one was
 unattributed**, so a sibling regenerating one grammar's tree-sitter sources
 moved the number while every guard on the page read clean and the row printed
 `graded: read`.
@@ -124,7 +124,7 @@ attribute.
 
 `order.miss` compared `folio.st_mtime` against `BIN.st_mtime`. That answers *was
 this made before the binary*, asked of a **path**. Staged with two real pins
-sharing one `OUTLINER_WORK`:
+sharing one `JOINTS_WORK`:
 
 | | verilog folio | verilog `nodes` |
 |---|---|---|

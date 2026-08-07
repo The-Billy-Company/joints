@@ -10,7 +10,7 @@ byte-identical (verilog damage 62852, built 51.6%). A `sided` cast records the
 work item that cast it; a refuted move marks itself dead; a cast whose caster
 died this same token mints an identity. Keyed on identity and not on offset,
 because haskell's 128 supplies produce 255 zero-width nodes and an offset join
-double-counts there even where verilog's is exact. Under `OUTLINER_TRACE=quire`
+double-counts there even where verilog's is exact. Under `JOINTS_TRACE=quire`
 the parse names each moment every surviving reading descends from one orphan -
 the moment a speculation becomes the sole authority for the scanner's slate.
 

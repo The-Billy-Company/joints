@@ -34,7 +34,7 @@ Corpus-wide: square **205,583 -> 272,766**, crooked as a share of `built`
 **21.62% -> 10.94%**, board **73.0% -> 74.7%**, and php off the widest-by-damage
 list. No other grammar's row moves by a byte - `rack`'s own without-php split
 reads 204,921 square identically on both arms, each arm measured with its own
-`OUTLINER_WORK` against a frozen oracle.
+`JOINTS_WORK` against a frozen oracle.
 
 **The corpus can only see half of it.** `Str.php` holds zero backticks and zero
 `<<<`, so the execution-string pair is seated and never exercised. Five php

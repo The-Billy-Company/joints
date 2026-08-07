@@ -4,7 +4,7 @@ Scored against [PREDICTION-1-board.md](PREDICTION-1-board.md), written before
 the corpus sweep. **Five of six held; P2 failed, and it is the one I named in
 advance as the one I most expected to be wrong about.**
 
-    binary   .local/pin/flag/bin/outliner  ·  outliner 7aa79135a from tree 9346ded81
+    binary   .local/pin/flag/bin/joints  ·  joints 7aa79135a from tree 9346ded81
     oracle   tree-sitter 0.26.11, via tool/rack.py (read-only for this lane)
     corpus   30 grammars, 526,798 bytes
 

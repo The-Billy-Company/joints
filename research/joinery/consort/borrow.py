@@ -25,7 +25,7 @@ which of the two is wrong: the qualifying width **per run kind**, and what
 `crooked` would read if the sample were restricted to the kinds `crooked`
 counts.
 
-    OUTLINER_BIN=<binary> python3 borrow.py [grammar...]
+    JOINTS_BIN=<binary> python3 borrow.py [grammar...]
 """
 from __future__ import annotations
 

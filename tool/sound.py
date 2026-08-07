@@ -62,8 +62,8 @@ import stamp  # noqa: E402
 from order import Refused, folio_for  # noqa: E402
 from walls import roster  # noqa: E402
 
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
-WORK = Path(os.environ.get("OUTLINER_WORK", ROOT / ".local" / "sound"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
+WORK = Path(os.environ.get("JOINTS_WORK", ROOT / ".local" / "sound"))
 PATIENCE = 240
 
 
@@ -95,7 +95,7 @@ class Says(NamedTuple):
 def look() -> tuple[list[Says], list[tuple[str, str]]]:
     """Every roster row asked once: the ones that answered, and the ones that could not.
 
-    Through `stamp.ask`, which is the only place an instrument runs outliner
+    Through `stamp.ask`, which is the only place an instrument runs joints
     and reads its answer back - so this gate and the board are reading the same
     sentence out of the same stderr rather than two regexes that agree today.
     """
@@ -183,7 +183,7 @@ def main(argv: list[str]) -> int:
               "\nand these rows carry no such clause — so either the binary predates the"
               "\ncontract, or the `Quire.survey` call has been dropped and every row here"
               "\nis clearing itself on an absence. Rebuild, and if the clause is still"
-              "\nmissing, look at `verdict` in `src/surface/face/outliner/parse.zig`.",
+              "\nmissing, look at `verdict` in `src/surface/face/joints/parse.zig`.",
               file=sys.stderr)
         return 1
 

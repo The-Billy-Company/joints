@@ -1,7 +1,7 @@
 # The reason a blind external costs far more than its own bytes.
 #
 # `double-quoted-string.php` shows php cannot lex `"x"`. This shows what
-# happens NEXT, and it is the finding this lane exists for. Outliner's forest
+# happens NEXT, and it is the finding this lane exists for. Joints's forest
 # over these 70 bytes:
 #
 #   php_tag       [0, 5)

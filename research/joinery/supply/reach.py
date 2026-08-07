@@ -100,7 +100,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--spans", type=Path, help="hand rack the join key")
     args = ap.parse_args(argv)
 
-    work = Path(os.environ.get("OUTLINER_WORK", ROOT / ".local" / "work"))
+    work = Path(os.environ.get("JOINTS_WORK", ROOT / ".local" / "work"))
     print(f"--mend={args.mend}\n\n{'grammar':<12}{'size':>9}"
           f"{'cuts ctl':>10}{'reach ctl':>11}{'%':>6}"
           f"{'cuts arm':>10}{'reach arm':>11}{'%':>6}{'gave':>7}   lead")

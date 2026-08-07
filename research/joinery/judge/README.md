@@ -38,7 +38,7 @@ token):
 
 | | leaf bytes | of token bytes | nodes | leaves |
 |---|---:|---:|---:|---:|
-| outliner | 44,911 | **60.5%** | 23,497 | 9,394 |
+| joints | 44,911 | **60.5%** | 23,497 | 9,394 |
 | tree-sitter | 73,357 | **98.8%** | 48,883 | 17,290 |
 
 **Bytes we leaf and tree-sitter does not: 0.** Our leaf set is a strict subset

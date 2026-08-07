@@ -1,7 +1,7 @@
 # Result 1 — ocaml could not lex a byte, and no board could see it
 
-Treatment arm `outliner aece1211e` · tree `a9353c78b` (pin) · oracle `d85e736fa`
-(30 of 30 live, 30 attributed). Control arm `outliner d95f68e4a` · tree
+Treatment arm `joints aece1211e` · tree `a9353c78b` (pin) · oracle `d85e736fa`
+(30 of 30 live, 30 attributed). Control arm `joints d95f68e4a` · tree
 `b8757cdcc` · same oracle `d85e736fa` (30 of 30 live, 30 attributed).
 `still against kotlin-dot ocaml-orphan --mine src/kernel/lex/scanner.zig --inert`
 reads **comparable**: one file differs and this lane claims it.
@@ -11,7 +11,7 @@ instrument was lying about that.
 
 ## What was wrong
 
-`outliner lex upstream/grammars/ocaml.json` returns **0 tokens over 16,878
+`joints lex upstream/grammars/ocaml.json` returns **0 tokens over 16,878
 bytes** on ocaml's own corpus file, in 2 microseconds. It returns 0 tokens on a
 Python file too, and on a one-byte file, and on anything else. The other
 twenty-nine grammars lex normally. Ocaml lexed nothing at all, ever, and had
@@ -178,7 +178,7 @@ them is this: scala `_simple_string_start`, ruby `heredoc_beginning`, bash
 coarser - 1,621 tokens to 54 - and I am calling that more honest rather than
 worse, on the argument that the terminals now in its cut are ones php's states
 genuinely name. Php parses whole, so `blame` never runs there and nothing in its
-tree can contradict me. If someone is using `outliner lex` on php as a
+tree can contradict me. If someone is using `joints lex` on php as a
 tokenizer, this lane made their day worse and the board cannot see that either.
 
 **"Only two grammars moved" is measured, "only two grammars *could* move" is

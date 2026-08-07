@@ -24,7 +24,7 @@ in its own body, an unterminated opener at end of file.
   **declared** - the named entries of `externals[]` in `grammar.json`. Exact;
   it is a field in a file.
 
-  **blind** - the terminals outliner says it has no stand-in for. Exact, but it
+  **blind** - the terminals joints says it has no stand-in for. Exact, but it
   has to be *pried out*: every reporting path caps the list at eight names and
   appends `+N more`, so a grammar over the cap can never state its own blind set
   in one breath. `enumerate_blind` rotates `externals[]` by eight and unions the
@@ -187,7 +187,7 @@ def press(path: Path) -> tuple[list[str], int] | None:
     Read from **`lex`**, and the reason is the twenty-second instrument this
     repository has caught reporting a number a report then repeated.
 
-    `outliner grammar` closes with `note: external scanner tokens cannot be
+    `joints grammar` closes with `note: external scanner tokens cannot be
     lexed here: ...`, which reads exactly like the blind set and is not it. On
     julia that note lists all sixteen declared externals; `lex` on the same
     grammar reports **five**, and names them - the `_immediate_*` family - while
@@ -286,7 +286,7 @@ def stop(grammar: Path, src: Path) -> tuple[int, int, str]:
     The third field is why this returns three. This read used to default a
     missing stop line to `1` roots and `0` mends, which is the exact shape of
     a perfect parse, so a binary that never parsed at all scored `roots 1` and
-    `mends 0` as claims HELD. `outliner parse upstream/grammars/yaml.json` exits
+    `mends 0` as claims HELD. `joints parse upstream/grammars/yaml.json` exits
     2 with `yaml has no lexable terminal at all` - the grammar is 41 externals
     and zero literals, so there is nothing for the lexer to be built out of -
     and yaml/comment.yml read 2 of 4 against a binary that had not read a byte
@@ -302,7 +302,7 @@ def stop(grammar: Path, src: Path) -> tuple[int, int, str]:
         return int(roots[1]), int(mends[1]) if mends else 0, ""
     why = next((l.strip() for l in got.stderr.splitlines()
                 if "blind to" not in l), "") or f"exit {got.returncode}"
-    return 0, 0, why.removeprefix("outliner: ")
+    return 0, 0, why.removeprefix("joints: ")
 
 
 # ---------------------------------------------------------------- population
@@ -605,7 +605,7 @@ def show(args) -> int:
 def oracle(args) -> int:
     """Tree-sitter's own tree over a specimen, so a claim can come from the spec.
 
-    A claim derived by running outliner and writing down what it said is not a
+    A claim derived by running joints and writing down what it said is not a
     claim; it is a snapshot, and it passes forever including the whole time the
     hand is wrong. This is the other reader - the grammar's reference
     implementation over the same bytes - and it is what a `spans` extent should
@@ -807,7 +807,7 @@ def status(args) -> int:
 def attributed(anyway: bool = False) -> tuple[stamp.Stamp, int]:
     """Name the binary that is about to answer, and refuse it if nobody chose it.
 
-    This file used to read whatever `zig-out/bin/outliner` happened to hold and
+    This file used to read whatever `zig-out/bin/joints` happened to hold and
     print a verdict without mentioning it. Ten lanes build into that prefix. A
     lane on its final pass got **7 of 20 sound from a tree that builds 14 of
     20** - a sibling had rebuilt the shared prefix from a different state
@@ -821,7 +821,7 @@ def attributed(anyway: bool = False) -> tuple[stamp.Stamp, int]:
     - **Every** report carries `stamp.line()`. A number without a binary
       identity beside it is not a measurement anyone can retake.
     - A run is REFUSED, exit 3, when it is both **unattributed** - the default
-      shared prefix, no `OUTLINER_BIN` - and the binary **does not match this
+      shared prefix, no `JOINTS_BIN` - and the binary **does not match this
       tree**, either because a source is newer than it (`stale`) or because it
       was built from different sources than the repo now holds (`drift`).
 
@@ -845,7 +845,7 @@ def attributed(anyway: bool = False) -> tuple[stamp.Stamp, int]:
           f"  sibling built last. A specimen run against it grades a tree that may not be\n"
           f"  yours: that has already produced `7 of 20 sound` from a tree building 14.\n\n"
           f"  Pin a binary you own, and the pin records which tree it is:\n"
-          f"      python3 tool/pin.py build <name> && export OUTLINER_BIN=$(python3"
+          f"      python3 tool/pin.py build <name> && export JOINTS_BIN=$(python3"
           f" tool/pin.py path <name>)\n"
           f"  Or rebuild the shared prefix and accept the race:\n"
           f"      zig build\n"

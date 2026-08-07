@@ -105,7 +105,7 @@ on it, and netted out it stands over 10,410 fewer real bytes than `fell`.
 
 ## The scripts, in the order they were written
 
-Each takes `OUTLINER_BIN` and scores through `standing`'s own arithmetic, so no
+Each takes `JOINTS_BIN` and scores through `standing`'s own arithmetic, so no
 row here can disagree with the board about what a root is.
 
 | script | question | what it settled |

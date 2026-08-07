@@ -1,5 +1,5 @@
 Scala handed newline inference and its indentation regions to an external
-scanner, and outliner seated none of the three. So `Option.scala` parsed as 314
+scanner, and joints seated none of the three. So `Option.scala` parsed as 314
 top-level roots: every statement boundary the file did not spell with a `;` was
 a place the parse could not continue, and the scaladoc above each definition —
 recognised, lexed, reachable — sat as its own root because nothing was open for

@@ -5,7 +5,7 @@
 #
 # The first draft of this specimen was `R"tag(a)b"tag"`, which has no closer
 # at all; tree-sitter ERRORed on it and that is how I learned my authored
-# input was wrong rather than outliner. An oracle that refuses is worth more
+# input was wrong rather than joints. An oracle that refuses is worth more
 # than an oracle that agrees.
 roots 1
 mends 0

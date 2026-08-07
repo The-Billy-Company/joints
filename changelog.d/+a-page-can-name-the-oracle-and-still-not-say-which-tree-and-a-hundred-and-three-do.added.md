@@ -25,7 +25,7 @@ remark, and it fails if the corpus ever stops exhibiting a corner rather than
 passing over an empty set.
 
 A stamp is any run of seven or more hex characters with a letter in it -
-`outliner f6a34cd7c`, `repo f7ba40004+55`, `tree c0cdbde69`, a `stamp:` line.
+`joints f6a34cd7c`, `repo f7ba40004+55`, `tree c0cdbde69`, a `stamp:` line.
 Deliberately not anchored to a keyword: the keyword-anchored variant refuses 203
 where this refuses 184, and the 19 it adds are pages carrying a digest in a
 spelling the keyword list had not met. A list that must be complete to avoid a

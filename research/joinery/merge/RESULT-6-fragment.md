@@ -140,7 +140,7 @@ per-grammar peel reports verilog and haskell as lower bounds, which moves
 `fragment` and not `on doc`.
 
 ```
-stamp: outliner 40a520f18 at zig-out/bin/outliner built 2026-08-07T17:31:50Z
+stamp: joints 40a520f18 at zig-out/bin/joints built 2026-08-07T17:31:50Z
        from . 010af3c60 · repo fdda15a2a+29
 ```
 

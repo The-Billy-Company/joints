@@ -39,8 +39,8 @@ is swift's **`) in state 141`, 95 B**.
 ## The two verbs
 
 ```sh
-outliner state <grammar.json> --holding '<item>'   # which states hold this reading?
-outliner state <grammar.json> --chain <n>          # how a parse reaches n, and where
+joints state <grammar.json> --holding '<item>'   # which states hold this reading?
+joints state <grammar.json> --chain <n>          # how a parse reaches n, and where
                                                    # a fold there goes
 ```
 
@@ -52,7 +52,7 @@ on, and a **frayed** flag when a fold's handle origin is wider than one state.
 
 The backward walk under `--chain` is **`press.retrace`, which already existed**.
 This lane wrote a second copy of it before finding the first and deleted the
-copy; the swap is byte-identical on verilog with a separate `OUTLINER_WORK` per
+copy; the swap is byte-identical on verilog with a separate `JOINTS_WORK` per
 arm. What was kept is one test donated to `src/press/retrace.zig`, asserting over
 every completed item of a pressed grammar that an uncovered origin can read its
 body forward and land where it started — the property its two hand-picked toy
@@ -81,7 +81,7 @@ It prints its own anti-vacuity column: a grammar whose warm set shares no wall
 with its cold set is a broken reader, not a finding. The test can say no — three
 walls survive it.
 
-**Give any comparison arm its own `OUTLINER_WORK`.** Two pinned binaries sharing
+**Give any comparison arm its own `JOINTS_WORK`.** Two pinned binaries sharing
 one work directory both read whichever folio was written last, and the error is
 always flattering, because two runs of the same table always agree. (The
 `grammar.json` paths used here press fresh and never touch a folio, which was

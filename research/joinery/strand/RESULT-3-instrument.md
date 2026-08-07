@@ -5,13 +5,13 @@ failed in the direction that would have flattered the repair.
 
 ## What shipped
 
-`src/surface/face/outliner/state.zig` grew an `Ask` union and dispatches to a new
-`src/surface/face/outliner/whence.zig` (360 lines; `state.zig` is 392, both under
+`src/surface/face/joints/state.zig` grew an `Ask` union and dispatches to a new
+`src/surface/face/joints/whence.zig` (360 lines; `state.zig` is 392, both under
 the 500-line rule). Two verbs, because the population needed two questions:
 
 ```sh
-outliner state <grammar.json> --holding '<item>'   # which states hold this reading?
-outliner state <grammar.json> --chain <n>          # how does a parse reach n, and
+joints state <grammar.json> --holding '<item>'   # which states hold this reading?
+joints state <grammar.json> --chain <n>          # how does a parse reach n, and
                                                    # where does a fold there go?
 ```
 
@@ -36,7 +36,7 @@ carried it through review and a file split, and only found the incumbent while
 reading `root.zig` for an unrelated reason. The duplicate is deleted.
 
 The swap is proven inert rather than assumed: `--holding` and `--chain` on
-verilog are **byte-identical** across it, with a separate `OUTLINER_WORK` per arm
+verilog are **byte-identical** across it, with a separate `JOINTS_WORK` per arm
 so the two are not reading one folio.
 
 One thing was worth keeping. `retrace`'s two tests check hand-picked positions on

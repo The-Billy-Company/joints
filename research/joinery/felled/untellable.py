@@ -64,7 +64,7 @@ def supplies(case: plumb.Case, how: str) -> tuple[list[dict], int, int]:
     a third that was untellable makes even the decline a claim about a set the
     walk did not establish.
     """
-    work = Path(os.environ.get("OUTLINER_WORK", ROOT / ".local" / "work"))
+    work = Path(os.environ.get("JOINTS_WORK", ROOT / ".local" / "work"))
     art = order.folio_for(case.name, work) or (order.GRAMMARS / f"{case.name}.json")
     if not Path(art).exists() or not case.source.exists():
         return [], 0, 0

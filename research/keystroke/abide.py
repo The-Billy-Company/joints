@@ -47,8 +47,8 @@ from collate import keystrokes  # noqa: E402
 from order import folio_for  # noqa: E402
 from walls import roster  # noqa: E402
 
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
-WORK = Path(os.environ.get("OUTLINER_WORK", ROOT / ".local" / "standing"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
+WORK = Path(os.environ.get("JOINTS_WORK", ROOT / ".local" / "standing"))
 SCRATCH = ROOT / ".local" / "keystroke" / "abide"
 
 

@@ -99,7 +99,7 @@ across c and cpp**, which is why the twelve net +642 rather than swift's +1,172.
 Closing that wants a *ranking* rule - prefer a closer over an opener when both
 are unique - and it is the same brief as the 54 `spurned`, from the other side.
 
-`Gather.init` leaves the move **off** and `outliner parse` turns it on. The
+`Gather.init` leaves the move **off** and `joints parse` turns it on. The
 incremental path replays a trail whose alignment marks are one per `read`; a
 supply keeps that index 1:1, but the mark it adds points at a byte where re-lexing
 yields the real token and not the ghost, and no test in this tree has ever offered

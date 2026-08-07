@@ -2,7 +2,7 @@
 
 > **Clearance upheld, on a wider instrument (2026-08-06).** Every arm on this
 > page read `square 0` (`consort/RESULT-5-blindness.md`), so "no other grammar by
-> a single column" was thirty-one columns of outliner's own words about its own
+> a single column" was thirty-one columns of joints's own words about its own
 > forest. `consort/RESULT-8-sighted.md` re-takes all fourteen singles, the five
 > pairs and the union arm with an oracle minted inside each arm: **no arm moves a
 > grammar its rows cannot seat, on any of twenty-four columns**, and every arm is
@@ -12,7 +12,7 @@
 > and ocaml's row changes sign.
 
 The re-establishment. Every number below was taken by `tool/standing.py` with its
-own `OUTLINER_BIN`, its own `OUTLINER_WORK` and its own `OUTLINER_LANE`, from a
+own `JOINTS_BIN`, its own `JOINTS_WORK` and its own `JOINTS_LANE`, from a
 binary `tool/pin.py build` minted in a scratch checkout.
 
 ## The board had settled

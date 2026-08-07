@@ -7,7 +7,7 @@ N runs per row - best rather than mean, because a shared laptop's noise is all
 in one direction and the floor is the number that reproduces.
 
 **It parses from a folio, and that is the whole reason this file exists.**
-`outliner parse <grammar.json>` presses the grammar first, and the press is two
+`joints parse <grammar.json>` presses the grammar first, and the press is two
 orders of magnitude the parse: scala is 1,336 ms from json and 24 ms from a
 folio. A timing harness that reads json is measuring the press, and it will
 report a runtime capacity as free no matter what the capacity does - the first
@@ -80,7 +80,7 @@ def main() -> int:
     unit, scale = ("KiB", 1 / 1024) if a.rss else ("ms", 1000)
     out: dict[str, dict[str, float]] = {}
     for pin in a.pins:
-        binary = str(ROOT / ".local/pin" / pin / "bin/outliner")
+        binary = str(ROOT / ".local/pin" / pin / "bin/joints")
         shelf = ROOT / ".local/fuses/folio" / pin
         shelf.mkdir(parents=True, exist_ok=True)
         out[pin] = {}

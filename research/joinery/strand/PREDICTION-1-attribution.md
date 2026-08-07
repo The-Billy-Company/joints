@@ -1,8 +1,8 @@
 # Prediction 1 — who owns the 22,179 stranded bytes
 
 Written before any state was read, against the population as
-`owners.py --stranded` reports it on `outliner 0446f4bc6`
-(`.local/strand/outliner`, pinned out of `zig-out/` before measuring). Scored in
+`owners.py --stranded` reports it on `joints 0446f4bc6`
+(`.local/strand/joints`, pinned out of `zig-out/` before measuring). Scored in
 `RESULT-1-attribution.md`, failures included.
 
 The population is 30 walls / 22,179 B, and it concentrates onto three fold

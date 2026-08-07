@@ -13,7 +13,7 @@ exactly the mistake that was available:
 
 ```text
 FAIL  every stored verdict still describes both live trees
-      verilog [89368,89412) 44B  judged `ours` (outliner is right)
+      verilog [89368,89412) 44B  judged `ours` (joints is right)
         DRIFTED ours lost: parameter_declaration -> —; neither tree has a node here any more
       verilog [50526,50629) 103B  judged `agree` (both say the same thing)
         DRIFTED ours deeper: expression/…/system_tf_call -> list_of_actual_arguments/expression/…/system_tf_call
@@ -22,8 +22,8 @@ FAIL  every stored verdict still describes both live trees
 **The headline is the first row, and it is a regression.** The bytes are
 `parameter [31:0] MASKED_IRQ = 32'h 0000_0000` - A.2.1.1's
 `parameter_declaration ::= parameter data_type_or_implicit
-list_of_param_assignments`, which outliner used to name and tree-sitter covers
-only with a 989-byte `operator_assignment` inside a root `ERROR`. Outliner now
+list_of_param_assignments`, which joints used to name and tree-sitter covers
+only with a 989-byte `operator_assignment` inside a root `ERROR`. Joints now
 builds no node over the span. What it builds instead is `simple_identifier
 [89368,89377)` over the word `parameter`, a bare `[`/`constant_range`/`]`, and a
 `variable_decl_assignment` over the tail. **That is the keyword read as an
@@ -61,7 +61,7 @@ changelog fragment naming any of them. Three files is not a named change, so it 
 not re-transcribed either.
 
 **Three rows were dissolved by siblings fixing the product, and are re-judged
-rather than re-captured.** Each was `theirs` - tree-sitter right, outliner wrong -
+rather than re-captured.** Each was `theirs` - tree-sitter right, joints wrong -
 and each now reads what tree-sitter reads:
 
 | row | was | is | the change |

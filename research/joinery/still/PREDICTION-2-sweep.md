@@ -14,8 +14,8 @@ net and here is what falls through it.
 when:
 
 1. **Target.** It lands inside the *compared artifact set* — the shared oracle
-   trees under `lang/<name>/`, the folio cache under `OUTLINER_WORK`, the binary
-   named by `OUTLINER_BIN`, the seat's `lib/`, or a committed fixture that is
+   trees under `lang/<name>/`, the folio cache under `JOINTS_WORK`, the binary
+   named by `JOINTS_BIN`, the seat's `lib/`, or a committed fixture that is
    itself an arm of the comparison. A write to an instrument's own report file
    is not this defect and must not be counted as one, or the sweep will report
    thirty findings and mean none of them.
@@ -41,7 +41,7 @@ things.**
   constants and parameters within the function. Then ask which of those writes
   are reachable from a verb that prints a verdict.
   **Blind to:** anything a child process writes. `tree-sitter generate` and
-  `outliner mint` are exactly that, and `oracle_build` — one of the four — would
+  `joints mint` are exactly that, and `oracle_build` — one of the four — would
   be only half visible here.
 - **Dynamic (`still.sealed`).** Run the instrument's own read verb inside a
   window that snapshots the artifact set on entry and re-reads it before the

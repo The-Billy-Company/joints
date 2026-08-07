@@ -62,7 +62,7 @@ def read(case: plumb.Case, how: str, supply: bool = True) -> list[dict] | None:
     files read the same artefact and a difference between them is a difference
     in the question rather than in what was parsed.
     """
-    work = Path(os.environ.get("OUTLINER_WORK", ROOT / ".local" / "work"))
+    work = Path(os.environ.get("JOINTS_WORK", ROOT / ".local" / "work"))
     art = order.folio_for(case.name, work) or (order.GRAMMARS / f"{case.name}.json")
     if not Path(art).exists() or not case.source.exists():
         return None

@@ -9,7 +9,7 @@ evidence.
 ## The fact the previous declines did not have
 
 ```
-outliner grammar upstream/grammars/yaml.json
+joints grammar upstream/grammars/yaml.json
   terminals      0 literal, 0 regex, 113 external
 ```
 
@@ -36,7 +36,7 @@ and that one of them is schema-classified — a terminal whose *name* depends on
 a regex over the bytes it matched, not on where it sits.
 
 **Falsifier and how it is measured:** walk the automaton with
-`outliner state upstream/grammars/yaml.json <n>`, starting at 0, taking the
+`joints state upstream/grammars/yaml.json <n>`, starting at 0, taking the
 shift the next construct needs. If fewer than 8 distinct externals are
 consumed before line 3 ends, the cohort is small and the decline is
 overturnable cheaply, and I should just seat it.
@@ -56,7 +56,7 @@ state, and here it comes from a **classifier over the match**.
 **Falsifier:** if the six variants are never co-admitted in one state — if the
 grammar's own expected set already separates null from int — then the
 classifier is redundant and the parse state does the work. Measure with
-`outliner state`: find a state admitting `_r_sgl_pln_str_blk` by shift and
+`joints state`: find a state admitting `_r_sgl_pln_str_blk` by shift and
 count how many of its five siblings it admits beside it. More than one and
 the classifier is load-bearing.
 

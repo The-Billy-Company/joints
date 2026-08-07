@@ -84,7 +84,7 @@ have been believed.
 ## The pins every number here was taken against
 
 A path is not a version in this tree, and two pinned binaries sharing an
-`OUTLINER_WORK` measure one side twice — always flatteringly. Each arm got its own
+`JOINTS_WORK` measure one side twice — always flatteringly. Each arm got its own
 directory, started from empty, and every folio carries its minter's digest.
 
 | arm | what | digest |

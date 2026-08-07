@@ -67,7 +67,7 @@ pub const Report = struct {
 /// is the run that had nothing to say.
 fn announce(b: *const g.Builder, victims: []const u32, r: Report) void {
     if (r.declined == 0) return;
-    std.debug.print("outliner: {d} inline rule(s) the press could not fold away:", .{r.declined});
+    std.debug.print("joints: {d} inline rule(s) the press could not fold away:", .{r.declined});
     for (victims) |v| {
         if (standing(b, v)) std.debug.print(" {s}", .{b.nameRaw(v)});
     }

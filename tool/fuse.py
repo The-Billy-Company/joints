@@ -34,7 +34,7 @@ run whose rows are pinned to a share ceiling is refused with the reason.
   python3 tool/fuse.py length           share and cost against file length
   python3 tool/fuse.py share --json     machine output
 
-`OUTLINER_BIN` picks the binary, as everywhere else here. Exit 0 ran, 2 refused.
+`JOINTS_BIN` picks the binary, as everywhere else here. Exit 0 ran, 2 refused.
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from stamp import ROOT, ask, take, usual  # noqa: E402
 from walls import roster  # noqa: E402
 
-BIN = Path(os.environ.get("OUTLINER_BIN") or usual())
+BIN = Path(os.environ.get("JOINTS_BIN") or usual())
 WORK = ROOT / ".local" / "fuse"
 
 # Where a run is pinned rather than measured. The byte fuse is 3/4, so a row

@@ -10,7 +10,7 @@ PREDICTION-2 guessed the shared mechanism was `prec.dynamic` — a per-productio
 rank spent at table-build time where tree-sitter sums over subtrees. Reading
 the tables says something narrower and much easier to falsify.
 
-`src/surface/face/outliner/joints.zig` already writes the thesis down, as an
+`src/surface/face/joints/survey.zig` already writes the thesis down, as an
 argument for *not* worrying:
 
 > Contested and residual are different numbers and only the second is a defect:
@@ -22,7 +22,7 @@ argument for *not* worrying:
 Read the other way round, that is the defect. A `conflicts:` entry in a
 tree-sitter grammar is not a hint about how to resolve an ambiguity; it is the
 author telling the parser **not to resolve it** — to carry both readings and
-let the input decide. Outliner is LALR. It cannot carry two. So every declared
+let the input decide. Joints is LALR. It cannot carry two. So every declared
 cell is a fork collapsed to one action at press time, chosen by a fixed ladder
 that never sees the input.
 
@@ -32,7 +32,7 @@ it successfully answered every question it was asked not to answer.
 ## P10 — the guilty cell in each of go, python and elixir is `declared`
 
 Not `residual`. The press will name each one as an ambiguity the grammar author
-declared, and outliner's `joints` line will report zero or near-zero residual
+declared, and joints' `survey` line will report zero or near-zero residual
 conflicts for exactly the grammars that are misreading.
 
 **Falsifier.** Any of the three guilty cells is residual (a conflict the author
@@ -40,8 +40,8 @@ never declared), or arises in a state whose row shows no contest at all.
 
 ## P11 — toml's 29 bytes are not a press decision, because toml has no decision
 
-`outliner grammar upstream/grammars/toml.json` reports **0 declared conflicts**,
-and `outliner joints` reports **0 contested cells over all 175 states**. If the
+`joints grammar upstream/grammars/toml.json` reports **0 declared conflicts**,
+and `joints survey` reports **0 contested cells over all 175 states**. If the
 whole table is uncontested there was never a second derivation for the press to
 prefer, so whatever `rack` is charging cannot be a wrong choice between two
 readings. It is either a shape difference that follows deterministically from

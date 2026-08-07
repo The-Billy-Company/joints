@@ -1,12 +1,12 @@
 A board that reads an oracle is not a parser that knows it is wrong. So the
-question after the split was whether outliner's own internal signals correlate
-with the regions rack calls misread — if any did, outliner could emit a
+question after the split was whether joints's own internal signals correlate
+with the regions rack calls misread — if any did, joints could emit a
 calibrated *untrustworthy* span, which is tree-sitter's `ERROR` except graded,
 and covering the case tree-sitter has no node for: a region that parses cleanly
 and is wrong.
 
 `research/joinery/flag/spans.py` files every built byte by what the oracle said
-and by what outliner knew, and scores nine signals over 325,788 adjudicated
+and by what joints knew, and scores nine signals over 325,788 adjudicated
 bytes with an 18.46% base rate. **The answer is no.** Best precision on the
 slate is 29.0% (`declared` — a node in a conflict the grammar's author
 declared). A control that reads *nothing about the parse at all* — whether the
@@ -42,7 +42,7 @@ placed wrong. Two different defects had been sharing one explanation.
 **The mend signals are inverted.** Precision within 0/16/64 bytes of a root
 boundary is 4.9%, 8.6%, 14.2% against 18.46% prevalence — monotonically
 approaching the base rate from below. Mends do not mark bad regions; they mark
-where outliner *noticed*, and misreadings are by definition where it did not. A
+where joints *noticed*, and misreadings are by definition where it did not. A
 flag built by widening the mend radius moves away from the target.
 
 Three of the brief's five candidates could not be measured from outside `src/`

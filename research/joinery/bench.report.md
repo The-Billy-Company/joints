@@ -1,6 +1,6 @@
 # What this parser actually does
 
-Three axes describe where outliner stands on its own terms - how much of the
+Three axes describe where joints stands on its own terms - how much of the
 corpus it really understands, what an edit costs it, and what its one safety cap
 is worth. The tree-sitter comparison is further down and unchanged.
 
@@ -14,12 +14,12 @@ Everything in the first four sections was re-measured for this pass rather than
 carried over. One binary, one stamp:
 
 ```
-outliner 8e69456aa at .local/lane-report/out/bin/outliner
+joints 8e69456aa at .local/lane-report/out/bin/joints
 built 2026-08-05T10:21:47Z from . 8e40d3ebc · repo f7ba40004+55
 ```
 
 That binary stamps `STALE`, because another lane touched
-`src/surface/face/outliner/main.zig` after it was built. It is not stale in the
+`src/surface/face/joints/main.zig` after it was built. It is not stale in the
 way that matters: a fresh `zig build` from the live tree produces a
 byte-identical executable, `8e69456aa186…` all three ways, so the flag is an
 mtime and not a drift. Checking that was cheaper than arguing about it.
@@ -45,8 +45,8 @@ number down.
 
 > **Correction, 2026-08-06 — there is a fifth number, and it is the only one on
 > this list not made out of our own forest.** `reach`, `covered`, `standing` and
-> `rubble` are four cuts of one question — *what did outliner put under
-> something* — so all four are answered by outliner alone and none of them can
+> `rubble` are four cuts of one question — *what did joints put under
+> something* — so all four are answered by joints alone and none of them can
 > see a byte we structured **wrongly**. `trued = square / size` is answered by a
 > second parser: bytes we put under the same construct real tree-sitter puts them
 > under, renames excused (`tool/rack.py`). Over the same thirty grammars and the
@@ -62,7 +62,7 @@ number down.
 >
 > Taken from the audited base arm of
 > [`consort/RESULT-8-sighted.md`](consort/RESULT-8-sighted.md) - 29 of 30 rows
-> sighted, `.local/sighted/boards/base.json`, `outliner 68e8f0e395e8`. Nothing in
+> sighted, `.local/sighted/boards/base.json`, `joints 68e8f0e395e8`. Nothing in
 > this report was re-measured for it; the board it needed already existed.
 > `python3 research/joinery/consort/askance.py --grammars` prints it per grammar.
 
@@ -217,7 +217,7 @@ That check was run, with an oracle in it.
 > **Correction, 2026-08-06 — two rows have left this table without getting any
 > better at agreeing, and the table cannot say so.**
 >
-> `rubble` is `damage`'s sibling: both are computed from what outliner built, so
+> `rubble` is `damage`'s sibling: both are computed from what joints built, so
 > a grammar leaves this board by **building** bytes and not by building them
 > right. Sighted, two of the nine rows above have done exactly that.
 >
@@ -248,7 +248,7 @@ That check was run, with an oracle in it.
 ### The delimited-span fix, measured — and `standing` got worse
 
 Six grammars were named as one cause: the refused terminal is *the inside of a
-delimited span*, because `outliner` had no external-scanner stand-in for the
+delimited span*, because `joints` had no external-scanner stand-in for the
 comment or string body, so the parser read the prose as code. Two of the six
 were bounded runs a `marrow` vein can answer whole - scala's nesting `/* */` and
 ocaml's nesting `(* *)` - and those two are seated. Control: the live tree with
@@ -795,7 +795,7 @@ evidence its answer depends on.
 
 *"Where a number has no second opinion available, that absence is the finding."*
 `rubble` had none. It is `damage`'s sibling — both are arithmetic over the spans
-outliner itself built — and the section above chose it over `standing` on the
+joints itself built — and the section above chose it over `standing` on the
 strength of a mechanism, which was the right call among four numbers that all
 answer the same question.
 
@@ -949,7 +949,7 @@ are ruled out by measurement rather than by argument.
 
 ### It is not raw scanning; it is scanning under a per-position `Expected`
 
-The same scanner over the same bytes with **no** admitted set, via `outliner lex`:
+The same scanner over the same bytes with **no** admitted set, via `joints lex`:
 
 ```
 lex     104,000 B       483 us      one token, no parser context
@@ -1044,10 +1044,10 @@ off the day all five rows are under the ceiling.
 worth writing down.** The bare lexer over the same 152,010 bytes:
 
 ```
-outliner lex  many-then-one.js      46 ms
-outliner lex  one-then-many.js      47 ms      1.0x
-outliner parse many-then-one.js  16,175 ms
-outliner parse one-then-many.js   4,232 ms     3.8x
+joints lex  many-then-one.js      46 ms
+joints lex  one-then-many.js      47 ms      1.0x
+joints parse many-then-one.js  16,175 ms
+joints parse one-then-many.js   4,232 ms     3.8x
 ```
 
 Flat, and **350x** cheaper than the slow order of the same bytes. The defect needs the per-position admitted
@@ -1199,7 +1199,7 @@ generated column, which carries a per-grammar caveat the real column does not.
 
 ### Collected: the prediction is met, and collecting it found a second defect
 
-The mask landed. Measured on `outliner 60f59cb48`, real corpus code, marginal
+The mask landed. Measured on `joints 60f59cb48`, real corpus code, marginal
 cost (the small corpus file's time subtracted from the 128 KB file's, so the
 grammar import both pay is not charged to either):
 
@@ -1237,8 +1237,8 @@ defect worth more than the prediction was.
 **Same binary, same file, two ways of naming the grammar:**
 
 ```
-outliner parse upstream/grammars/javascript.json  many-then-one.js   0.14 s
-outliner parse <a folio minted by that same binary> many-then-one.js  15.40 s
+joints parse upstream/grammars/javascript.json  many-then-one.js   0.14 s
+joints parse <a folio minted by that same binary> many-then-one.js  15.40 s
 ```
 
 **110x, from the same executable.** The reachability mask is applied when a
@@ -1433,7 +1433,7 @@ startup axis is blocked behind the throughput defect** - it becomes measurable
 the day the quadratic scan is gone and not before. Three honest "skipped" lines with
 the arithmetic on them beat a published negative duration.
 
-Six grammars are skipped from the timing axes outright because outliner stops
+Six grammars are skipped from the timing axes outright because joints stops
 early on the 128 KB file - bash, c, cpp, go, python, ruby - each with its wall
 printed on its row. **The throughput table is the five grammars we can parse
 whole, which is the flattering subset.** Read it that way.
@@ -1507,7 +1507,7 @@ were quiet without taking my word for it.
 ## Which path each number is on
 
 Until tonight nobody knew there were two, so no number in this file said. A
-grammar can be named to `outliner parse` two ways, and for one afternoon they
+grammar can be named to `joints parse` two ways, and for one afternoon they
 disagreed by 110x. Every number here is now labelled, because a report that
 silently prices the dev path answers a real question nobody asked.
 
@@ -1662,7 +1662,7 @@ lexer never sees the admitted set this defect lives in.
 
 Taken four times, across three binaries, because the scanner lane rebuilt twice
 while this was being written and the stamp caught it: `16,516 / 3,749 = 4.4x`
-and `17,035 / 3,636 = 4.7x` on `outliner f6419542c`; `18,103 / 3,667 = 4.9x` and
+and `17,035 / 3,636 = 4.7x` on `joints f6419542c`; `18,103 / 3,667 = 4.9x` and
 `16,026 / 5,732 = 2.8x` on `17ab2293d`; `16,175 / 4,232 = 3.8x` on `4bcfadacc`.
 All five at 152,010 B and 28,011 nodes. The spread across binaries is the honest
 reason the ceiling is 1.6x rather than 1.2x. The **ratio** is the number to

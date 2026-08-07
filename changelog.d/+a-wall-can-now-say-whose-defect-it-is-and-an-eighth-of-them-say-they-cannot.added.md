@@ -5,7 +5,7 @@ verilog cost 63,937 bytes; it could not say whether a lane should spend a week i
 vendored, in which case the week buys nothing.
 
 `research/joinery/owners/` answers it mechanically for the whole corpus. For each
-wall it reads the LR state the parse stopped in (`outliner state`), computes that
+wall it reads the LR state the parse stopped in (`joints state`), computes that
 state's LR(1) viability set from the grammar's own nullable/FIRST/FOLLOW, and
 asks whether the offending terminal is in it. In is a **conflict** - the grammar
 admits it here and we refuse it anyway, ours. Out is a grammar **gap** - no LR

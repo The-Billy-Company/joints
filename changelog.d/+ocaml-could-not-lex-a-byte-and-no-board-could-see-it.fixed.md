@@ -1,11 +1,11 @@
 ocaml could not lex a byte, and no board could see it.
 
-Treatment `outliner aece1211e` · tree `a9353c78b` (pin) · oracle `d85e736fa`
-(30 of 30 live, 30 attributed), against control `outliner d95f68e4a` · tree
+Treatment `joints aece1211e` · tree `a9353c78b` (pin) · oracle `d85e736fa`
+(30 of 30 live, 30 attributed), against control `joints d95f68e4a` · tree
 `b8757cdcc` on the same oracle. `still against --inert` reads comparable: one
 file differs and this lane claims it.
 
-`outliner lex upstream/grammars/ocaml.json` returned 0 tokens over 16,878 bytes,
+`joints lex upstream/grammars/ocaml.json` returned 0 tokens over 16,878 bytes,
 and 0 tokens over anything else, while ocaml parsed normally at 167 roots. Both
 can be true because the scanner keeps two slates and only the state-free one was
 empty. Its filter drops terminals reachable only through an extra the parser

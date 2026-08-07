@@ -1,11 +1,11 @@
-# Result 2 — no. Outliner does not already know.
+# Result 2 — no. Joints does not already know.
 
 Scored against [PREDICTION-2-signals.md](PREDICTION-2-signals.md), written
 before `spans.py score` was run once. **Four of six predictions failed**, and
 the failures are the finding.
 
 > **Flat statement, as the brief asked for.** None of the nine signals
-> extractable from outliner's current output predicts a misread region with
+> extractable from joints's current output predicts a misread region with
 > useful precision. The best of them scores 29.0% precision against an 18.46%
 > base rate. A control that reads **nothing about the parse at all** — "is this
 > byte in php or elixir" — scores 48.5%. And under a null that scatters guilt at
@@ -77,7 +77,7 @@ This kills the story I most expected to survive, and I said so in advance. The
 brief's evidence for it was that the four widest `orphan` rows all stop on a
 blind external. That is true, and it explains `orphan` — bytes never placed. It
 says nothing about `crooked` — bytes placed wrongly. **Two different defects
-have been sharing one explanation.** Where outliner's scanner is blind, outliner
+have been sharing one explanation.** Where joints's scanner is blind, joints
 tends to *stop*, and stopping is visible. Misreading is what happens when
 nothing goes wrong.
 
@@ -88,7 +88,7 @@ adjacent to a mend boundary are nearly **four times less likely** to be misread
 than an average built byte, and the effect weakens monotonically with distance
 (0.26 → 0.47 → 0.77 at 0/16/64 bytes).
 
-Mends do not mark bad regions. They mark the regions where outliner **noticed**.
+Mends do not mark bad regions. They mark the regions where joints **noticed**.
 The misread bytes are, definitionally, the ones it did not notice, so the
 existing damage machinery is not merely blind to them — it is *anti*-correlated
 with them. Any future flag built by widening the mend radius will move away from
@@ -117,7 +117,7 @@ and that is not a hedge — it is the specification:
 
 | candidate | why not | who would emit it |
 |---|---|---|
-| GLR fork survivor counts; forks that died late | nothing emits them. `OUTLINER_TRACE` has no weave lens; the folio carries the press's conflict table, not a per-parse fork history | the weave/spine lane |
+| GLR fork survivor counts; forks that died late | nothing emits them. `JOINTS_TRACE` has no weave lens; the folio carries the press's conflict table, not a per-parse fork history | the weave/spine lane |
 | a conflict resolved **under duress** — an unranked fold ordering an authored reading | `settle.zig` classifies these at press time (`residual`/`unwritten`) but per LR *state*, and nothing in the parse output says which state reduced over which byte | `src/press/` + the parse |
 | a reduction where `inquest` would have named a wall one byte later | requires re-parsing every prefix of every file | offline, but not this lane |
 
@@ -190,7 +190,7 @@ entirely which grammars it fires in. `declared`, the best number on the page at
 uninformative, it is very slightly worse than the corpus composition it rides on.
 
 The only signals with real positional content are the three mend distances, and
-they point backwards: they mark where outliner **noticed**, which is definitionally
+they point backwards: they mark where joints **noticed**, which is definitionally
 not where it misread. `external`'s null is 0.30 rather than 1.00 because external
 tokens concentrate in low-guilt grammars — and its real 0.01 is 30x below even
 that, so it is genuinely anti-correlated within grammars too.

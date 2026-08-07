@@ -1,8 +1,8 @@
 # Result 5 — the chain, and the class dissolving on contact with it
 
-Treatment: outliner `2657b5416` · tree `cec2e31ee` (pin) · oracle `d85e736fa`
+Treatment: joints `2657b5416` · tree `cec2e31ee` (pin) · oracle `d85e736fa`
 (30 of 30 live, 30 attributed).
-Control: outliner `2ec8d6492` · tree `b9c36ab21` (pin) · same oracle
+Control: joints `2ec8d6492` · tree `b9c36ab21` (pin) · same oracle
 `d85e736fa` (30 of 30 live, 30 attributed).
 
 One court, two binaries, both arms fully live. `still against` says

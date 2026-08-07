@@ -10,7 +10,7 @@ anywhere is collateral and the whole clearance is gone.
 The point of doing it here rather than in `score` is that a clearance quoted
 off three columns is a clearance quoted off three columns. `RESULT-2-arms.md`
 cleared this same family on "thirty-one columns" - and every one of those
-columns was outliner's own words about its own forest, because `square` read
+columns was joints's own words about its own forest, because `square` read
 0 on all of them. This run has `square`, `crooked`, `soft`, `unframed` and
 `trued` live on 29 of 30 rows, so the same width of check is now half oracle.
 

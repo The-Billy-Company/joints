@@ -53,7 +53,7 @@ mended at least once and the file has at least one top-level extra.
 Either one means something other than the crown gate is deciding, and the
 whole reframe is wrong.
 
-**Measurement:** `outliner parse` per corpus file for the mend count, joined
+**Measurement:** `joints parse` per corpus file for the mend count, joined
 against `standing.py --json`'s per-file orphan.
 
 ## P1b — Kotlin's 19,705 is therefore all-or-nothing, and no string fix alone moves it

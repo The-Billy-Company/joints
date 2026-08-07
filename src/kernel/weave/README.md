@@ -8,7 +8,7 @@ Until something owned both halves they were two subsystems with a hyphen
 between them. This is that something, and it is deliberately small: a `Loom`
 (one pressed grammar and the interning space its effects live in), a `Weave`
 (one open file on that loom), `open`, `amend`, `product`. The CLI verb is
-`outliner amend`.
+`joints amend`.
 
 ## What a leaf is
 

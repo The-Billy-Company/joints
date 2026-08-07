@@ -1,7 +1,7 @@
 # CONTROL for print-as-statement.py, and the sharpest one in this lane.
 #
 # `print(x)` alone reads as a Python 2 `print_statement`. Put the identical
-# eight bytes on the right of an assignment and outliner reads a call:
+# eight bytes on the right of an assignment and joints reads a call:
 #
 #   assignment [0, 12)
 #     left: identifier  "y"
@@ -10,9 +10,9 @@
 #       arguments: argument_list [9, 12)
 #
 # Both trees, identical. `print_statement` is a STATEMENT, so it is not
-# derivable here at all - there is only one reading, and outliner takes it.
+# derivable here at all - there is only one reading, and joints takes it.
 #
-# So the defect is not "outliner thinks print is a keyword". It thinks `print`
+# So the defect is not "joints thinks print is a keyword". It thinks `print`
 # is a keyword exactly where the grammar offers it the choice, which is
 # statement position, which is python.json's declared
 # `['print_statement', 'primary_expression']` conflict and nowhere else.

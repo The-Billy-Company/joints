@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Hold outliner against the incumbent on the axes a byte comparison cannot see.
+"""Hold joints against the incumbent on the axes a byte comparison cannot see.
 
 `plumb.py` asks whether a `built` byte was built *right*, byte-indexed, against
 tree-sitter. It is one-directional by construction: every disagreement is scored
-against outliner, because the oracle is assumed correct. Buried in its own
+against joints, because the oracle is assumed correct. Buried in its own
 limits paragraph is the evidence that assumption has a hole - **34,687 built
 bytes have no verdict at all, because tree-sitter's own tree is in recovery
 there**, and on `picorv32.v` the recovery reaches the root.
@@ -27,8 +27,8 @@ Tree-sitter's ERROR over the same input is *less* structure and *more* useful.
 So a byte counts toward an improvement only when all three hold:
 
   1. tree-sitter refuses it (an `ERROR` or `MISSING` covers it), and
-  2. outliner builds it (it is inside a top-level root that has a child), and
-  3. the structure outliner puts there is adjudicated **right, by hand**,
+  2. joints builds it (it is inside a top-level root that has a child), and
+  3. the structure joints puts there is adjudicated **right, by hand**,
      against the language's own grammar, with the adjudication written down.
 
 Bytes failing (3) are a **gap wearing an improvement's clothes**, which is the
@@ -56,7 +56,7 @@ them, and a name that names nothing is an error rather than a silent full
 sweep. `--runs N` sets how many times a timed verb repeats (minimum wins, since
 the minimum is the run least interrupted by the other nine agents here).
 
-  OUTLINER_BIN=<path>   measure a pinned binary (`tool/pin.py`), never `zig-out`
+  JOINTS_BIN=<path>   measure a pinned binary (`tool/pin.py`), never `zig-out`
 
 Exit 0 measured, 1 a clean negative (a verdict drifted, a guard cannot say no),
 2 could not run.
@@ -86,8 +86,8 @@ from walls import roster  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 GRAMMARS = ROOT / "upstream" / "grammars"
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
-WORK = Path(os.environ.get("OUTLINER_WORK", ROOT / ".local" / "standing"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
+WORK = Path(os.environ.get("JOINTS_WORK", ROOT / ".local" / "standing"))
 OUT = ROOT / ".local" / "collate"
 PATIENCE = 240
 
@@ -115,7 +115,7 @@ class Their(NamedTuple):
 
 
 class Ours(NamedTuple):
-    """Outliner over the same file, in the board's own words."""
+    """Joints over the same file, in the board's own words."""
 
     ok: bool
     why: str
@@ -133,7 +133,7 @@ class Row(NamedTuple):
     size: int
     ours: Ours
     theirs: Their
-    # Bytes tree-sitter refuses that outliner builds. **A candidate, not a win** -
+    # Bytes tree-sitter refuses that joints builds. **A candidate, not a win** -
     # nothing here is adjudicated, and the whole point of the word is that it
     # stays unspent until somebody reads the tree.
     candidate: int = 0
@@ -274,7 +274,7 @@ def count(node: d.Node) -> int:
 # -------------------------------------------------------------------- our side
 
 def ours(case: Case) -> tuple[Ours, list[tuple[int, int]], list[Leaf]]:
-    """Outliner over the same file, in the board's own words and its own function.
+    """Joints over the same file, in the board's own words and its own function.
 
     `built` is `standing.tops` - the board's definition, imported rather than
     restated, because two instruments that each derive `built` are two
@@ -287,7 +287,7 @@ def ours(case: Case) -> tuple[Ours, list[tuple[int, int]], list[Leaf]]:
     size = case.source.stat().st_size
     got = stamp.ask(BIN, folio, case.source, tree=True, patience=PATIENCE)
     if got.kind == "timeout":
-        return blank_us("outliner timed out"), [], []
+        return blank_us("joints timed out"), [], []
     top = standing.tops(standing.rows(got.tree))
     stands = merge([(a, b) for _, a, b, kid in top if kid])
     built = union(stands)
@@ -324,7 +324,7 @@ def flatten(node: d.Node, out: list[Leaf] | None = None) -> list[Leaf]:
 
 
 def mine(tree: str) -> list[Leaf]:
-    """Outliner's forest, read by `standing.rows` - the same reader the board
+    """Joints's forest, read by `standing.rows` - the same reader the board
     counts `built` with, so this is a split of `built` and not a second opinion
     about which bytes it holds."""
     seen = standing.rows(tree)
@@ -357,11 +357,11 @@ def lexical(grammar: Path) -> set[str]:
     every number below flattering. `tree-sitter parse -x` writes an anonymous
     node as bare text, so `(integer_vector_type "reg")` arrives in the XML as a
     childless `integer_vector_type`. A leaf comparison reads that as a leaf,
-    finds outliner's anonymous `"reg"` under the same bytes, and files 450 bytes
+    finds joints's anonymous `"reg"` under the same bytes, and files 450 bytes
     across 150 sites as tree-sitter disagreeing with us. It is not a
     disagreement at all: it is one wrapper node, and the token underneath is the
     same token on both sides. The first run of this file reported exactly that,
-    and every one of those 150 rows pointed the way that made outliner look
+    and every one of those 150 rows pointed the way that made joints look
     right.
 
     The `--cst` printer does carry an anonymous node's type, and it is what
@@ -434,7 +434,7 @@ class Run(NamedTuple):
 
 
 class Dispute(NamedTuple):
-    """Outliner's built bytes judged against an oracle that is **in recovery**.
+    """Joints's built bytes judged against an oracle that is **in recovery**.
 
     `plumb` refuses these deliberately and correctly: a tree in recovery is not
     a contract. But refusing them is what turned the corpus's #1 damage row into
@@ -596,7 +596,7 @@ class Honest(NamedTuple):
     the tree a consumer receives *mark* the part that cannot be trusted?
 
     Each side flags in its own vocabulary. Tree-sitter flags in-band, with an
-    `ERROR` or `MISSING` node a walker trips over. Outliner flags by *absence* -
+    `ERROR` or `MISSING` node a walker trips over. Joints flags by *absence* -
     a byte with no built root over it is `orphan`, `rubble` or `spoil`, and the
     board's `damage` is the union. Both are answerable with the same question:
     of the bytes we know that side reads wrong, how many did it flag?
@@ -604,16 +604,16 @@ class Honest(NamedTuple):
 
     name: str
     size: int
-    ours_flag: int  # damage: bytes outliner puts no root over
+    ours_flag: int  # damage: bytes joints puts no root over
     theirs_flag: int  # bytes under an ERROR or MISSING
-    misread: int  # outliner's, where the oracle is sound enough to say so
-    ours_caught: int  # ... of those, how many outliner flagged
-    blind: int  # externals outliner declares it cannot lex, in the run's own words
+    misread: int  # joints's, where the oracle is sound enough to say so
+    ours_caught: int  # ... of those, how many joints flagged
+    blind: int  # externals joints declares it cannot lex, in the run's own words
     ok: bool = True
 
     @property
     def recall(self) -> float | None:
-        """Of outliner's known misreadings, the share it flagged. See `honesty`
+        """Of joints's known misreadings, the share it flagged. See `honesty`
         for why this is an identity and not a statistic.
 
         `None` where there was nothing to catch. A row with no misread byte
@@ -639,7 +639,7 @@ def honesty(cases: list[Case]) -> list[Honest]:
 
     `plumb`'s misread bytes are a subset of `built`; `damage` is the complement
     of `built` over the file. So a misread byte cannot be a flagged byte - the
-    two sets are disjoint by construction, and outliner's recall over its own
+    two sets are disjoint by construction, and joints's recall over its own
     misreadings is exactly 0.00 on every grammar, forever, for as long as the
     board is defined this way. This verb computes the intersection anyway and
     would report it if it were ever non-empty, because a prediction that the
@@ -700,7 +700,7 @@ def show_honesty(rows: list[Honest]) -> None:
         return
     miss, caught = sum(r.misread for r in ok), sum(r.ours_caught for r in ok)
     tried = [r for r in ok if r.recall is not None]
-    print(f"\n  {miss:,} bytes outliner reads wrong where the oracle is sound; "
+    print(f"\n  {miss:,} bytes joints reads wrong where the oracle is sound; "
           f"it flags {caught:,} of them — recall "
           + (f"{caught / miss:.2f}" if miss else "— (nothing to catch)"))
     print("  and that is an identity, not a score: misread bytes are inside "
@@ -714,7 +714,7 @@ def show_honesty(rows: list[Honest]) -> None:
     print(f"  tree-sitter marks {sum(r.theirs_flag for r in ok):,} bytes untrustworthy "
           f"in-band, over {len(hurt)} of {len(ok)} files")
     blind = [r for r in ok if r.blind]
-    print(f"  outliner names an external it cannot lex on {len(blind)} of {len(ok)} "
+    print(f"  joints names an external it cannot lex on {len(blind)} of {len(ok)} "
           f"files, on stderr — a channel no tree walker reads")
 
 
@@ -755,7 +755,7 @@ def show(rows: list[Row]) -> None:
     print(f"\n  {len(hurt)} of {len(ok)} files carry an oracle ERROR or MISSING")
     total = sum(r.theirs.error_bytes for r in ok)
     cand = sum(r.candidate for r in ok)
-    print(f"  {total:,} bytes under an oracle ERROR; {cand:,} of them outliner builds")
+    print(f"  {total:,} bytes under an oracle ERROR; {cand:,} of them joints builds")
     if top := sorted(hurt, key=lambda r: -r.theirs.error_bytes)[:2]:
         share = sum(r.theirs.error_bytes for r in top) / total if total else 0.0
         print(f"  top two ({', '.join(r.name for r in top)}) are {share:.1%} of that total")
@@ -771,7 +771,7 @@ class Cost(NamedTuple):
 
     name: str
     size: int  # the corpus file, so throughput is comparable
-    folio: int  # bytes of artifact outliner needs at run time
+    folio: int  # bytes of artifact joints needs at run time
     mint_ms: float  # grammar.json -> that artifact
     dylib: int  # bytes of artifact tree-sitter needs at run time
     gen_ms: float  # grammar.json -> parser.c
@@ -800,7 +800,7 @@ class Cost(NamedTuple):
 
     @property
     def slower(self) -> float:
-        """Outliner's time per byte over tree-sitter's. Over 1.0 is a loss."""
+        """Joints's time per byte over tree-sitter's. Over 1.0 is a loss."""
         return self.ours_ms / self.theirs_ms if self.theirs_ms else 0.0
 
     @property
@@ -831,7 +831,7 @@ SPEED = re.compile(r"average speed:\s*(\d+)\s*bytes/ms")
 
 
 def ours_speed(case: Case, folio: Path, runs: int, repeat: int = REPEAT) -> float:
-    """Outliner's milliseconds per parse, from the **slope** of "parse it N times".
+    """Joints's milliseconds per parse, from the **slope** of "parse it N times".
 
     The first draft of this timed one process against a process over an empty
     file and subtracted. It reported go at 0.1 ms against tree-sitter's 46.6 ms
@@ -916,7 +916,7 @@ class Edit(NamedTuple):
     keystroke, do not parse the file again.
 
     Both sides are read from **their own inner clock** here, not a wall clock:
-    `outliner amend` prints microseconds per edit, `tree-sitter parse -t` prints
+    `joints amend` prints microseconds per edit, `tree-sitter parse -t` prints
     one `Edit:` total over all of them. Neither includes process start, and the
     ratio of two inner clocks is the only honest form this comparison has -
     `tree-sitter parse` spends 295 ms per path resolving the language, which
@@ -1077,7 +1077,7 @@ def show_cost(rows: list[Cost]) -> None:
         worst = max(ok, key=lambda r: r.slower)
         beat = [r for r in ok if r.slower < 1.0]
         print(f"  parse  median {median([r.slower for r in ok]):.1f}x tree-sitter's time "
-              f"per byte (over 1.0 is outliner slower); worst {worst.name} at "
+              f"per byte (over 1.0 is joints slower); worst {worst.name} at "
               f"{worst.slower:.1f}x; faster on {len(beat)} of {len(ok)}")
     ship = [r for r in priced if r.scanner]
     print(f"  C      {len(ship)} of {len(priced)} grammars ship a hand-written external "
@@ -1095,7 +1095,7 @@ def median(xs: list[float]) -> float:
 
 VERDICTS = ROOT / "research" / "collate" / "verdicts.toml"
 # Who the bytes belong to, decided by hand against the language's own grammar.
-SIDES = {"ours": "outliner is right", "theirs": "tree-sitter is right",
+SIDES = {"ours": "joints is right", "theirs": "tree-sitter is right",
          "neither": "both are wrong", "agree": "both say the same thing",
          "neutral": "a declared difference that misreads nothing"}
 # No node of any name over exactly these bytes. Not an empty string, because a
@@ -1108,7 +1108,7 @@ class Verdict(NamedTuple):
     source: str
     start: int
     end: int
-    ours: str  # what outliner's tree says here, at the time of adjudication
+    ours: str  # what joints's tree says here, at the time of adjudication
     theirs: str  # what tree-sitter's does
     side: str
     why: str
@@ -1179,7 +1179,7 @@ def adjudicated(cases: list[Case], rows: list[Verdict]) -> list[tuple[Verdict, s
 
     **This is the anti-vacuity, and it is the whole reason the adjudication is a
     file rather than a paragraph.** A hand verdict is a claim about two trees on
-    one day. Both parsers move: outliner is under ten agents, and the oracle is
+    one day. Both parsers move: joints is under ten agents, and the oracle is
     a pin that can be regenerated. A scoreboard quoting hand verdicts against
     trees that have since changed is the twenty-seventh instrument.
 
@@ -1213,7 +1213,7 @@ def adjudicated(cases: list[Case], rows: list[Verdict]) -> list[tuple[Verdict, s
                 trees[key] = (mine(got.tree), flatten(root) if root else [])
         us, them_nodes = trees[key]
         if not us:
-            out.append((row, "no tree from outliner"))
+            out.append((row, "no tree from joints"))
             continue
         got_ours = "/".join(chain(us, row.start, row.end)) or NOTHING
         got_theirs = "/".join(chain(them_nodes, row.start, row.end)) or NOTHING
@@ -1256,7 +1256,7 @@ def show_verdicts(judged: list[tuple[Verdict, str]]) -> int:
               f"   {gloss}")
     ours = sum(v.width for v, _ in live if v.side == "ours")
     them = sum(v.width for v, _ in live if v.side == "theirs")
-    print(f"\n  adjudicated bytes where one side is right: outliner {ours:,}, "
+    print(f"\n  adjudicated bytes where one side is right: joints {ours:,}, "
           f"tree-sitter {them:,}")
     if drifted := [v.grammar for v, w in judged if w]:
         print(f"  EXCLUDED from every total above: {', '.join(sorted(set(drifted)))}")
@@ -1348,11 +1348,11 @@ def probe(case: Case, src: Path, a: int, b: int) -> None:
     them = flatten(root) if root else []
     print(f"\n  {src} [{a},{b}) {b - a}B")
     print(f"  {blob[a:b][:200].decode('utf8', 'replace')!r}\n")
-    print(f"  outliner   at this exact extent: {'/'.join(chain(us, a, b)) or '—'}")
+    print(f"  joints   at this exact extent: {'/'.join(chain(us, a, b)) or '—'}")
     print(f"             enclosing:            {enclosing(us, a, b)}")
     print(f"  tree-sitter at this exact extent: {'/'.join(chain(them, a, b)) or '—'}")
     print(f"             enclosing:            {enclosing(them, a, b)}")
-    for who, nodes in (("outliner", us), ("tree-sitter", them)):
+    for who, nodes in (("joints", us), ("tree-sitter", them)):
         print(f"\n  {who}: every node overlapping the span")
         for n in nodes:
             if n.start < b and n.end > a:

@@ -4,7 +4,7 @@
 //! recognize and hand them to a C function it links: `externals`. Ten of the
 //! eleven grammars in `upstream/` use one, four of them for the token that
 //! starts the file, so a lexer with no answer here is a lexer that cannot read
-//! Python at all. outliner links no tree-sitter runtime, so the C function is
+//! Python at all. joints links no tree-sitter runtime, so the C function is
 //! not available to us and never will be.
 //!
 //! It is also, most of the time, not necessary. Read the scanners and the vast

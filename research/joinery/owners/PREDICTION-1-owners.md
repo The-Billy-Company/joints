@@ -3,7 +3,7 @@
 Written before the closure has been pointed at a single wall outside verilog.
 Everything in this section is a board I already hold and am **not** predicting.
 
-The pinned binary is `.local/pin/owners` (`OUTLINER_BIN`), so nothing below moves
+The pinned binary is `.local/pin/owners` (`JOINTS_BIN`), so nothing below moves
 when another lane rebuilds `zig-out`.
 
 Read-only facts:
@@ -60,7 +60,7 @@ after all, and the brief's framing needed no third column.
 `reach.py` is handed its governing nonterminal **by hand** (`CASES` carries
 `list_of_port_declarations`, `statement_item`, `variable_lvalue`, …). Corpus-wide
 there is nobody to hand it 181 of those, so the position has to come off the
-wall's own LR state: `outliner state <grammar> <n>` prints the state's items, and
+wall's own LR state: `joints state <grammar> <n>` prints the state's items, and
 the symbols after the dot are what the position can still consume.
 
 That substitution is the whole risk in Item 1. If the frontier I read out of a

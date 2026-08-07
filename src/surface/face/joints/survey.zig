@@ -37,21 +37,21 @@
 //!     and not multiplying back at all is a bug in the algebra.
 
 const std = @import("std");
-const outliner = @import("outliner");
-const assay = outliner.assay;
+const joints = @import("joints");
+const assay = joints.assay;
 const intake = @import("intake.zig");
 
-const import = outliner.press.import;
-const press = outliner.press;
-const lalr = outliner.press.lalr;
-const g = outliner.press.grammar;
-const scanner = outliner.kernel.lex.scanner;
-const drive = outliner.kernel.walk.drive;
-const cursor = outliner.kernel.joint.cursor;
-const reverse = outliner.kernel.joint.reverse;
-const jstack = outliner.kernel.joint.stack;
-const jroster = outliner.kernel.joint.roster;
-const jledger = outliner.kernel.joint.ledger;
+const import = joints.press.import;
+const press = joints.press;
+const lalr = joints.press.lalr;
+const g = joints.press.grammar;
+const scanner = joints.kernel.lex.scanner;
+const drive = joints.kernel.walk.drive;
+const cursor = joints.kernel.joint.cursor;
+const reverse = joints.kernel.joint.reverse;
+const jstack = joints.kernel.joint.stack;
+const jroster = joints.kernel.joint.roster;
+const jledger = joints.kernel.joint.ledger;
 
 /// Segment lengths, in tokens and in bytes. `TESTING.md` asks for both: a byte
 /// span is what an editor's viewport and a parallel split look like, a token
@@ -133,7 +133,7 @@ pub fn run(
     }
     const files = paths.items;
     if (files.len == 0) {
-        try w.writeAll("outliner: joints needs at least one source file\n");
+        try w.writeAll("joints: survey needs at least one source file\n");
         return 2;
     }
 
@@ -141,13 +141,13 @@ pub fn run(
     defer gpa.free(source);
 
     var gr = import.treeSitter(gpa, source) catch |e| {
-        try w.print("outliner: cannot import {s}: {s}\n", .{ grammar_path, @errorName(e) });
+        try w.print("joints: cannot import {s}: {s}\n", .{ grammar_path, @errorName(e) });
         return 2;
     };
     defer gr.deinit();
 
     var built = press.tables(gpa, &gr) catch |e| {
-        try w.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
+        try w.print("joints: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
         return 2;
     };
     defer built.deinit();
@@ -170,10 +170,10 @@ pub fn run(
     if (churn != 0) cur.born_max = churn;
 
     var sc = (scanner.Scanner.compile(gpa, &gr) catch |e| {
-        try w.print("outliner: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(e) });
+        try w.print("joints: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(e) });
         return 2;
     }) orelse {
-        try w.print("outliner: {s} has no lexable terminal at all\n", .{gr.name});
+        try w.print("joints: {s} has no lexable terminal at all\n", .{gr.name});
         return 1;
     };
     defer sc.deinit();
@@ -365,12 +365,12 @@ fn witnessed(gpa: std.mem.Allocator, sample: []const u32, enter: []const u32) ![
 fn counted(w: *std.Io.Writer, rest: *[]const []const u8) !u32 {
     const flag = rest.*[0];
     if (rest.len < 2) {
-        try w.print("outliner: {s} wants a count\n", .{flag});
+        try w.print("joints: {s} wants a count\n", .{flag});
         return error.Usage;
     }
     rest.* = rest.*[1..];
     return std.fmt.parseInt(u32, rest.*[0], 10) catch {
-        try w.print("outliner: {s} {s} is not a count\n", .{ flag, rest.*[0] });
+        try w.print("joints: {s} {s} is not a count\n", .{ flag, rest.*[0] });
         return error.Usage;
     };
 }
@@ -762,7 +762,7 @@ const Probe = struct {
     }
 };
 
-const effectCompose = outliner.kernel.joint.effect.compose;
+const effectCompose = joints.kernel.joint.effect.compose;
 
 /// Whether the segments multiplied back to the whole.
 const Chain = union(enum) {

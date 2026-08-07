@@ -51,5 +51,5 @@ repo's sources. None of the three re-reads the binary, so a `zig build` that
 changes only the compiler's output - or any lane installing a binary built
 elsewhere - is invisible.
 
-*Falsifier:* swap `zig-out/bin/outliner` mid-run without touching `src/` and see
+*Falsifier:* swap `zig-out/bin/joints` mid-run without touching `src/` and see
 any of TOLD / STALE / DRIFT / MOVED / FED fire.

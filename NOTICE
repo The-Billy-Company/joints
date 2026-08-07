@@ -1,10 +1,10 @@
-outliner — parsing as algebra: one binary, one folio, every language
+joints — parsing as algebra: one binary, one folio, every language
 Copyright 2026 The Billy Company
 
 This product includes software developed at The Billy Company
 (https://billylives.com/).
 
-outliner stands on the irregex package for its regex engine, C-ABI floor, and
+joints stands on the irregex package for its regex engine, C-ABI floor, and
 shared math primitives; the attributions for what irregex bundles live in its
 own NOTICE file.
 
@@ -16,5 +16,5 @@ No third-party source is bundled here. One third-party data file is:
   The MIT License (MIT), Copyright (c) 2014 Max Brunsfeld.
   https://github.com/tree-sitter/tree-sitter-json
 
-outliner reads tree-sitter grammars; it does not link, vendor, or ship
+joints reads tree-sitter grammars; it does not link, vendor, or ship
 tree-sitter itself, and nothing at run time depends on it.

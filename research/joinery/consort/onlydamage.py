@@ -3,7 +3,7 @@
 
 `RESULT-5-blindness.md` labelled the ablation family: 28 of the 33 boards on
 this disk never read a square byte, so every conclusion drawn off them is a
-statement about outliner's own forest and not about agreement with a second
+statement about joints's own forest and not about agreement with a second
 parser. The family is not the only thing measured here, and this is the sweep
 that says how far the blindness reaches into what is already written down.
 

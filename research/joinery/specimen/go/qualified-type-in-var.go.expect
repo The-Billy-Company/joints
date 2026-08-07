@@ -1,5 +1,5 @@
 # CONTROL for selector-field.go. When `pkg.Name` really IS a qualified type,
-# outliner reads it as one.
+# joints reads it as one.
 #
 #   var_spec [32, 46)
 #     name: identifier      "x"
@@ -8,7 +8,7 @@
 #       name: type_identifier        "Stringer"
 #
 # Both trees, identical. This matters because the guilty witness produces a
-# `qualified_type` too, and a reader could conclude outliner has some general
+# `qualified_type` too, and a reader could conclude joints has some general
 # problem with `.` after a package name. It does not: in type position, where
 # the grammar admits nothing else, it is right.
 #

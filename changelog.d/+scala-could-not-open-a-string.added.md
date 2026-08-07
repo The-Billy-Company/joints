@@ -1,7 +1,7 @@
 scala could not open a string.
 
-Treatment outliner `beb695b5d` · tree `e973ce73c` (pin) · oracle `d85e736fa`
-(30 of 30 live, 30 attributed), against control outliner `aece1211e` · tree
+Treatment joints `beb695b5d` · tree `e973ce73c` (pin) · oracle `d85e736fa`
+(30 of 30 live, 30 attributed), against control joints `aece1211e` · tree
 `a9353c78b` on the same oracle. `still against` reads comparable: two files
 differ and this lane claims both.
 

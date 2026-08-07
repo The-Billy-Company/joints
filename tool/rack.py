@@ -31,7 +31,7 @@ Labeled brackets - `(name, named, start, end)` per node - are the standard
 constituency measure and they survive contact with this corpus. Measured before
 this file was written: **javascript's two trees carry 324 nodes each and their
 labeled bracket sets are identical**, 324 shared and none on either side alone.
-Outliner elides hidden rules, splices inlined ones and invents nodes for
+Joints elides hidden rules, splices inlined ones and invents nodes for
 aliases, and none of that moved a bracket on a grammar that works. A strict
 comparison is therefore viable rather than drowned, which is the fact this
 whole file rests on and the first thing to re-check if it starts reporting
@@ -39,10 +39,10 @@ nonsense.
 
 ## What is deliberately NOT compared
 
-**Anything wider than the outliner root the byte sits under.** Outliner hands
+**Anything wider than the joints root the byte sits under.** Joints hands
 back a forest on 18 of 30 grammars; tree-sitter always hands back one tree, so
-its `source_file` covers bytes outliner never reduced under anything. Charging
-those would report *"outliner returned a forest"*, which the board already
+its `source_file` covers bytes joints never reduced under anything. Charging
+those would report *"joints returned a forest"*, which the board already
 measures as `orphan`, `rubble` and `spoil`. Each built top-level root is a
 **window** and the oracle's brackets are judged only where they are contained
 in it. A byte with no contained oracle bracket at all is `unwindowed` - counted,
@@ -75,7 +75,7 @@ Same rule here, applied position by position along the spine.
 
 `unframed` used to mean *"the spines agree rung for rung under a frame we never
 built"*, and the agreement was doing work it should never have done. Where the
-oracle had nothing below the frame and outliner had something - our own extra
+oracle had nothing below the frame and joints had something - our own extra
 structure under a construct we are missing - the walk reached `not t_sp[k]`
 first and filed the bytes `unwindowed`, which reads as the oracle's silence.
 **Corpus-wide that was 1,237 of 1,264 `unwindowed` bytes: 97.9% of a column
@@ -120,7 +120,7 @@ and it is not "a shape tree-sitter does not build", which is the sentence it
 was feeding.
 
 `unframed` is the other direction. `<p>x</q>`: tree-sitter reads one
-`element [0, 8)`, outliner reads three roots and no element, both spines agree
+`element [0, 8)`, joints reads three roots and no element, both spines agree
 about every byte underneath, and this file scored it 7 built / 7 square / 0
 askew / 0 racked. A perfect row for a parse missing the node the file is about.
 
@@ -149,7 +149,7 @@ stretched root cannot buy it. `rack.py guard` runs the mend policies and prints
 `--json` on `run` / `whole` / `board`; a positional name filters, and a name
 that names nothing is an error rather than a silent full sweep.
 
-    OUTLINER_BIN=<path>   measure a pinned binary (`tool/pin.py`), not `zig-out`
+    JOINTS_BIN=<path>   measure a pinned binary (`tool/pin.py`), not `zig-out`
     --oracle=<tag>        measure against a FROZEN oracle (`tool/attest.py`)
     --price=<name>        `charged` (default) or `sheltered` (see above)
 
@@ -191,7 +191,7 @@ POLICY = ("none", "keep", "fell", "relent")
 
 # Which oracle answered. Every number below is a claim about two parsers and
 # this file used to name one: `stamp` records fourteen fields and all fourteen
-# are about outliner. On a tree four lanes rebuild, that is not pedantry - 28 of
+# are about joints. On a tree four lanes rebuild, that is not pedantry - 28 of
 # the 29 compiled oracles on this machine exist as several different files at
 # once, and 25 have a library older than the sources beside it. See `attest.py`.
 # The oracle is half of every number this file prints, and until `attest`
@@ -263,7 +263,7 @@ class Seen(NamedTuple):
     unframed: int  # a node the oracle frames these bytes with that we never built
     engulf: int  # ...of those, how many the SINGLE WIDEST missing frame accounts for
     unjudged: int  # plumb's rule: no oracle node, or an interior under an ERROR
-    unwindowed: int  # no oracle bracket contained in this outliner root
+    unwindowed: int  # no oracle bracket contained in this joints root
     shade: int  # ...the disputed population: `unwindowed`-shaped AND under an unbuilt frame
     shelter: int  # ...of `shade`, how many the ACTIVE price still files unwindowed (0 charged)
     mute: int  # of `unjudged`, how many also sit under a frame we never built
@@ -470,7 +470,7 @@ def inorder(nodes: list[plumb.Node]) -> list[Rung]:
     routinely hold the **same extent** - tree-sitter's go reads `fmt.Print(b)`
     as `expression_statement [23, 35)` over `call_expression [23, 35)` - and a
     span key alone cannot order them. The first version broke that tie on
-    `name`, so `call_expression` sorted above its own parent while outliner's
+    `name`, so `call_expression` sorted above its own parent while joints's
     `expression_statement` over `type_conversion_expression` sorted correctly,
     and the two spines were charged with a disagreement at a rung where they
     in fact agreed. Nesting is not alphabetical; ask the tree.
@@ -484,8 +484,8 @@ def within(pile: list[Rung], starts: list[int], lo: int, hi: int) -> list[Rung]:
 
     Strictly, and that word cost this file its first set of numbers. Keeping a
     rung as wide as the window looks harmless and is not, because the window is
-    an **outliner root** and the two sides frame it differently by construction:
-    outliner hands back a forest whose root stops at the last token, tree-sitter
+    an **joints root** and the two sides frame it differently by construction:
+    joints hands back a forest whose root stops at the last token, tree-sitter
     one tree whose root reaches EOF. On `ascii.zig` those are `source_file
     [4163, 16124)` and `source_file [0, 16125)` - the same node, disagreeing
     about a leading comment run and a trailing newline. The first version of
@@ -540,7 +540,7 @@ def unframed(saw: plumb.Read, pile: list[Rung]) -> list[tuple[int, int, str]]:
     """The oracle brackets that FRAME two of our roots and that we never built.
 
     The hole this file shipped with. `within` refuses to judge a frame from
-    inside itself - rightly, because outliner hands back a forest and
+    inside itself - rightly, because joints hands back a forest and
     tree-sitter one tree, and the two disagree about a root's extent by
     construction. But that refusal is total: it also excuses the case where the
     oracle has a genuine construct spanning several of our roots and we simply
@@ -548,7 +548,7 @@ def unframed(saw: plumb.Read, pile: list[Rung]) -> list[tuple[int, int, str]]:
     judged at, and every byte underneath reads `square`.
 
     `<p>x</q>` is the specimen. tree-sitter reads one `element [0, 8)`;
-    outliner reads three roots side by side and no element at all. Both spines
+    joints reads three roots side by side and no element at all. Both spines
     agree rung for rung about every byte below, so the old walk scored it
     **7 built, 7 square, 0 askew, 0 racked** - a perfect row for a parse that
     is missing the node the file is about.
@@ -664,7 +664,7 @@ def bucket(ours: tuple[Rung, ...], theirs: tuple[Rung, ...],
         # That is the whole `<p>x</q>` defect.
         return "unframed" if missing else "square"
     if not theirs:
-        # The oracle has nothing below the frame here and outliner does. Where
+        # The oracle has nothing below the frame here and joints does. Where
         # the frame itself is one we never built, these are the SAME bytes as
         # the branch above under the SAME missing construct, differing only in
         # whether we put something of our own underneath - so charging one and
@@ -1166,7 +1166,7 @@ def silence(rows: list[Seen], loud: float = 0.05) -> None:
     if whole := [r for r in hush if r.why]:
         print(f"  {len(whole)} row(s) above were refused WHOLE: no square, no crooked, no"
               f" unframed. `damage`\n  is then the only instrument left on the row, and"
-              f" `damage` is outliner's own words\n  about its own forest. Do not rank work"
+              f" `damage` is joints's own words\n  about its own forest. Do not rank work"
               f" off it.")
 
 
@@ -1188,7 +1188,7 @@ def hollow(rows: list[Seen], top: int = 6) -> None:
     child's node then starts *after* its own padding
     (`ts_node_child_iterator_next`), and a node ends at `start + size`
     (`ts_node_end_byte`). So on tree-sitter's tree the space between two tokens
-    is inside every ancestor and inside no leaf. Outliner's `Node` says the
+    is inside every ancestor and inside no leaf. Joints's `Node` says the
     same thing in its own words - *a node spans from its first token to its
     last, so the extras between them are inside it and the ones around it are
     not* - and `Gather.reduce` implements it by refusing to let a child that
@@ -1275,7 +1275,7 @@ def unread(rows: list[Seen]) -> None:
           " which no board reads:")
     for r, b in sorted(bad, key=lambda p: -p[1].standing):
         print(f"  {r.name:<19}{b.standing * 100:>6.1f}% standing  UNSOUND: {b.unsound}")
-    print("  These are outliner's own words about its own forest. A grammar can score"
+    print("  These are joints's own words about its own forest. A grammar can score"
           " 100.0%\n  and `whole` on a board that never asked.")
 
 
@@ -1314,7 +1314,7 @@ def whole(as_json: bool, mark: stamp.Stamp, pin: str = "") -> int:
     print(f"\n{len(dirty)} of {len(rows)} carry a byte the two parsers derive differently;"
           f" {sum(1 for r in rows if r.racked)} carry a RIGHT LEAF UNDER A WRONG PARENT;"
           f"\n{sum(1 for r in rows if r.unframed)} carry a frame the oracle builds and"
-          f" outliner does not.")
+          f" joints does not.")
     totals(rows, "THE WHOLE TWELVE, TOGETHER")
     hollow(rows)
     unread(rows)
@@ -1340,14 +1340,14 @@ def show(picked: list[plumb.Case]) -> int:
         if r.unframed and (saw := plumb.read(case)) is not None:
             for lo, hi, span in unframed(saw, inorder(saw.mine)):
                 print(f"  NO FRAME for [{lo}, {hi}): the oracle builds {span} there and"
-                      f" outliner builds nothing"
+                      f" joints builds nothing"
                       f" — {saw.blob[lo:min(hi, lo + 40)].decode('utf-8', 'replace')!r}")
         print(f"  brackets: {r.shared} of the oracle's {r.their_nodes} shared"
               f" ({r.recall * 100:.1f}% recall), {r.ours_nodes} ours"
               f" ({r.precision * 100:.1f}% precision)")
         blob = case.source.read_bytes()
         if r.worst:
-            print(f"\n  {'bytes':<18}{'wide':>6} {'kind':<8}{'at':>3}  {'outliner':<30}"
+            print(f"\n  {'bytes':<18}{'wide':>6} {'kind':<8}{'at':>3}  {'joints':<30}"
                   f"{'tree-sitter':<30}text")
         for w in r.worst:
             text = blob[w.start:min(w.end, w.start + 26)].decode("utf-8", "replace")
@@ -1388,7 +1388,7 @@ def board(rows: list[Seen], as_json: bool) -> int:
     print(f"       {built / size * 100:.2f}% standing, unmoved — of which {crooked} bytes"
           f" ({crooked / built * 100:.2f}% of built) are derived differently"
           f"\n       and a further {frame} ({frame / built * 100:.2f}%) sit under a frame"
-          f" outliner never built")
+          f" joints never built")
     if eat := sum(r.engulf for r in rows):
         print(f"       of those {frame}, {eat} ({eat / frame * 100:.1f}%) are ONE frame per file"
               f" — the widest single missing node\n       on each row, and where a file is one"
@@ -1658,7 +1658,7 @@ def verify() -> int:
     # believed it was. A parent and its only child share an extent often enough
     # that the tie-break in `inorder` is load-bearing, and breaking it on `name`
     # ordered tree-sitter's `expression_statement [23, 35)` BELOW its own child
-    # `call_expression [23, 35)` while outliner's same-extent pair happened to
+    # `call_expression [23, 35)` while joints's same-extent pair happened to
     # sort right — charging a disagreement at a rung where the two agreed. It
     # moved 340 bytes between `askew` and `racked` corpus-wide and left the
     # total untouched, which is exactly why nothing else here would have caught
@@ -1678,7 +1678,7 @@ def verify() -> int:
                     + ("" if mum and kid else " — no same-extent pair in the oracle tree")))
 
     # THE MISSING FRAME. `<p>x</q>`: tree-sitter reads one `element [0, 8)`,
-    # outliner reads three roots and no element at all. Every byte below the
+    # joints reads three roots and no element at all. Every byte below the
     # frame is derived identically, so the walk this file shipped with scored
     # it 7 built / 7 square / 0 askew / 0 racked - a perfect row for a parse
     # missing the node the file is about. The specimen lane wrote it down and
@@ -1702,7 +1702,7 @@ def verify() -> int:
         if saw is not None and not saw.why and got is not None and not got.why:
             roots = sorted({(ra, rb) for _, _, ra, rb in saw.windows})
             span = unframed(saw, inorder(saw.mine))
-            out.append((len(roots) > 1, f"outliner builds a forest here: {len(roots)} roots"
+            out.append((len(roots) > 1, f"joints builds a forest here: {len(roots)} roots"
                                         f" over {len(saw.blob)} bytes"))
             out.append((len(span) == 1 and span[0][0] <= roots[0][0]
                         and span[0][1] >= roots[-1][1],
@@ -1913,7 +1913,7 @@ def adjudged(rows: list[Seen]) -> list[tuple[bool, str]]:
                 + (f" — EXCEPT {', '.join(off)}" if off else "")))
     # THE VERDICT. Almost all of it must be the shared gap, or the sentence is
     # false and `damage` is the larger figure after all. This is the row that
-    # goes red if outliner starts leaving bytes bare that tree-sitter tokenises.
+    # goes red if joints starts leaving bytes bare that tree-sitter tokenises.
     out.append((bare / out_of >= 0.5,
                 f"and it is overwhelmingly the SHARED gap rather than a token we owe:"
                 f" {bare} of {out_of} byte(s) ({bare / out_of * 100:.1f}%) are under no"
@@ -2195,7 +2195,7 @@ def soft(cases: list[plumb.Case]) -> int:
     part of it I would not defend. An `extra` - a comment, a blank line - may
     attach at any point the grammar allows, and where a parser hangs one is an
     internal choice rather than a claim about structure. tree-sitter swallows a
-    leading scaladoc into the `function_definition` it precedes; outliner keeps
+    leading scaladoc into the `function_definition` it precedes; joints keeps
     it a sibling. Neither has misread a byte, and my walk charges every byte of
     the comment to whichever spine it isn't on.
 
@@ -2207,7 +2207,7 @@ def soft(cases: list[plumb.Case]) -> int:
     can part at a rung where both sides name the same construct, starting at
     the same byte, and disagree only about where it STOPS. Nobody disputes a
     parent there. `toml`'s entire row is that shape - both parsers hang the
-    `comment` under the same `pair`, and outliner's `pair` merely ends early -
+    `comment` under the same `pair`, and joints's `pair` merely ends early -
     and this file scored it as a derivation tree-sitter does not build. It is
     62% of toml, 96% of latex and 80% of zig. A moved edge is a real defect and
     somebody else's to price; it is not "built in a shape tree-sitter does not

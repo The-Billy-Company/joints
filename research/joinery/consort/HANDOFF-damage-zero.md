@@ -16,7 +16,7 @@ Three identical rows on the two columns every page in this repository quotes.
 php and html are finished. **elixir builds every byte of `router.ex` and derives
 22,210 of them under parents tree-sitter does not use** — 48% of the file, and
 `damage` and `standing` are structurally incapable of saying so, because both are
-outliner's own words about outliner's own forest.
+joints's own words about joints's own forest.
 
 This is not hypothetical damage to the record. `RESULT-9-reach.md` found 116 of
 347 pages quoting our columns and never the oracle's, and the two most-cited

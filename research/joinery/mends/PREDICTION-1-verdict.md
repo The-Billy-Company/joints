@@ -5,9 +5,9 @@ stderr I already had from the brief and from
 `research/joinery/board/PREDICTION-1-order.md`:
 
 ```
-outliner: kotlin: blind to 8 externally scanned terminal(s)
-outliner: upstream/sources/Maps.kt: unexpected (?:[^\r\n]*) at 270 in state 433, 419 roots, mended 142 over 142B
-outliner: kotlin: lexer on (?:[^\r\n]*) in state 433 [no stand-in for _string_start]: …
+joints: kotlin: blind to 8 externally scanned terminal(s)
+joints: upstream/sources/Maps.kt: unexpected (?:[^\r\n]*) at 270 in state 433, 419 roots, mended 142 over 142B
+joints: kotlin: lexer on (?:[^\r\n]*) in state 433 [no stand-in for _string_start]: …
 ```
 
 `stamp.verdict()` takes the **last non-blank line**. On this row that is

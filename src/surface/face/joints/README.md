@@ -1,4 +1,4 @@
-# outliner - the CLI face
+# joints - the CLI face
 
 Seven verbs over one library. This folder's job is to turn whatever the
 library refuses to do into a sentence a terminal can read and an exit code a
@@ -11,7 +11,7 @@ script can branch on - never a stack trace.
 | `parse.zig` | `parse` - load a grammar or a folio, build a tree, print it. |
 | `amend.zig` | `amend` - re-parse across an edit without re-reading the file. |
 | `mint.zig` | `mint` - press a grammar into a folio, or read one back and check it. |
-| `joints.zig` | `joints` - rung 1 of `research/joinery/TESTING.md`: does a segment collapse to one answer. |
+| `survey.zig` | `survey` - rung 1 of `research/joinery/TESTING.md`: does a segment collapse to one answer. |
 
 ## The contract
 
@@ -28,16 +28,16 @@ travel through it.** Instead:
    trace, which is the correct behavior for a bug and the wrong one for a
    typo.
 2. **One sentence shape.** Every diagnostic this face prints follows
-   `outliner: <what> <path-or-name>: <error message>` (`@errorName(err)` for
+   `joints: <what> <path-or-name>: <error message>` (`@errorName(err)` for
    the last part, since the library's error sets already name themselves in
    sentence case - `FolioBadMagic`, `Unsplittable`) or, when there is no error
-   value to name, a hand-written reason (`outliner: {s} has no lexable
+   value to name, a hand-written reason (`joints: {s} has no lexable
    terminal at all`). It always goes to the writer the caller already owns
    (`w` for a fresh run, `e` for `parse`'s stderr), never to `std.debug.print`
    or a second stream the caller doesn't control.
 3. **Three exit codes, and they mean different things.** `0` ran and answered.
    `1` is a **clean negative answer** - the machinery worked and the answer is
-   "no": a grammar with no lexable terminal, a `joints` run that tripped its
+   "no": a grammar with no lexable terminal, a `survey` run that tripped its
    kill condition, a folio that doesn't parse as one so it must be a grammar
    instead. `2` is a **failure** - the thing asked for could not be attempted:
    an unreadable file, a grammar tree-sitter itself rejects, a scanner that
@@ -60,7 +60,7 @@ Every call to a fallible library seam - `import.treeSitter`,
 
 ```zig
 var gr = import.treeSitter(gpa, source) catch |e| {
-    try w.print("outliner: cannot import {s}: {s}\n", .{ path, @errorName(e) });
+    try w.print("joints: cannot import {s}: {s}\n", .{ path, @errorName(e) });
     return 2;
 };
 ```
@@ -70,16 +70,16 @@ that compiled fine but found no lexable terminal is a `null`, not an error):
 
 ```zig
 var sc = (scanner.Scanner.compile(gpa, &gr) catch |e| {
-    try w.print("outliner: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(e) });
+    try w.print("joints: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(e) });
     return 2;
 }) orelse {
-    try w.print("outliner: {s} has no lexable terminal at all\n", .{gr.name});
+    try w.print("joints: {s} has no lexable terminal at all\n", .{gr.name});
     return 1;
 };
 ```
 
 The one place this loosens on purpose is a verb walking *several* files
-(`joints`, `parse`'s multi-file form): one path's read failure is reported and
+(`survey`, `parse`'s multi-file form): one path's read failure is reported and
 that path is skipped with `continue`, because the other files a user named on
 the command line are still owed an answer. That is a different shape from
 `intake.slurp`'s single-file `null`-and-return, not a violation of it - a

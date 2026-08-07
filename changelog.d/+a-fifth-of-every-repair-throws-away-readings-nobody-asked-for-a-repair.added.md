@@ -1,12 +1,12 @@
 A fifth of every repair throws away readings nobody asked for a repair.
 
-Taken on `outliner 1885792a7` · tree `4f018b60f` (pin) · oracle `d85e736fa`
+Taken on `joints 1885792a7` · tree `4f018b60f` (pin) · oracle `d85e736fa`
 (30 of 30 live, 30 attributed).
 
 `research/joinery/supply/RESULT-2-heads.md` measures the population behind the
 per-reading error cost item, which had been carried on the strength of an
 argument from the tables alone. Nothing in `src/` changed to get it: the
-runtime already prints `Scar.heads` under `outliner parse --scars`, and already
+runtime already prints `Scar.heads` under `joints parse --scars`, and already
 traces why a supply stands down.
 
 **The premise holds, and harder than written.** Both arms of `mended`
@@ -39,7 +39,7 @@ A staleness hypothesis about `x.refused`/`x.spent` was tested and left open:
 4 of 473 multi-head scars report a state that admits the symbol they refused,
 but `gather.zig:2433`'s fold-failure arm produces that report legitimately and
 the test cannot separate the two. The first run of that test said zero, and the
-zero was `outliner state` exiting 2 on a folio and printing nothing - the
+zero was `joints state` exiting 2 on a folio and printing nothing - the
 tool's silence read as the table's answer, which is the same trap `Scar.heads`
 itself fell into once. Re-run with the exit code asserted and controls both
 ways.

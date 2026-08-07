@@ -131,7 +131,7 @@ elixir 22,089 → 22,721, and `do-block-without-inner-call.ex` goes red.
 ## Half two — the merge tie-break (`src/kernel/quire/gather.zig`)
 
 With both actions on the cell the parse forks, and `collapse` merges the two
-limbs back. Under `OUTLINER_TRACE=quire` they arrive with **equal `heft` and
+limbs back. Under `JOINTS_TRACE=quire` they arrive with **equal `heft` and
 equal `rank`** — the grammar ranked nothing and neither reading speculated
 further than the other — so `Reading.beats` falls through to `a.rank < b.rank`,
 which is a strict `<`, which keeps whichever limb was already in `next`. That is
@@ -162,7 +162,7 @@ challenger is arm D.
 ## The decomposition
 
 Four arms, one variable each, one pinned binary each, each with its own
-`OUTLINER_WORK` and its own minted oracle reading **30 of 30 verdicts live**.
+`JOINTS_WORK` and its own minted oracle reading **30 of 30 verdicts live**.
 All four share one source snapshot, so the only differences between them are the
 two edits.
 
@@ -316,7 +316,7 @@ Four arms under `.local/lane-elixir/land/{A,B,C,D}`, one source snapshot each,
 | C tie-break | `dc141584a80a` | `bbb978704eba` |
 | D both | `572f101904b7` | `b2eac71bc20e` |
 
-Each carries its own `OUTLINER_WORK` and its own oracle minted with
+Each carries its own `JOINTS_WORK` and its own oracle minted with
 `pin.py oracle`, all four reading **30 of 30 verdicts live** — the column that
 reads `0` both when thirty grammars agree and when nobody asked. tree-sitter
 0.26.11. Specimens under each pin with

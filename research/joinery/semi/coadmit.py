@@ -3,7 +3,7 @@
 
 **Superseded by `population.py`; kept only as the record of a wrong answer.**
 This counts *shiftable* rivals, which is the narrower of the two populations an
-`outliner state` row holds - the row also lists reduce lookaheads, and it is the
+`joints state` row holds - the row also lists reduce lookaheads, and it is the
 union of the two that a scanner reads as `valid_symbols`. So its 20 states for
 `_implicit_semi` answer a question a stand-in does not face; the number that
 governs is 1712. `RESULT-2-seated.md` cites this file for that error. Run
@@ -17,7 +17,7 @@ late hand never fires and an early one has to be right about which reading asked
 
 So the same question has to be asked before designing anything for
 `_implicit_semi`. This walks every LR state, reads its row out of
-`outliner state`, and for each state that admits a named terminal reports how
+`joints state`, and for each state that admits a named terminal reports how
 many *other* terminals are shiftable there - split by whether the rival is one
 this lexer can actually see (a spelled terminal) or another blind external.
 
@@ -38,7 +38,7 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-BIN = ROOT / "zig-out" / "bin" / "outliner"
+BIN = ROOT / "zig-out" / "bin" / "joints"
 
 # `read on`/`read off` is a shift, `fold` is a reduction, `halt` is accept. Only
 # a shift competes for bytes, so only a shift is a rival.

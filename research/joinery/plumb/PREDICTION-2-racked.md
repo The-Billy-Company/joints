@@ -24,7 +24,7 @@ measurement that falsifies it.
   without them would have been a guess:
   - **javascript's two trees carry 324 nodes each and their labeled bracket
     sets — `(name, named, start, end)` — are identical: 324 shared, 0 on
-    either side alone.** So outliner's node shaping (hidden rules, inlining,
+    either side alone.** So joints's node shaping (hidden rules, inlining,
     invented alias nodes) does *not* structurally swamp a strict comparison on
     a grammar that works. A strict measure is viable.
   - **go's corpus file carries the specimen's defect, not just the specimen.**
@@ -49,10 +49,10 @@ Same scope, same oracle, same pin. For each top-level `built` root R = [a, b)
 from `standing.tops`, and for each byte i inside it:
 
 - **`spine(i)`** is the sequence of `(name, named, start, end)` for every node
-  covering i, outermost first — outliner's from R down, tree-sitter's
+  covering i, outermost first — joints's from R down, tree-sitter's
   restricted to nodes **contained in [a, b)**. Tree-sitter's ancestors that
-  reach past R are dropped: outliner never claimed a bracket that wide, and
-  judging it on one would report *"outliner returned a forest"*, which the
+  reach past R are dropped: joints never claimed a bracket that wide, and
+  judging it on one would report *"joints returned a forest"*, which the
   board already measures as `orphan`/`rubble`/`spoil`.
 
 Five buckets, disjoint, totalling `built`:

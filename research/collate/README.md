@@ -1,6 +1,6 @@
 # collate — the scoreboard against tree-sitter
 
-Outliner exists to beat tree-sitter. Nobody had measured whether it does. This
+Joints exists to beat tree-sitter. Nobody had measured whether it does. This
 folder is the measurement, on thirty grammars, against tree-sitter 0.26.11
 generated from the same `grammar.json` files the press reads.
 
@@ -16,7 +16,7 @@ Pin `collate` (tree `735a2c2ee2e8`, binary `a01fcb3448c4`), 2026-08-05.
 | axis | verdict | number | where |
 |---|---|---|---|
 | artifact size, per grammar | **improvement** | folio 0.34x the dylib, 28 of 28 | [Result 2](RESULT-2-cost.md) |
-| installation, 1 language | gap | outliner 2.07 MB against ~1.6 MB | [Result 2](RESULT-2-cost.md) |
+| installation, 1 language | gap | joints 2.07 MB against ~1.6 MB | [Result 2](RESULT-2-cost.md) |
 | installation, 2+ languages | **improvement** | crossover at two; 16 MB against 76 MB at thirty | [Result 2](RESULT-2-cost.md) |
 | no C toolchain | **improvement** | 22 of 28 grammars ship 486,301B of scanner C; 0 folios need a compiler | [Result 2](RESULT-2-cost.md) |
 | externals seated from structure | **improvement**, narrower than claimed | 263 of 461 tokens, but 7 of 23 grammars | [Result 2](RESULT-2-cost.md) |
@@ -33,35 +33,35 @@ Pin `collate` (tree `735a2c2ee2e8`, binary `a01fcb3448c4`), 2026-08-05.
 
 ## The four things worth knowing
 
-**Outliner is not incremental on most of the corpus.** Median gain from having
+**Joints is not incremental on most of the corpus.** Median gain from having
 an existing tree: 1x. Swift is 30,740 microseconds per keystroke against
 tree-sitter's 73. This is the axis editors adopt tree-sitter for and it is the
 worst row here by a distance.
 
 **The candidate win was two files, not a corpus, and it splits.** tree-sitter
 `ERROR`s on 2 of 30 files, not the 5 predicted, and 99.4% of those bytes are
-`picorv32.v`. Hand adjudication of twenty spans there: outliner right on 8,
+`picorv32.v`. Hand adjudication of twenty spans there: joints right on 8,
 tree-sitter right on 7, both wrong on 2 — and the two `neither` rows carry 1,215
 of the 2,724 disputed bytes.
 
 **"Tree-sitter produces nothing usable for that file" is false.** Inside its
 root `ERROR` it hands back 59,611 bytes under named nodes, 63% of the file. It
-parses and says don't trust it. That is a feature outliner does not have.
+parses and says don't trust it. That is a feature joints does not have.
 
-**Outliner's tree can never mark its own misreadings.** Misread bytes live in
+**Joints's tree can never mark its own misreadings.** Misread bytes live in
 `built`; `damage` is everything outside `built`. Flag recall is 0.00 as an
 identity, on every grammar, forever, for as long as the board is defined this
 way. php misreads 25,338 bytes, flags none, and reports 87.2% standing.
 
 ## The instrument
 
-`tool/collate.py`, seven verbs. `OUTLINER_BIN` picks the binary — in this tree a
+`tool/collate.py`, seven verbs. `JOINTS_BIN` picks the binary — in this tree a
 path is not a version, and a benchmark against a binary you do not control is
 worthless.
 
 | verb | question |
 |---|---|
-| `refusal` | where does tree-sitter `ERROR`, how much survives inside it, and what does outliner build there |
+| `refusal` | where does tree-sitter `ERROR`, how much survives inside it, and what does joints build there |
 | `disputed` | inside a recovery region, where do the two trees disagree byte by byte — **evidence, never a verdict** |
 | `adjudicated` | do the twenty hand verdicts still describe both live trees; exits 1 on drift |
 | `probe` | both trees over one span, side by side, for judging the next one |
@@ -71,7 +71,7 @@ worthless.
 | `prove` | every guard above, asked to say no on an input where no is right |
 
 ```bash
-export OUTLINER_BIN=.local/pin/collate/bin/outliner
+export JOINTS_BIN=.local/pin/collate/bin/joints
 python3 tool/collate.py adjudicated   # the tracked correctness gate
 python3 tool/collate.py prove         # the anti-vacuity
 ```

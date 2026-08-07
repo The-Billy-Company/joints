@@ -71,7 +71,7 @@ def one(i: int, label: str, text: str, base: plumb.Case, show: bool) -> None:
     saw = plumb.read(base._replace(source=path))
     print(f"\n[{i:2}] {label}\n     {text.strip()!r}")
     if saw is None:
-        print("     no folio for cpp in OUTLINER_WORK")
+        print("     no folio for cpp in JOINTS_WORK")
         return
     if not saw.ok:
         print(f"     refused: {saw.why}")

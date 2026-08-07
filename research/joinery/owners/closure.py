@@ -7,7 +7,7 @@ does not scale to 181 walls in 18 grammars, and hand-picking 181 positions is
 181 chances to pick the position that makes the verdict come out the way I
 expected.
 
-So the position comes off the wall's own LR state instead — `outliner state
+So the position comes off the wall's own LR state instead — `joints state
 <grammar> <n>` prints the items, and an item `A -> alpha . beta` says exactly
 what this position can still consume. Which turns the closure into the textbook
 question it always was:

@@ -1,6 +1,6 @@
 `parse` rendered its tree one way: indented lines for a person, s-expressions
 under `--sexp` for a person who grew up on tree-sitter. Both are drawings. A
-program consuming outliner - an editor plugin, a harness, an agent - had to
+program consuming joints - an editor plugin, a harness, an agent - had to
 re-parse the drawing, which is a parser feeding people who own parsers a
 format that needs one.
 

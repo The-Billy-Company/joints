@@ -8,7 +8,7 @@ appetite, and all 6,591 bytes of it are the cold peel's cut.
 
 ## The eight walls are three states, and two of the three hold no contest
 
-`outliner state <g> --holding '-> _identifier .'` — the inverse query this lane
+`joints state <g> --holding '-> _identifier .'` — the inverse query this lane
 built — over `verilog.json`:
 
 ```
@@ -54,7 +54,7 @@ Any run of non-backslash, non-newline bytes — **including the empty string**. 
 matches `= 0;`, `[3:0]`, a whole line of anything. Under maximal munch it beats
 every real token it overlaps.
 
-And it belongs almost nowhere. `outliner state <g> --census macro_text`:
+And it belongs almost nowhere. `joints state <g> --census macro_text`:
 
 > shift in **1 state(s)**, lookahead in 6
 

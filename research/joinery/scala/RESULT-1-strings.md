@@ -1,7 +1,7 @@
 # Result 1 — scala could not open a string
 
-Treatment arm outliner `beb695b5d` · tree `e973ce73c` (pin) · oracle `d85e736fa`
-(30 of 30 live, 30 attributed). Control arm outliner `aece1211e` · tree
+Treatment arm joints `beb695b5d` · tree `e973ce73c` (pin) · oracle `d85e736fa`
+(30 of 30 live, 30 attributed). Control arm joints `aece1211e` · tree
 `a9353c78b` · same oracle `d85e736fa` (30 of 30 live, 30 attributed).
 `still against ocaml-orphan scala-string --mine src/kernel/lex/outside.zig
 --mine src/kernel/lex/scanner_test.zig` reads **comparable**: two files differ
@@ -189,7 +189,7 @@ both true of it.
 
 **Reading the scanner settles intent, not behaviour.** I read
 `scan_string_content` and transcribed three stopping conditions into three
-patterns. What I did not do is run tree-sitter's scanner and outliner's slate
+patterns. What I did not do is run tree-sitter's scanner and joints's slate
 over the same bytes and diff the token streams. The oracle compares *trees*, so
 a spelling that is wrong in a way the parse recovers from would not show up in
 +4,281 square.

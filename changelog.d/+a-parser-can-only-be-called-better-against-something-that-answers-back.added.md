@@ -1,4 +1,4 @@
-Outliner has always been described as beating tree-sitter and nothing measured
+Joints has always been described as beating tree-sitter and nothing measured
 whether it does. `tool/collate.py` and `research/collate/` are the scoreboard:
 thirty grammars, against tree-sitter 0.26.11 generated from the same
 `grammar.json` the press reads, every difference labelled gap, improvement or
@@ -20,11 +20,11 @@ identifiers.
 The losses are worse than the wins are good, and one of them is a category
 rather than a ratio. Cold parse is 2.9x slower at the median and latex is 31.7x.
 The keystroke is 5.6x slower at the median, but the number that matters is the
-gain over re-opening the file: tree-sitter's is 8x and **outliner's is 1x**, so
+gain over re-opening the file: tree-sitter's is 8x and **joints's is 1x**, so
 on 17 of 29 grammars typing one character costs what opening the file costs -
 30,740 microseconds per keystroke on a 28 KB Swift file against tree-sitter's
 73. php is the one row that beats it, 138 microseconds at a 65x gain, which
-proves the machinery works and the rest is a re-mint policy. Outliner's tree
+proves the machinery works and the rest is a re-mint policy. Joints's tree
 also cannot mark its own misreadings at all: misread bytes lie inside `built`,
 `damage` is everything outside `built`, so flag recall is 0.00 as an identity.
 php misreads 25,338 bytes, flags none of them, and reports 87.2% standing.
@@ -51,7 +51,7 @@ the language per path. The second is this lane's own byte comparison: over the
 1,188-byte module instantiation that both parsers call a class type, it scores
 57.7% agreement and 0% disagreement, because a deepest-node comparison inside a
 recovery region measures two lexers rather than two trees. A third was caught
-before it printed anything: `outliner grammar`'s "cannot be lexed here" note
+before it printed anything: `joints grammar`'s "cannot be lexed here" note
 lists all 33 of swift's externals while 22 are in fact seated, so reading it as
 a seating census would have reported zero seated everywhere.
 

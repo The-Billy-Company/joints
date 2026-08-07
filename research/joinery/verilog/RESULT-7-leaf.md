@@ -2,7 +2,7 @@
 
 Every number here was read on isolated arm **`leaflane`** (binary `69c0b9172`,
 built from tree `0d4217867`) unless it says otherwise, and cross-read on the
-tree's own `zig-out/bin/outliner`, which was rebuilt under me three times
+tree's own `zig-out/bin/joints`, which was rebuilt under me three times
 (`1570509f7`, `151af229f`, `bfdfe5443` — three other lanes are in these files
 tonight). picosoc and spimemio never moved; picorv32 read 59.4 / 59.3 / 58.3 and
 simpleuart 86.7 / 86.7 / 87.6. §6 has that table, because it turned out to be a
@@ -50,7 +50,7 @@ corrections to the instrument that were quietly inflating the answer.
 ```text
 # leaf gap — verilog  picorv32.v  94657 B
   verible: 74194 B carry a non-blank token, in 17510 tokens
-  outliner leafs 44140 B · tree-sitter 73357 B · DEFICIT 30127 B
+  joints leafs 44140 B · tree-sitter 73357 B · DEFICIT 30127 B
   of verible's token bytes we stand a leaf on 44097 — 59.4%
   of that deficit: 590 B under a node we built with no leaf on it,
                    29537 B under no node at all
@@ -108,9 +108,9 @@ mend trail.
 `inquest`, re-derived on this tree rather than inherited:
 
 ```text
-outliner: picorv32.v: unexpected ` at 3712 in state 3438, 3430 roots,
+joints: picorv32.v: unexpected ` at 3712 in state 3438, 3430 roots,
           mended 1981 over 31792B, supplied 34, spurned 11
-outliner: verilog: press? on ` in state 3438 (0 dropped, 34 misfolded):
+joints: verilog: press? on ` in state 3438 (0 dropped, 34 misfolded):
           a merge damaged this terminal's cell elsewhere, and no fold chain
           was supplied to say whether this wall is downstream of it
 ```
@@ -125,7 +125,7 @@ Byte 3712 is `` `ifdef RISCV_FORMAL `` **inside a module port list**.
 
 ## 3. Externals: absent, not starved
 
-Straight from the press, `outliner grammar`:
+Straight from the press, `joints grammar`:
 
 ```text
 terminals   398 literal, 46 regex, 0 external
@@ -196,7 +196,7 @@ over.
 
 ### Where it actually goes wrong
 
-`OUTLINER_TRACE=quire` on the 56-byte witness, in full — three lines:
+`JOINTS_TRACE=quire` on the 56-byte witness, in full — three lines:
 
 ```text
 split: state 1599 on [ at 727 rank 0 - keeps read on -> 2448,
@@ -411,4 +411,4 @@ re-derived.
    quoting any number on the page** — that is what it is for.
 
 Nothing on this page depends on `crooked`, `square`, `trued`, `standing`, or
-`damage`. It is Verible's token stream, our leaf spans, and `outliner state`.
+`damage`. It is Verible's token stream, our leaf spans, and `joints state`.

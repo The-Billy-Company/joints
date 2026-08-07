@@ -126,7 +126,7 @@ consulted the oracle. The remedy is to make the population exist, and it is in
 
 **`pin.py verify` exits 1 on `scars-arm`: a stale pin, not corruption, and I
 can show it.** The pin records binary `67892dc687d4`, built 22:08:53 local; the
-bytes at `.local/pin/scars-arm/bin/outliner` digest `c7ad0942e6a1` and the file
+bytes at `.local/pin/scars-arm/bin/joints` digest `c7ad0942e6a1` and the file
 is dated **22:49:47**, the same second as `fz-skeins`, in the middle of a run
 of ten sibling arms all built between 22:37 and 23:14. So someone re-armed into
 the same prefix 41 minutes after pinning it and never re-pinned. Nothing is

@@ -1,7 +1,7 @@
 # Result 4 - the 6,316 and the 6,591 are not the same bytes, and neither is a residue
 
 Scored against [PREDICTION-2](PREDICTION-2-rederive.md) P2.1–P2.3. Arm
-`unjudged` (`outliner 94d59d9ad`, tree `05a18fcd1`), one whole-file parse per row.
+`unjudged` (`joints 94d59d9ad`, tree `05a18fcd1`), one whole-file parse per row.
 Tool: [`reconcile.py`](reconcile.py).
 
 > **They are provably different bytes, on two independent grounds. The 6,477

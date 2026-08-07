@@ -15,7 +15,7 @@ This file joins the three channels that together name the obstruction:
 
   the trace     `stood down (none): TERM at N in state S` — where, and why
   the scars     `scar A..B nB fell …`                     — how many bytes
-  the table     `outliner state <g> S`                    — what S would accept
+  the table     `joints state <g> S`                    — what S would accept
 
 and reports, per blind external, how many refusals stood in a state that
 admits it. That is an *attribution*, not a proof of causation, so it is
@@ -109,7 +109,7 @@ class Row(NamedTuple):
 
 
 def parse(binary: Path, art: Path, src: Path, mend: str) -> tuple[str, str]:
-    env = dict(os.environ) | {"OUTLINER_TRACE": "quire"}
+    env = dict(os.environ) | {"JOINTS_TRACE": "quire"}
     got = subprocess.run(
         [str(binary), "parse", str(art), str(src), "--scars", f"--mend={mend}"],
         capture_output=True, text=True, timeout=stamp.PATIENCE, cwd=ROOT, env=env)
@@ -138,12 +138,12 @@ def walls(out: str, err: str) -> list[Wall]:
 def admitted(binary: Path, art: Path, state: int) -> tuple[frozenset[str], frozenset[str]]:
     """The named terminals one state shifts, and the ones it only folds on.
 
-    Reads the grammar **JSON**, not the folio the parse ran on: `outliner
+    Reads the grammar **JSON**, not the folio the parse ran on: `joints
     state` imports a grammar and refuses a compiled folio with
     `MalformedGrammar`. The first draft of this file passed the folio, got
     nothing back on every state, and reported all 936 refusals `clear` — a
     perfectly-shaped falsification of its own brief, produced entirely by a
-    silent exit 2. Hence the tally line: `outliner state` closes with
+    silent exit 2. Hence the tally line: `joints state` closes with
     `shift N, lookahead M`, and a run that never printed one did not answer.
     """
     got = subprocess.run([str(binary), "state", str(art), str(state)],
@@ -280,7 +280,7 @@ def main(argv: list[str]) -> int:
     if args.selftest:
         return selftest()
 
-    work = Path(os.environ.get("OUTLINER_WORK", ROOT / ".local" / "work"))
+    work = Path(os.environ.get("JOINTS_WORK", ROOT / ".local" / "work"))
     pick = TWELVE if args.all else ("haskell",)
     rows = [r for c in plumb.slate() if c.name in pick
             if (r := row(c, work, order.BIN, args.mend))]

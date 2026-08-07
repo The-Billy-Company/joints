@@ -2,10 +2,10 @@
 # instrument that reported it needed adjudicating.
 #
 # `rack` charges toml 29 bytes and files them as a derivation dispute. They are
-# not. Both parsers hang the comment under the SAME parent; outliner just
+# not. Both parsers hang the comment under the SAME parent; joints just
 # forgets to grow the parent over it.
 #
-#   outliner                      tree-sitter
+#   joints                      tree-sitter
 #   pair [0, 7)     <- 7           pair [0, 12)   <- 12
 #     bare_key [0, 1)                bare_key [0, 1)
 #     string [4, 7)                  string [4, 7)

@@ -1,10 +1,10 @@
-`outliner state <grammar> <n>` has always answered "what does this state hold?"
+`joints state <grammar> <n>` has always answered "what does this state hold?"
 There was no way to run that backwards, and the backwards direction is the one
 attribution needs: a wall names a state, and the question "who is at fault for
 this wall" is usually a question about states the wall's own state never
 mentions. Two verbs now close it.
 
-`outliner state <grammar> --holding '<item>'` names every state holding a
+`joints state <grammar> --holding '<item>'` names every state holding a
 reading. The query is an item pattern with three optional halves, so it can be
 asked at whatever precision you have. `variable_lvalue -> _identifier .` is
 exact; `-> _identifier .` drops the left-hand side and asks which left-hand
@@ -14,7 +14,7 @@ the whole difficulty - a substring test for `variable_lvalue -> _identifier .`
 also matches `variable_lvalue -> _identifier . select1`, a different item with a
 different meaning, and reports a count that looks like evidence.
 
-`outliner state <grammar> --chain <n>` answers the other half: how a parse
+`joints state <grammar> --chain <n>` answers the other half: how a parse
 arrives at a state, and where a fold there goes. Handle origins are **exact, not
 a radius** - stepping back `|body|` times while ignoring the edge symbols
 returns every state within `|body|` steps, which on a small automaton is usually
@@ -29,7 +29,7 @@ reviewed, formatted and split into its own module first, because the search that
 should have found it went looking for the *word* the new code used. The
 duplicate is deleted and `whence.zig` calls the incumbent; `--holding` and
 `--chain` produce byte-identical output across the swap, checked with a separate
-`OUTLINER_WORK` per arm.
+`JOINTS_WORK` per arm.
 
 What survived the deletion is the one thing the incumbent lacked: its two tests
 check hand-picked positions on a five-production toy, which is precisely what a

@@ -65,7 +65,7 @@ times in `rules`), and `_newline_before_do` is one arm of a
 `choice(_newline_before_do, blank)` in five call rules. My first reading of that
 was that an extra which duplicates the plain `\r?\n` extra could not be
 load-bearing. **That reading is wrong**, and the binary already says so:
-`outliner parse` on `x =\n  a\n  |> f()` refuses at byte 13 and names the reason
+`joints parse` on `x =\n  a\n  |> f()` refuses at byte 13 and names the reason
 itself — `[no stand-in for _newline_before_binary_operator]`. Reading the
 grammar told me it could not matter; running the parser told me it does.
 

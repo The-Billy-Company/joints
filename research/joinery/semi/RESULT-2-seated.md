@@ -235,7 +235,7 @@ not the problem.
 
 ## The instrument I trust least
 
-**`outliner state`'s row, because it is the one that actually fooled me, and it
+**`joints state`'s row, because it is the one that actually fooled me, and it
 did it by being complete.** The row lists every terminal the state can act on,
 one per line, with the verb in a second column: `read on` for a shift, `fold X ->
 Y` for a reduce on that lookahead. Nothing is hidden and nothing is wrong. But
@@ -264,7 +264,7 @@ readings support a fluent argument. Mine supported two opposite ones about the
 same design.
 
 The fix is cheap and I did not make it, because the file is not mine: if
-`outliner state` printed the two sets under separate headers, or closed with
+`joints state` printed the two sets under separate headers, or closed with
 `shift: N  lookahead: M`, none of the three scripts could have drifted. Worth a
 lane, and `population.py` reports both columns side by side in the meantime.
 
@@ -284,7 +284,7 @@ assembled into a specific-sounding diagnosis, and `Chunked.swift` contains
 not in the file. The name is flagged as untrustworthy; the argument built on top
 of it is not flagged at all, and it is the more persuasive of the two.
 
-Second, and specific to this lane: **`outliner lex`'s blind count is not the
+Second, and specific to this lane: **`joints lex`'s blind count is not the
 lexer's answer.** It reported swift blind to 13 including `_explicit_semi` while
 `_explicit_semi` was being emitted correctly and the probes were passing - the
 count reads `Provision` and `claimed`, and `claimed` did not know about the new

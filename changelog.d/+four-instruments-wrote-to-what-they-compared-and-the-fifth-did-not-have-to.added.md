@@ -18,7 +18,7 @@ other's population.
 
 **`witness`** records what world one arm was taken against: the binary's bytes,
 a per-file manifest of the tree it was built from, the oracle identity of every
-grammar read, the digest of every artifact read, and the `OUTLINER_*` variables
+grammar read, the digest of every artifact read, and the `JOINTS_*` variables
 that say whether the arm owned its own workspace. `still against A B --mine
 <file>` compares two of them and refuses when they differ anywhere outside what
 the lane claims. It catches all five, and it catches the fifth on the subject
@@ -31,7 +31,7 @@ the tree it came from is only knowable while it is still the live tree.
 directory they were handed, and hooks `stamp.fed`, so a read of an artifact this
 run mutated raises **at the instant of the read** - strictly before any verdict
 derived from it, with the file, line and function that wrote it. A write into
-the arm's own `OUTLINER_WORK`, or into shared state under a lock the writer
+the arm's own `JOINTS_WORK`, or into shared state under a lock the writer
 holds, is a mint and passes; that exemption is what keeps the gate off the
 repairs the last lane made rather than firing on them.
 

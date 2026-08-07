@@ -46,7 +46,7 @@ Three distinct leaps get you from a sound test to a false sentence.
 ### 1. The state is ours, and the state is the thing under test
 
 `viable()` computes FIRST/FOLLOW over the grammar, but the **item set** comes
-from `outliner state <grammar> <n>` — our LR(0) collection, built by our table
+from `joints state <grammar> <n>` — our LR(0) collection, built by our table
 construction, after our precedence handling and our conflict resolution. A
 terminal outside a state's viability set is a fact about **the automaton we
 built from the grammar**, not about the grammar.

@@ -42,7 +42,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-PINS = ROOT / ".local/aud-iso/outliner/.local/pin"
+PINS = ROOT / ".local/aud-iso/joints/.local/pin"
 WORK = ROOT / ".local/consort-work"
 VACUITY = ROOT / "research/joinery/vacuity"
 
@@ -67,10 +67,10 @@ def seated() -> list[tuple[int, str, str]]:
 
 def sound(arm: str, grammar: str) -> dict[str, bool]:
     """Which of a grammar's specimens are sound under one arm."""
-    binary = PINS / arm / "bin/outliner"
+    binary = PINS / arm / "bin/joints"
     if not binary.exists():
         return {}
-    env = os.environ | {"OUTLINER_BIN": str(binary), "OUTLINER_WORK": str(WORK / arm)}
+    env = os.environ | {"JOINTS_BIN": str(binary), "JOINTS_WORK": str(WORK / arm)}
     got = subprocess.run([sys.executable, "tool/specimen.py", "run", "--grammar", grammar],
                          capture_output=True, text=True, cwd=ROOT, env=env, timeout=600)
     return {name: verdict == "ok" for verdict, name in VERDICT.findall(got.stdout)}
@@ -106,7 +106,7 @@ def main(argv: list[str]) -> int:
     for i, seat, grammar in rows:
         if i not in want:
             continue
-        if not (PINS / f"aud-r{i}" / "bin/outliner").exists():
+        if not (PINS / f"aud-r{i}" / "bin/joints").exists():
             print(f"{i:>3}  {seat[:45]:<46}{grammar:<9}{'—':>8}  no retained pin")
             tally["no arm"] += 1
             continue

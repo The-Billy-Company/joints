@@ -27,7 +27,7 @@ This dossier holds three findings. The third is the one that outlives toml.
 | `[47, 56)` | `#:version` | `comment`, a child of that `pair` |
 
 Reduced to the smallest thing that reproduces it (`b = "2"  # c` on its own
-line): outliner mints `pair [8, 15)` holding `comment [17, 20)`. Tree-sitter, on
+line): joints mints `pair [8, 15)` holding `comment [17, 20)`. Tree-sitter, on
 the same bytes and the same pinned grammar, mints `pair 1:0 - 1:12` = `[8, 20)`.
 
 **The two trees have identical children.** Only the parent's extent differs. We
@@ -110,7 +110,7 @@ verdict line). Not one of them could say no about the corpus.
 So the promotion is of the **reader**, not the exit code: `tool/sound.py`, wired
 into CI as a hard gate. It asks the roster — so a grammar added tomorrow is asked
 tomorrow — reads the answer through `stamp.ask` (the single place an instrument
-reads outliner's stderr, so the gate and the board cannot drift into two
+reads joints's stderr, so the gate and the board cannot drift into two
 regexes), refuses to pass vacuously when nothing could be asked, and reports
 skips as skips rather than as clearances. Ten seconds over thirty grammars, and
 no oracle: it asks the tree about itself.

@@ -59,7 +59,7 @@ BLANK = {"TK_SPACE", "TK_NEWLINE", "end of file"}
 # Reading that blob as "a token stands on these bytes" is EXACTLY the mistake
 # this lane exists to repair, with the parsers swapped: a refusal to answer,
 # counted as an answer. The first draft of this file made it, and charged 38
-# single spaces inside `$display` arguments as tokens outliner owed. So
+# single spaces inside `$display` arguments as tokens joints owed. So
 # `MacroArg` is carved out and REPORTED rather than folded either way — Verible
 # has no opinion about those bytes and this file does not invent one for it.
 DEFERRED = {"MacroArg"}
@@ -202,7 +202,7 @@ def main(argv: list[str]) -> int:
     print(f"  refused by the cover's own verdict      {len(bound):>6}  — the bound")
 
     print("\nthe residue, by what each tree calls the cover")
-    print(f"  {'tree-sitter':<34}{'outliner':<30}{'bytes':>7}{'Verible':>9}")
+    print(f"  {'tree-sitter':<34}{'joints':<30}{'bytes':>7}{'Verible':>9}")
     for (t, o), n in by_name.most_common(12):
         print(f"  {t:<34}{o:<30}{n:>7}{charged_by[(t, o)]:>9}")
 

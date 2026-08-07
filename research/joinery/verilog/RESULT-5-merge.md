@@ -36,7 +36,7 @@ it regressed `c[3] <= 0;` and `a[3:0] <= 0;` from `nonblocking_assignment` to
 `clocking_drive`; `forks.zig` is back to the shape its author wrote.
 
 `<=` is a different matter. It is **declared**, gather does fork, and with
-`OUTLINER_TRACE=quire` the whole defect is two lines:
+`JOINTS_TRACE=quire` the whole defect is two lines:
 
 ```
 split: state 1762 on <= at 42 rank 0 - keeps fold clockvar #3382, casts fold variable_lvalue #4185
@@ -85,7 +85,7 @@ against `limb-base` as a control. It should have been byte-identical. It showed
 latex −1,185 and elixir −583 with `collapse` textually identical either side —
 a behaviour change with no code change, which is only ever a stale baseline.
 
-The brief warned about two binaries sharing an `OUTLINER_WORK`; each arm here
+The brief warned about two binaries sharing an `JOINTS_WORK`; each arm here
 had its own, and the folio shas were checked identical, which is the right check
 for a quire change. **It does not cover a shared tree moving underneath the
 pins.** On a tree ten lanes write to, the control has to be pinned *after* the

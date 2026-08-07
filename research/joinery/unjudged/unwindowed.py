@@ -7,10 +7,10 @@ byte"*. Both halves of that line were wrong for haskell, whose `unjudged` is
 exactly **0**: no plumb rule fires on any of its 1,013 bytes.
 
 `unwindowed` is the `not t_sp[k]` branch of `rack.survey` - *the oracle has
-nothing strictly inside this window here and outliner does*. Its docstring is
+nothing strictly inside this window here and joints does*. Its docstring is
 right that the oracle's silence inside a window is not a verdict. What the column
 cannot say is **why** the oracle has nothing inside, and this walks the same
-windows `survey` walks to find out: for each such byte it keeps outliner's
+windows `survey` walks to find out: for each such byte it keeps joints's
 deepest node, the oracle's node, the narrowest oracle bracket that *spans* the
 window from outside, and whether that byte sits under a frame `rack.unframed`
 already charges us for.

@@ -55,7 +55,7 @@ pub const Tally = settle.Tally;
 /// reduced a cohort to co-admission by shift alone and printed a wall of zeros
 /// under a header that read like a clearance, and `lex`'s blind count called
 /// swift blind to a terminal the parser was emitting. **One function, one
-/// answer** - so `state --census`, `inquest`'s stand-in and `joints`'s legal
+/// answer** - so `state --census`, `inquest`'s stand-in and `survey`'s legal
 /// set all split on this and none of them re-derives it.
 ///
 /// Total over the accepted cells and disjoint, which is what lets a footer add
@@ -1063,7 +1063,7 @@ test "the halves partition the verbs, and a real table has rows where they diffe
     try testing.expectEqual(@as(u32, 3), verbs);
 
     // **And the split is not vacuous.** Everything downstream - `state
-    // --census`, `inquest`'s stand-in, `joints`'s legal set - exists because
+    // --census`, `inquest`'s stand-in, `survey`'s legal set - exists because
     // the two halves of a row are different sets. If a real table had no state
     // where both halves are occupied and unequal, "say which half you mean"
     // would be a distinction with nothing behind it and every one of those

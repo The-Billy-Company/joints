@@ -1,4 +1,4 @@
-`outliner parse grammar.json -` read `-` as a path, and no file is spelled `-`.
+`joints parse grammar.json -` read `-` as a path, and no file is spelled `-`.
 Every composition an agent actually writes - a probe piped out of `git show`,
 a fragment cut out of a buffer, a here-doc - had to detour through a temp file
 first, which is the tax `-` has existed to remove since before this machine's

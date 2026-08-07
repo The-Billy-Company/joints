@@ -3,7 +3,7 @@ is now supported by an instrument that could have said otherwise. Fourteen
 `Troupe` rows were seated across nine grammars; each was re-measured against its
 own isolation arm - today's tree with exactly that row deleted and every seam,
 walk, dialect and vein left standing - built by `pin.py` into its own prefix and
-read by `standing.py` with its own `OUTLINER_WORK` and its own `OUTLINER_LANE`.
+read by `standing.py` with its own `JOINTS_WORK` and its own `JOINTS_LANE`.
 
 **Thirteen arms move exactly one grammar, one moves none, and in every case the
 grammar that moved is the grammar the row was seated for.** No arm moved a second

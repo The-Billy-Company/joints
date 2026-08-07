@@ -28,7 +28,7 @@ python3 research/press/wobble.py --against BIN     # two builds, not two runs
 python3 research/press/wobble.py cpp verilog       # just these
 ```
 
-`OUTLINER_BIN` points it at a binary of your own. Ten agents share one
+`JOINTS_BIN` points it at a binary of your own. Ten agents share one
 `zig-out`, and during this work a sibling rebuilt it mid-measurement twice - so
 a lane measuring its own fix should `zig build -p` into a private prefix and
 name it here. A path is not a version.

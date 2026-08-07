@@ -32,7 +32,7 @@ damage, parses with zero mends, and reads `fmt.Print("x")` as a
 because it is the only *leaf* whose name moves and every other byte sits under
 a leaf both parsers agree on. A byte-indexed comparison cannot see a wrong
 shape over right leaves, which is the same blind spot one level up that `built`
-has over wrong trees. Byte-indexing was chosen because outliner returns a
+has over wrong trees. Byte-indexing was chosen because joints returns a
 forest on 18 of 30 grammars and aligning 3,544 roots is a guess; the cost is
 that a tree-aligned lane will report a larger number than 9.24%.
 
@@ -48,7 +48,7 @@ before asserting anything about it.
 
 The second lie was quieter and moved a conclusion. The first draft had one
 disagreement class, and swift came out second-worst in the corpus — on 1,096
-bytes that are method names outliner resolves to `type_identifier` where
+bytes that are method names joints resolves to `type_identifier` where
 tree-sitter leaves `simple_identifier`, a rename **swift's own grammar
 declares**. Splitting `renamed` off the `ALIAS` table, and `relabelled` off
 `regrouped` by extent, is what moved swift from second-worst to sixth at 117
@@ -56,6 +56,6 @@ bytes. The observation this lane was opened on is real and reproduces; as a
 share of the corpus it is 0.6%, and saying so is the finding.
 
 Three specimens carry it, all failing today and all asserting tree-sitter's
-answer rather than outliner's: `php/double-quoted-string.php` (6 claims),
+answer rather than joints's: `php/double-quoted-string.php` (6 claims),
 `php/text-swallows-remainder.php` (4), `go/selector-field.go` (8, of which
 `roots 1` and `mends 0` pass).

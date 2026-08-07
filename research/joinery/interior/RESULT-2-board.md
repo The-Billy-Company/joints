@@ -29,8 +29,8 @@
 > Nothing here was re-measured.
 
 Baseline `.local/lane-strings/board-before.txt`, 2026-08-05T19:34Z, binary
-`outliner 9e422a351`. After `.local/lane-strings/board-after.txt`,
-2026-08-05T19:56Z, binary `outliner e8343caf6`. Both `python3
+`joints 9e422a351`. After `.local/lane-strings/board-after.txt`,
+2026-08-05T19:56Z, binary `joints e8343caf6`. Both `python3
 tool/standing.py --unbound`, both exit 0, both `generation: one generation
 each`, so neither table spans artifact generations.
 

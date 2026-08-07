@@ -14,7 +14,7 @@ v = "1"  # c
 13 bytes, seated as `specimen/toml/comment-after-pair.toml`.
 
 ```
-  outliner                          tree-sitter
+  joints                          tree-sitter
   document [0, 13)                  document [0, 13)
     pair [0, 7)      <- 7             pair [0, 12)     <- 12
       bare_key [0, 1)                   bare_key [0, 1)
@@ -25,7 +25,7 @@ v = "1"  # c
 
 Read the indentation and then read the extents. **The comment is a child of
 `pair` on both sides.** Every name agrees, every nesting agrees, every leaf
-agrees. One number differs: outliner's `pair` ends at 7, and it has a child
+agrees. One number differs: joints's `pair` ends at 7, and it has a child
 that starts at 9.
 
 The control is the same line without the comment: `pair [0, 7)`, identical
@@ -33,8 +33,8 @@ trees, sound.
 
 ## The verdict: neither GAP nor CONFLICT
 
-`outliner grammar upstream/grammars/toml.json` reports **0 declared
-conflicts**. `joints` reports **0 contested cells over all 175 states**. There
+`joints grammar upstream/grammars/toml.json` reports **0 declared
+conflicts**. `survey` reports **0 contested cells over all 175 states**. There
 was never a second derivation for the press to prefer, so there is no choice
 here to have made wrongly — and there is no missing rule either, since both
 parsers derive the same tree. The GAP/CONFLICT axis has no answer for this

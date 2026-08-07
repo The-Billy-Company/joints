@@ -23,12 +23,12 @@ one.
 
 ## The board
 
-`outliner` is what our parser did with the witness. `wall` compares the terminal
+`joints` is what our parser did with the witness. `wall` compares the terminal
 it actually refused against the one `GAPS.md` names. `tree-sitter` and `blinded`
 are the oracle with its scanner live and with every external answered `no`, and
 both are read **only over the construct's own byte span**.
 
-| row | grammar | B | outliner | wall | tree-sitter | blinded | verdict |
+| row | grammar | B | joints | wall | tree-sitter | blinded | verdict |
 |---|---|---:|---|---|---|---|---|
 | php-encapsed | php | 40,996 | mended | same | clean | refuses | **external** |
 | kotlin-supertypes | kotlin | 35,369 | mended | same | clean | clean | **ours** |
@@ -128,7 +128,7 @@ concatenation. And narrowed to `{a[12:11], b}`, tree-sitter answers with
 
 ## The two void rows
 
-`cpp-stream-chain` (14 B) and `swift-labelled` (7 B) **parse whole in outliner**.
+`cpp-stream-chain` (14 B) and `swift-labelled` (7 B) **parse whole in joints**.
 There is no defect at those constructs on either side; the wall exists because
 the peel resumed mid-file and asked about a byte in a context the construct never
 has. `GAPS.md`'s swift row names the terminal `(?:[^\r\n]*)` — a comment-body
@@ -174,7 +174,7 @@ claim.**
 | **P3** | of the 7 rows in zero-external grammars, ≥ 5 are `ours`; falsified at 3 real gaps | 4 ours, **3 real gaps** | **falsified** |
 | **P4** | ≥ 4 rows `external` | 6 | held; 4 of 5 named candidates right, julia wrong, both elixir rows unnamed |
 | **P5** | ≥ 6 walls refuse a terminal the language does not have at that byte; falsified below 3 | **5** (php `/`, c `%`, bash `[`, latex body, swift comment-pattern) | claim missed, floor cleared |
-| **P6** | ≥ 4 witnesses parse whole in outliner; falsified at 0 | **2** | claim missed, floor cleared |
+| **P6** | ≥ 4 witnesses parse whole in joints; falsified at 0 | **2** | claim missed, floor cleared |
 | **P7** | ≥ 1 row where both trees are wrong; falsified at 0 | **0** on the rows as stated | **falsified** |
 
 **P7 could have been scored green and is not.** Narrowing `verilog-sized` to
@@ -205,7 +205,7 @@ bytes of that assumption are the entire upstream column.
 ## Reproducing
 
 ```bash
-export OUTLINER_BIN=$PWD/.local/pin/adjudicate2/bin/outliner
+export JOINTS_BIN=$PWD/.local/pin/adjudicate2/bin/joints
 python3 research/joinery/adjudicate/adjudicate.py run
 python3 research/joinery/adjudicate/adjudicate.py prove          # 6 guards
 python3 research/joinery/adjudicate/adjudicate.py probe php-encapsed

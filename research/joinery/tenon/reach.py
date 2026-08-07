@@ -19,12 +19,12 @@ a fact about the population, not a verdict:
 `seated` is the discriminator `reachable` cannot be. A wrong parent is a choice
 between two productions that BOTH exist, so both are reachable and only one is
 the one the oracle used; naming that production is what turns "the grammar can
-express this" into "here is the rule outliner declined to reduce".
+express this" into "here is the rule joints declined to reduce".
 
     python3 research/joinery/tenon/reach.py
 
 Every row is paired with a control from the same grammar - the spelling that
-outliner already builds the oracle's way - because a closure that says the same
+joints already builds the oracle's way - because a closure that says the same
 thing about the guilty and the innocent case is reading itself.
 """
 
@@ -129,7 +129,7 @@ CASES = (
     Case("elixir  do-block on the outer call", "elixir",
          "call", "do_block", "call", ("do_block",),
          "defp f(x) do x end",
-         "f(x)  — the same call with no block, which outliner already builds right"),
+         "f(x)  — the same call with no block, which joints already builds right"),
     Case("go      call, not conversion", "go",
          "_expression", "call_expression", "call_expression", ("argument_list",),
          'fmt.Print("x")',
@@ -177,7 +177,7 @@ def main() -> int:
             print(f"{'':<38}  {' '.join(body)}")
         print(f"{'':<38}  witness  {c.witness}")
         print(f"{'':<38}  control  {c.control}")
-    print("\nA row that reads CONFLICT above and YES below is a production outliner\n"
+    print("\nA row that reads CONFLICT above and YES below is a production joints\n"
           "declined to use, not a production nobody has. That is the whole verdict:\n"
           "every one of these is seatable in this tree by whoever owns the table.")
     return 0

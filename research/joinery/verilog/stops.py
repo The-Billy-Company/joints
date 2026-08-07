@@ -68,7 +68,7 @@ def scars(binary: Path, folio: Path, src: Path) -> tuple[list[Scar], str]:
     out = [s for line in got.stdout.splitlines() if (s := read(line.strip())) is not None]
     # The verdict is the first stderr line; the second, when there is one, is
     # inquest's attribution of the same wall and belongs to `inquest`, not here.
-    said = [ln for ln in got.stderr.splitlines() if ln.startswith("outliner:")]
+    said = [ln for ln in got.stderr.splitlines() if ln.startswith("joints:")]
     return out, (said[0].split(": ", 2)[-1] if said else "")
 
 

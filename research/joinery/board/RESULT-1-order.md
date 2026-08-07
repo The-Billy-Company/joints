@@ -1,6 +1,6 @@
 # Result 1 — the board that routes the other boards
 
-Measured 2026-08-05 against `.local/pin/kdocA` (`outliner b6cf8b5a3`, tree
+Measured 2026-08-05 against `.local/pin/kdocA` (`joints b6cf8b5a3`, tree
 `98abef26d`), `generation: uniform`, `cache: kept 30`. Totals `354,893 built +
 56,766 orphan + 27,667 rubble + 87,472 spoil = 526,798`, `standing 67.3679%`,
 `unbound 115,139` — the same board `research/joinery/orphan/` was taken against,
@@ -83,7 +83,7 @@ it and that both are the work order.
 
 ## P3 — HELD. The ranking is a property of the tree, not the pin
 
-Re-measured against the live `zig-out/bin/outliner` (tree `3046af30f`, an
+Re-measured against the live `zig-out/bin/joints` (tree `3046af30f`, an
 unrelated lane's later build):
 
 ```

@@ -3,7 +3,7 @@ and defaulted a missing line to **one root and no mends** - which is exactly
 what a perfect parse looks like. So a grammar the binary refuses to lex scored
 `roots 1` and `mends 0` as claims HELD.
 
-yaml is the case. `outliner parse upstream/grammars/yaml.json` exits 2 with
+yaml is the case. `joints parse upstream/grammars/yaml.json` exits 2 with
 `yaml has no lexable terminal at all` - the grammar is 113 externals and zero
 literals, so there is nothing for a lexer to be built out of - and
 `yaml/comment.yml` reported **2 of 4 held against a binary that had not read a

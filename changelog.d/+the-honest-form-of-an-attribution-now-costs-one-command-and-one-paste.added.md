@@ -4,7 +4,7 @@ measured figure and names no tree; `standing.py --cite` is the other half.
 
 ```
 $ python3 tool/standing.py --cite
-outliner `e51716d6c` · tree `61c93c367` (live) · **no oracle** — outliner's own words
+joints `e51716d6c` · tree `61c93c367` (live) · **no oracle** — joints's own words
 ```
 
 One line, markdown, **110 ms**, and it runs no survey. That is the whole design
@@ -17,7 +17,7 @@ three fields that make a figure re-findable, dropping the seven that make
 
 It inherits yesterday's discipline rather than restating it. A board that never
 asked an oracle cannot mint an attribution that implies it did: the line reads
-**no oracle — outliner's own words**, in bold, in the same sentence as the
+**no oracle — joints's own words**, in bold, in the same sentence as the
 digest, which is the `damage 0` fix arriving in prose.
 
 **What it does not do, and cannot.** It does not prove the figure beside it came

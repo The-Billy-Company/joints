@@ -38,7 +38,7 @@ Everything below follows from that gap.
 
 ## P1.1 — tree-sitter's own tree has the same hole, and it is not small
 
-Restricted to outliner's own `built` scope, **tree-sitter's own tree will leave
+Restricted to joints's own `built` scope, **tree-sitter's own tree will leave
 a non-zero count of bytes under no leaf of its own**, of the same order as the
 79,628 `stretch` the board carries.
 

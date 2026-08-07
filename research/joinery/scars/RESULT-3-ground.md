@@ -5,7 +5,7 @@ positive name, and `rack.py`'s `square` could not say what ground it stood on.
 Both are now positive, and both can fail.
 
 Read on tree `f7ba40004+144`, binary
-`.local/lane-scar/bin/outliner` (build `60727cf12f63…`, source tree
+`.local/lane-scar/bin/joints` (build `60727cf12f63…`, source tree
 `1f6a711f0ffa…`), oracle tree-sitter as `plumb.py` pins it. Every number below
 was taken on that tree. **The population moved between the authoring lane's
 sweep and this one** — see the last section, it matters.

@@ -3,7 +3,7 @@
 Written before the change is made. Each claim carries the measurement that kills
 it.
 
-Predicted against the control arm outliner `beb695b5d` · tree `e973ce73c` (pin)
+Predicted against the control arm joints `beb695b5d` · tree `e973ce73c` (pin)
 · oracle `d85e736fa` (30 of 30 live, 30 attributed), which is where zig's 1,375
 bytes of damage and its wall at byte 4101 were read.
 
@@ -46,7 +46,7 @@ The change is the condition and nothing else: `.none` becomes "`.none` or
 ## What kills it
 
 1. **Zig does not reach whole.** If `[_]u8{` still refuses, the ladder was not
-   what was holding it and this whole page is wrong. Measure: `outliner parse
+   what was holding it and this whole page is wrong. Measure: `joints parse
    upstream/grammars/zig.json upstream/sources/ascii.zig`.
 
 2. **Any grammar loses built bytes.** The narrowing is supposed to be
@@ -62,7 +62,7 @@ The change is the condition and nothing else: `.none` becomes "`.none` or
 4. **`residual` or `contested` rises.** `Defects.betterThan` ranks residual
    first for a reason; a cell that becomes residual is one `forks` refuses to
    offer, which is worse than the fold it replaced. Measure:
-   `OUTLINER_TRACE=press` round lines, before and after.
+   `JOINTS_TRACE=press` round lines, before and after.
 
 5. **The press gets materially bigger.** Declining a comparison leaves both
    actions standing, which the unfolder may then try to separate. The earlier

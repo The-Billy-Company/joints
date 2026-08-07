@@ -35,7 +35,7 @@ import standing  # noqa: E402
 from order import folio_for  # noqa: E402
 from stamp import outcome  # noqa: E402
 
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
 
 DECLS = "reg [31:0] a, b, x, y, c [0:3];\ninteger i;\nreg eq, lt;\n"
 IN_PROC = "module m;\n" + DECLS + "always @* begin\n%s\nend\nendmodule\n"

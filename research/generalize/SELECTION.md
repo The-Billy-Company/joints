@@ -3,7 +3,7 @@
 This file exists so that "we did not curate toward shapes we handle" is a thing
 you can check rather than a thing I say. It was written, and the predictions
 beside it were written, **before any grammar outside `upstream/grammars/` was
-fetched, pressed or parsed**. Nothing below mentions outliner, its results, its
+fetched, pressed or parsed**. Nothing below mentions joints, its results, its
 walls, its externals, or any property of a grammar this project has an opinion
 about. Every condition is about a third party's roster and an upstream
 repository's own contents.

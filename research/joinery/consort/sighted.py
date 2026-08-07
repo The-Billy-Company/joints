@@ -7,7 +7,7 @@ one grammar, one moves none, and the twenty-one grammars nobody seated are
 byte-identical in all thirty-one columns. `consort/RESULT-5-blindness.md` then
 established that every one of those arms read `square 0`, because the private
 work dir that makes an arm an arm is where the oracle's verdicts live - so the
-clearance was taken on `damage`, which is outliner's own words about its own
+clearance was taken on `damage`, which is joints's own words about its own
 forest and cannot see a change that leaves `built` untouched while moving every
 leaf to a different parent.
 
@@ -122,7 +122,7 @@ def scratch(n: int) -> Path:
 
 def build(rows: tuple[int, ...], at: Path) -> Path | None:
     tag = tag_of(rows)
-    got = at / ".local/pin" / tag / "bin/outliner"
+    got = at / ".local/pin" / tag / "bin/joints"
     if got.exists():
         return got
     if rows:
@@ -149,8 +149,8 @@ def measure(binary: Path, tag: str, at: Path) -> dict | None:
     """Mint this arm's own verdicts, then board it. Sighted or it did not happen."""
     work = at / f"work-{tag}"
     work.mkdir(parents=True, exist_ok=True)
-    env = os.environ | {"OUTLINER_BIN": str(binary), "OUTLINER_WORK": str(work),
-                        "OUTLINER_LANE": f"sq-{tag}"}
+    env = os.environ | {"JOINTS_BIN": str(binary), "JOINTS_WORK": str(work),
+                        "JOINTS_LANE": f"sq-{tag}"}
     swept = subprocess.run([sys.executable, "tool/standing.py", "--audit", "--json"],
                            cwd=ROOT, capture_output=True, text=True, env=env)
     if swept.returncode not in (0, 3):

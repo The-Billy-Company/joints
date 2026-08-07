@@ -5,7 +5,7 @@ built and instrumented, and [`TESTING.md`](TESTING.md) rung 1 records what it
 did on real grammars and real files - including the part where the kill
 condition as originally written was not met, and why the number turned out to be
 the wrong one to have chosen. Everything else here states precisely what
-outliner claims is new, so that the claim can be attacked before it is built.
+joints claims is new, so that the claim can be attacked before it is built.
 
 ---
 

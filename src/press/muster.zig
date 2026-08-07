@@ -175,7 +175,7 @@ pub fn internExternals(self: *Import, node: ?json.Value) Error!void {
 /// Naming both was never a tie a lexer could be taught to break. The two
 /// terminals matched identical bytes, and every state that admitted one
 /// admitted the other, because the grammar really does allow either there.
-/// `outliner state` prints both on the row. Rules are interned before
+/// `joints state` prints both on the row. Rules are interned before
 /// inline atoms, so the rule always won, and javascript's `import` beat the
 /// `'import'` its own `import_statement` needed.
 pub fn census(self: *Import, extras: ?json.Value, externals: ?json.Value) Error!void {

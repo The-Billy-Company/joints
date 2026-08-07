@@ -8,7 +8,7 @@ The sentence, from the lane that shipped `stretch` and `airy`:
 Its own closing words: **"Nothing in the repository adjudicates the sentence."**
 Something outside the repository does. Tree-sitter's answer is **yes, and it is
 my rule too** - the hole `stretch` measures is what both parsers do with the
-space between two tokens, not something outliner failed at.
+space between two tokens, not something joints failed at.
 
 **The sentence survives. The column that rests on it does not.** `airy` asks
 whether a byte is a space; the sentence asks whether a token stands on it. Those
@@ -117,7 +117,7 @@ Corroboration worth stating: go's row on the board reads `stretch` **193** and
 `padding` **193**, and this independent walk over the root finds **193**. Three
 routes, one number.
 
-## 3. Does outliner's `quire` make the same claim? Yes, in its own code
+## 3. Does joints's `quire` make the same claim? Yes, in its own code
 
 Not inferred from output. `src/kernel/quire/quire.zig:237-239`, on `Node.start`:
 

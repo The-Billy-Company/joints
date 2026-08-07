@@ -82,7 +82,7 @@ def folio_for(arg: Path, tmp: Path) -> Path:
         return arg
     out = tmp / (arg.stem + ".folio")
     subprocess.run(
-        [str(ROOT / "zig-out/bin/outliner"), "mint", str(arg), "-o", str(out)],
+        [str(ROOT / "zig-out/bin/joints"), "mint", str(arg), "-o", str(out)],
         check=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,

@@ -69,7 +69,7 @@ Two instruments lied. The brief this work started from stated that
 and that is not the rule: `provisionFor` requires *a row's own* cohort, and eight
 grammars were already running partially seated, bash at 3 of 4 and ruby at 3 of
 7. A day could have gone into designing a fail-closed partial for a door that was
-never shut. And `outliner lex`'s blind count reported swift blind to
+never shut. And `joints lex`'s blind count reported swift blind to
 `_explicit_semi` while the parser was emitting it and the probes were passing,
 because the count reads `claimed` and `claimed` did not know about the new role;
 the census of the mechanism and the mechanism were two implementations of one

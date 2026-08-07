@@ -1,6 +1,6 @@
 # RESULT 2 — the numbers, and the two predictions that died on them
 
-Three arms, each with its own empty `OUTLINER_WORK`, all against the frozen
+Three arms, each with its own empty `JOINTS_WORK`, all against the frozen
 `seat3` oracle:
 
 | arm | binary | what it is |

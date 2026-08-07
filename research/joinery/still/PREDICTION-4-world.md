@@ -8,7 +8,7 @@ record of what that prediction got wrong and what I am replacing it with.
 
 The fifth: a lane pinned a baseline, worked for eight minutes, pinned its arm,
 and read `latex −1,185`. The lex lane had landed a latex fix inside those eight
-minutes. Each arm had its own `OUTLINER_WORK`; the folio shas matched and were
+minutes. Each arm had its own `JOINTS_WORK`; the folio shas matched and were
 checked. The lane credited itself with somebody else's fix.
 
 Prediction 3's gate **does not catch this, and cannot**, and the reason is not
@@ -65,7 +65,7 @@ needing to know what kind of mistake it is looking for.
 **Predicted:** a `Witness` — binary digest, the pin's own recorded tree digest,
 the live repo source digest at arm time, the oracle identity of every grammar
 read, the digest of every artifact `stamp.fed` recorded, and the three
-`OUTLINER_*` variables — recorded per arm and compared pairwise, refuses all
+`JOINTS_*` variables — recorded per arm and compared pairwise, refuses all
 five, and refuses case five *on the repo tree digest field alone*.
 
 **Kills it:** any of the five passing a pairwise witness comparison, or the

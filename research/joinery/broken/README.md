@@ -39,7 +39,7 @@ json has no keywords and no `mid-word` to catch, so it carries four of the seven
 
 tree-sitter returns one root spanning the whole file on all twenty-five, marking
 its repairs with `MISSING` (zero-width, where a byte should have been) and
-`ERROR` (a subtree it could not place). outliner returns one root on none of
+`ERROR` (a subtree it could not place). joints returns one root on none of
 them. It has neither node kind, and hands back a forest of partial roots plus a
 verdict naming the byte.
 

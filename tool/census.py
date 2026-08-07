@@ -39,7 +39,7 @@ from stamp import take  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 GRAMMARS = ROOT / "upstream" / "grammars"
 CORPUS = ROOT / "research" / "joinery" / "corpus"
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
 PATIENCE = 240
 
 # The same eleven files, one program in eleven languages; see corpus/README.md.

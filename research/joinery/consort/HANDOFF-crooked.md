@@ -117,7 +117,7 @@ running the oracle twice, and it is not a threshold.
 Reproduce:
 
 ```
-OUTLINER_BIN=.local/sighted/scratch2/.local/pin/r4/bin/outliner \
-OUTLINER_WORK=.local/sighted/scratch2/work-r4 \
+JOINTS_BIN=.local/sighted/scratch2/.local/pin/r4/bin/joints \
+JOINTS_WORK=.local/sighted/scratch2/work-r4 \
 python3 research/joinery/consort/borrow.py scala
 ```

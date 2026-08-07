@@ -9,9 +9,9 @@ board it is worth.
 **`built` is the same shape.** `tool/standing.py` prices `built` as bytes under a
 top-level root that has at least one child, and a root built *after* the parse
 put its stack down and stood back up in state zero is counted exactly like one
-built in context. The board never claimed otherwise - `built` is outliner's own
+built in context. The board never claimed otherwise - `built` is joints's own
 word about its own forest and `damage` is `size - built` - but until
-`outliner parse --scars` there was no way to *ask* it, so nobody could say
+`joints parse --scars` there was no way to *ask* it, so nobody could say
 whether the distinction was worth a column or worth a footnote.
 
 **`square` is a different shape and a smaller exposure.** It is agreement with
@@ -182,7 +182,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--json", type=Path)
     args = ap.parse_args(argv)
 
-    work = Path(order.os.environ.get("OUTLINER_WORK", ROOT / ".local" / "work"))
+    work = Path(order.os.environ.get("JOINTS_WORK", ROOT / ".local" / "work"))
     rows = [r for name, src in walls.roster() if (r := row(name, src, work, order.BIN))]
     if not rows:
         print("blind: nothing measurable", file=sys.stderr)

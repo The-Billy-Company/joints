@@ -9,7 +9,7 @@ out the same way for three different reasons, none of which is the old one.
 ## Fact 1 — there is no floor for a partial seating to stand on
 
 ```
-$ outliner grammar upstream/grammars/yaml.json
+$ joints grammar upstream/grammars/yaml.json
   terminals      0 literal, 0 regex, 113 external
 ```
 
@@ -20,7 +20,7 @@ a slate that answers everywhere else. Yaml has no slate. And this is not an
 argument about averages, because the entry state settles it:
 
 ```
-$ outliner state upstream/grammars/yaml.json 0
+$ joints state upstream/grammars/yaml.json 0
   shift 44, lookahead 0 — 44 terminal(s) accepted of 113
 ```
 
@@ -50,7 +50,7 @@ The falsifier I named was: if the parse state already separates the variants,
 the classifier is redundant and the table does the work. Measured:
 
 ```
-$ outliner state upstream/grammars/yaml.json --census \
+$ joints state upstream/grammars/yaml.json --census \
     _r_sgl_pln_str_blk _r_sgl_pln_int_blk _r_sgl_pln_bol_blk _r_sgl_pln_nul_blk
 
 _r_sgl_pln_str_blk

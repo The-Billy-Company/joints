@@ -1,7 +1,7 @@
 # Result 1 — the refusal was an ancestor's, on a corpus where one ancestor is the file
 
 **Arm.** `pin.py` isolation arm `coverlane` — binary `346d880fc`, built from
-tree `05e300803`, its own `OUTLINER_WORK`, its own oracle seat (30 of 30
+tree `05e300803`, its own `JOINTS_WORK`, its own oracle seat (30 of 30
 verdicts local). `stamp` reports `DRIFT — the binary's tree 05e300803 is not the
 repo's 07388886c`, which is correct and expected for an isolation arm: **every
 number below describes that tree**, and the before/after pair was measured on
@@ -286,7 +286,7 @@ parser declined to answer about.
 
 ### The check made this lane's own mistake first, and it is worth recording
 
-The first draft charged **38 bytes**, all single spaces, as tokens outliner
+The first draft charged **38 bytes**, all single spaces, as tokens joints
 owed. `picorv32.v` is full of `` `debug($display("…", a, b);) ``, and **Verible
 does not lex inside a macro-call argument** — it captures the whole thing
 verbatim as one `MacroArg` token, up to 104 bytes of it, spaces and semicolons

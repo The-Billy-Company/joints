@@ -1,4 +1,4 @@
-//! `outliner mint` - press a grammar into a folio, and read one back.
+//! `joints mint` - press a grammar into a folio, and read one back.
 //!
 //! Minting is the act the vocabulary already had a word for, and it keeps the
 //! verb from colliding with the noun: `mint` is what you do, a folio is what you
@@ -24,15 +24,15 @@
 //! so it gets stated and left alone.
 
 const std = @import("std");
-const outliner = @import("outliner");
+const joints = @import("joints");
 const intake = @import("intake.zig");
 
-const folio = outliner.folio;
+const folio = joints.folio;
 const leaf = folio.leaf;
-const import = outliner.press.import;
-const press = outliner.press;
-const g = outliner.press.grammar;
-const lr0 = outliner.press.lr0;
+const import = joints.press.import;
+const press = joints.press;
+const g = joints.press.grammar;
+const lr0 = joints.press.lr0;
 
 pub fn run(
     gpa: std.mem.Allocator,
@@ -48,7 +48,7 @@ pub fn run(
         const a = rest[0];
         if (std.mem.eql(u8, a, "-o") or std.mem.eql(u8, a, "--out")) {
             if (rest.len < 2) {
-                try w.writeAll("outliner: -o needs a path\n");
+                try w.writeAll("joints: -o needs a path\n");
                 return 2;
             }
             rest = rest[1..];
@@ -56,7 +56,7 @@ pub fn run(
         } else try paths.append(gpa, a);
     }
     if (paths.items.len == 0) {
-        try w.writeAll("outliner: mint needs a grammar.json or a folio\n");
+        try w.writeAll("joints: mint needs a grammar.json or a folio\n");
         return 2;
     }
     // Several grammars are one codex, and that is the whole sentence: until
@@ -84,7 +84,7 @@ pub fn run(
                 // can parse from.
                 var lone = f;
                 var bound = folio.bind(gpa, &lone) catch |e| {
-                    try w.print("outliner: cannot bind {s}: {s}\n", .{ path, @errorName(e) });
+                    try w.print("joints: cannot bind {s}: {s}\n", .{ path, @errorName(e) });
                     return 2;
                 };
                 defer bound.deinit();
@@ -102,7 +102,7 @@ pub fn run(
     } else |e| switch (e) {
         error.FolioBadMagic, error.FolioTooSmall, error.FileNotFound => {},
         else => {
-            try w.print("outliner: {s} does not load: {s}\n", .{ path, @errorName(e) });
+            try w.print("joints: {s} does not load: {s}\n", .{ path, @errorName(e) });
             return 1;
         },
     }
@@ -167,7 +167,7 @@ fn gathering(
     out: ?[]const u8,
 ) !u8 {
     const target = out orelse {
-        try w.writeAll("outliner: minting several grammars into one file needs -o <codex path>\n");
+        try w.writeAll("joints: minting several grammars into one file needs -o <codex path>\n");
         return 2;
     };
 
@@ -214,7 +214,7 @@ fn gathering(
                 .many => {
                     // Nesting would make `pick` a tree walk and give one
                     // language two spellings of its address. Flatten instead.
-                    try w.print("outliner: {s} is already a codex; mint its members' folios" ++
+                    try w.print("joints: {s} is already a codex; mint its members' folios" ++
                         " or grammar.jsons directly\n", .{path});
                     return 2;
                 },
@@ -222,7 +222,7 @@ fn gathering(
         } else |e| switch (e) {
             error.FolioBadMagic, error.FolioTooSmall, error.FileNotFound => {},
             else => {
-                try w.print("outliner: {s} does not load: {s}\n", .{ path, @errorName(e) });
+                try w.print("joints: {s} does not load: {s}\n", .{ path, @errorName(e) });
                 return 2;
             },
         }
@@ -230,17 +230,17 @@ fn gathering(
         const source = intake.slurp(gpa, io, w, path) orelse return 2;
         defer gpa.free(source);
         var gr = import.treeSitter(gpa, source) catch |e| {
-            try w.print("outliner: cannot import {s}: {s}\n", .{ path, @errorName(e) });
+            try w.print("joints: cannot import {s}: {s}\n", .{ path, @errorName(e) });
             return 2;
         };
         const pressed_at = std.Io.Clock.awake.now(io);
         var built = press.tables(gpa, &gr) catch |e| {
-            try w.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
+            try w.print("joints: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
             gr.deinit();
             return 2;
         };
         const bytes = folio.pack(gpa, &gr, &built) catch |e| {
-            try w.print("outliner: cannot pack {s}: {s}\n", .{ gr.name, @errorName(e) });
+            try w.print("joints: cannot pack {s}: {s}\n", .{ gr.name, @errorName(e) });
             built.deinit();
             gr.deinit();
             return 2;
@@ -261,12 +261,12 @@ fn gathering(
     const packed_at = std.Io.Clock.awake.now(io);
     const bytes = folio.codex.pack(gpa, parts.items) catch |e| switch (e) {
         error.TitleRepeated => {
-            try w.writeAll("outliner: two of those grammars share a name;" ++
+            try w.writeAll("joints: two of those grammars share a name;" ++
                 " a codex holds each language once\n");
             return 2;
         },
         else => {
-            try w.print("outliner: cannot bind the codex: {s}\n", .{@errorName(e)});
+            try w.print("joints: cannot bind the codex: {s}\n", .{@errorName(e)});
             return 2;
         },
     };
@@ -274,7 +274,7 @@ fn gathering(
     const pack_us = since(io, packed_at);
 
     folio.writeTo(io, std.Io.Dir.cwd(), target, bytes) catch |e| {
-        try w.print("outliner: cannot write {s}: {s}\n", .{ target, @errorName(e) });
+        try w.print("joints: cannot write {s}: {s}\n", .{ target, @errorName(e) });
         return 2;
     };
 
@@ -282,14 +282,14 @@ fn gathering(
     // from - the same rule as the single mint, for the same reason.
     const loaded_at = std.Io.Clock.awake.now(io);
     var mapped = folio.mapVolume(io, std.Io.Dir.cwd(), target) catch |e| {
-        try w.print("outliner: {s} does not load: {s}\n", .{ target, @errorName(e) });
+        try w.print("joints: {s} does not load: {s}\n", .{ target, @errorName(e) });
         return 1;
     };
     defer mapped.close();
     const c: *const folio.Codex = switch (mapped.volume) {
         .many => |*x| x,
         .one => {
-            try w.print("outliner: {s} read back as a lone folio, not a codex\n", .{target});
+            try w.print("joints: {s} read back as a lone folio, not a codex\n", .{target});
             return 1;
         },
     };
@@ -339,14 +339,14 @@ fn write(
     defer gpa.free(source);
 
     var gr = import.treeSitter(gpa, source) catch |e| {
-        try w.print("outliner: cannot import {s}: {s}\n", .{ path, @errorName(e) });
+        try w.print("joints: cannot import {s}: {s}\n", .{ path, @errorName(e) });
         return 2;
     };
     defer gr.deinit();
 
     const pressed_at = std.Io.Clock.awake.now(io);
     var built = press.tables(gpa, &gr) catch |e| {
-        try w.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
+        try w.print("joints: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
         return 2;
     };
     defer built.deinit();
@@ -354,7 +354,7 @@ fn write(
 
     const packed_at = std.Io.Clock.awake.now(io);
     const bytes = folio.pack(gpa, &gr, &built) catch |e| {
-        try w.print("outliner: cannot pack {s}: {s}\n", .{ gr.name, @errorName(e) });
+        try w.print("joints: cannot pack {s}: {s}\n", .{ gr.name, @errorName(e) });
         return 2;
     };
     defer gpa.free(bytes);
@@ -363,7 +363,7 @@ fn write(
     const target = out orelse try swapExtension(gpa, path);
     defer if (out == null) gpa.free(target);
     folio.writeTo(io, std.Io.Dir.cwd(), target, bytes) catch |e| {
-        try w.print("outliner: cannot write {s}: {s}\n", .{ target, @errorName(e) });
+        try w.print("joints: cannot write {s}: {s}\n", .{ target, @errorName(e) });
         return 2;
     };
 
@@ -371,12 +371,12 @@ fn write(
     // A writer checking its own bytes proves nothing about what landed on disk.
     const loaded_at = std.Io.Clock.awake.now(io);
     var mapped = folio.map(io, std.Io.Dir.cwd(), target) catch |e| {
-        try w.print("outliner: {s} does not load: {s}\n", .{ target, @errorName(e) });
+        try w.print("joints: {s} does not load: {s}\n", .{ target, @errorName(e) });
         return 1;
     };
     defer mapped.close();
     var bound = folio.bind(gpa, &mapped.folio) catch |e| {
-        try w.print("outliner: cannot bind {s}: {s}\n", .{ target, @errorName(e) });
+        try w.print("joints: cannot bind {s}: {s}\n", .{ target, @errorName(e) });
         return 2;
     };
     defer bound.deinit();
@@ -513,7 +513,7 @@ fn footprint(gr: *const g.Grammar, built: anytype) Footprint {
             st.edges.len * @sizeOf(lr0.Edge) +
             st.complete.len * @sizeOf(u32);
     }
-    m.table = built.tables.action.len * @sizeOf(outliner.press.lalr.Action);
+    m.table = built.tables.action.len * @sizeOf(joints.press.lalr.Action);
     return m;
 }
 
@@ -573,7 +573,7 @@ fn disagrees(
     return null;
 }
 
-fn alike(a: outliner.press.lalr.Action, b: outliner.press.lalr.Action) bool {
+fn alike(a: joints.press.lalr.Action, b: joints.press.lalr.Action) bool {
     return a.kind == b.kind and a.value == b.value;
 }
 

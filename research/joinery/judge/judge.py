@@ -116,7 +116,7 @@ def coverage(saw, size: int, ref: bytearray | None) -> None:
     if ref:
         print(f"  yardstick: verible says {tot} B carry a non-blank token\n")
     print(f"  {'':<16}{'leaf B':>9}{'of token B':>12}{'nodes':>8}{'leaves':>8}")
-    for who, m, tree in (("outliner", ours, saw.mine), ("tree-sitter", theirs, saw.theirs)):
+    for who, m, tree in (("joints", ours, saw.mine), ("tree-sitter", theirs, saw.theirs)):
         hit = f"{sum(1 for p in range(size) if ref[p] and m[p]) / tot * 100:>11.1f}%" if ref else f"{'--':>12}"
         print(f"  {who:<16}{sum(m):>9}{hit}{len(tree):>8}{sum(n.leaf for n in tree):>8}")
 

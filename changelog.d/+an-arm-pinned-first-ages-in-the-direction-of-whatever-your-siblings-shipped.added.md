@@ -7,7 +7,7 @@ An arm pinned first ages while you work, and it ages in the direction of
 whatever your siblings shipped meanwhile, so the distance between your two pins
 is your change plus theirs. A lane pinned a baseline, worked eight minutes,
 pinned its arm, and read `latex -1,185` that belonged to the lex lane. That run
-satisfies the third house rule completely: own binary, own `OUTLINER_WORK`, own
+satisfies the third house rule completely: own binary, own `JOINTS_WORK`, own
 seat, folio shas checked and matching. The rule does not cover it, because
 nothing wrote to anything being compared - a work directory per arm cannot see a
 tree it does not contain.

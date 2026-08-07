@@ -94,7 +94,7 @@ oracle tree is exactly the seam shape `unframed` was written to charge.
 
 **P1.9 - the 63,937 `damage` figure will survive contact, and will turn out to
 be uninformative rather than wrong.** `damage = size - built` is arithmetic over
-outliner's own forest; adjudication cannot move it. What adjudication adds is
+joints's own forest; adjudication cannot move it. What adjudication adds is
 the column that says whether the `built` complement of it was worth anything.
 I predict the honest sentence at the end of this lane is *"the number was
 correct and was never the question"*. *Confidence: high.*

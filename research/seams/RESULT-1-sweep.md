@@ -43,7 +43,7 @@ any of them is a change to a **type declaration**, not to a call site — so the
 assertion belongs at the declaration, and three of them cover every site.
 
 `irregex` closed its hash side by putting the predicate inside `mix.SliceCtx`,
-because it *has* a shared context. Outliner has none: every one of these maps
+because it *has* a shared context. Joints has none: every one of these maps
 declares its own `struct { hash, eql }` inline, over key shapes that are not
 each other (`Key{kernel, mark}`, a tuple of two slices, `[]const State`, and two
 `StringHashMap`s already keyed on `[]const u8`). Giving them a common context is
@@ -137,7 +137,7 @@ stands; the **before** arm is that same snapshot with exactly my three edits
 removed — `diff -rq` between the arms reports three files and no others. Both
 arms were built **at the same path**, sequentially, so nothing a compiler
 embeds about its own location can differ. Each binary then boarded into its own
-folio cache under its own `OUTLINER_WORK`, and the two `--json` boards were
+folio cache under its own `JOINTS_WORK`, and the two `--json` boards were
 compared cell by cell with the stamp's volatile fields named and excluded one at
 a time rather than wildcarded.
 

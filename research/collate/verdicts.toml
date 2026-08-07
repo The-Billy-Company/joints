@@ -1,6 +1,6 @@
 # Hand adjudication — who is actually right where the two parsers disagree
 #
-# `plumb` scores every disagreement against outliner, because the oracle is
+# `plumb` scores every disagreement against joints, because the oracle is
 # assumed correct. On the two files where tree-sitter's own tree is in recovery
 # it goes silent instead, and silence over the corpus's #1 damage row was read
 # as a win. This file is the other half: each row is one span, what both trees
@@ -8,7 +8,7 @@
 # own grammar rather than by trusting either parser.
 #
 # `side` is one of:
-#   ours     outliner is right
+#   ours     joints is right
 #   theirs   tree-sitter is right
 #   neither  both are wrong
 #   agree    both say the same thing (kept as controls and regression guards)
@@ -32,7 +32,7 @@
 # `grammar.json` the press reads.
 #
 # Three rows re-judged 2026-08-06 on pin `driftlane` (tree b08566533455) - go
-# [43,57) and both php rows, each `theirs` because outliner was wrong there and
+# [43,57) and both php rows, each `theirs` because joints was wrong there and
 # each now `agree` because a sibling fixed it. The dissolved witness is kept as
 # the regression guard for the fix that dissolved it. **Two verilog rows are left
 # drifted on purpose**: [89368,89412) lost a `parameter_declaration` we were right
@@ -42,7 +42,7 @@
 # --------------------------------------------------------------------- verilog
 # `picorv32.v` — 94,657 bytes, the corpus's largest damage row, and the file the
 # brief singled out: tree-sitter's ERROR is the root, so `plumb` has no verdict
-# on any of outliner's 30,720 built bytes here.
+# on any of joints's 30,720 built bytes here.
 
 [[verdict]]  # '#(\n\tparameter [ 0:0] ENABLE_COUNTERS = 1, ...'
 grammar = "verilog"
@@ -55,12 +55,12 @@ side = "ours"
 why = """
 The parameter port list of `module picorv32_axi`. A1.4 of the language spells it
 `parameter_port_list ::= # ( list_of_param_assignments ... )`, which is exactly
-these bytes, and outliner fills it out - parameter_port_declaration,
+these bytes, and joints fills it out - parameter_port_declaration,
 parameter_declaration, packed_dimension, constant_range, integral_number.
 tree-sitter has no node over any of it: the deepest thing covering byte 80092 is
 the root `ERROR [0,94657)`. Consumer: an editor folding the parameter list, or
 expanding a selection outward from one parameter, gets a 1,007-byte region from
-outliner and the whole file from tree-sitter."""
+joints and the whole file from tree-sitter."""
 
 [[verdict]]  # 'module picorv32_axi'
 grammar = "verilog"
@@ -73,7 +73,7 @@ side = "ours"
 why = """
 tree-sitter's deepest node here is `ERROR [79903,80128)`, so the second module in
 the file has no header node at all. Consumer: an outline view or a symbol index
-lists `picorv32_axi` from outliner's tree and cannot see it in tree-sitter's."""
+lists `picorv32_axi` from joints's tree and cannot see it in tree-sitter's."""
 
 [[verdict]]  # '`define FORMAL_KEEP\n'
 grammar = "verilog"
@@ -85,7 +85,7 @@ theirs = "—"
 side = "ours"
 why = """
 A `define body ends at the end of its line unless the line is continued with a
-backslash; this one is not. Outliner cuts at 1438, the newline, and names the
+backslash; this one is not. Joints cuts at 1438, the newline, and names the
 following `endif` a `zero_directive` at [1440,1446). tree-sitter's
 `text_macro_definition` runs to 1447 and swallows the `endif` into the macro
 body. Consumer: a refactoring tool that renames or deletes the macro takes the
@@ -115,13 +115,13 @@ theirs = "—"
 side = "ours"
 why = """
 tree-sitter's enclosing node is `operator_assignment [88423,89412)`, a 989-byte
-procedural assignment that ends exactly where this declaration ends. Outliner
+procedural assignment that ends exactly where this declaration ends. Joints
 names the declaration.
 
 **DRIFTED, and left drifted because it is a regression rather than a stale line.**
 The bytes are `parameter [31:0] MASKED_IRQ = 32'h 0000_0000`, which A.2.1.1 spells
 `parameter_declaration ::= parameter data_type_or_implicit
-list_of_param_assignments`. On pin `driftlane` outliner builds no node over the
+list_of_param_assignments`. On pin `driftlane` joints builds no node over the
 span at all; what it builds instead is `simple_identifier [89368,89377)` over the
 word `parameter`, a bare `[`/`constant_range`/`]`, and a
 `variable_decl_assignment` over the tail. **That is the keyword read as an
@@ -153,7 +153,7 @@ theirs = "—"
 side = "ours"
 why = """
 `task_declaration` is a declared member of `package_or_generate_item_declaration`
-in this grammar, so outliner's two-node chain is what the grammar says. In
+in this grammar, so joints's two-node chain is what the grammar says. In
 tree-sitter's tree these bytes are loose inside `seq_block [6233,9085)`, with no
 node of their own. Consumer: go-to-definition for `empty_statement`."""
 
@@ -186,7 +186,7 @@ why = """
 two trees genuinely disagree about what this token is. 27 sites and 243 bytes on
 this file, and the same shape covers `wire` (53), `output` (17), `input` (11),
 `reg` (5) and `endtask` (1): 610 bytes of keyword read as identifier.
-Consumer: a highlighter. Outliner paints these as keywords; tree-sitter paints
+Consumer: a highlighter. Joints paints these as keywords; tree-sitter paints
 them the colour of a variable name."""
 
 [[verdict]]  # 'mem_rdata_q[31:25]'
@@ -200,9 +200,9 @@ side = "theirs"
 why = """
 The line is `{mem_rdata_q[31:25], mem_rdata_q[11:7]} <= {...};` inside an always
 block. This is the left-hand side of a nonblocking assignment - an lvalue, which
-is what tree-sitter calls it. Outliner calls it a declaration with an
+is what tree-sitter calls it. Joints calls it a declaration with an
 initialiser, which nothing here declares. Consumer: "find every write to this
-signal" reads tree-sitter's tree correctly and reads outliner's as a
+signal" reads tree-sitter's tree correctly and reads joints's as a
 declaration site."""
 
 [[verdict]]  # '[6:5]'
@@ -216,7 +216,7 @@ side = "theirs"
 why = """
 `if (mem_rdata_latched[6:5] == 2'b10)` - a part-select inside an expression.
 `unpacked_dimension` is an array bound in a *declaration*, and there is no
-declaration on this line. tree-sitter is right. Outliner does get this right
+declaration on this line. tree-sitter is right. Joints does get this right
 elsewhere in the same file (`constant_range` over `14:12` at [17707,17712)), so
 this is an inconsistency rather than a missing rule."""
 
@@ -233,7 +233,7 @@ tree-sitter's node is `continuous_assign [11928,12155)`, which starts at the
 `assign` keyword and is what the grammar calls this. `continuous_assign` is not
 reachable from `package_or_generate_item_declaration` - its members are
 net_declaration, data_declaration, task/function/class declarations and the
-parameter forms, none of which can derive `assign`. Outliner is wrong twice
+parameter forms, none of which can derive `assign`. Joints is wrong twice
 over: wrong name, and an extent that drops the keyword."""
 
 [[verdict]]  # 'assign pcpi_mul_rd = 32\'bx;'
@@ -247,9 +247,9 @@ side = "neither"
 why = """
 Inside `generate if (ENABLE_PCPI) ... else begin ... end endgenerate`, so this is
 a continuous assignment at module scope: `module_or_generate_item ->
-continuous_assign`. Outliner calls it a declaration, which the grammar cannot
+continuous_assign`. Joints calls it a declaration, which the grammar cannot
 derive from `assign`. tree-sitter calls it a procedural statement, which is
-illegal at this scope. Both are confidently wrong, and 123 of outliner's roots
+illegal at this scope. Both are confidently wrong, and 123 of joints's roots
 on this file sit in exactly this pairing."""
 
 [[verdict]]  # 'picorv32 #(\n\t\t.ENABLE_COUNTERS (...)) core (...)'
@@ -264,7 +264,7 @@ why = """
 A module instantiation - `module_instantiation ::= module_identifier
 [parameter_value_assignment] hierarchical_instance ...`. Both parsers call it a
 class type, 1,188 bytes of it, twice in the file. This is the single widest
-built root outliner has on this file and it is wrong; that it is *equally* wrong
+built root joints has on this file and it is wrong; that it is *equally* wrong
 in tree-sitter is why it belongs in `neither` and not in a win column."""
 
 [[verdict]]  # 'vfi_csr_minstret_wmask'
@@ -276,10 +276,10 @@ ours = "variable_decl_assignment/simple_identifier"
 theirs = "—"
 side = "theirs"
 why = """
-The identifier in the source is `rvfi_csr_minstret_wmask`; outliner's node starts
+The identifier in the source is `rvfi_csr_minstret_wmask`; joints's node starts
 at 4654 and cuts the leading `r` off. tree-sitter's `simple_identifier` runs
 [4653,4676) and has the whole name. Consumer: a rename refactor driven by
-outliner's extents corrupts the identifier."""
+joints's extents corrupts the identifier."""
 
 [[verdict]]  # '$display("ST_RD: %2d 0x%08x, BRANCH 0x%08x", ...)'
 grammar = "verilog"
@@ -290,19 +290,19 @@ ours = "expression/primary/function_subroutine_call/subroutine_call/system_tf_ca
 theirs = "system_tf_call"
 side = "agree"
 why = """
-Same innermost name over the same bytes; outliner spells the four ancestor rules
+Same innermost name over the same bytes; joints spells the four ancestor rules
 the grammar puts above it and tree-sitter collapses them. Kept as a control: a
 byte comparison over deepest nodes must score this as agreement, and one that
 scores it a disagreement is measuring node shaping.
 
 **DRIFTED `deeper`, and left drifted because no change has been named for it.**
-Outliner now spells a fifth ancestor, `list_of_actual_arguments`, over the same
+Joints now spells a fifth ancestor, `list_of_actual_arguments`, over the same
 extent. The control's claim is untouched - same innermost `system_tf_call`, same
 bytes, tree-sitter still collapses - so what moved is this row's *transcript* of
 the chain and not its verdict, which is why `prove` reports it `deeper` rather
 than `renamed` or `lost`. It flips between pins `swift-raw` (23:51) and
 `g-control` (00:09), a window whose manifests differ in
-`src/kernel/quire/{gather,quire}.zig` and `src/surface/face/outliner/parse.zig`,
+`src/kernel/quire/{gather,quire}.zig` and `src/surface/face/joints/parse.zig`,
 with no pin in between and no changelog fragment naming it. Three files is not a
 named change, so the row is not re-transcribed: whoever owns that window should
 re-read these bytes and re-sign the chain."""
@@ -334,7 +334,7 @@ theirs = "expression_statement/call_expression"
 side = "agree"
 why = """
 **This was the file's red tripwire, and the parser outgrew it.** `fmt.Print("x")`
-is a call. Outliner used to read it as a `type_conversion_expression` over a
+is a call. Joints used to read it as a `type_conversion_expression` over a
 qualified type - a cast, not a call - while go reported 100.0% standing, zero
 damage and zero mends, so every coverage-shaped number here called the file
 perfect. The row said in as many words that adjudicating `agree` without somebody
@@ -357,7 +357,7 @@ ours = "encapsed_string"
 theirs = "encapsed_string"
 side = "agree"
 why = """
-php could not lex a double-quoted string. Outliner had no node over these three
+php could not lex a double-quoted string. Joints had no node over these three
 bytes at all - not a wrong node, no node - and on the corpus file that was 40,995
 bytes collapsing into one `text` node while the board reported 87.2% standing.
 Seating four of the six terminals `scan_encapsed_part_string` serves fixed it, and
@@ -375,7 +375,7 @@ ours = "expression_statement"
 theirs = "expression_statement"
 side = "agree"
 why = """
-The whole nine-byte statement, over which outliner used to produce nothing at all.
+The whole nine-byte statement, over which joints used to produce nothing at all.
 Same unseated `encapsed_string_chars` external as the row above, one rung up, and
 it stays a separate row because a statement can come back without its string
 doing. Same window: `php-before` (tree 986eb8ece142) to `php-after`
@@ -391,7 +391,7 @@ ours = "multiline_comment"
 theirs = "multiline_comment"
 side = "agree"
 why = """
-**This was the amendment's central exhibit and it is no longer true.** Outliner
+**This was the amendment's central exhibit and it is no longer true.** Joints
 read this comment as a `prefix_expression` over a `multiplicative_expression` -
 a comment parsed as arithmetic, one root, zero mends, scored `built` by every
 instrument here. On pin `collate` (tree 735a2c2ee2e8) it reads

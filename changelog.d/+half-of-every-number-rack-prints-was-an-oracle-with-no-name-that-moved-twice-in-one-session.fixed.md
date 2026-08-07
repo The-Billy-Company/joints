@@ -1,5 +1,5 @@
 `rack.py` stamped fourteen fields about the run and **all fourteen were about
-outliner**. The oracle is the other half of every number it prints and carried
+joints**. The oracle is the other half of every number it prints and carried
 no tree-sitter version, no digest, no seat. A sibling lane caught what that
 costs: **scala read 1,278 crooked in one run and 9,087 in the next — same pin,
 same unedited script, stamp byte-identical.** Three oracle libraries under

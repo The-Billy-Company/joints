@@ -4,7 +4,7 @@
 # `defp f do x end` is the same construct as `defp f(x) do x end` minus one
 # thing: there is no inner CALL for the do-block to be hung on. `f` here is a
 # bare identifier in `arguments`, not a call of its own, so when `do` arrives
-# there is exactly one node that can take it and outliner takes it.
+# there is exactly one node that can take it and joints takes it.
 #
 # Both trees, leaf for leaf and extent for extent:
 #
@@ -14,7 +14,7 @@
 #       identifier  "f"
 #     do_block [7, 15)    <- sibling of arguments, on both sides
 #
-# This is what makes the guilty witness credible. The failure is not "outliner
+# This is what makes the guilty witness credible. The failure is not "joints
 # cannot attach a do_block to a definition" - it attaches this one correctly.
 # It is specifically the choice between two nodes that could both take it, and
 # with only one candidate present there is no choice to get wrong.

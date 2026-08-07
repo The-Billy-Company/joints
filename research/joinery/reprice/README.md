@@ -81,11 +81,11 @@ not in this lane, and until it lands the honest bucket is `untested`.
 ## Reproducing
 
     eval "$(python3 tool/pin.py arm strandprice)"
-    OUTLINER_WORK=.local/reprice/coldwork python3 tool/walls.py run  --json > .local/owners/priced.json
-    OUTLINER_WORK=.local/reprice/warmwork python3 tool/walls.py warm --json > .local/reprice/warm2.json
+    JOINTS_WORK=.local/reprice/coldwork python3 tool/walls.py run  --json > .local/owners/priced.json
+    JOINTS_WORK=.local/reprice/warmwork python3 tool/walls.py warm --json > .local/reprice/warm2.json
     python3 research/joinery/owners/owners.py --warm .local/reprice/warm2.json --json > .local/owners/labelled.json
     python3 research/joinery/owners/cut.py --owner "" --warm .local/reprice/warm2.json
 
-Give the two arms different `OUTLINER_WORK` directories. Two runs sharing one work
+Give the two arms different `JOINTS_WORK` directories. Two runs sharing one work
 directory both read whichever folio was written last, and that error is always
 flattering, because two runs of the same table always agree.

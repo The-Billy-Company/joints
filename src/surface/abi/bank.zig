@@ -1,8 +1,8 @@
-//! The bodies behind `libotl`'s exports: open a bank of languages, lend a
+//! The bodies behind `libjnt`'s exports: open a bank of languages, lend a
 //! parser out of it, hand trees back.
 //!
 //! In `exports.zig`'s module rather than the library's, the same split the
-//! sibling packages keep: the artifact root is a *consumer* of `outliner`, so
+//! sibling packages keep: the artifact root is a *consumer* of `joints`, so
 //! nothing a CLI needs can quietly become something an embedder must link,
 //! and the bodies stay testable without going through C.
 //!
@@ -16,23 +16,23 @@
 //! Strings cross the boundary two ways, on purpose. Titles, node names, and
 //! renders are **pointer + length views** borrowed from the handle that
 //! answered - a folio's names are mmap-ed bytes and a copy per call would be
-//! the allocation this format exists to avoid. Only `otl_version` and
-//! `otl_last_error` are NUL-terminated, because those are for logs.
+//! the allocation this format exists to avoid. Only `jnt_version` and
+//! `jnt_last_error` are NUL-terminated, because those are for logs.
 //!
 //! Every entry returns a status instead of aborting, so a malformed file or a
 //! wrong language can never terminate the host. On a negative status,
-//! `otl_last_error()` holds the sentence the CLI would have printed - per
-//! thread, valid until that thread's next `otl_*` call.
+//! `jnt_last_error()` holds the sentence the CLI would have printed - per
+//! thread, valid until that thread's next `jnt_*` call.
 
 const std = @import("std");
-const outliner = @import("outliner");
+const joints = @import("joints");
 
-const folio = outliner.folio;
-const press = outliner.press;
-const import = outliner.press.import;
-const g = outliner.press.grammar;
-const scanner = outliner.kernel.lex.scanner;
-const quire = outliner.kernel.quire;
+const folio = joints.folio;
+const press = joints.press;
+const import = joints.press.import;
+const g = joints.press.grammar;
+const scanner = joints.kernel.lex.scanner;
+const quire = joints.kernel.quire;
 
 const gpa = std.heap.c_allocator;
 
@@ -48,7 +48,7 @@ pub const Status = enum(c_int) {
     /// build can load - corrupt, sealed wrong, or minted by another version.
     format = -3,
     /// The language asked for is not in the bank, or several are and none
-    /// was named. `otl_last_error` carries the roster.
+    /// was named. `jnt_last_error` carries the roster.
     language = -4,
     /// The grammar was read whole and refused by the importer or the press.
     grammar = -5,
@@ -61,7 +61,7 @@ pub const Status = enum(c_int) {
 /// with no prefix.
 pub const StopKind = enum(c_int) { accepted = 0, stray = 1, unexpected = 2, truncated = 3 };
 
-/// The ref that is not a node - `otl_node_kid` past the end, `otl_node_field`
+/// The ref that is not a node - `jnt_node_kid` past the end, `jnt_node_field`
 /// on nothing. Same value the kernel uses, re-exported so the header can name
 /// it.
 pub const none: u32 = quire.none;
@@ -120,14 +120,14 @@ pub const Bank = struct {
     }
 };
 
-/// `otl_open`. The same first-eight-bytes sniff as the CLI: a folio or codex
+/// `jnt_open`. The same first-eight-bytes sniff as the CLI: a folio or codex
 /// is mapped, anything else is a grammar.json until the importer says
 /// otherwise, and a *real* folio failing is reported as that folio failing
 /// rather than retried as JSON.
 pub fn open(path_z: ?[*:0]const u8, out: ?**Bank) Status {
     clear();
-    const slot = out orelse return fail(.invalid, "otl_open: out is NULL", .{});
-    const path = std.mem.span(path_z orelse return fail(.invalid, "otl_open: path is NULL", .{}));
+    const slot = out orelse return fail(.invalid, "jnt_open: out is NULL", .{});
+    const path = std.mem.span(path_z orelse return fail(.invalid, "jnt_open: path is NULL", .{}));
 
     var threaded = std.Io.Threaded.init(gpa, .{});
     defer threaded.deinit();
@@ -169,7 +169,7 @@ pub fn open(path_z: ?[*:0]const u8, out: ?**Bank) Status {
     return .ok;
 }
 
-/// `otl_close`. Every parser lent from the bank must be freed first.
+/// `jnt_close`. Every parser lent from the bank must be freed first.
 pub fn close(bank: *Bank) void {
     switch (bank.source) {
         .mapped => |*m| m.close(),
@@ -198,14 +198,14 @@ pub const Parser = struct {
     }
 };
 
-/// `otl_parser_new`. `language` null means "the obvious one", which exists
+/// `jnt_parser_new`. `language` null means "the obvious one", which exists
 /// only when the bank holds exactly one - a codex of several is refused with
-/// its roster in `otl_last_error`, never guessed at, because a python file
+/// its roster in `jnt_last_error`, never guessed at, because a python file
 /// parsed with the rust tables hands back a tree that looks fine and is wrong.
 pub fn parserNew(bank: ?*Bank, language_z: ?[*:0]const u8, out: ?**Parser) Status {
     clear();
-    const slot = out orelse return fail(.invalid, "otl_parser_new: out is NULL", .{});
-    const bk = bank orelse return fail(.invalid, "otl_parser_new: bank is NULL", .{});
+    const slot = out orelse return fail(.invalid, "jnt_parser_new: out is NULL", .{});
+    const bk = bank orelse return fail(.invalid, "jnt_parser_new: bank is NULL", .{});
     const language: ?[]const u8 = if (language_z) |z| std.mem.span(z) else null;
 
     const p = gpa.create(Parser) catch return fail(.out_of_memory, "out of memory", .{});
@@ -277,19 +277,19 @@ fn roster(bk: *const Bank, status: Status, comptime fmt: []const u8, args: anyty
     return status;
 }
 
-/// `otl_parser_free`. Trees lent from this parser must be freed first.
+/// `jnt_parser_free`. Trees lent from this parser must be freed first.
 pub fn parserFree(p: *Parser) void {
     p.gather.deinit();
     p.sc.deinit();
     unbind(p);
 }
 
-/// `otl_parser_language`: the name of the grammar this parser parses.
+/// `jnt_parser_language`: the name of the grammar this parser parses.
 pub fn parserLanguage(p: *const Parser) []const u8 {
     return p.grammar().name;
 }
 
-/// `otl_parser_blind`: how many externally scanned terminals this grammar has
+/// `jnt_parser_blind`: how many externally scanned terminals this grammar has
 /// that no lexer rule can produce - the honesty number the CLI prints before
 /// any tree, surfaced so an embedder can decide whether a stop is a wall or
 /// a known blindness.
@@ -309,14 +309,14 @@ pub const Tree = struct {
     rendered: [2]?[:0]u8 = .{ null, null },
 };
 
-/// `otl_parse`. The tree comes back on every status `.ok`, accepted or not;
-/// `otl_tree_stop` says which, exactly as the CLI splits stdout and stderr.
+/// `jnt_parse`. The tree comes back on every status `.ok`, accepted or not;
+/// `jnt_tree_stop` says which, exactly as the CLI splits stdout and stderr.
 pub fn parse(parser: ?*Parser, text: ?[*]const u8, len: usize, out: ?**Tree) Status {
     clear();
-    const slot = out orelse return fail(.invalid, "otl_parse: out is NULL", .{});
-    const p = parser orelse return fail(.invalid, "otl_parse: parser is NULL", .{});
+    const slot = out orelse return fail(.invalid, "jnt_parse: out is NULL", .{});
+    const p = parser orelse return fail(.invalid, "jnt_parse: parser is NULL", .{});
     const bytes: []const u8 = if (len == 0) &.{} else b: {
-        const t = text orelse return fail(.invalid, "otl_parse: text is NULL with len {d}", .{len});
+        const t = text orelse return fail(.invalid, "jnt_parse: text is NULL with len {d}", .{len});
         break :b t[0..len];
     };
 

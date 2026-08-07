@@ -22,7 +22,7 @@ command sets all three, and a before/after pair that skips it has read one arm
 twice - always agreeing with itself, which is why nobody notices:
 
 ```sh
-eval "$(python3 tool/pin.py arm before)"   # OUTLINER_BIN + OUTLINER_WORK + OUTLINER_LANE
+eval "$(python3 tool/pin.py arm before)"   # JOINTS_BIN + JOINTS_WORK + JOINTS_LANE
 python3 tool/standing.py --json > before.json
 eval "$(python3 tool/pin.py arm after)"
 python3 tool/standing.py --against=before.json   # every cell, and what the runs differed in
@@ -46,7 +46,7 @@ gap between your two pins is not your change, it is your change plus theirs.
 
 A lane pinned its baseline, worked for eight minutes, pinned its arm, and read
 `latex -1,185`. The lex lane had landed a latex fix inside those eight minutes.
-Each arm had its own binary, its own `OUTLINER_WORK` and its own seat; the folio
+Each arm had its own binary, its own `JOINTS_WORK` and its own seat; the folio
 shas were checked and matched. **The third house rule is fully satisfied by that
 run and does not cover this**, because nothing wrote to anything being compared -
 the tree simply moved between the two pins, and a work directory per arm cannot
@@ -270,7 +270,7 @@ the algebra is.
 
 ### Rung 1 - verdict: **conditional pass, and the condition is the table**
 
-Run it yourself: `outliner joints <grammar.json> <file>...`, which reports every
+Run it yourself: `joints survey <grammar.json> <file>...`, which reports every
 segmentation on one line each. `--exact` picks the other fusion pole and
 `--confess` prints the limbs at a ceiling. Two grammars, both real files.
 
@@ -334,7 +334,7 @@ than the cause.
 
 **That was a press bug, four of them, and Go's table is now deterministic.**
 1029 states, **23 contested cells, all 23 of them groups Go's author declared,
-none residual**. Read the classification yourself with `outliner grammar
+none residual**. Read the classification yourself with `joints grammar
 <grammar.json> --conflicts`, which groups every contested cell by whose rules
 were arguing and spells out the two productions. What the conflicts turned out
 to be, in the order the measurement surfaced them:
@@ -403,7 +403,7 @@ which the residual count could not see and a parse notices immediately.
 Everything below is over one corpus, `research/joinery/corpus/`: the same little
 ledger program written eleven times, once per language, so a rank number differs
 because the *grammar* differs and not because the file did. Reproduce any row
-with `outliner joints upstream/grammars/<lang>.json research/joinery/corpus/<file>`.
+with `joints survey upstream/grammars/<lang>.json research/joinery/corpus/<file>`.
 
 | grammar | states | unfold rounds | residual | frayed (refuse a token) | press |
 |---|---|---|---|---|---|
@@ -509,7 +509,7 @@ rather than against a description of it.
 | java | 306 | `research/joinery/corpus/Ledger.java`, the whole program |
 
 Taken by `differential.py run` on the corpus five and by `breadth.py run` on the
-held-out three, both on `outliner f6a34cd7c`.
+held-out three, both on `joints f6a34cd7c`.
 
 **It said four for several rounds, and three of the four missing rows were
 already true.** css, embedded-template and lua were byte-exact and nobody knew,
@@ -543,7 +543,7 @@ and swept by `recover.py --valid`; the terminal is routed to the externals lane,
 where it wants a zero-width external, a shape none of the others have.
 
 Reproduce with `python3 tool/differential.py run`;
-every number here is identical on `outliner 1a9a951fa` (tree `c0cdbde69`) and on
+every number here is identical on `joints 1a9a951fa` (tree `c0cdbde69`) and on
 `db3e41054` (tree `211abb346`), a lane landing apart, corpus as committed. Two
 tree states agreeing is the corroboration; one is an anecdote.
 
@@ -716,7 +716,7 @@ word: no terminal is producible anywhere in the file, so there is no first byte
 to name. Every other grammar in the set now reads to the last byte or to within
 one of it.
 
-Taken by `census.py` on `outliner f6a34cd7c`, whose stamp reads `TOLD` and
+Taken by `census.py` on `joints f6a34cd7c`, whose stamp reads `TOLD` and
 `STALE` - a private binary, deliberately, so the eight other lanes rebuilding
 this tree could not move the floor under a three-minute measurement. The corpus
 row was then re-taken an hour later on the tree's own `4d0d74316`, which reads
@@ -912,7 +912,7 @@ a different code path, the same state number.
 yaml is the only grammar that reaches nothing, and printing it as a wall with
 a lower bound - which is what the survey does - undersells what it actually
 needs. The reason is categorical rather than positional, and
-`outliner grammar upstream/grammars/yaml.json` says it outright:
+`joints grammar upstream/grammars/yaml.json` says it outright:
 
 ```
 symbols      328  (113 terminal, 215 nonterminal)
@@ -947,7 +947,7 @@ report its own stops, which is `src/`, which is another lane's. Every row says
 how it was obtained, and the one row that did not finish - yaml, which has no
 lexable terminal anywhere - is printed as a lower bound rather than a zero.
 
-Taken on `outliner 1e91ef9c8`, built from `95b3f4ee5` over a tree at
+Taken on `joints 1e91ef9c8`, built from `95b3f4ee5` over a tree at
 `3d980e308+43`. The scanner lane rebuilt three times while this was being
 measured; nothing above is a duration, so none of it moved.
 
@@ -1112,7 +1112,7 @@ deliberate break each, in four of the grammars that are byte-exact on valid
 input, each with valid code after the break so "does it recover, or just stop?"
 has an answer. `python3 tool/recover.py` runs them.
 
-| | tree-sitter | outliner, then | outliner, now |
+| | tree-sitter | joints, then | joints, now |
 |---|---:|---:|---:|
 | one root spanning the whole file | **25** of 25 | 0 of 25 | 1 of 25 |
 | repairs marked in the tree | 10 MISSING, 30 ERROR | none | none; neither node kind exists |
@@ -1124,7 +1124,7 @@ nineteen of them do it by mending, thirty-seven mends in all, and the rest by
 the older `truncated` and `unclosed` verdicts where the lexer read to the end
 and no root closed. The forest is one to fifteen partial roots rather than one
 whole tree, so an editor gets structure past the caret without being told a lie
-about it. Taken by `recover.py` on `outliner f6a34cd7c`.
+about it. Taken by `recover.py` on `joints f6a34cd7c`.
 
 The top row has not moved and mostly should not. Never inventing a node is
 deliberate and documented - `Only Stop.accepted is a whole tree`, and a partial
@@ -1161,7 +1161,7 @@ end on five of eleven - json, java, javascript, typescript and rust. Every one
 of the other six stops is one of three known-and-owned things:
 
 - **A terminal no lexer rule can produce** - python, ruby, bash. Each
-  grammar hands some terminals to a hand-written external scanner, and outliner
+  grammar hands some terminals to a hand-written external scanner, and joints
   has no equivalent yet: ruby is blind to 29 of its own, bash 22, rust 11,
   typescript 9, python 8, javascript 7, cpp 2. **rust used to be the widening's
   one casualty and has since left this bucket.** Rust nests block comments,
@@ -1362,7 +1362,7 @@ Four things this section will not round up:
   measurable the day the quadratic is gone, and a published negative duration
   would have been worse than three "skipped" lines carrying their arithmetic.
 - **The throughput table is the flattering subset.** Six grammars are absent
-  because outliner stops early on their 128 KB file.
+  because joints stops early on their 128 KB file.
 - **The double take is the weaker kind.** The census's two runs were one byte
   apart; these two sweeps ran on *different binaries* because another lane's
   `scanner.zig` landed between them, and both printed `MOVED` saying so. 35 of

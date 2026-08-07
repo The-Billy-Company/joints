@@ -39,7 +39,7 @@ bounds a quantity the program produces rather than describing the data — so
 
 Two more that are knobs but not fuses: `tidemark` (16, a *threshold* — when to
 start collapsing, not how much is allowed) and `entry_sample` / `residue_ceiling`
-in `joints.zig` (a sample size and a runaway detector).
+in `survey.zig` (a sample size and a runaway detector).
 
 ## The reduction
 
@@ -54,7 +54,7 @@ That relation is visible in the code, and it partitions the twenty-two.
 The reachable path is `press → lex → quire.gather`. That deletes:
 
 - **#20, #21, #22 and `tidemark`** — `cursor.zig` and `reverse.zig` are imported
-  by `root.zig` and by `surface/face/outliner/joints.zig`, and by nothing on the
+  by `root.zig` and by `surface/face/joints/survey.zig`, and by nothing on the
   parse path. `gather.zig` imports neither. They are the rung-1 **survey
   instrument**. They still get audited below, on the survey's own numbers,
   because two of the three carry a demonstrably one-knob comment — but no arm of

@@ -1,4 +1,4 @@
-//! `outliner amend` - a file, a series of edits, and the tree after each one.
+//! `joints amend` - a file, a series of edits, and the tree after each one.
 //!
 //! `parse` answers "what is this file"; this answers "what is it now, given
 //! that it was that a moment ago", which is the question an editor asks a
@@ -16,7 +16,7 @@
 //! The tree goes to stdout and the verdict to stderr, as in `parse`. The
 //! verdict carries what the edit cost, which is the point of the verb:
 //!
-//!   outliner: ledger.json: 61..61 +1: accepted, 5/274 leaves reminted at 4,
+//!   joints: ledger.json: 61..61 +1: accepted, 5/274 leaves reminted at 4,
 //!             height 9, 3 lifts over 402 bytes, 71 of 274 tokens read
 //!
 //! `--cold` re-reads the whole file for every edit instead, which is the
@@ -29,13 +29,13 @@
 //! stopped early, 2 nothing could be read or pressed.
 
 const std = @import("std");
-const outliner = @import("outliner");
+const joints = @import("joints");
 const parse = @import("parse.zig");
 const intake = @import("intake.zig");
 
-const scanner = outliner.kernel.lex.scanner;
-const quire = outliner.kernel.quire;
-const weave = outliner.kernel.weave;
+const scanner = joints.kernel.lex.scanner;
+const quire = joints.kernel.quire;
+const weave = joints.kernel.weave;
 
 pub fn run(
     gpa: std.mem.Allocator,
@@ -65,14 +65,14 @@ pub fn run(
         else if (std.mem.startsWith(u8, a, "--language=")) language = a["--language=".len..] //
         else if (std.mem.startsWith(u8, a, "--policy=")) {
             policy = std.meta.stringToEnum(weave.Policy, a["--policy=".len..]) orelse {
-                try e.print("outliner: no such re-mint policy: {s}\n", .{a["--policy=".len..]});
+                try e.print("joints: no such re-mint policy: {s}\n", .{a["--policy=".len..]});
                 return 2;
             };
         } else if (path == null) path = a //
         else try script.append(gpa, a);
     }
     if (path == null) {
-        try e.writeAll("outliner: amend needs a source file and at least one FROM..TO=TEXT\n");
+        try e.writeAll("joints: amend needs a source file and at least one FROM..TO=TEXT\n");
         return 2;
     }
 
@@ -84,7 +84,7 @@ pub fn run(
         if (std.mem.indexOfScalar(u8, spell, '=')) |eq| {
             if (std.mem.indexOf(u8, spell[0..eq], "..") != null) continue;
         }
-        try e.print("outliner: {s} is not FROM..TO=TEXT\n", .{spell});
+        try e.print("joints: {s} is not FROM..TO=TEXT\n", .{spell});
         return 2;
     }
 
@@ -93,10 +93,10 @@ pub fn run(
     const gr = parser.grammar();
 
     var sc = (scanner.Scanner.compile(gpa, gr) catch |err| {
-        try e.print("outliner: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(err) });
+        try e.print("joints: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(err) });
         return 2;
     }) orelse {
-        try e.print("outliner: {s} has no lexable terminal at all\n", .{gr.name});
+        try e.print("joints: {s} has no lexable terminal at all\n", .{gr.name});
         return 2;
     };
     defer sc.deinit();
@@ -152,17 +152,17 @@ const Cut = struct { from: u32, to: u32, insert: u32 = 0 };
 /// Null means the spelling was wrong and the reason is already on stderr.
 fn lex(e: *std.Io.Writer, spell: []const u8, wide: usize) !?Cut {
     const eq = std.mem.indexOfScalar(u8, spell, '=') orelse {
-        try e.print("outliner: {s} is not FROM..TO=TEXT\n", .{spell});
+        try e.print("joints: {s} is not FROM..TO=TEXT\n", .{spell});
         return null;
     };
     const dots = std.mem.indexOf(u8, spell[0..eq], "..") orelse {
-        try e.print("outliner: {s} is not FROM..TO=TEXT\n", .{spell});
+        try e.print("joints: {s} is not FROM..TO=TEXT\n", .{spell});
         return null;
     };
     const from = std.fmt.parseInt(u32, spell[0..dots], 10) catch null;
     const to = std.fmt.parseInt(u32, spell[dots + 2 .. eq], 10) catch null;
     if (from == null or to == null or from.? > to.? or to.? > wide) {
-        try e.print("outliner: {s} does not address a span of {d} bytes\n", .{ spell, wide });
+        try e.print("joints: {s} does not address a span of {d} bytes\n", .{ spell, wide });
         return null;
     }
     return .{ .from = from.?, .to = to.? };
@@ -200,15 +200,15 @@ fn since(io: std.Io, from: std.Io.Timestamp) i64 {
 /// The height beside it is what one spliced leaf costs in compositions.
 fn report(
     e: *std.Io.Writer,
-    gr: *const outliner.press.grammar.Grammar,
+    gr: *const joints.press.grammar.Grammar,
     path: []const u8,
     it: *const weave.Weave,
     cut: ?Cut,
     us: i64,
 ) !void {
     if (cut) |c| {
-        try e.print("outliner: {s}: {d}..{d} +{d}: ", .{ path, c.from, c.to, c.insert });
-    } else try e.print("outliner: {s}: opened: ", .{path});
+        try e.print("joints: {s}: {d}..{d} +{d}: ", .{ path, c.from, c.to, c.insert });
+    } else try e.print("joints: {s}: opened: ", .{path});
 
     const q = &it.tree.?;
     switch (q.stop) {

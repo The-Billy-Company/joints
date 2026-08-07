@@ -7,7 +7,7 @@ and **a node in a mended forest is not a claim that the text under it was read
 as the author wrote it**. The parse that built it had already repaired
 somewhere, so the node proves round 1 did not refuse *there* - not that the
 byte survived. The capability that settles it, enumerating the repair sites,
-was not in the binary. It is now: `outliner parse --scars`, one line per mend.
+was not in the binary. It is now: `joints parse --scars`, one line per mend.
 
 ## The reading, and why it is `--mend=keep` and not the default
 
@@ -68,7 +68,7 @@ board reads and the run says so and exits 1 rather than publishing a table.
   python3 research/joinery/owners/owners.py --json > .local/scars/labelled.json
   python3 research/joinery/scars/seat.py --from-json .local/scars/labelled.json
 
-Give this its own `OUTLINER_WORK`: two pinned binaries sharing one work
+Give this its own `JOINTS_WORK`: two pinned binaries sharing one work
 directory both read whichever folio was written last, and that error is always
 flattering, because two runs of the same table always agree.
 
@@ -359,7 +359,7 @@ def main(argv: list[str]) -> int:
 
     rows = json.loads(args.from_json.read_text())
     binary = order.BIN
-    work = Path(order.os.environ.get("OUTLINER_WORK", ROOT / ".local" / "work"))
+    work = Path(order.os.environ.get("JOINTS_WORK", ROOT / ".local" / "work"))
     want = {w["grammar"] for w in rows}
     seats: dict[str, Seat] = {}
     for name, src in walls.roster():

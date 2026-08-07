@@ -26,13 +26,13 @@ measurement that falsifies it.
 
 ## The measure I am about to build
 
-For each byte of the corpus, the **deepest node covering it** in outliner's
+For each byte of the corpus, the **deepest node covering it** in joints's
 forest and in tree-sitter's tree. Same byte, two names. A byte whose two names
 differ is **askew**; a byte whose names agree is **plumb**; a byte the oracle
 cannot adjudicate is **unjudged**. Restricted to the `built` population, so
 `built = plumb + askew + unjudged` and no other bucket moves.
 
-Byte-indexed rather than tree-aligned on purpose: outliner hands back a forest
+Byte-indexed rather than tree-aligned on purpose: joints hands back a forest
 on 18 of 30 grammars, and an alignment over 3,544 roots is a guess. Two
 functions from offset to name need no alignment at all.
 

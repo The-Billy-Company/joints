@@ -1,6 +1,6 @@
 # Result 4 — four of the five walls are not merge defects, and the biggest one is not ours
 
-outliner `beb695b5d` · tree `e973ce73c` (pin) · oracle `d85e736fa` (30 of 30
+joints `beb695b5d` · tree `e973ce73c` (pin) · oracle `d85e736fa` (30 of 30
 live, 30 attributed), tree-sitter CLI 0.26.11. No `src/` change, so no treatment
 arm. Every claim below is read off the shipped CLI, the grammar JSON, or a live
 tree-sitter parse.
@@ -11,7 +11,7 @@ Result 3 closed by admitting the gap: the floor counts *cells*, not walls, so it
 bounds what a split could reach without showing that any particular wall sits in
 a sealed cell. This page closes that gap by going to the walls themselves, one
 at a time. Four of the five turned out not to be merge defects at all, and the
-one carrying 89% of the class's damage is not outliner's defect in any sense.
+one carrying 89% of the class's damage is not joints's defect in any sense.
 
 ## The verdicts, read properly
 

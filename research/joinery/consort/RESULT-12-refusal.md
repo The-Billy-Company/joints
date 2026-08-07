@@ -15,7 +15,7 @@ enforced gate is the first of those. The second prints `note:` and returns 0,
 with `--strict` for anyone measuring whether it is ready to be promoted, and a
 promotion criterion that is a number rather than a mood.
 
-outliner `a525dc9b8` · tree `3d0d2e481` (live) · **no oracle** — outliner's own
+joints `a525dc9b8` · tree `3d0d2e481` (live) · **no oracle** — joints's own
 words. Every count below is off that tree; the record grows several pages an
 hour while ten lanes work, so a re-run will not reproduce the populations and
 `--rate` re-derives them live rather than quoting these.

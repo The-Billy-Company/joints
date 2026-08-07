@@ -20,9 +20,9 @@ different fix. Every one of elixir's nine widest racked runs is the same
 construct, `arguments` where the oracle says `do_block`.
 
 toml is neither a gap nor a conflict. Its grammar declares zero conflicts and
-`joints` reports zero contested cells over all 175 states, so there was never a
+`survey` reports zero contested cells over all 175 states, so there was never a
 second derivation to prefer. Both parsers put the `comment` under the same
-`pair`; outliner's `pair` merely ends before it. `standing.py` has been printing
+`pair`; joints's `pair` merely ends before it. `standing.py` has been printing
 `UNSOUND — child outside its parent` for that grammar all along, on a row the
 board scores 100.0% standing and `whole`.
 

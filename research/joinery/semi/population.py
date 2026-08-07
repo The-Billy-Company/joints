@@ -33,7 +33,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-BIN = Path(__file__).resolve().parents[3] / "zig-out" / "bin" / "outliner"
+BIN = Path(__file__).resolve().parents[3] / "zig-out" / "bin" / "joints"
 
 # The row prints one line per terminal it can act on: four spaces of indent, the
 # terminal (spelled, for a literal or regex; named otherwise), then the verb -

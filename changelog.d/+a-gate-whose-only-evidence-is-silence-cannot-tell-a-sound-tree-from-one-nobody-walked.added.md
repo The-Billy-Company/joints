@@ -17,8 +17,8 @@ roots reached) and `held` (nodes the arena holds), and `verdict` prints
 clause:
 
 ```
-outliner: /t/a.toml: accepted, 1 root, surveyed 731 of 731 nodes
-outliner: /t/b.zig: stray byte at 41, 4 roots, surveyed 31 of 31 nodes, UNSOUND: 1 loose, 0 disorder, 0 torn
+joints: /t/a.toml: accepted, 1 root, surveyed 731 of 731 nodes
+joints: /t/b.zig: stray byte at 41, 4 roots, surveyed 31 of 31 nodes, UNSOUND: 1 loose, 0 disorder, 0 torn
 ```
 
 `stamp.Outcome` gains `surveyed`/`arena` off it and strips the clause from

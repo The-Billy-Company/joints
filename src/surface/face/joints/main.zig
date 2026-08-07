@@ -1,23 +1,23 @@
-//! The outliner CLI.
+//! The joints CLI.
 //!
 //! Seven verbs, in two groups. Four look at the machinery: `grammar` imports a
 //! tree-sitter `grammar.json` and reports what the press made of it, `state`
 //! prints one LR state, `lex` runs the terminal scanner over a real file, and
-//! `joints` is rung 1 of `research/joinery/TESTING.md` — the measurement that
+//! `survey` is rung 1 of `research/joinery/TESTING.md` — the measurement that
 //! decided whether the whole package was a good idea. Two are the product:
 //! `parse` returns a tree, `amend` returns the tree again after an edit without
 //! re-reading the file, and `mint` turns a grammar into a folio. All three are
 //! real now; the machinery verbs are why they could be written at all.
 //!
 //! Exit codes follow the family: 0 ran, 1 a clean negative answer, 2 an error.
-//! `joints` uses that 1 for something specific: the kill condition tripped.
+//! `survey` uses that 1 for something specific: the kill condition tripped.
 
 const std = @import("std");
-const outliner = @import("outliner");
-const assay = outliner.assay;
-const import = outliner.press.import;
-const scanner = outliner.kernel.lex.scanner;
-const joints = @import("joints.zig");
+const joints = @import("joints");
+const assay = joints.assay;
+const import = joints.press.import;
+const scanner = joints.kernel.lex.scanner;
+const survey = @import("survey.zig");
 const state = @import("state.zig");
 const parse = @import("parse.zig");
 const mint = @import("mint.zig");
@@ -29,25 +29,25 @@ const intake = @import("intake.zig");
 /// module of whatever compilation it lands in, and there are two: this face is
 /// the executable's root, `src/root.zig` is the library's and the test build's.
 /// Restating them would be two copies of one identity, free to disagree.
-pub const irgx_brand = outliner.irgx_brand;
-pub const irgx_lenses = outliner.irgx_lenses;
+pub const irgx_brand = joints.irgx_brand;
+pub const irgx_lenses = joints.irgx_lenses;
 
 const usage =
-    \\outliner - parsing as algebra
+    \\joints - parsing as algebra
     \\
     \\usage:
-    \\  outliner grammar <grammar.json>          import a tree-sitter grammar, report its shape
-    \\  outliner lex <grammar.json> <file>       tokenize a file, print the stream
-    \\  outliner joints <grammar.json> <file>... measure segment effects (rung 1)
-    \\  outliner state <grammar.json> <n>        print one LR state: its items and its row
-    \\  outliner state <grammar.json> --census <terminal>...  count those terminals over every state
-    \\  outliner state <grammar.json> --holding <item>  name the states holding a reading
-    \\  outliner state <grammar.json> --chain <n>  how a parse reaches n, and where a fold there goes
-    \\  outliner parse <grammar.json|folio> <file>...  parse a file, print the tree
-    \\  outliner amend <grammar.json|folio> <file> FROM..TO=TEXT...  re-parse across edits
-    \\  outliner mint <grammar.json|folio>... [-o P]  press grammars into a folio
+    \\  joints grammar <grammar.json>          import a tree-sitter grammar, report its shape
+    \\  joints lex <grammar.json> <file>       tokenize a file, print the stream
+    \\  joints survey <grammar.json> <file>... measure segment effects (rung 1)
+    \\  joints state <grammar.json> <n>        print one LR state: its items and its row
+    \\  joints state <grammar.json> --census <terminal>...  count those terminals over every state
+    \\  joints state <grammar.json> --holding <item>  name the states holding a reading
+    \\  joints state <grammar.json> --chain <n>  how a parse reaches n, and where a fold there goes
+    \\  joints parse <grammar.json|folio> <file>...  parse a file, print the tree
+    \\  joints amend <grammar.json|folio> <file> FROM..TO=TEXT...  re-parse across edits
+    \\  joints mint <grammar.json|folio>... [-o P]  press grammars into a folio
     \\                (several press into one codex), or read one back
-    \\  outliner --version
+    \\  joints --version
     \\
     \\a <file> of - is stdin
     \\
@@ -66,7 +66,7 @@ const usage =
     \\  --policy=P  how far the re-mint window widens: prove, snap, whole
     \\  --language=NAME  which grammar, when the folio holds several
     \\
-    \\joints flags:
+    \\survey flags:
     \\  --exact     fuse two limbs only on identical claims, never by depth
     \\  --dump      print the first many-valued joint in full
     \\  --confess   print the standing limbs wherever a run hits a ceiling
@@ -76,7 +76,7 @@ const usage =
     \\  --churn N   sprout at most N limbs while reading one token
     \\
     \\environment:
-    \\  OUTLINER_TRACE=press,lex,joint,weave,folio,quire  light one or more phase traces
+    \\  JOINTS_TRACE=press,lex,joint,weave,folio,quire  light one or more phase traces
     \\                 (or `all`, which adds the search engine's own beneath them)
     \\
 ;
@@ -87,7 +87,7 @@ pub fn main(init: std.process.Init) !u8 {
 
     // Before dispatch, because a verb that traces its own setup would otherwise
     // run with the lens mask still zero. This is also the only read of
-    // `OUTLINER_TRACE`: a phase asks `assay.trace(.press, …)` and never the
+    // `JOINTS_TRACE`: a phase asks `assay.trace(.press, …)` and never the
     // environment, so lighting one is a decision made in one place.
     assay.install(.{});
 
@@ -103,47 +103,47 @@ pub fn main(init: std.process.Init) !u8 {
     const verb = args[1];
 
     if (std.mem.eql(u8, verb, "--version") or std.mem.eql(u8, verb, "-V")) {
-        try w.print("outliner {s}\n", .{@import("build_options").version});
+        try w.print("joints {s}\n", .{@import("build_options").version});
         return 0;
     }
     if (std.mem.eql(u8, verb, "grammar")) {
         if (args.len < 3) {
-            try w.writeAll("outliner: grammar needs a path to a grammar.json\n");
+            try w.writeAll("joints: grammar needs a path to a grammar.json\n");
             return 2;
         }
         var show: Show = .{};
         var path: ?[]const u8 = null;
         for (args[2..]) |a| {
             if (std.mem.eql(u8, a, "--rules")) show.rules = true //
-            else if (std.mem.eql(u8, a, "--trace")) outliner.press.setTrace(true) //
-            else if (std.mem.startsWith(u8, a, "--growth=")) outliner.press.setGrowth(
+            else if (std.mem.eql(u8, a, "--trace")) joints.press.setTrace(true) //
+            else if (std.mem.startsWith(u8, a, "--growth=")) joints.press.setGrowth(
                 std.fmt.parseInt(u32, a["--growth=".len..], 10) catch 8,
             ) //
             else if (std.mem.eql(u8, a, "--conflicts")) show.conflicts = true //
             else path = a;
         }
         if (path == null) {
-            try w.writeAll("outliner: grammar needs a path to a grammar.json\n");
+            try w.writeAll("joints: grammar needs a path to a grammar.json\n");
             return 2;
         }
         return describe(gpa, init.io, w, path.?, show);
     }
     if (std.mem.eql(u8, verb, "state")) {
         if (args.len < 4) {
-            try w.writeAll("outliner: state needs a grammar.json and a state number" ++
+            try w.writeAll("joints: state needs a grammar.json and a state number" ++
                 " (or --census and a terminal)\n");
             return 2;
         }
         if (std.mem.eql(u8, args[3], "--census")) {
             if (args.len < 5) {
-                try w.writeAll("outliner: --census needs at least one terminal name\n");
+                try w.writeAll("joints: --census needs at least one terminal name\n");
                 return 2;
             }
             return state.run(gpa, init.io, w, args[2], .{ .census = args[4..] });
         }
         if (std.mem.eql(u8, args[3], "--holding")) {
             if (args.len < 5) {
-                try w.writeAll("outliner: --holding needs an item to look for," ++
+                try w.writeAll("joints: --holding needs an item to look for," ++
                     " like 'variable_lvalue -> _identifier .' or '-> _identifier .'\n");
                 return 2;
             }
@@ -151,52 +151,52 @@ pub fn main(init: std.process.Init) !u8 {
         }
         if (std.mem.eql(u8, args[3], "--chain")) {
             if (args.len < 5) {
-                try w.writeAll("outliner: --chain needs a state number\n");
+                try w.writeAll("joints: --chain needs a state number\n");
                 return 2;
             }
             const from = std.fmt.parseInt(u32, args[4], 10) catch {
-                try w.print("outliner: {s} is not a state number\n", .{args[4]});
+                try w.print("joints: {s} is not a state number\n", .{args[4]});
                 return 2;
             };
             return state.run(gpa, init.io, w, args[2], .{ .chain = from });
         }
         const at = std.fmt.parseInt(u32, args[3], 10) catch {
-            try w.print("outliner: {s} is not a state number\n", .{args[3]});
+            try w.print("joints: {s} is not a state number\n", .{args[3]});
             return 2;
         };
         return state.run(gpa, init.io, w, args[2], .{ .at = at });
     }
     if (std.mem.eql(u8, verb, "lex")) {
         if (args.len < 4) {
-            try w.writeAll("outliner: lex needs a grammar.json and a source file\n");
+            try w.writeAll("joints: lex needs a grammar.json and a source file\n");
             return 2;
         }
         return lex(gpa, init.io, w, args[2], args[3]);
     }
-    if (std.mem.eql(u8, verb, "joints")) {
+    if (std.mem.eql(u8, verb, "survey")) {
         if (args.len < 4) {
-            try w.writeAll("outliner: joints needs a grammar.json and at least one source file\n");
+            try w.writeAll("joints: survey needs a grammar.json and at least one source file\n");
             return 2;
         }
-        return joints.run(gpa, init.io, w, args[2], args[3..]);
+        return survey.run(gpa, init.io, w, args[2], args[3..]);
     }
     if (std.mem.eql(u8, verb, "parse")) {
         if (args.len < 4) {
-            try w.writeAll("outliner: parse needs a grammar.json and at least one source file\n");
+            try w.writeAll("joints: parse needs a grammar.json and at least one source file\n");
             return 2;
         }
         return parse.run(gpa, init.io, w, args[2], args[3..]);
     }
     if (std.mem.eql(u8, verb, "amend")) {
         if (args.len < 4) {
-            try w.writeAll("outliner: amend needs a grammar.json, a source file and an edit\n");
+            try w.writeAll("joints: amend needs a grammar.json, a source file and an edit\n");
             return 2;
         }
         return amend.run(gpa, init.io, w, args[2], args[3..]);
     }
     if (std.mem.eql(u8, verb, "mint")) {
         if (args.len < 3) {
-            try w.writeAll("outliner: mint needs a grammar.json or a folio\n");
+            try w.writeAll("joints: mint needs a grammar.json or a folio\n");
             return 2;
         }
         return mint.run(gpa, init.io, w, args[2..]);
@@ -223,7 +223,7 @@ fn lex(
     const source = intake.slurp(gpa, io, w, grammar_path) orelse return 2;
     defer gpa.free(source);
     var gr = import.treeSitter(gpa, source) catch |e| {
-        try w.print("outliner: cannot import {s}: {s}\n", .{ grammar_path, @errorName(e) });
+        try w.print("joints: cannot import {s}: {s}\n", .{ grammar_path, @errorName(e) });
         return 2;
     };
     defer gr.deinit();
@@ -232,10 +232,10 @@ fn lex(
     defer gpa.free(text);
 
     var sc = (scanner.Scanner.compile(gpa, &gr) catch |e| {
-        try w.print("outliner: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(e) });
+        try w.print("joints: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(e) });
         return 2;
     }) orelse {
-        try w.print("outliner: {s} has no lexable terminal at all\n", .{gr.name});
+        try w.print("joints: {s} has no lexable terminal at all\n", .{gr.name});
         return 1;
     };
     defer sc.deinit();
@@ -317,7 +317,7 @@ fn writeClipped(w: *std.Io.Writer, text: []const u8) !void {
 
 const Show = struct { rules: bool = false, conflicts: bool = false };
 
-const Symbol = outliner.press.grammar.Symbol;
+const Symbol = joints.press.grammar.Symbol;
 
 /// Contested cells grouped by *whose* ambiguity they are, commonest first.
 ///
@@ -329,17 +329,17 @@ const Symbol = outliner.press.grammar.Symbol;
 fn parties(
     gpa: std.mem.Allocator,
     w: *std.Io.Writer,
-    gr: *const outliner.press.grammar.Grammar,
-    conflicts: []const outliner.press.lalr.Conflict,
+    gr: *const joints.press.grammar.Grammar,
+    conflicts: []const joints.press.lalr.Conflict,
 ) !void {
     const Group = struct {
         party: []const Symbol,
-        class: outliner.press.lalr.Conflict.Class,
+        class: joints.press.lalr.Conflict.Class,
         cells: u32 = 0,
         reduce_reduce: u32 = 0,
         /// One cell of the group, so the report can show the actual two rules
         /// rather than only how many times they disagreed.
-        witness: outliner.press.lalr.Conflict,
+        witness: joints.press.lalr.Conflict,
     };
     var groups: std.ArrayList(Group) = .empty;
     defer groups.deinit(gpa);
@@ -397,7 +397,7 @@ fn describe(
     // phases is not either phase, and lapping would fold it into the second.
     const importing = assay.Span.open(io);
     var gr = import.treeSitter(gpa, source) catch |e| {
-        try w.print("outliner: cannot import {s}: {s}\n", .{ path, @errorName(e) });
+        try w.print("joints: cannot import {s}: {s}\n", .{ path, @errorName(e) });
         return 2;
     };
     defer gr.deinit();
@@ -442,8 +442,8 @@ fn describe(
     try w.print("  imported in    {d} us\n", .{elapsed_us});
 
     const pressing = assay.Span.open(io);
-    var built = outliner.press.tables(gpa, &gr) catch |e| {
-        try w.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
+    var built = joints.press.tables(gpa, &gr) catch |e| {
+        try w.print("joints: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
         return 2;
     };
     defer built.deinit();
@@ -539,7 +539,7 @@ fn describe(
 
 test {
     std.testing.refAllDecls(@This());
-    _ = outliner;
+    _ = joints;
     // Named rather than left to `refAllDecls`, which reaches public decls: the
     // face's siblings are private consts here, so `parse.zig`'s tests were only
     // ever collected if something else happened to analyse the file. The one

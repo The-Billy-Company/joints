@@ -4,7 +4,7 @@ Scored against `PREDICTION-1-owners.md`, written before the closure had been
 pointed at a wall outside verilog. Binary: `.local/pin/owners`, so nothing here
 moves when another lane rebuilds `zig-out`.
 
-Reproduce: `OUTLINER_BIN=$(python3 tool/pin.py path owners) python3
+Reproduce: `JOINTS_BIN=$(python3 tool/pin.py path owners) python3
 research/joinery/owners/owners.py` (board), `--control` (the verilog four),
 `--vacuity` (the collapse), `--gaps` (the competitive lane's input).
 
@@ -225,7 +225,7 @@ Three things wrong with that:
    settled test. The settled test has **no control at all** beyond the four
    verilog hand verdicts, and three of those four land on `stranded`, so exactly
    **one** hand-checked wall exercises the `gap` branch.
-3. **It rests on parsing prose.** `settled` reads `outliner state`'s rendered
+3. **It rests on parsing prose.** `settled` reads `joints state`'s rendered
    items and looks for a trailing dot. `ROW`'s first spelling silently dropped
    terminals whose row carried a conflict note, which deflated haskell's control
    until I noticed. The same class of miss in the item parser would not deflate

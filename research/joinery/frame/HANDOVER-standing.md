@@ -23,11 +23,11 @@ not, and the second sentence has been losing for as long as both have printed.
 **It is not a false alarm.** A sibling lane adjudicated toml properly — zero
 declared conflicts, zero contested cells across 175 states — and the mechanism
 is exactly what the complaint says: both parsers hang the `comment` under the
-same `pair`, and outliner's `pair` merely ends at byte 7 with a child starting
+same `pair`, and joints's `pair` merely ends at byte 7 with a child starting
 at 9. A moved right edge. `rack.py soft` prices the same class corpus-wide at
 **12,439 bytes**, of which toml is 29, latex 96% of its row and zig 80% of its.
 
-So `standing.py` diagnosed, from outliner's own forest and with no oracle
+So `standing.py` diagnosed, from joints's own forest and with no oracle
 present at all, a defect that took `rack` an oracle and two revisions to find.
 That is the most useful thing either instrument did this week and it needed no
 new code.
@@ -41,7 +41,7 @@ its own table, with the complaint's full text and the standing figure beside it:
 1 row(s) here carry a soundness complaint the PARSE ITSELF printed,
 which no board reads:
   toml   100.0% standing  UNSOUND: 1 loose, ... [child outside its parent: ...]
-  These are outliner's own words about its own forest. A grammar can score
+  These are joints's own words about its own forest. A grammar can score
   100.0% and `whole` on a board that never asked.
 ```
 
@@ -60,11 +60,11 @@ scoring 100%.
 
 ## 3. The seat, which is new
 
-`standing.py` is oracle-free — it reads outliner and nothing else — so nothing
+`standing.py` is oracle-free — it reads joints and nothing else — so nothing
 here forces a change today. But two things now true will reach it.
 
 **The oracle moves under you.** `rack` stamped fourteen fields and all fourteen
-were about outliner; a sibling measured **scala at 1,278 crooked in one run and
+were about joints; a sibling measured **scala at 1,278 crooked in one run and
 9,087 in the next, same pin, same unedited script, stamp byte-identical**,
 because three grammar libraries were rebuilt mid-session by other lanes.
 `tool/attest.py` now seats the oracle by digesting each grammar's **sources**

@@ -51,7 +51,7 @@ from stamp import take  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT / ".local" / "resync"
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
 CAP = 6000        # hops one file may take before the row is reported as a floor
 PATIENCE = 60
 

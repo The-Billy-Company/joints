@@ -62,13 +62,13 @@ terminates.
 
 ## The board did not move, and that is the finding
 
-Two arms, same outliner tree (`41ff3dca6a06`), same oracle (`d85e736fa`), 30 of
+Two arms, same joints tree (`41ff3dca6a06`), same oracle (`d85e736fa`), 30 of
 30 verdicts live on each, differing only in the irregex ceiling:
 
 ```
 $ diff board-slatectl board-slate
-107c107  < stamp: outliner 7c480a089 ...
-         > stamp: outliner 5f5c551fa ...
+107c107  < stamp: joints 7c480a089 ...
+         > stamp: joints 5f5c551fa ...
 ```
 
 **Every one of the thirty rows is byte-identical.** No regression anywhere - and
@@ -124,12 +124,12 @@ patterns are rather than where a different caller left it.
 ## What the instrument could not see
 
 Worth recording against the apparatus rather than the fix. `pin.py` digests
-outliner's own tree, and irregex is a **path dependency**. Both arms pinned as
+joints's own tree, and irregex is a **path dependency**. Both arms pinned as
 `tree 41ff3dca6a06` - identical - while the binaries are `7c480a089` and
 `5f5c551fa`. `still.py against` would call these arms comparable on a tree digest
 that cannot see the variable under test.
 
-It was harmless here, and by accident: holding the outliner tree constant made
+It was harmless here, and by accident: holding the joints tree constant made
 this a clean single-variable experiment. But a pin that names a tree it did not
 fully observe is a citation that could outlive its truth, and the binary digest
 is the only field that noticed.
@@ -137,12 +137,12 @@ is the only field that noticed.
 ## Provenance
 
 ```
-control  outliner 7c480a089 · irregex 2a4488d (pristine)
-subject  outliner 5f5c551fa · irregex 2a4488d + this change
+control  joints 7c480a089 · irregex 2a4488d (pristine)
+subject  joints 5f5c551fa · irregex 2a4488d + this change
 both     tree 41ff3dca6a06 · repo fdda15a2a+31 · oracle d85e736fa · 30 of 30 live
 ```
 
 State counts from a temporary `nstates` probe in `powerset.build`, removed. The
-declined census is `outliner lex` over all thirty grammars, falsified by putting
+declined census is `joints lex` over all thirty grammars, falsified by putting
 the ceiling back: at 4,096 it reports `markdown: 1 pattern(s) the engine would
 not build: entity_reference`, at 8,192 it reports nothing.

@@ -5,7 +5,7 @@ lanes spent a day working it. It also contributed **zero adjudicable bytes**:
 `rack` asked its oracle for a tree, the oracle's two renders disagreed, and
 every one of verilog's 30,720 built bytes was filed `unjudged` - a state the
 board printed nowhere. So `damage` was the only instrument left on the row, and
-`damage` is outliner's own words about its own forest.
+`damage` is joints's own words about its own forest.
 
 [`PREDICTION-1`](PREDICTION-1-disagreement.md) was written before anything ran
 and covers all of it - the diagnosis in P1.1-P1.6, the sweep in P1.7, the

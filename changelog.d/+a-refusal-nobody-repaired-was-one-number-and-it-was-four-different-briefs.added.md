@@ -57,7 +57,7 @@ ground at 19.9–23.0% with no column anywhere distinguishing it; that file is t
 join key for the column, handed to the lane that owns `tool/rack.py` rather than
 built into their board.
 
-The trace costs nothing unless lit (`OUTLINER_TRACE=quire`) and names every exit
+The trace costs nothing unless lit (`JOINTS_TRACE=quire`) and names every exit
 `supply` has — the four declines `fuse`, `ground`, `none` and `unseated`, plus
 `spurned` and `supplied` — so a lane asked to shrink the residue knows which
 quarter it is standing in. `fuse` and `unseated` read 0 across this corpus; both

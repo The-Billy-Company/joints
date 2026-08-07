@@ -59,7 +59,7 @@ I predict: **zero co-admission-by-shift between any two of the eight**, and
 **Measurement:**
 
 ```
-outliner state upstream/grammars/julia.json --census \
+joints state upstream/grammars/julia.json --census \
   _content_str_1 _content_str_3 _content_str_1_raw _content_str_3_raw \
   _content_cmd_1 _content_cmd_3 _content_cmd_1_raw _content_cmd_3_raw \
   _end_str _end_cmd

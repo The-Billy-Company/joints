@@ -138,7 +138,7 @@ where `askew 589` comes from, and 63% of the charged bytes read `string_literal
 
 Six routes, three of which could have contradicted the other three.
 
-**(a) The trace, which is the direct witness.** `OUTLINER_TRACE=quire`, on the
+**(a) The trace, which is the direct witness.** `JOINTS_TRACE=quire`, on the
 two probes that differ by one token:
 
 ```
@@ -177,7 +177,7 @@ that lost, for the report. **There may have been more.**"*, and
 `forks.Forks.Split` is `{ cell, other: Action }` - one rival per cell. A cell
 that lost two readings can hand one back.
 
-**(e) The lexer is exonerated, twice.** `outliner state cpp.json --census '"'`
+**(e) The lexer is exonerated, twice.** `joints state cpp.json --census '"'`
 says `"` shifts in **517 of 4,466 states**; state 907 is
 `parameter_list -> ( . parameter_declaration …` and correctly refuses a string
 literal, because a string cannot begin a parameter declaration. The token exists
@@ -355,8 +355,8 @@ python3 research/joinery/cpp/confuse.py --verb price
 python3 research/joinery/cpp/confuse.py --verb where --cut 690
 python3 tool/rack.py run --json > board.json
 python3 research/joinery/cpp/blind.py board.json
-outliner state upstream/grammars/cpp.json 2572
-OUTLINER_TRACE=quire outliner parse "$OUTLINER_WORK/cpp.folio" <probe>
+joints state upstream/grammars/cpp.json 2572
+JOINTS_TRACE=quire joints parse "$JOINTS_WORK/cpp.folio" <probe>
 ```
 
 Nothing here writes outside `stdout` and `.local/`. No file under `src/` or

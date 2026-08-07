@@ -85,7 +85,7 @@ a purchase; neither is a cascade. See `Warm.paid` and
   python3 research/joinery/owners/owners.py --json > .local/owners/labelled.json
   python3 research/joinery/owners/cut.py --warm .local/reprice/warm.json
 
-Give the warm run its own `OUTLINER_WORK`: two pinned binaries sharing one work
+Give the warm run its own `JOINTS_WORK`: two pinned binaries sharing one work
 directory both read whichever folio was written last, and the error is always
 flattering because two runs of the same table always agree.
 

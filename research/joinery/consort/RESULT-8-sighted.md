@@ -3,7 +3,7 @@
 `vacuity/RESULT-2-arms.md` cleared fourteen single-row arms of collateral and
 `RESULT-5-pairs.md` cleared five pairs and the union arm. `RESULT-5-blindness.md`
 then established that **every one of those twenty arms read `square 0`**, so the
-clearance was taken on `damage` — outliner's own words about its own forest,
+clearance was taken on `damage` — joints's own words about its own forest,
 which cannot see a change that leaves `built` untouched and moves every leaf to
 a different parent.
 
@@ -180,7 +180,7 @@ handoff had not been worth a probe of its own.
 
 `sighted.py` — one snapshot of `src/` for all twenty-one arms, one build tree
 per worker, three arms at a time, ~120 s each. Each arm gets its own
-`OUTLINER_WORK`, pays its own `--audit`, and is required to read its own
+`JOINTS_WORK`, pays its own `--audit`, and is required to read its own
 verdicts back; an arm whose `src/` differs from the snapshot in anything but
 `outside.zig` is dropped by name rather than measured.
 

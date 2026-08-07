@@ -135,7 +135,7 @@ const js = struct {
 /// `null` are terminals named after their own single-atom rules.
 ///
 /// Last reconciled against the corpus at:
-///   outliner 4d64f888c built 2026-08-04T14:59:37Z from . d839aa01b
+///   joints 4d64f888c built 2026-08-04T14:59:37Z from . d839aa01b
 ///   repo 35f3da5f0+75
 ///
 /// That line is here so the next person can tell staleness from breakage

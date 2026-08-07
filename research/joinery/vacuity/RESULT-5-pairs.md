@@ -2,7 +2,7 @@
 
 > **Withdrawn verdict, kept page (2026-08-06).** Every arm on this page read
 > `square 0` - see `consort/RESULT-5-blindness.md` - so every residual below is
-> priced on `damage`, which is outliner's own words about its own forest. Re-taken
+> priced on `damage`, which is joints's own words about its own forest. Re-taken
 > sighted in `consort/RESULT-8-sighted.md`, **no pair on this board is two rows
 > cooperating.** Every `square` residual is zero or positive, which is a ceiling:
 > two rows that each destroy nearly all of one quantity cannot also sum. scala

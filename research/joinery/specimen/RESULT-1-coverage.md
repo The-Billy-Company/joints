@@ -24,7 +24,7 @@ of the 36 that can be, 21 are exercised (58%)
 ```
 
 Four populations per grammar. **declared** is a field in `grammar.json`.
-**blind** is what outliner says it has no stand-in for. **seated** is the
+**blind** is what joints says it has no stand-in for. **seated** is the
 difference — *this tree can make that token*. **exercised** is a seated
 external some file here actually reaches.
 
@@ -34,7 +34,7 @@ I said in the brief's own words that the instrument I would trust least is the
 one I was building. It lied on the first run, in the most alarming direction
 available, and it took reading a forest to catch it.
 
-`outliner grammar` closes with
+`joints grammar` closes with
 
 ```
 note: external scanner tokens cannot be lexed here: _block_comment_rest
@@ -42,7 +42,7 @@ _immediate_paren _immediate_bracket ... +8 more
 ```
 
 which reads exactly like the blind set and is not it. On julia that note names
-**all sixteen** declared externals. `outliner lex` on the same grammar reports
+**all sixteen** declared externals. `joints lex` on the same grammar reports
 **five**, and names them — the `_immediate_*` family — and `parse` agrees. The
 note is a restatement of `externals[]` wearing a blindness sentence.
 
@@ -242,7 +242,7 @@ is now named per row, so it cannot be read as a finding — but it means the
 instrument can only ever witness 36 of 252 seated externals, 14%. For the other
 216 the honest answer is that this gate does not know, and no amount of specimen
 writing changes that. Witnessing a hidden terminal needs the parse to report the
-tokens it consumed, and the `lex` lens advertised in `outliner`'s own usage
-banner — `OUTLINER_TRACE=press,lex,joint,weave,folio` — emits nothing today; no
+tokens it consumed, and the `lex` lens advertised in `joints`'s own usage
+banner — `JOINTS_TRACE=press,lex,joint,weave,folio` — emits nothing today; no
 code under `src/kernel/lex/` writes a trace. That is the cheapest available
 route to turning 14% into 100%, and it is one lens, not a rewrite.

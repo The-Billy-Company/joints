@@ -82,7 +82,7 @@ class Claim(NamedTuple):
 CLAIMS: tuple[Claim, ...] = (
     Claim("the verdict vocabulary", "stamp", ("outcome", "verdict", "behind")),
     Claim("the verdict regexes", "stamp", regexes=True),
-    Claim("running outliner for a verdict", "stamp", ("ask",), argv=("parse",), by="BIN"),
+    Claim("running joints for a verdict", "stamp", ("ask",), argv=("parse",), by="BIN"),
     Claim("the corpus list", "rung1", roster="corpus", raw=False),
     Claim("the held-out list", "breadth", roster="breadth", raw=False),
     Claim("the scanner include walk", "differential", ("beside", "lay"), regexes=True),
@@ -410,7 +410,7 @@ def look(p):
 '''),
     ("a restated exchange", '''
 import subprocess
-BIN = "outliner"
+BIN = "joints"
 def look(g, s):
     got = subprocess.run([str(BIN), "parse", str(g), str(s)], capture_output=True)
     return got.stdout
@@ -419,7 +419,7 @@ def look(g, s):
 CORPUS = ["c", "cpp", "go", "java", "javascript", "json", "python"]
 '''),
     ("a wrapper hiding the exchange", '''
-BIN = "outliner"
+BIN = "joints"
 def say(cmd): return cmd
 def look(g, s):
     out = say([str(BIN), "parse", str(g), str(s)]).stdout

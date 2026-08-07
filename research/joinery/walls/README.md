@@ -275,7 +275,7 @@ a keyword or a named terminal. No single lane owns these by shape; each needs re
 
 ## The 59 unassigned, read one at a time
 
-Shape could not route them, so I read them - `outliner state <grammar> <n>`
+Shape could not route them, so I read them - `joints state <grammar> <n>`
 prints the items and the row, which turns "a named terminal was refused" into
 "here is what the state wanted instead". **It is the admitted set that carries
 the diagnosis, not the refused terminal**, and that reframing does most of the
@@ -362,4 +362,4 @@ The cascade row is the one worth reading twice. Those walls are real refusals an
 they will disappear when the mis-repair upstream of them is fixed, so treating
 them as work would be paying for the same defect a second time and then reporting
 a fix that closed walls nobody had to close.
-stamp: outliner cf9722c1d at /Users/griffinstrier/Billy-Company/outliner/zig-out/bin/outliner built 2026-08-05T04:41:11Z from . 3e819413d · repo fd73da392+44 · run 2026-08-05T04:43:40Z
+stamp: joints cf9722c1d at /Users/griffinstrier/Billy-Company/joints/zig-out/bin/joints built 2026-08-05T04:41:11Z from . 3e819413d · repo fd73da392+44 · run 2026-08-05T04:43:40Z

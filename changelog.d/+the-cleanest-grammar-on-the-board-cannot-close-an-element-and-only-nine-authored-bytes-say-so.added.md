@@ -1,9 +1,9 @@
 Fifteen specimens across thirteen new grammars, authored against the coverage
 gate's unexercised externals and with every claim derived from tree-sitter's
-own parse rather than from outliner's. The tier is **37 specimens over 20
+own parse rather than from joints's. The tier is **37 specimens over 20
 grammars, 28 sound**, up from 22 over 7 with 15 sound. Witnessable externals
 exercised went **22 of 36 to 35 of 36**; the holdout is yaml's, which no
-specimen can reach because outliner refuses to lex yaml at all.
+specimen can reach because joints refuses to lex yaml at all.
 
 The finding is html. The board calls it genuinely clean - 72,288 bytes, 100.0%
 standing, zero damage - and `rack` scores `viewer.html` 13,971 labeled brackets
@@ -15,7 +15,7 @@ say something else:
 ```
 
 tree-sitter reads one `element [0, 8)` over a start tag, a text node and an
-`erroneous_end_tag`. outliner produces **three roots and no `element` at all**,
+`erroneous_end_tag`. joints produces **three roots and no `element` at all**,
 then `input ended before the start symbol closed`. Every leaf is identical at
 identical extents, including `erroneous_end_tag_name`, the external this
 specimen was written for. Only the parent is missing.

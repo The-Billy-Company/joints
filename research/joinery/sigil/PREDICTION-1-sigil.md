@@ -41,7 +41,7 @@ close from a first-match one — holds under both readings.
 
 **Falsified by**: compiling the pinned `scan_string_content` against a stub
 `TSLexer` over `"""a""""` and reading where it marks end. If it marks 13, I am
-wrong and outliner owes [11, 13).
+wrong and joints owes [11, 13).
 
 ## P2 — five of six Kotlin specimens go green, and the sixth goes green but one
 

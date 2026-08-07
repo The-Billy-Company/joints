@@ -240,6 +240,6 @@ two generations, and nothing in `gate.py` would say so.
 - `scala`'s `_simple_string_start` and `php`'s `encapsed_string_chars` are the
   same defect class as kotlin's, worth 4,046 and 8,091 orphan bytes; php reaches
   its 8,091 on a **single** mend.
-- `contract/outliner.zone` still fails `zoning` on `language zig`, and
+- `contract/joints.zone` still fails `zoning` on `language zig`, and
   `zig fmt --check` still flags `press.zig` and `wall_test.zig`. This lane
   cleared none of them; it edited no production file.

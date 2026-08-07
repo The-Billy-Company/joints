@@ -8,7 +8,7 @@
 # Both trees, identical. A call in statement position is not the problem; the
 # problem is one identifier for which python.json carries a second, competing
 # statement rule. Without this control the guilty witness would be consistent
-# with outliner misreading every bare call in a module, and it does not.
+# with joints misreading every bare call in a module, and it does not.
 roots 1
 mends 0
 holds call

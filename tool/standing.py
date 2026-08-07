@@ -308,9 +308,9 @@ measurement · 4 the two boards are not a comparison.
   python3 tool/standing.py --against=<json> --unjudged   ...scored on `damage`
                                       only, and say so on the page
 
-  OUTLINER_WORK=<dir>                 press the folio cache somewhere else
-  OUTLINER_BIN=<path>                 measure a pinned binary (`tool/pin.py`)
-  OUTLINER_LANE=<tag>                 which oracle seat `--audit` consults
+  JOINTS_WORK=<dir>                 press the folio cache somewhere else
+  JOINTS_BIN=<path>                 measure a pinned binary (`tool/pin.py`)
+  JOINTS_LANE=<tag>                 which oracle seat `--audit` consults
 """
 
 import json
@@ -329,12 +329,12 @@ from rung1 import pairs  # noqa: E402
 from walls import roster  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
 # Overridable so the mid-run-republish reproduction in `research/generation/`
 # can stage the race against a cache of its own. Ten agents read the default
 # one and a stage that re-minted into it would be somebody else's confusing
 # afternoon; the same reason `sole.probe` builds its adverse tree in a tmpdir.
-WORK = Path(os.environ.get("OUTLINER_WORK", ROOT / ".local" / "standing"))
+WORK = Path(os.environ.get("JOINTS_WORK", ROOT / ".local" / "standing"))
 PATIENCE = 240
 # Where `--audit` leaves the oracle's opinion. Beside the folios rather than in
 # a directory of its own, because a verdict is only readable against the folio
@@ -380,7 +380,7 @@ class Held(NamedTuple):
     of them has moved.
 
     **`oracle` is the fourth and it was missing.** The other three all describe
-    *outliner*, and every number in this class is a comparison of two parsers.
+    *joints*, and every number in this class is a comparison of two parsers.
     A sibling regenerating one grammar's tree-sitter sources moved `crooked`
     while the three digests read clean and the row printed `graded: read` -
     which is how the same pinned binary came to be quoted at 1,278 crooked in
@@ -1074,7 +1074,7 @@ LAST_NODES = 0
 # `ranged`'s return and a third tuple member would break a sibling's tool.
 #
 # Read by `stamp.outcome` and carried on the `Outcome`, because the clause rides
-# the stop's own line and the last `outliner:` line is the *owner*'s on every
+# the stop's own line and the last `joints:` line is the *owner*'s on every
 # grammar that hit a wall - so on most of the thirty it is not on the line a
 # verdict comes from. That is a fact about how the binary talks, which is the
 # one thing `stamp` exists to know.
@@ -1092,7 +1092,7 @@ LAST_ARENA = -1
 def ranged(name: str, src: Path) -> tuple[list[tuple[str, int, int, bool]], str] | None:
     """One top-level `--ranges --all` parse: the spans, and what it said at the end.
 
-    Through `stamp.ask`, which is **the only place an instrument runs outliner
+    Through `stamp.ask`, which is **the only place an instrument runs joints
     and reads its answer back**. This file used to spell that exchange itself,
     which is the fifth-reader shape `sole.py` exists to catch: sharing the rule
     did not stop a copy being written, so the whole exchange is what is shared.
@@ -1602,7 +1602,7 @@ def table(rows: list[Row], order: str, split: frozenset[str] = frozenset()) -> N
     # than by anybody's decision.
     if not any(r.audited for r in rows):
         print(f"\nUNSIGHTED — no row below has an oracle verdict, so every column here is"
-              f" outliner's own words about\n{'':12}outliner's own forest. `--audit` buys"
+              f" joints's own words about\n{'':12}joints's own forest. `--audit` buys"
               f" `trued`; until then a `damage` of zero is not a clearance.")
     # Three axes, and they are the three columns in the middle: `stand` is
     # coverage at the root frontier, `shape` is whether what stands is a tree,
@@ -1874,7 +1874,7 @@ def table(rows: list[Row], order: str, split: frozenset[str] = frozenset()) -> N
              if void else "")
           + (f" · {len(mute)} UNASKED: no `surveyed` clause, so this board has NO evidence"
              f" about {', '.join(r.name for r in mute)} — rebuild, then check"
-             f" `verdict` in src/surface/face/outliner/parse.zig" if mute else ""))
+             f" `verdict` in src/surface/face/joints/parse.zig" if mute else ""))
     tell = {}
     for r in rows:
         tell.setdefault(r.basis, []).append(r.name)
@@ -2020,7 +2020,7 @@ def unjudged(runs: list[dict], names: list[str], declared: bool) -> bool:
     Two shapes are refused and they are different news:
 
       **square-silent** - no board on either side read a square. Whatever moved
-      below, both arms are outliner's own words about its own forest, and a
+      below, both arms are joints's own words about its own forest, and a
       change can leave `built` untouched while moving every leaf to a different
       parent. This is not a defect in the boards; it is a comparison that has
       not been given the instrument its conclusion needs.
@@ -2062,7 +2062,7 @@ def unjudged(runs: list[dict], names: list[str], declared: bool) -> bool:
     else:
         print(f"\n{said} — no board here read a single square byte, so nothing"
               "\nbelow is a claim about agreement with tree-sitter. `built` and"
-              "\n`damage` are outliner's own words about its own forest, and a"
+              "\n`damage` are joints's own words about its own forest, and a"
               "\nchange can leave both untouched while moving every leaf to a"
               "\ndifferent parent.")
     if not declared:
@@ -2100,7 +2100,7 @@ def spread(runs: list[dict], names: list[str], mine: tuple[str, ...] = (),
         led, was = r.get("generation", {}), r.get("stamp", {})
         # The source tree the binary was built from, not the path it sits at. A
         # path is not a version - that is what `pin.py` exists to say - and two
-        # runs of two different pins print the same path under `OUTLINER_BIN`.
+        # runs of two different pins print the same path under `JOINTS_BIN`.
         print(f"  [{i + 1}] {name[:26]:<28}tree {was.get('tree', '?'):<14}"
               f"built {was.get('built', '?'):<22}"
               f"{'one generation' if led.get('uniform', True) else 'SPLIT'}")
@@ -2288,13 +2288,13 @@ def main(argv: list[str]) -> int:
         #
         # `bench()` first, and it is not optional. Skipping the survey also
         # skipped the only call that seats a court, so the line this command
-        # exists to mint said `**no oracle** — outliner's own words` on every
+        # exists to mint said `**no oracle** — joints's own words` on every
         # arm ever cited, including one whose board printed `30 oracle(s)
         # d85e736fa attributed` in the same terminal. It costs 0.35 s, reads no
         # `parser.c` (see `bench`), and `verdicts` in the witness is what keeps
         # seating a court from becoming the opposite claim on a blind arm.
         bench()
-        print(still.take(os.environ.get("OUTLINER_LANE") or "board", BIN, WORK).cite())
+        print(still.take(os.environ.get("JOINTS_LANE") or "board", BIN, WORK).cite())
         return 0
     if any(a == "--twice" or a.startswith("--twice=") for a in argv):
         many = next((int(a.split("=", 1)[1]) for a in argv if a.startswith("--twice=")), 2)
@@ -2322,7 +2322,7 @@ def main(argv: list[str]) -> int:
     # it, which is the entire design constraint. Kept unbidden, because a
     # witness a lane has to remember to record is a witness the pairs that
     # needed it will not have.
-    seen = still.take(os.environ.get("OUTLINER_LANE") or "board", BIN, WORK)
+    seen = still.take(os.environ.get("JOINTS_LANE") or "board", BIN, WORK)
     still.keep(seen)
     if "--json" in argv:
         # The checks ride the machine output too. A gate whose only reader is a

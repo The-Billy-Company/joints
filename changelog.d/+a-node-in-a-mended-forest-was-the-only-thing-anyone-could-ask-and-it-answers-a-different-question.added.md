@@ -1,4 +1,4 @@
-`outliner parse --scars` enumerates every repair the parse performed: one line
+`joints parse --scars` enumerates every repair the parse performed: one line
 per mend, where it was, what it deleted, and what the stack did about it.
 
 ```

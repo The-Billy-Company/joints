@@ -21,7 +21,7 @@ its repeat.
 **What the population needs, and does not have.** An item-indexed inverse query
 - which states can reach this fold - and then a fold chain from the wall back
 to the state that committed. The brief for this work named
-`outliner state <grammar.json> --holding <item>` as the tool. That flag has
+`joints state <grammar.json> --holding <item>` as the tool. That flag has
 never existed in this tree: `state` takes a state number or `--census
 <terminal>`, `--census` is indexed by terminal and cannot ask this question,
 and `git log -S'--holding' -- src/` returns no commit. `inquest` says the same

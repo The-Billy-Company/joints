@@ -14,7 +14,7 @@ three readings of a bare `identifier` complete at once - `_declarator`,
 `Action`, documented as *"One of the readings that lost. There may have been
 more."* So `Forks.Split` can hand one rival back, the runtime forks correctly
 into two *declaration* readings, and the reading tree-sitter takes was never a
-strand. The runtime is doing its job: `OUTLINER_TRACE=quire` shows the split at
+strand. The runtime is doing its job: `JOINTS_TRACE=quire` shows the split at
 2572 and both strands refuted on `"`, with no `denied` line, so no budget bound
 either. cpp's author declared `['expression', '_declarator', 'type_specifier']`
 - three-way - where c declared `['type_specifier', 'expression']`, which a binary

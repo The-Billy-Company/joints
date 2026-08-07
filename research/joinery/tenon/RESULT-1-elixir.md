@@ -11,11 +11,11 @@ defp f(x) do x end
 ```
 
 21 bytes, seated as `research/joinery/specimen/elixir/do-block-on-inner-call.ex`.
-`outliner parse` says `accepted, 1 root`. Every one of the seven tokens agrees
+`joints parse` says `accepted, 1 root`. Every one of the seven tokens agrees
 with tree-sitter 0.26.11, name and extent. The disagreement is one edge:
 
 ```
-  outliner                          tree-sitter
+  joints                          tree-sitter
   call [0, 20)                      call [0, 20)
     identifier  "defp"                identifier  "defp"
     arguments [5, 20)   <- 20         arguments [5, 9)    <- 9
@@ -26,7 +26,7 @@ with tree-sitter 0.26.11, name and extent. The disagreement is one edge:
 ```
 
 `defp f(x) do ... end` desugars to `defp(f(x), do: ...)`. The block is an
-argument of `defp`. Outliner says it belongs to the function being defined.
+argument of `defp`. Joints says it belongs to the function being defined.
 
 ## Three controls, all green
 
@@ -36,7 +36,7 @@ argument of `defp`. Outliner says it belongs to the function being defined.
 | `defp(f(x), do: x)` | The desugared form, inner call still present. Identical trees. |
 | `def f(x), do: x` | The one-line form. Identical trees. |
 
-The first is the load-bearing one. Outliner attaches a `do_block` to a
+The first is the load-bearing one. Joints attaches a `do_block` to a
 definition correctly whenever it is the only candidate. The failure needs two
 candidates, which pins the defect to a decision rather than to the construct.
 
@@ -53,7 +53,7 @@ vendored grammar can express the right tree. Nothing here is unseatable.
 This is the prediction I most wanted to be right about, and it is wrong in the
 direction its own falsifier named as worse:
 
-> **Falsifier.** `outliner state elixir.json <n>` at that point shows a single
+> **Falsifier.** `joints state elixir.json <n>` at that point shows a single
 > action with no rival. That would mean the wrong tree was already decided when
 > the table was built — a lost production, not a resolved contest — and would
 > be a strictly worse defect than a mis-resolution.

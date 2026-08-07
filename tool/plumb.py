@@ -16,7 +16,7 @@ whole reason nothing has caught it: `orphan` costs bytes, `spoil` costs bytes,
 and being confidently wrong costs nothing at all.
 
 So this asks the one question the board structurally cannot, against the only
-oracle that can answer it - tree-sitter, whose trees outliner exists to be
+oracle that can answer it - tree-sitter, whose trees joints exists to be
 compatible with, generated from **the same `grammar.json` the press read**.
 
   For each byte, the DEEPEST node covering it in each tree.
@@ -26,14 +26,14 @@ compatible with, generated from **the same `grammar.json` the press read**.
 
 `differential.py` aligns the two trees node by node and reports findings. It is
 the right instrument for "is our shape their shape" and the wrong one for
-"how many bytes are wrong", because on 18 of 30 grammars outliner hands back a
+"how many bytes are wrong", because on 18 of 30 grammars joints hands back a
 forest - verilog is 3,544 roots - and an alignment over that many roots is a
 guess wearing a number. Two functions from byte offset to node name need no
 alignment at all: they are defined over the same domain by construction, and a
 mended forest indexes exactly as well as a whole tree.
 
 That also makes this immune to the two shape differences that would otherwise
-swamp it. A comment tree-sitter hands to the root as a child and outliner
+swamp it. A comment tree-sitter hands to the root as a child and joints
 leaves as a top-level orphan is the SAME deepest node over those bytes, so
 `orphan` and this are orthogonal - which is what makes the split safe to put
 beside the board rather than on top of it.
@@ -64,7 +64,7 @@ Dropping the field makes this **weaker** than `differential.py`, on purpose. A
 lane claiming a headline is flattering should be the one holding the
 conservative instrument.
 
-**Interstitial bytes are set aside rather than judged.** Outliner elides hidden
+**Interstitial bytes are set aside rather than judged.** Joints elides hidden
 rules, splices inlined ones and invents nodes for aliases; tree-sitter's own
 `--cst` shows a different set of interior nodes for the same parse. Over a byte
 inside a *token* that does not matter - both trees bottom out at the token, and
@@ -109,7 +109,7 @@ nothing:
   python3 tool/plumb.py verify              prove it can say no
   python3 tool/plumb.py list                who has an oracle and who does not
 
-  OUTLINER_BIN=<path>   measure a pinned binary (`tool/pin.py`), not `zig-out`
+  JOINTS_BIN=<path>   measure a pinned binary (`tool/pin.py`), not `zig-out`
 
 Exit 0 measured, 1 a clean negative (a tripwire moved, a row unjudged under
 `--strict`), 2 could not run.
@@ -135,8 +135,8 @@ from walls import roster  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 GRAMMARS = ROOT / "upstream" / "grammars"
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
-WORK = Path(os.environ.get("OUTLINER_WORK", ROOT / ".local" / "standing"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
+WORK = Path(os.environ.get("JOINTS_WORK", ROOT / ".local" / "standing"))
 SPECIMEN = ROOT / "research" / "joinery" / "specimen"
 PATIENCE = 240
 # Names tree-sitter gives a node it is not standing behind. A byte whose oracle
@@ -251,7 +251,7 @@ def flatten(node: d.Node, depth: int = 0, out: list[Node] | None = None) -> list
 
 
 def ours(text: str) -> list[Node]:
-    """Outliner's forest, read by `standing.rows` and nobody else.
+    """Joints's forest, read by `standing.rows` and nobody else.
 
     Deliberately not `differential.ours_tree`, which reads the same render one
     line at a time and raises on a node whose anonymous name carries a raw
@@ -396,7 +396,7 @@ def judge(name: str, blob: bytes, mine: list[Node], theirs: list[Node],
       `ALIAS` between exactly these two names. The bytes were read the same and
       called something else. A real compatibility defect, since a
       `highlights.scm` keys on the name — but not a byte read wrong, and 1,096
-      of swift's 1,213 askew bytes were this: method names outliner resolves to
+      of swift's 1,213 askew bytes were this: method names joints resolves to
       `type_identifier` where tree-sitter leaves `simple_identifier`.
 
     Folding those together made swift the second-worst grammar in the corpus on
@@ -548,8 +548,8 @@ def windowed(top_level: list[tuple[str, int, int, bool]]) -> list[tuple[int, int
     The bytes are clipped against every root already taken, so the total is
     `merge`'s total to the byte and no byte is judged twice. The extent is kept
     unclipped because it is the **window** a structural comparison judges
-    inside: outliner never reduced anything wider than this root, so an oracle
-    bracket that reaches past it is a bracket outliner could not have had, and
+    inside: joints never reduced anything wider than this root, so an oracle
+    bracket that reaches past it is a bracket joints could not have had, and
     charging one would report `orphan` a second time under a new name.
     """
     out: list[tuple[int, int, int, int]] = []
@@ -579,7 +579,7 @@ def read(case: Case, extra: tuple[str, ...] = ()) -> Read | None:
     nothing: list[Node] = []
     got = stamp.ask(BIN, folio, case.source, tree=True, patience=PATIENCE, extra=extra)
     if got.kind == "timeout":
-        return Read(blob, nothing, nothing, [], [], set(), 0, "outliner timed out")
+        return Read(blob, nothing, nothing, [], [], set(), 0, "joints timed out")
     mine = ours(got.tree)
     # `built` is the board's definition and is read here from the board's own
     # function, not restated: the union of top-level spans that have a child.
@@ -694,7 +694,7 @@ def total(rows: list[Seen]) -> None:
     same, off = sum(r.frame_same for r in rows), sum(r.frame_askew for r in rows)
     if same + off:
         print(f"       interstitial bytes agree at the interior {same} to {off}"
-              f" ({off / (same + off) * 100:.1f}% differ) — WEAKER: outliner elides hidden"
+              f" ({off / (same + off) * 100:.1f}% differ) — WEAKER: joints elides hidden"
               f"\n       rules and invents alias nodes, so a difference here can be node"
               f" shaping rather than misreading")
     hit = [r for r in rows if r.misread]
@@ -787,7 +787,7 @@ def show(picked: list[Case]) -> int:
         if r.worst:
             print(f"\n  widest MISREAD runs (renamed bytes are not listed — same extent,"
                   f" declared ALIAS)")
-            print(f"  {'bytes':<16}{'wide':>6}  {'outliner':<28}{'tree-sitter':<28}text")
+            print(f"  {'bytes':<16}{'wide':>6}  {'joints':<28}{'tree-sitter':<28}text")
         for reg in r.worst:
             text = blob[reg.start:min(reg.end, reg.start + 30)].decode("utf-8", "replace")
             print(f"  {f'[{reg.start}, {reg.end})':<16}{reg.width:>6}  {reg.ours:<28}"
@@ -1016,7 +1016,7 @@ def verify() -> int:
                                                 RED, tree=True, patience=PATIENCE).tree)
                  if a <= n.start < b} if got and not got.why else set()
         out.append(("multiline_comment" in names,
-                    f"and outliner names the comment's own bytes [{a}, {b}):"
+                    f"and joints names the comment's own bytes [{a}, {b}):"
                     f" {', '.join(sorted(names)) or 'nothing'}"))
 
     # RED, and it does not depend on the parser still being wrong about

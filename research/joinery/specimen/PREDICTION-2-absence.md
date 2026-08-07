@@ -28,7 +28,7 @@ For each grammar, two independent readings of "the corpus never presents this":
 bytes never occur in that grammar's corpus file. A substring search for a
 `STRING`, a regex search for a `PATTERN`. It needs no parser at all, which is
 the point: it is the only reading available on the 34,687 bytes where
-tree-sitter itself ERRORs and outliner is being graded by nothing.
+tree-sitter itself ERRORs and joints is being graded by nothing.
 
 **structural absence** — a named rule the oracle's own parse of the corpus
 never yields a node for. Needs the oracle, so it is missing exactly where the

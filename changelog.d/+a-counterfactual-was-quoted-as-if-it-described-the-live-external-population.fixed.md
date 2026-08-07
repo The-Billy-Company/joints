@@ -42,6 +42,6 @@ price is recorded beside the argument so nobody re-derives it and nobody quotes
 it as a win.
 
 The reason this looked open is the same reason the previous lane believed
-`outliner state --holding` had never existed: `research/joinery/owners/` is
+`joints state --holding` had never existed: `research/joinery/owners/` is
 entirely untracked, so a stale read of an uncommitted file briefed two separate
 tasks that were already done.

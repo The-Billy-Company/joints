@@ -1,7 +1,7 @@
 # python is one of the twelve grammars the board reads at 100.0% standing, and
 # it resolves `print(x)` to Python 2's print STATEMENT.
 #
-#   outliner                      tree-sitter
+#   joints                      tree-sitter
 #   print_statement [0, 8)        call [0, 8)
 #     "print"                       identifier "print"
 #     parenthesized_expression      argument_list
@@ -10,7 +10,7 @@
 # Both parsers read the same `python.json`, and that grammar really does carry
 # `print_statement` - tree-sitter-python keeps it for Python 2 sources. So this
 # is not an invented node. It is an AMBIGUITY RESOLVED THE OTHER WAY: the same
-# eight bytes derive through two live rules, and outliner takes the one that
+# eight bytes derive through two live rules, and joints takes the one that
 # makes `print` a keyword rather than a name.
 #
 # The cost is not cosmetic. Under `print_statement`, `print` is not an

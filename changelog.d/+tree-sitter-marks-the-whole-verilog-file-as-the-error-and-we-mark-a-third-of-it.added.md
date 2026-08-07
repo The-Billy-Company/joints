@@ -3,7 +3,7 @@
 oracle, yaml's parser will not compile in this seat - so "we are trying to beat
 tree-sitter here" is a table rather than a claim.
 
-| | tree-sitter | outliner |
+| | tree-sitter | joints |
 |---|---|---|
 | enumerate every repair site | `ERROR` nodes in the tree, `MISSING` on the CST | `--scars`, one line each - **level, and only as of this lane** |
 | what each site carries | a span | byte range · refused terminal · refusing state · felled/kept · live heads · tokens since the last repair - **ahead** |

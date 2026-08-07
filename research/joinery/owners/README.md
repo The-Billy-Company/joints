@@ -57,7 +57,7 @@ which is a worklist for adjudication and not a claim about upstream.
 | file | what |
 |---|---|
 | `closure.py` | reads a vendored `grammar.json`, flattens every rule body into sequences of symbols, computes nullable / FIRST / FOLLOW, bridges grammar spellings to the names the press renders (`spellings()`), and reads **every shape an external is declared in** (`declared()`) |
-| `owners.py` | reads `outliner state <grammar> <n>` per wall, computes the state's viability set and whether it is settled, assigns a verdict, and prices it off `walls.py`'s peel |
+| `owners.py` | reads `joints state <grammar> <n>` per wall, computes the state's viability set and whether it is settled, assigns a verdict, and prices it off `walls.py`'s peel |
 | `UNOWNED.md` | the live worklist — walls this table found no reading for, to be adjudicated against a second parser |
 | `GAPS.md` | **retracted.** The list `UNOWNED.md` replaces, kept because two lanes cite its rows |
 | `PREDICTION-1-owners.md` / `RESULT-1-owners.md` | six predictions written before any wall outside verilog was labelled, and the honest scoreline |
@@ -71,8 +71,8 @@ on state numbers from a binary somebody replaced mid-run is a report about an
 afternoon.
 
 ```sh
-cp zig-out/bin/outliner .local/<pin>/outliner && shasum -a 256 .local/<pin>/outliner
-export OUTLINER_BIN=$PWD/.local/<pin>/outliner
+cp zig-out/bin/joints .local/<pin>/joints && shasum -a 256 .local/<pin>/joints
+export JOINTS_BIN=$PWD/.local/<pin>/joints
 python3 tool/walls.py run --json > .local/<pin>/priced.json  # the priced peel
 python3 research/joinery/owners/owners.py --from-json .local/<pin>/priced.json
 python3 research/joinery/owners/owners.py --control        # the verilog four
@@ -112,7 +112,7 @@ itself.
 **The name control (`--terminals`).** A wall's terminal decides its label, its
 price and its owner together, so a wrong name is three wrong answers that agree
 with each other. Every wall is re-asked whether the state it names really
-refuses the terminal it names — `outliner state`'s admitted row against the
+refuses the terminal it names — `joints state`'s admitted row against the
 stop line, two code paths over the same table. **162 of 162 coherent**, and
 because that is also what a `spellings()` matching nothing would score, each
 wall is re-run with its terminal swapped for one its own state does admit:

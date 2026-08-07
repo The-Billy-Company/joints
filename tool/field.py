@@ -33,7 +33,7 @@ not choose which languages are on it, and changing the pin is a recorded edit.
     absent     no committed grammar.json at the pinned revision
 
 `unlexable` is separate because **yaml already proves the trap**: 113 external
-terminals, zero literal, zero regex, presses to 0 RESIDUAL, and `outliner parse`
+terminals, zero literal, zero regex, presses to 0 RESIDUAL, and `joints parse`
 exits 2 with "no lexable terminal at all". A taxonomy that filed that under
 `clean` would report the project's hardest stop as a success. Pressing whole and
 lexing nothing are different questions and this tool answers only the first;
@@ -52,7 +52,7 @@ field**. A denominator you cannot see is worse than a small one.
 
     --json on the read verbs · --jobs N · --patience S · --limit N
 
-    OUTLINER_BIN=<path>   press with a pinned binary (`tool/pin.py`), not `zig-out`
+    JOINTS_BIN=<path>   press with a pinned binary (`tool/pin.py`), not `zig-out`
 
 Exit 0 ran, 1 a clean negative answer, 2 could not run.
 """
@@ -77,8 +77,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import stamp  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
-WORK = Path(os.environ.get("OUTLINER_FIELD", ROOT / ".local" / "generalize" / "field"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
+WORK = Path(os.environ.get("JOINTS_FIELD", ROOT / ".local" / "generalize" / "field"))
 
 # The roster, pinned. Changing any of these four lines changes what "the field"
 # means, and the sweep records them beside every number it prints.
@@ -93,7 +93,7 @@ FIELD = {k: re.compile(rf"\b{k} = '([^']*)'") for k in ("url", "revision", "loca
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 
 # What the press says about itself. Read off the report rather than restated:
-# every one of these is a line `outliner grammar` prints, and a bucket is a
+# every one of these is a line `joints grammar` prints, and a bucket is a
 # predicate over them - never a list of grammar names.
 SAYS = {
     "symbols": re.compile(r"^\s*symbols\s+(\d+)\s+\((\d+) terminal, (\d+) nonterminal\)", re.M),
@@ -319,7 +319,7 @@ def press_one(pin: Pin, patience: float) -> Press:
     said = got.stdout + got.stderr
     if got.returncode != 0:
         line = refusal(said)
-        # `stamp.behind` strips the `outliner: <path>: ` prefix using the path
+        # `stamp.behind` strips the `joints: <path>: ` prefix using the path
         # we passed in. Nothing here infers one: two readers in this tree used
         # to, and both took too little the moment a payload held the delimiter.
         return Press(pin.name, "refused", stamp.behind(line, path) or line, len(blob), sha, ms=ms)
@@ -343,7 +343,7 @@ def refusal(said: str) -> str:
     """The one line of a refusal worth repeating."""
     lines = [ln.strip() for ln in said.splitlines() if ln.strip()]
     for ln in lines:
-        if ln.startswith("outliner:") or "error" in ln.lower():
+        if ln.startswith("joints:") or "error" in ln.lower():
             return ln
     return lines[-1] if lines else "no reason given"
 

@@ -90,7 +90,7 @@ will report more.
 ## Specimens this lane added
 
 Under `research/joinery/specimen/`, all failing today, all carrying
-tree-sitter's answer rather than outliner's:
+tree-sitter's answer rather than joints's:
 
 | specimen | claims | pins |
 |---|---|---|

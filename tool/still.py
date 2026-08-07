@@ -35,7 +35,7 @@ different questions and a merged verdict would hide which one spoke.
 **`witness`** — *what world was this arm taken against?* A record per arm: the
 binary's bytes, a **per-file manifest** of the tree it was built from, the oracle
 identity of every grammar read, the digest of every artifact read, and the three
-`OUTLINER_*` variables that say whether the arm owned its own workspace. Two
+`JOINTS_*` variables that say whether the arm owned its own workspace. Two
 witnesses are compared field by field and the comparison refuses when they differ
 anywhere outside the variable it declared it was varying. This catches all five,
 and it catches the fifth on the subject manifest alone — *your two arms were
@@ -179,8 +179,8 @@ class Witness(NamedTuple):
     subject: dict[str, str]  # per-file manifest of the tree it was built from
     tree: str  # fold of that manifest
     live: str  # the repo's own sources, right now
-    work: str  # OUTLINER_WORK - the folio cache this arm presses into
-    lane: str  # OUTLINER_LANE - the oracle seat this arm sits in
+    work: str  # JOINTS_WORK - the folio cache this arm presses into
+    lane: str  # JOINTS_LANE - the oracle seat this arm sits in
     oracles: dict[str, str]  # grammar -> attest identity, as read
     artifacts: dict[str, str]  # path -> digest, as read
     # --- the other parser. Defaults, so a witness written before these fields
@@ -237,7 +237,7 @@ class Witness(NamedTuple):
         how = "consulted" if self.asked else "attributed"
         alive, held = self.verdicts or (0, 0)
         if not self.oracles:
-            oracle = "**no oracle** — outliner's own words"
+            oracle = "**no oracle** — joints's own words"
         elif self.verdicts is not None and not alive:
             # The state that had no spelling, and the reason this is three
             # branches and not two. `oracles` says thirty parsers would answer;
@@ -252,7 +252,7 @@ class Witness(NamedTuple):
             oracle = (f"oracle `{self.court[:9]}`"
                       f" ({f'{alive} of {held} live, ' if self.verdicts else ''}"
                       f"{len(self.oracles)} {how})")
-        return (f"outliner `{self.binary[:9]}` · tree `{self.tree[:9]}`"
+        return (f"joints `{self.binary[:9]}` · tree `{self.tree[:9]}`"
                 f" ({self.origin}) · {oracle}")
 
 
@@ -262,12 +262,12 @@ def take(arm: str, binary: Path | None = None, work: Path | None = None) -> Witn
 
     `work` is the seat to count live verdicts in, and it is a parameter rather
     than a default because the default belongs to the caller: `standing`,
-    `plumb` and `collate` each spell `OUTLINER_WORK or ROOT/.local/standing`,
+    `plumb` and `collate` each spell `JOINTS_WORK or ROOT/.local/standing`,
     and a fourth copy here is how a witness would come to disagree with the
     board it witnesses about which seat was read. Unset and unpassed means the
     liveness question was never put, which `Witness.verdicts` spells `None`.
     """
-    binary = binary or Path(os.environ.get("OUTLINER_BIN", stamp.usual()))
+    binary = binary or Path(os.environ.get("JOINTS_BIN", stamp.usual()))
     mani, origin = subject_of(binary)
     try:
         build, built = stamp.digest(binary), binary.stat().st_mtime
@@ -282,8 +282,8 @@ def take(arm: str, binary: Path | None = None, work: Path | None = None) -> Witn
         arm=arm, when=time.time(), binary=build, built=built, where=str(binary),
         origin=origin, subject=mani, tree=fold(mani),
         live=stamp.survey(ROOT.resolve()).digest,
-        work=os.environ.get("OUTLINER_WORK", ""),
-        lane=os.environ.get("OUTLINER_LANE", ""),
+        work=os.environ.get("JOINTS_WORK", ""),
+        lane=os.environ.get("JOINTS_LANE", ""),
         oracles={r.name: r.tree for r in rows if r.tree},
         artifacts={p: s[0].mark for p, s in stamp.FED.items()},
         cli=seen.cli if rows else "",
@@ -295,7 +295,7 @@ def take(arm: str, binary: Path | None = None, work: Path | None = None) -> Witn
         # looked at, and saying "looked, holds nothing" of it would be the same
         # conflation this field exists to undo, one level up.
         verdicts=live_verdicts(Path(seat), binary)
-        if (seat := work or os.environ.get("OUTLINER_WORK")) else None,
+        if (seat := work or os.environ.get("JOINTS_WORK")) else None,
     )
 
 
@@ -1010,7 +1010,7 @@ def sealed(mine: tuple[Path, ...] = (), strict: bool = True) -> Iterator[list[Wr
     # so an UNARMED run has an empty private set and every shared write it reads
     # back is a fault. Failing closed there is the point: that run never had a
     # claim to comparability.
-    work = os.environ.get("OUTLINER_WORK")
+    work = os.environ.get("JOINTS_WORK")
     _MINE = tuple(Path(p).resolve() for p in (
         *mine, *((work,) if work else ()), Path(os.environ.get("TMPDIR", "/tmp"))))
     _WROTE.clear()
@@ -1080,7 +1080,7 @@ def stub(arm: str, **over) -> Witness:
     tree, further down.
     """
     base = dict(
-        arm=arm, when=time.time(), binary="a" * 64, built=1.0, where="/pin/a/bin/outliner",
+        arm=arm, when=time.time(), binary="a" * 64, built=1.0, where="/pin/a/bin/joints",
         origin="pin", subject={"src/kernel/table/press.zig": "1" * 64},
         tree="", live="l" * 64, work=f"/pin/{arm}/work", lane=f"pin-{arm}",
         oracles={"latex": "o" * 64}, artifacts={"/w/latex.folio": "f" * 64},
@@ -1331,7 +1331,7 @@ def caused(tmp: Path) -> list[tuple[str, str, bool]]:
         hand.press(work)
         stamp.fed(work / "latex.folio", "latex")
         stamp.fed(lang / "scanner.c", "latex")
-    out.append(("private · press a folio into this arm's own OUTLINER_WORK",
+    out.append(("private · press a folio into this arm's own JOINTS_WORK",
                 "read back, no complaint", True))
     stamp.FED.clear()
     return out
@@ -1465,11 +1465,11 @@ def filled(tmp: Path) -> list[tuple[str, str, bool]]:
     # --- and the fields the tree half already owns, caused rather than stated,
     #     because the same class of filler bug would be invisible in them too.
     clean()
-    os.environ["OUTLINER_WORK"], os.environ["OUTLINER_LANE"] = str(tmp / "w"), "pin-x"
+    os.environ["JOINTS_WORK"], os.environ["JOINTS_LANE"] = str(tmp / "w"), "pin-x"
     try:
         env = take("environment")
     finally:
-        for k in ("OUTLINER_WORK", "OUTLINER_LANE"):
+        for k in ("JOINTS_WORK", "JOINTS_LANE"):
             os.environ.pop(k, None)
     row("CAUSE · the arm's own workspace and seat, read from the environment",
         f"{Path(env.work).name} · {env.lane}",
@@ -1667,7 +1667,7 @@ def sweep(show: int) -> int:
     not the finding.
 
     **Dynamic:** each module's own self-check, run inside a non-strict seal. The
-    seal judges by value rather than by syntax - it knows `OUTLINER_WORK` and it
+    seal judges by value rather than by syntax - it knows `JOINTS_WORK` and it
     knows which locks are held - so a fault it reports is a real one. It covers
     only what a self-check exercises, and that number is printed rather than
     implied.

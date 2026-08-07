@@ -176,7 +176,7 @@ measured and rejected, and the argument lives here.
 ## The instrument I trust least
 
 `damage`, and by extension every headline number in this thread including the
-one in my brief. It is `size − built`, both terms are outliner's own words about
+one in my brief. It is `size − built`, both terms are joints's own words about
 its own forest, and one root stretched over a hole moves it the flattering way.
 B is the proof: it *improves* verilog damage by 1,292 while giving up 29,348
 bytes of agreement with a second parser and reducing elixir to a single square

@@ -51,7 +51,7 @@ from order import folio_for  # noqa: E402
 from stamp import outcome  # noqa: E402
 
 SRC = ROOT / "upstream" / "sources" / "picorv32.v"
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
 
 # The harness. `%s` is one statement; everything else is known to stand.
 FRAME = "module m;\nreg [31:0] x, y, c, mem [0:3];\ninteger i;\nalways @* begin\n%s\nend\nendmodule\n"

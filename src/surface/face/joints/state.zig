@@ -34,13 +34,13 @@
 //! action still printed beside it.
 
 const std = @import("std");
-const outliner = @import("outliner");
-const import = outliner.press.import;
+const joints = @import("joints");
+const import = joints.press.import;
 const intake = @import("intake.zig");
 const whence = @import("whence.zig");
 
-const Grammar = outliner.press.grammar.Grammar;
-const Action = outliner.press.lalr.Action;
+const Grammar = joints.press.grammar.Grammar;
+const Action = joints.press.lalr.Action;
 const Verb = @FieldType(Action, "kind");
 
 /// What this verb was asked for. One of the four, and the shape says so rather
@@ -68,13 +68,13 @@ pub fn run(
     const source = intake.slurp(gpa, io, w, grammar_path) orelse return 2;
     defer gpa.free(source);
     var gr = import.treeSitter(gpa, source) catch |e| {
-        try w.print("outliner: cannot import {s}: {s}\n", .{ grammar_path, @errorName(e) });
+        try w.print("joints: cannot import {s}: {s}\n", .{ grammar_path, @errorName(e) });
         return 2;
     };
     defer gr.deinit();
 
-    var built = outliner.press.tables(gpa, &gr) catch |e| {
-        try w.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
+    var built = joints.press.tables(gpa, &gr) catch |e| {
+        try w.print("joints: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
         return 2;
     };
     defer built.deinit();
@@ -90,11 +90,11 @@ pub fn run(
 fn one(
     w: *std.Io.Writer,
     gr: *const Grammar,
-    built: *const outliner.press.Result,
+    built: *const joints.press.Result,
     at: u32,
 ) !u8 {
     if (at >= built.collection.states.len) {
-        try w.print("outliner: {s} has {d} states\n", .{ gr.name, built.collection.states.len });
+        try w.print("joints: {s} has {d} states\n", .{ gr.name, built.collection.states.len });
         return 2;
     }
 
@@ -137,7 +137,7 @@ fn census(
     gpa: std.mem.Allocator,
     w: *std.Io.Writer,
     gr: *const Grammar,
-    built: *const outliner.press.Result,
+    built: *const joints.press.Result,
     wanted: []const []const u8,
 ) !u8 {
     const states: u32 = @intCast(built.collection.states.len);
@@ -231,7 +231,7 @@ fn census(
 fn together(
     w: *std.Io.Writer,
     gr: *const Grammar,
-    built: *const outliner.press.Result,
+    built: *const joints.press.Result,
     wanted: []const []const u8,
 ) !void {
     try w.writeAll("\nco-admitted (shift = both consume; set = both in the" ++
@@ -278,10 +278,10 @@ fn symbolOf(gr: *const Grammar, name: []const u8) ?u32 {
 /// Owned by `lalr` and not by this file. It used to live here, which was right
 /// while this was the only instrument making the split and wrong the moment a
 /// second one had to: `inquest` names the terminal a wall was waiting for and
-/// `joints` prints what a state accepts, and both were answering the union
+/// `survey` prints what a state accepts, and both were answering the union
 /// while sounding like they meant the shifts. A shared definition is what makes
 /// "which half" one fact rather than three.
-const Half = outliner.press.lalr.Half;
+const Half = joints.press.lalr.Half;
 
 const headings = std.enums.EnumArray(Half, []const u8).init(.{
     .shift =
@@ -300,7 +300,7 @@ const headings = std.enums.EnumArray(Half, []const u8).init(.{
 fn row(
     w: *std.Io.Writer,
     gr: *const Grammar,
-    built: *const outliner.press.Result,
+    built: *const joints.press.Result,
     at: u32,
     half: Half,
 ) !u32 {

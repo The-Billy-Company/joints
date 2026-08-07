@@ -54,7 +54,7 @@ now carries a comptime ledger naming every press-side field the writer is
 answerable for, so a new one fails the build with its own name and the two
 things that may be done about it, and the folio round trip compares conflict
 records by reflection over their fields rather than by a list somebody
-maintains. The other trap was smaller and worse: `OUTLINER_SEAM=` reads as
+maintains. The other trap was smaller and worse: `JOINTS_SEAM=` reads as
 **on**, because `getenv` hands back a pointer to `""`, so the baseline arm ran
 the treatment and printed nine go repros accepted under a baseline that refuses
 six. Both arms agreeing is what that looks like. It is in `CONTRIBUTING.md` now.

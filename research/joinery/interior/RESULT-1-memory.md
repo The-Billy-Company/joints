@@ -1,6 +1,6 @@
 # Result 1 — the three string interiors, classified from their own `serialize`
 
-Measured 2026-08-05, binary `outliner e8343caf6`, against the pinned scanners
+Measured 2026-08-05, binary `joints e8343caf6`, against the pinned scanners
 under `.local/breadth/lang/<name>/src/scanner.c` and the pressed tables of the
 thirty vendored grammars.
 

@@ -3,8 +3,8 @@
 Scored against `PREDICTION-1-attribution.md`, written before any state was read.
 **Two of four predictions failed**, including the one about the largest row.
 
-Measured on `outliner 5c962f8d5` (`.local/strand/outliner`, pinned out of
-`zig-out/` before measuring), with `OUTLINER_WORK=.local/strand/work` of its own.
+Measured on `joints 5c962f8d5` (`.local/strand/joints`, pinned out of
+`zig-out/` before measuring), with `JOINTS_WORK=.local/strand/work` of its own.
 Reproduce with:
 
 ```sh

@@ -63,7 +63,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CORPUS = ROOT / "research" / "joinery" / "corpus"
 GRAMMARS = ROOT / "upstream" / "grammars"
 WORK = ROOT / ".local" / "amend"
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
 BASELINE = Path(__file__).resolve().parent / "amend.baseline.json"
 
 # The deciles worth printing. 2 and 98 are the poles the finding lives at; the
@@ -74,9 +74,9 @@ CUTS = (2, 10, 25, 50, 75, 90, 98)
 # the position means what it says. Odd, so the median is a measurement.
 BEATS = 9
 
-# `outliner: PATH: 61..61 +1: accepted, 2/273 leaves reminted at 20, height 10,
+# `joints: PATH: 61..61 +1: accepted, 2/273 leaves reminted at 20, height 10,
 #  4 lifts over 637 bytes, 29 tokens read, 55 us`
-# The `outliner: <path>: ` prefix is stripped by `stamp.behind` with the path
+# The `joints: <path>: ` prefix is stripped by `stamp.behind` with the path
 # we passed in, so this starts where the payload does.
 #
 # The verdict is read lazily up to the structured tail rather than as "everything
@@ -151,7 +151,7 @@ def grown(seed: bytes, copies: int) -> bytes:
 
 
 def drive(grammar: Path, path: Path, edits: list[str], cold: bool) -> list[Beat]:
-    """One `outliner amend` process, and the cost line it printed per edit."""
+    """One `joints amend` process, and the cost line it printed per edit."""
     argv = [str(BIN), "amend", str(grammar), str(path), "--quiet"]
     if cold:
         argv.append("--cold")

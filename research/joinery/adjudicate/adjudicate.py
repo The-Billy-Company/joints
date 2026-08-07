@@ -51,7 +51,7 @@ harness a construct that genuinely is not in the language and requires the
 answer `gap`, because a harness that cannot say `gap` has not cleared any of
 these rows, it has only failed to.
 
-    OUTLINER_BIN=$(python3 tool/pin.py path adjudicate) \
+    JOINTS_BIN=$(python3 tool/pin.py path adjudicate) \
       python3 research/joinery/adjudicate/adjudicate.py run
     ... adjudicate.py probe kotlin-supertypes    # both trees, side by side
     ... adjudicate.py prove                      # can it still say no
@@ -414,7 +414,7 @@ class Verdict(NamedTuple):
         """Does the witness reproduce the wall `GAPS.md` named?
 
         The whole adjudication rests on the witness being about the row, and
-        nothing else here checks that. A witness outliner accepts cannot be
+        nothing else here checks that. A witness joints accepts cannot be
         carrying the row's defect at all (that is what `void` says out loud);
         one that walls on a *different* terminal is a second defect wearing the
         row's price, which is exactly the failure that made a lane's shrinker
@@ -458,7 +458,7 @@ WORDS = {"gap": "the verdict stands - nobody in this tree",
 
 
 def report(seen: list[Verdict]) -> None:
-    print(f"\n{'row':<20}{'grammar':<9}{'B':>8}  {'outliner':<9}{'wall':<14}"
+    print(f"\n{'row':<20}{'grammar':<9}{'B':>8}  {'joints':<9}{'wall':<14}"
           f"{'tree-sitter':<12}{'blinded':<12}{'verdict':<10}innocent")
     for v in seen:
         us = v.us.kind if v.us else "-"
@@ -520,7 +520,7 @@ def main(argv: list[str]) -> int:
             print(f"\n=== {v.row.id}  ({v.row.grammar}, {v.row.cost:,} B)")
             print(f"    {v.row.construct}")
             print(f"    GAPS.md says: {v.row.wall}\n")
-            print(f"--- outliner: {v.us.verdict if v.us else 'not run'}")
+            print(f"--- joints: {v.us.verdict if v.us else 'not run'}")
             print(v.us.tree if v.us else "")
             print(f"--- tree-sitter: {v.them.word}")
             print(v.them.tree)
@@ -533,8 +533,8 @@ def main(argv: list[str]) -> int:
         print(json.dumps([{"id": v.row.id, "grammar": v.row.grammar,
                            "bytes": v.row.cost, "gaps_wall": v.row.wall,
                            "construct": v.row.construct,
-                           "outliner": v.us.kind if v.us else None,
-                           "outliner_verdict": v.us.verdict if v.us else None,
+                           "joints": v.us.kind if v.us else None,
+                           "joints_verdict": v.us.verdict if v.us else None,
                            "theirs": v.them.word, "theirs_why": v.them.why,
                            "blinded": v.blind.word if v.blind else "no scanner",
                            "verdict": v.word, "innocent_ok": v.sound}

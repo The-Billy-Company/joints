@@ -1,4 +1,4 @@
-# Prediction 2 — does outliner already know which bytes it got wrong?
+# Prediction 2 — does joints already know which bytes it got wrong?
 
 Written **before running `spans.py score` even once.** What I have run at this
 point: `spans.py check` (81 of 81 tripwires held, so the walk is rack's walk),
@@ -43,7 +43,7 @@ The brief named five candidates. **Three of them I cannot measure from outside
 `src/`, and saying so is part of the answer**:
 
 - **GLR fork survivor counts, and forks that died late.** Nothing emits them.
-  `OUTLINER_TRACE` has no lens for the weave, and the folio carries the press's
+  `JOINTS_TRACE` has no lens for the weave, and the folio carries the press's
   conflict table, not a per-parse fork history. Unmeasurable offline.
 - **A conflict resolved under duress** — an unranked fold that ordered an
   authored reading. `settle.zig` classifies these at press time
@@ -62,7 +62,7 @@ build, which is exactly the cost the brief was trying to find out about first.
 ## P1 — `external` beats prevalence by 1.5x or better
 
 The four widest `orphan` rows all stop on a blind external, and php's 25,394
-crooked bytes are the largest single number in the corpus. A terminal outliner
+crooked bytes are the largest single number in the corpus. A terminal joints
 seats with a stand-in rather than a real scanner match is a token whose extent
 is a guess, and a wrong extent is a wrong parent.
 
@@ -98,7 +98,7 @@ and nothing else.
 
 ## P5 — no single signal reaches precision 0.50 at recall 0.20
 
-The bar for "outliner can emit a calibrated untrustworthy span" — half of what
+The bar for "joints can emit a calibrated untrustworthy span" — half of what
 it flags is really wrong, and it catches a fifth of the damage. I predict
 nothing on this slate clears it, and that the honest deliverable is a
 specification for the three signals I *cannot* see rather than a claim about

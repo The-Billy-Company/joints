@@ -50,7 +50,7 @@ because "another page said so" is the precise mechanism under investigation.
 
 **4. A gate that verifies the figure against the stamp.** This is the one that
 would actually close the hole, and it is unreachable on three independent
-grounds. To check `311,540` against `outliner e51716d6c` the gate must re-press
+grounds. To check `311,540` against `joints e51716d6c` the gate must re-press
 the corpus at that binary: the binary may be a pinned arm long since pruned from
 `.local`; the tree may never have been committed, so it cannot be restored; and
 a press costs ~30 s where the standing ceiling is 1 s. Any one of those is
@@ -71,10 +71,10 @@ a gate. It is shipped, in two pieces:
 
 ```
 $ python3 tool/standing.py --cite
-outliner `e51716d6c` · tree `61c93c367` (live) · **no oracle** — outliner's own words
+joints `e51716d6c` · tree `61c93c367` (live) · **no oracle** — joints's own words
 
 $ python3 tool/standing.py --cite=board.json --quote=damage
-`damage` reads **125,011** over 30 row(s) — outliner `e51716d6c` · tree `61c93c367` (live) · oracle `d85e736fa` (30 attributed)
+`damage` reads **125,011** over 30 row(s) — joints `e51716d6c` · tree `61c93c367` (live) · oracle `d85e736fa` (30 attributed)
 ```
 
 The second is the mechanism and the first is its degenerate case. The figure and
@@ -154,6 +154,6 @@ The corpus exhibits all four corners of the two axes, which is asserted as a
 check rather than a remark: if it ever stops exhibiting one, the second axis has
 collapsed into the first and one of them should be deleted.
 
-Taken on `outliner e51716d6c` · tree `61c93c367` (live) · no oracle — this page
+Taken on `joints e51716d6c` · tree `61c93c367` (live) · no oracle — this page
 quotes no oracle column, and the counts above are `sighting.py`'s own, not the
 board's.

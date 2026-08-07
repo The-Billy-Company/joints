@@ -103,14 +103,14 @@ records field by field through `std.meta.fields` rather than against a list
 somebody maintains, and the fixture grammar was extended until it presses an
 `unwritten` cell, which the test asserts is there - a reflective comparison over
 an empty conflict list is a green light for nothing. Adding a class means adding
-a rule to that grammar that provokes it. `outliner mint
+a rule to that grammar that provokes it. `joints mint
 <grammar.json>` makes the same comparison on the way out - it presses, writes,
 maps the file back and checks the reloaded table against the one still in
 memory - so any grammar on disk is a case you can run.
 
 ## What it measures
 
-`outliner mint upstream/grammars/<lang>.json`:
+`joints mint upstream/grammars/<lang>.json`:
 
 | Grammar | grammar.json | pressed in memory | folio | vs pressed |
 |---|---|---|---|---|

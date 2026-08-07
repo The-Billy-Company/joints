@@ -102,7 +102,7 @@ the floor's error, and this file says so instead of picking a number.
 ## Oracle-silent - the second reading, where there is one
 
 A named rule the **oracle's** parse of the corpus yields no node for. Read from
-tree-sitter rather than from outliner on purpose: outliner misreading a
+tree-sitter rather than from joints on purpose: joints misreading a
 construct would otherwise present as the corpus lacking it, which is the exact
 confusion this file exists to end. It needs an oracle, so it is missing on the
 grammars the lexical half matters most for, and the two are printed side by
@@ -477,7 +477,7 @@ def witness(case: plumb.Case, row: Row) -> Row:
     """Both oracle readings of one grammar: which rules it built, and which
     spellings it actually tokenised.
 
-    The oracle and not outliner, because outliner misreading a construct would
+    The oracle and not joints, because joints misreading a construct would
     otherwise present as the corpus lacking it - which is the confusion this
     whole file is here to end.
 

@@ -463,7 +463,7 @@ pub const Scanner = struct {
         // state-directed path that costs nothing, because the set they are
         // absent from is the set being consulted. On the state-free path there
         // is no set, the whole slate is offered, and they win - rust's
-        // `line_comment` carries a bare `.*`, so `outliner lex` hands back the
+        // `line_comment` carries a bare `.*`, so `joints lex` hands back the
         // first line of any rust file as one token and never sees `fn`.
         //
         // Excluded from the two unconditional cuts below and nowhere else. It is

@@ -10,7 +10,7 @@ hand-picking positions does not scale to 170 walls in 17 grammars, and 170 hand
 picks are 170 chances to pick the position that makes the verdict come out the
 way I expected.
 
-So the position comes off the wall's own LR state. `outliner state <g.json> <n>`
+So the position comes off the wall's own LR state. `joints state <g.json> <n>`
 prints the kernel items, and an item `A -> alpha . beta` says exactly what this
 position can still consume, which turns the ownership question into the textbook
 one:
@@ -100,7 +100,7 @@ items) is the row that shows the test is doing work rather than restating
 **The anti-vacuity control, which is the reason to believe any of it.** The
 closure could say `unreachable` for everything and every wall would read as a
 grammar gap. So every state is also asked about the terminals the built table
-**already admits** there - `outliner state` prints them, and they are by
+**already admits** there - `joints state` prints them, and they are by
 construction things this grammar accepts in this state. The closure has to find
 those viable. Per state, per grammar, printed on every run: a grammar whose
 control is not near 100% has its verdicts withheld rather than reported, because
@@ -133,7 +133,7 @@ import cut  # noqa: E402
 
 ROOT = closure.ROOT
 GRAMMARS = closure.GRAMMARS
-BIN = Path(os.environ.get("OUTLINER_BIN") or ROOT / "zig-out" / "bin" / "outliner")
+BIN = Path(os.environ.get("JOINTS_BIN") or ROOT / "zig-out" / "bin" / "joints")
 IN_STATE = re.compile(r"^(.*) in state (\d+)$")
 # `    {name: <28} {verdict}`, and the verdict may carry a `[declared …]` note
 # after it - so the pattern stops at the verb rather than anchoring on the end of
@@ -220,7 +220,7 @@ class Wall(NamedTuple):
 
 
 def rows(text: str) -> tuple[tuple[str, ...], tuple[str, ...], int]:
-    """One `outliner state` dump into (items, admitted terminals, unparsed)."""
+    """One `joints state` dump into (items, admitted terminals, unparsed)."""
     items: list[str] = []
     admitted: list[str] = []
     lost, where = 0, ""
@@ -297,7 +297,7 @@ def settled(items: tuple[str, ...]) -> bool:
 
 
 def dump(grammar: str, at: int, keep: dict[tuple[str, int], str]) -> str:
-    """`outliner state`, memoised - haskell walls crowd onto few states."""
+    """`joints state`, memoised - haskell walls crowd onto few states."""
     if (hit := keep.get((grammar, at))) is not None:
         return hit
     got = subprocess.run([str(BIN), "state", str(GRAMMARS / f"{grammar}.json"), str(at)],
@@ -322,7 +322,7 @@ def verdict(g: closure.Grammar, term: str, seen: frozenset[str],
     kin = g.spellings(term)
     dual = " (also a declared external - seating it may be the cheaper repair)"
     if kin & seen:
-        return "conflict", ("the grammar derives it here and outliner refused it"
+        return "conflict", ("the grammar derives it here and joints refused it"
                             + (dual if kin & g.blind else ""))
     if kin & g.blind:
         return "scanner", "a declared external - tree-sitter runs a C scanner for it"
@@ -703,7 +703,7 @@ def terminals(walls: list[Wall], keep: dict[tuple[str, int], str]) -> int:
     price and its owner together, so a wrong name is three wrong answers that
     agree with each other.
 
-    So re-derive rather than inherit. `outliner state` prints the terminals a
+    So re-derive rather than inherit. `joints state` prints the terminals a
     state's table row **admits** - those are cells, not opinions - and a stop
     line saying `unexpected T in state N` is the claim that `T` is not among
     them. The two come from different code paths over the same table, so they
@@ -839,7 +839,7 @@ def stranded(walls: list[Wall], keep: dict[tuple[str, int], str]) -> int:
     left it, so the refusal may be that fold's consequence and the defect may be
     several constructs upstream. Nothing in the wall's own state can say which.
 
-    The tool this wanted now exists: `outliner state <g> --holding '<item>'`
+    The tool this wanted now exists: `joints state <g> --holding '<item>'`
     names the states holding a reading, and `--chain <n>` gives the arrivals and
     the folds. An earlier revision of this docstring said the flag "does not
     exist on this tree" on the strength of `git log -S`, which was wrong for a
@@ -892,7 +892,7 @@ def stranded(walls: list[Wall], keep: dict[tuple[str, int], str]) -> int:
           f"({100.0 * share / sum(w.cost for w in mine):.0f}%) over "
           f"{len(fat)} walls.** So the population concentrates by byte even though it "
           f"scatters by item, and the item grouping alone would have said the opposite.")
-    print("Both instruments this asked for now exist: `outliner state <g> --holding "
+    print("Both instruments this asked for now exist: `joints state <g> --holding "
           "'<item>'` names every state holding a reading, and `--chain <n>` gives the "
           "arrivals, the folds, how far each pops and where its goto lands - flagging a "
           "handle origin wider than one state as frayed. They kill wrong hypotheses in "

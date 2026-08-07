@@ -9,7 +9,7 @@ folio is re-pressed between runs either, which also re-confirms the 30/30
 byte-reproducible press.
 
 The third number is why the guard changed. `Held` carried three digests — folio,
-binary, source — **and all three describe outliner.** `crooked` is a comparison
+binary, source — **and all three describe joints.** `crooked` is a comparison
 of two parsers, and the second one was unattributed: a sibling regenerating one
 grammar's tree-sitter sources moved the number while every guard on the page read
 clean and the row printed `graded: read`.

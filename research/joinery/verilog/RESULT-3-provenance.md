@@ -287,7 +287,7 @@ Gather is right exactly once, where the grammar left it no choice.
 
 This is a better handover than scala and elixir were. Those were whole-file
 regressions in grammars this lane does not own; this is three lines of verilog,
-one state, one terminal, and both limbs printed by `outliner state … 1762`.
+one state, one terminal, and both limbs printed by `joints state … 1762`.
 **Handing over to the quire lane:** in a `seq_block`, on `=` in state 1762, the
 press now offers `read on` (→ `variable_decl_assignment`) beside `fold
 variable_lvalue -> _identifier` (→ `blocking_assignment`), and the statement
@@ -340,7 +340,7 @@ prov-after  mints                      sha 811e808412d78cbc
 The "before" arm never once read its own table. Both runs measured the after
 grammar; the only reason they agreed is that they were the same grammar.
 
-The demonstration is the fix: give each arm its own `OUTLINER_WORK`, and the
+The demonstration is the fix: give each arm its own `JOINTS_WORK`, and the
 folio shas separate — and so do the results, from 9 failing witnesses to 7. The
 whole of P4 was invisible until then.
 

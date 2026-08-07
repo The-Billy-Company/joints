@@ -5,8 +5,8 @@ cell the way an unranked one already does. **Falsifier 2 fired on the first
 measurement.** The change is reverted; `src/press/bench.zig` is byte-identical to
 HEAD and `zig build check` is green.
 
-Treatment arm `zero-frayed` (outliner tree `ab968b8352f7`) against control
-`scala-string` — outliner `beb695b5d` · tree `e973ce73c` · oracle `d85e736fa`
+Treatment arm `zero-frayed` (joints tree `ab968b8352f7`) against control
+`scala-string` — joints `beb695b5d` · tree `e973ce73c` · oracle `d85e736fa`
 (30 of 30 live).
 
 ## What happened

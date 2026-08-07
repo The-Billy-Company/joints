@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hold outliner's tree against the tree tree-sitter actually builds.
+"""Hold joints's tree against the tree tree-sitter actually builds.
 
 Node names are the whole compatibility surface: every `highlights.scm` and every
 editor integration in the ecosystem is keyed on them. `src/kernel/quire` builds
@@ -15,12 +15,12 @@ exits 0, because a missing baseline tool is not a failing comparison.
 
 Both sides read the *same bytes*: the oracle's parser is generated from
 `upstream/grammars/<name>.json`, the file the press reads, hashed on the way in.
-Comparing outliner against a differently-pinned tree-sitter grammar would make
+Comparing joints against a differently-pinned tree-sitter grammar would make
 every diff meaningless.
 
 Three normalisations, and no others:
 
-  * **position spelling.** tree-sitter reports `row:column` in bytes; outliner
+  * **position spelling.** tree-sitter reports `row:column` in bytes; joints
     reports byte offsets. Both are converted to byte offsets against the source.
     Same positions, one spelling.
   * **the oracle's own three faces.** The tree is read out of `--cst`, which is
@@ -75,7 +75,7 @@ TS = CLI / "node_modules" / ".bin" / "tree-sitter"
 # A lane's own corner of the workspace. Keyed by the *calling shell* rather than
 # by this process, so running the tool twice in one terminal reuses everything
 # it built the first time, while two lanes in two terminals share nothing
-# writable. `OUTLINER_LANE` names it explicitly where a caller knows better.
+# writable. `JOINTS_LANE` names it explicitly where a caller knows better.
 #
 # What goes in here is what a second writer corrupts. `TREE_SITTER_LIBDIR` moves
 # the compiled libraries and *nothing else*: the CLI also keeps a lockfile per
@@ -96,13 +96,13 @@ TS = CLI / "node_modules" / ".bin" / "tree-sitter"
 # collision this whole mechanism exists to stop. A run with no living caller
 # owns itself instead.
 SEAT = WORK / "seat" / os.environ.get(
-    "OUTLINER_LANE", str(os.getppid() if os.getppid() > 1 else os.getpid()))
+    "JOINTS_LANE", str(os.getppid() if os.getppid() > 1 else os.getpid()))
 LIB = SEAT / "lib"
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
 # How long a lane will wait for another lane's compile of the same language
 # before refusing. Long enough for the slowest grammar in the set to generate
 # and compile from cold; short enough that a crashed holder is not forever.
-PATIENCE = float(os.environ.get("OUTLINER_ORACLE_PATIENCE", "300"))
+PATIENCE = float(os.environ.get("JOINTS_ORACLE_PATIENCE", "300"))
 # The token a contended skip carries, so the summary can tell a fact about the
 # grammar apart from a fact about how many lanes were running.
 CONTENDED = "another lane holds"
@@ -116,7 +116,7 @@ WAITED: set[str] = set()  # languages this run had to queue behind
 _HELD: dict[str, tuple[int, bool]] = {}
 
 USAGE = """\
-differential.py - is outliner's tree the tree tree-sitter builds?
+differential.py - is joints's tree the tree tree-sitter builds?
 
 usage:
   differential.py run       compare every case (offline; skips if no oracle)
@@ -310,7 +310,7 @@ class Finding(NamedTuple):
     owner: str  # extras · recovery · root-extent · partial · unexplained
 
     def line(self) -> str:
-        return f"    {self.where}: {self.kind}: outliner {self.ours}, tree-sitter {self.theirs}"
+        return f"    {self.where}: {self.kind}: joints {self.ours}, tree-sitter {self.theirs}"
 
 
 class Case(NamedTuple):
@@ -376,7 +376,7 @@ def head(body: str) -> tuple[str | None, str, bool, str]:
 
 
 def ours_tree(text: str) -> list[Node]:
-    """`outliner parse --ranges --all`: one node a line, two spaces a level."""
+    """`joints parse --ranges --all`: one node a line, two spaces a level."""
     roots: list[Node] = []
     stack: list[Node] = []
     for raw in text.splitlines():
@@ -384,7 +384,7 @@ def ours_tree(text: str) -> list[Node]:
             continue
         m = OURS.match(raw)
         if not m:
-            raise ValueError(f"cannot read outliner's own output: {raw!r}")
+            raise ValueError(f"cannot read joints's own output: {raw!r}")
         depth = len(m[1]) // 2
         field, name, named, _ = head(m[2])
         node = Node(name, named, field, int(m[3]), int(m[4]))
@@ -652,7 +652,7 @@ class Judge(NamedTuple):
     """What a difference at this spot can be blamed on. Two gaps are known and
     owned elsewhere; one more is what an unfinished parse cannot be asked about
     yet; everything else is unexplained until somebody explains it. Nothing here
-    looks at what outliner said in order to decide that."""
+    looks at what joints said in order to decide that."""
 
     extras: set[str]  # the grammar's own visible extras, from the grammar
     aliases: set[str]  # every name an ALIAS can rename something to, likewise
@@ -667,7 +667,7 @@ class Judge(NamedTuple):
         return "unexplained"
 
     def at_root(self, kind: str, ours: Node, theirs: Node) -> str:
-        # tree-sitter's root reaches the end of the input; outliner's stops at
+        # tree-sitter's root reaches the end of the input; joints's stops at
         # the last token, so the two differ exactly when the file ends in
         # extras. Sound on its own: a dropped trailing *token* would show up as
         # an absent child as well, and that is judged separately.
@@ -945,7 +945,7 @@ def fetch_scanners(which: str = "dossier", work: Path | None = None) -> int:
 
     Seven of the eleven pins are for grammars whose lexer is partly hand-written
     C, and tree-sitter cannot build one of those without it - so without this
-    there is no oracle for seven languages no matter what outliner's lexer does.
+    there is no oracle for seven languages no matter what joints's lexer does.
     `grammars.toml` pins a repo, a commit and a path; the scanner is the file
     next to that path in that same commit, which is the same pin and not a new
     one. Its sha256 is printed so it can be written into the manifest by
@@ -1014,7 +1014,7 @@ def sandboxed(work: Path | None = None) -> int:
 def ours_run(case: Case) -> tuple[list[Node], Outcome]:
     end = ask_one(BIN, case.grammar, case.source, tree=True)
     if end.code == 2:
-        raise ValueError(f"outliner refused: {end.verdict}")
+        raise ValueError(f"joints refused: {end.verdict}")
     return ours_tree(end.tree), end
 
 
@@ -1072,7 +1072,7 @@ def held_out() -> list[Case]:
 def lay_out() -> None:
     """Write the cases this file carries. Probe grammars are written before the
     oracle generates from them, so the grammar the oracle builds and the grammar
-    outliner imports are one file rather than two copies."""
+    joints imports are one file rather than two copies."""
     for name, text in SOURCES.items():
         leaf = WORK / "case" / name
         leaf.parent.mkdir(parents=True, exist_ok=True)
@@ -1467,7 +1467,7 @@ def show(picked: list[Case]) -> int:
         at = Lines(blob)
         theirs, _ = cst_tree(oracle_run(case.lang, case.source, "--cst"), at)
         ours, stop = ours_run(case)
-        print(f"  {r.why}\n\n  -- outliner ({stop.verdict})")
+        print(f"  {r.why}\n\n  -- joints ({stop.verdict})")
         for root in ours:
             print("\n".join("    " + ln for ln in root.render()))
         print("\n  -- tree-sitter")
@@ -1496,7 +1496,7 @@ def install() -> int:
         return oops("no npm on this machine; the oracle cannot be installed here")
     CLI.mkdir(parents=True, exist_ok=True)
     (CLI / "package.json").write_text(
-        json.dumps({"name": "outliner-differential-oracle", "private": True,
+        json.dumps({"name": "joints-differential-oracle", "private": True,
                     "description": "dev-only tree-sitter CLI; never a dependency of the package"},
                    indent=2) + "\n", encoding="utf-8")
     got = subprocess.run(["npm", "install", "--no-audit", "--no-fund", "tree-sitter-cli"], cwd=CLI)

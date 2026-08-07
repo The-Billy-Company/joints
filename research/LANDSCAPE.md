@@ -1,4 +1,4 @@
-# The landscape - the mathematics outliner is built on
+# The landscape - the mathematics joints is built on
 
 This is the map that has to exist before a line is written. It states what
 tree-sitter actually is, where it is genuinely soft, and the algebra we intend
@@ -11,7 +11,7 @@ with a falsifier attached.
 
 ## 0. The thesis
 
-**Tree-sitter treats parsing as code generation. Outliner treats parsing as
+**Tree-sitter treats parsing as code generation. Joints treats parsing as
 algebra.**
 
 That single choice is upstream of every pain tree-sitter has. A grammar becomes
@@ -313,7 +313,7 @@ story.
 
 ## 5. What must grow in irregex
 
-irregex is the math floor for this family, and most of what outliner needs is
+irregex is the math floor for this family, and most of what joints needs is
 already sitting in it: `portal.zig` (mmap), `signet.zig` (BLAKE3),
 `frame.zig` (atomic artifact publish), `fresh/` (the dual-clock freshness
 model), `bits.zig`, `dag.zig` (hash-consing), `mix.zig` (`SliceCtx` interning),
@@ -323,17 +323,17 @@ model), `bits.zig`, `dag.zig` (hash-consing), `mix.zig` (`SliceCtx` interning),
 discipline.
 
 Seven things are missing, and every one of them is general mathematics that
-belongs in irregex rather than in outliner:
+belongs in irregex rather than in joints:
 
 | Add to irregex | Why it belongs there | Who else wants it |
 |---|---|---|
-| `kernel/math/monoid.zig` - the Monoid concept plus a generic **parallel prefix scan** (Ladner-Fischer / Blelloch over `parallel.zig`'s fan-out) | irregex runs DFAs; the `shuffle` rung is already a special case of scan-parallel automaton execution, arrived at by hand | irregex regex rungs; outliner M1 + M2 |
-| `kernel/math/spine.zig` - the monoid-measured balanced tree, with O(log n) splice | irregex needs a line index and incremental index amendment today | outliner M1/M2/M3; relate's fragment spans; gist's line index |
-| `kernel/math/refine.zig` - Paige-Tarjan / Hopcroft coarsest stable partition | `linear/automata/reduce.zig` hand-rolls Moore for the symbolic road; the sieve's SP-closure ascends the same lattice from the other end | irregex determinizer; outliner M5 |
-| `kernel/math/succinct/parens.zig` - BP plus range min-max tree | `succinct/` already has RRR rank/select and a wavelet tree; parentheses is the missing third leg | outliner M3; any hierarchical index |
-| `kernel/math/semiring.zig` - Boolean / tropical / Viterbi / counting | approximate matching is a tropical walk over an automaton irregex already builds | outliner M4 |
-| `kernel/math/dafsa.zig` - Daciuk incremental minimal automaton | table and dictionary compression | outliner M5, folio packing |
-| Unseal the **symbolic minterm alphabet** for external consumers | `contract/irregex.ward` seals `kernel/regex` behind `regex.zig`, but a predicate-minterm alphabet is alphabet theory, not regex opinion | outliner M5 |
+| `kernel/math/monoid.zig` - the Monoid concept plus a generic **parallel prefix scan** (Ladner-Fischer / Blelloch over `parallel.zig`'s fan-out) | irregex runs DFAs; the `shuffle` rung is already a special case of scan-parallel automaton execution, arrived at by hand | irregex regex rungs; joints M1 + M2 |
+| `kernel/math/spine.zig` - the monoid-measured balanced tree, with O(log n) splice | irregex needs a line index and incremental index amendment today | joints M1/M2/M3; relate's fragment spans; gist's line index |
+| `kernel/math/refine.zig` - Paige-Tarjan / Hopcroft coarsest stable partition | `linear/automata/reduce.zig` hand-rolls Moore for the symbolic road; the sieve's SP-closure ascends the same lattice from the other end | irregex determinizer; joints M5 |
+| `kernel/math/succinct/parens.zig` - BP plus range min-max tree | `succinct/` already has RRR rank/select and a wavelet tree; parentheses is the missing third leg | joints M3; any hierarchical index |
+| `kernel/math/semiring.zig` - Boolean / tropical / Viterbi / counting | approximate matching is a tropical walk over an automaton irregex already builds | joints M4 |
+| `kernel/math/dafsa.zig` - Daciuk incremental minimal automaton | table and dictionary compression | joints M5, folio packing |
+| Unseal the **symbolic minterm alphabet** for external consumers | `contract/irregex.ward` seals `kernel/regex` behind `regex.zig`, but a predicate-minterm alphabet is alphabet theory, not regex opinion | joints M5 |
 
 The payoff runs back into the family too. relate's `spans.zig` currently finds
 functions by counting braces and climbing sixteen lines looking for something
@@ -378,8 +378,8 @@ src/
   folio/      the artifact: pack, read, verify, slice one language out
   press/      the compiler, plus import/ - the tree-sitter grammar.json importer
   surface/
-    face/outliner/   the CLI
-    ffi/             libotl, the C ABI (otl_* symbols)
+    face/joints/   the CLI
+    ffi/             libjnt, the C ABI (jnt_* symbols)
 ```
 
 `grain` deserves its own note, because it is the one place SIMD unambiguously

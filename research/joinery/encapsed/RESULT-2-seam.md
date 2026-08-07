@@ -35,7 +35,7 @@ the parser asked a different question.
 
 ## The census, and it disagreed with itself
 
-`outliner state php.json --census` over the four terminals reports **shift 0
+`joints state php.json --census` over the four terminals reports **shift 0
 for all six pairs** — no LR state ever shifts two of them at once. Read alone,
 that says roster order cannot matter and no guard is needed.
 

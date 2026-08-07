@@ -16,7 +16,7 @@ node is minted *after* the position advances past that padding
 inside every ancestor's byte range and inside **no leaf**. On
 `research/joinery/corpus/ledger.go` the gap `[784, 786)` between `}` and `var`
 sits inside `source_file`, `method_declaration`, `block` and `statement_list`, and
-inside nothing else. Outliner's `quire.Node` says the same thing in its own
+inside nothing else. Joints's `quire.Node` says the same thing in its own
 words - *a node spans from its first token to its last, so the extras between
 them are inside it and the ones around it are not* - and `Gather.reduce`
 implements it by refusing to let a child that consumed nothing set the start.

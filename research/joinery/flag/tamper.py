@@ -52,7 +52,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-WORK = Path(os.environ.get("OUTLINER_WORK", ROOT / ".local" / "standing"))
+WORK = Path(os.environ.get("JOINTS_WORK", ROOT / ".local" / "standing"))
 BOARD = ROOT / "tool" / "standing.py"
 
 
@@ -76,7 +76,7 @@ def stage(into: Path) -> Path:
 def board(work: Path) -> dict:
     got = subprocess.run(
         [sys.executable, str(BOARD), "--json"], capture_output=True, text=True,
-        env={**os.environ, "OUTLINER_WORK": str(work)})
+        env={**os.environ, "JOINTS_WORK": str(work)})
     try:
         return json.loads(got.stdout)
     except ValueError:

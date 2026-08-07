@@ -1,6 +1,6 @@
 # Result 1 — the surface, what it cost, and the field of mine that was a constant
 
-`outliner parse --scars` prints one line per repair. It is a **side channel**:
+`joints parse --scars` prints one line per repair. It is a **side channel**:
 a sorted, disjoint `[]Scar` on `Quire`, parallel to the node array and indexed
 by nothing. P1–P4 scored below; the design argument that produced this shape is
 in `PREDICTION-1-surface.md` and held up, with one correction I had to make to

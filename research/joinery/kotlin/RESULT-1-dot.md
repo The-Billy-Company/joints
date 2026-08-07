@@ -1,7 +1,7 @@
 # Result 1 — kotlin was two spellings short of whole
 
-Treatment arm `outliner d95f68e4a` · tree `b8757cdcc` (pin) · oracle `d85e736fa`
-(30 of 30 live, 30 attributed). Control arm `outliner 1885792a7` · tree
+Treatment arm `joints d95f68e4a` · tree `b8757cdcc` (pin) · oracle `d85e736fa`
+(30 of 30 live, 30 attributed). Control arm `joints 1885792a7` · tree
 `4f018b60f` · same oracle `d85e736fa`. `still against handoff kotlin-dot` reads
 **comparable**: one file differs and this lane claims it.
 
@@ -17,7 +17,7 @@ verdict: kotlin: lexer on . in state 253 [no stand-in for _import_dot, admitted 
 
 Byte 388 is the dot in `import kotlin.contracts.*`. The verdict names the cause
 exactly: `_import_dot` is one of the ten terminals kotlin hands to a C external
-scanner, outliner links no tree-sitter runtime, and the roll in
+scanner, joints links no tree-sitter runtime, and the roll in
 `src/kernel/lex/outside.zig` had no row for it. The second scar is the first one
 downstream - the `fell` restarted in state zero mid-import, so the `*` had
 nothing to be a wildcard of.

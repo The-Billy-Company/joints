@@ -42,7 +42,7 @@ ROOT = Path(__file__).resolve().parents[2]
 GRAMMARS = ROOT / "upstream" / "grammars"
 # Ten agents share one `zig-out`, so a lane measuring its own fix points this
 # at a prefix of its own (`zig build -p …`) rather than racing the shared one.
-BIN = Path(os.environ.get("OUTLINER_BIN") or ROOT / "zig-out" / "bin" / "outliner")
+BIN = Path(os.environ.get("JOINTS_BIN") or ROOT / "zig-out" / "bin" / "joints")
 
 HEADER_LEN = 96
 ENTRY_LEN = 16

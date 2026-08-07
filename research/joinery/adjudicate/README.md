@@ -44,7 +44,7 @@ on `settled` and the one-line defect that is demonstrable in isolation.
 | file | what |
 |---|---|
 | `locate.py` | Re-runs the peel and keeps the byte offsets `walls.py` throws away, so a `GAPS.md` row can be traced to the line of source it stands in front of. State numbers are not keys here; **(terminal, offset)** is. |
-| `adjudicate.py` | The harness. Three arms per row: outliner, tree-sitter, and tree-sitter with every external answered `no`. `run` · `probe` · `prove` · `list`. |
+| `adjudicate.py` | The harness. Three arms per row: joints, tree-sitter, and tree-sitter with every external answered `no`. `run` · `probe` · `prove` · `list`. |
 | `witness/` | One hand-authored witness per row, plus an **innocent control per grammar**. Nothing here was produced by a shrinker. |
 | `PREDICTION-1-gaps.md` | Seven predictions with named falsifiers, written after locating the constructs and before running anything. |
 | `RESULT-1-gaps.md` | The eighteen adjudicated, the revised corpus split, the self-score. |
@@ -53,7 +53,7 @@ on `settled` and the one-line defect that is demonstrable in isolation.
 ## Running it
 
 ```bash
-export OUTLINER_BIN=$PWD/.local/pin/adjudicate2/bin/outliner   # a path is not a version
+export JOINTS_BIN=$PWD/.local/pin/adjudicate2/bin/joints   # a path is not a version
 python3 research/joinery/adjudicate/adjudicate.py run          # the table above
 python3 research/joinery/adjudicate/adjudicate.py probe php-encapsed   # all three trees
 python3 research/joinery/adjudicate/adjudicate.py prove        # the anti-vacuity guards
@@ -66,7 +66,7 @@ that would call anything clean.
 
 ## The three arms, and why the third one exists
 
-An outliner refusal plus a tree-sitter acceptance says the closure was wrong.
+An joints refusal plus a tree-sitter acceptance says the closure was wrong.
 It does **not** say whose the work is, because **22 of 28 grammars make
 tree-sitter compile a hand-written external scanner**. So each witness is parsed
 a third time against a clone of the oracle home whose `scanner.c` has been
@@ -93,7 +93,7 @@ counts. `prove` guards both directions.
 **A witness that walls is not automatically a witness about the row.** A lane's
 shrinker was green while destructive — it deleted a token while the failure
 still held and produced sixteen witnesses named after their parent's defect. So
-the table carries a **wall** column comparing the terminal outliner actually
+the table carries a **wall** column comparing the terminal joints actually
 refuses against the one `GAPS.md` names. Four rows disagree, all four are
 adjacent tokens of the same construct, and all four are reported rather than
 quietly accepted.

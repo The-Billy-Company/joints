@@ -1,5 +1,5 @@
 `square` is the only column on the board that is a claim about agreement with a
-second parser, and it comes off an `audit.json` living in `OUTLINER_WORK`. The
+second parser, and it comes off an `audit.json` living in `JOINTS_WORK`. The
 third house rule gives every isolation arm a work dir of its own, so two arms
 cannot contaminate each other — and that is exactly what empties the column, to
 **zero**, which is also what a board prints when thirty grammars agree

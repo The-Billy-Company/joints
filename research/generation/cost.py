@@ -37,7 +37,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 TOOL = ROOT / "tool"
-BIN = ROOT / "zig-out" / "bin" / "outliner"
+BIN = ROOT / "zig-out" / "bin" / "joints"
 
 # The rule as it stood before this lane: an artifact was recorded by the time it
 # was written, and nothing ever looked at it again. Appended rather than edited
@@ -91,7 +91,7 @@ def arm(tmp: Path, name: str, revert: bool) -> Path:
 
 def once(tool: Path, cache: Path) -> float:
     """One whole board process, timed from outside it - fork, exec and all."""
-    env = {**os.environ, "OUTLINER_WORK": str(cache), "PYTHONDONTWRITEBYTECODE": "1"}
+    env = {**os.environ, "JOINTS_WORK": str(cache), "PYTHONDONTWRITEBYTECODE": "1"}
     start = time.perf_counter()
     got = subprocess.run([sys.executable, str(tool / "standing.py")],
                          capture_output=True, text=True, cwd=ROOT, env=env)

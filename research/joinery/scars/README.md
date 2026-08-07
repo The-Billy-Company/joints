@@ -5,7 +5,7 @@ wrote it or repaired into place. `research/joinery/reprice/` hit that wall,
 named the missing capability, and left **18,146 B `untested`** rather than
 resolve it in the direction that would have flattered its own re-price.
 
-This lane built the capability — `outliner parse --scars`, one line per repair —
+This lane built the capability — `joints parse --scars`, one line per repair —
 handed it to the peel, checked who else was reasoning from "a node covers this
 byte", and put our repair surface beside tree-sitter's.
 
@@ -61,5 +61,5 @@ match it by accident. `--scars` replaces the tree on stdout.
 | `blind.py` | who else reasons from node coverage: `built` downstream of a repair, `built` papered over one, and the bound on `square` |
 | `against.py` | our repair surface against tree-sitter's `ERROR` and `MISSING`, over the same thirty files |
 
-Give each its own `OUTLINER_WORK`: two pinned binaries sharing one folio cache
+Give each its own `JOINTS_WORK`: two pinned binaries sharing one folio cache
 both read whichever folio was written last, and that error is always flattering.

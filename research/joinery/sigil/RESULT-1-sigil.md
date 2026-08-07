@@ -202,7 +202,7 @@ only for its `state`/name lines and took every mend count off `standing.py`. A
 lane is fixing that field; nothing here rests on it.
 
 **`tool/specimen.py`'s default binary, caught live at the end of this lane.** It
-falls back to `zig-out/bin/outliner` when `OUTLINER_BIN` is unset, and on the
+falls back to `zig-out/bin/joints` when `JOINTS_BIN` is unset, and on the
 final verification pass that shared binary reported **7/20** — every kotlin claim
 and both swift comment claims red — against a working tree that builds 14/20.
 A sibling lane had rebuilt `zig-out` from a different state two hours earlier.
@@ -210,7 +210,7 @@ Nothing in the output says so: the run is not marked stale, and a lane that read
 it would have concluded its own fix had been reverted. Rebuilt into a fresh pin
 (`lex-final`, tree `273999fd4d9e`) and got 14/20 back, identical to `lex-swift`.
 This is the brief's "a path is not a version" hazard, confirmed by walking into
-it. **Never run the specimen tier without `OUTLINER_BIN` pointing at a pin.**
+it. **Never run the specimen tier without `JOINTS_BIN` pointing at a pin.**
 
 **The one I trust least is `parse`'s own root count as a soundness signal** —
 and Swift below is the proof, not a worry. `/* c\n d */` parses today as **one

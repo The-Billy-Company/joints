@@ -10,7 +10,7 @@ valid folio and no torn byte anywhere gave it away.
 A fix for a race that was never made to fail once is not a fix, so this stages
 it. Three things are held to genuine:
 
-  the poison    a **real older binary** - `.local/ink/base/bin/outliner`, built
+  the poison    a **real older binary** - `.local/ink/base/bin/joints`, built
                 from this tree at 08:35 on 2026-08-05 - presses the folios,
                 the way the previous lane used a real pinned binary rather
                 than a staged corruption. Measured over all thirty grammars, it
@@ -66,11 +66,11 @@ from cost import arm  # noqa: E402
 ROOT = Path(__file__).resolve().parents[2]
 TOOL = ROOT / "tool"
 GRAMMARS = ROOT / "upstream" / "grammars"
-BIN = ROOT / "zig-out" / "bin" / "outliner"
+BIN = ROOT / "zig-out" / "bin" / "joints"
 # A real binary built out of this same tree earlier today, kept by another
 # lane. Not a corruption and not a mock: a generation this checkout genuinely
 # produced, which is the only kind of poison worth reproducing with.
-OLDER = ROOT / ".local" / "ink" / "base" / "bin" / "outliner"
+OLDER = ROOT / ".local" / "ink" / "base" / "bin" / "joints"
 # When the swap lands. A warm board is ~1.0s end to end and pays ~0.35s of that
 # in interpreter start and imports before its first row, so the window is narrow
 # and the right delay is not a thing to know in advance - the first two attempts
@@ -105,7 +105,7 @@ print(n)
 def board(cache: Path, binary: Path, *flags: str,
           tool: Path | None = None) -> tuple[dict, int, float]:
     """One board run over one cache, as JSON, with its wall clock."""
-    env = {**os.environ, "OUTLINER_WORK": str(cache), "OUTLINER_BIN": str(binary)}
+    env = {**os.environ, "JOINTS_WORK": str(cache), "JOINTS_BIN": str(binary)}
     start = time.perf_counter()
     got = subprocess.run([sys.executable, str((tool or TOOL) / "standing.py"),
                           "--json", *flags],
@@ -334,12 +334,12 @@ def binary() -> int:
     press and its read-back the previous lane's `Refused` guard stops the run
     outright (observed, first attempt at this trial). The gap is the other half
     - a binary installed without a fresher mtime, which is every pinned build,
-    every `cp -p`, and every `OUTLINER_BIN` pointed at somebody else's tree.
+    every `cp -p`, and every `JOINTS_BIN` pointed at somebody else's tree.
     """
     for attempt, wait in enumerate(WAITS, 1):
         with tempfile.TemporaryDirectory(prefix="stage-") as tmp:
             tmp = Path(tmp)
-            cache, mine = tmp / "cache", tmp / "outliner"
+            cache, mine = tmp / "cache", tmp / "joints"
             cache.mkdir()
             # Seeded from the shared cache by copying, never by pressing into
             # it. Plain copy, not copy2: a fresh mtime is what makes the board
@@ -374,7 +374,7 @@ def binary() -> int:
                         or (w == "MOVED" and out["stamp"]["moved"])]
                 print(f"    today's source detectors: {', '.join(loud) or 'nothing'}"
                       f"  ← none of them re-reads the binary"
-                      f" (TOLD fires either way: the stage set OUTLINER_BIN)")
+                      f" (TOLD fires either way: the stage set JOINTS_BIN)")
                 return 0 if landed else 1
     return 1
 

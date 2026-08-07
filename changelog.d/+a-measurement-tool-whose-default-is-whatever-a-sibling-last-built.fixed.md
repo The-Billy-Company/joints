@@ -1,5 +1,5 @@
-`tool/specimen.py` fell back to the shared `zig-out/bin/outliner` whenever
-`OUTLINER_BIN` was unset, and printed a verdict without mentioning which binary
+`tool/specimen.py` fell back to the shared `zig-out/bin/joints` whenever
+`JOINTS_BIN` was unset, and printed a verdict without mentioning which binary
 produced it. Ten lanes build into that prefix. A lane on its final pass read
 **7 of 20 specimens sound from a tree that actually builds 14 of 20** - a
 sibling had rebuilt the prefix from a different state mid-run - and nothing in
@@ -9,7 +9,7 @@ work that lane had just finished, which is not a mechanism.
 Every report now carries `stamp.line()`, printed after the verdict rather than
 before it, so `moved()` covers the run's own interval - sweeps here take minutes
 and four lanes land inside one. And a run is **refused, exit 3**, when it is
-both unattributed and out of date: the default prefix with no `OUTLINER_BIN`,
+both unattributed and out of date: the default prefix with no `JOINTS_BIN`,
 *and* a binary older than a source in the tree or built from different sources
 than the repo now holds. Those two conditions together are precisely the failure
 that happened and nothing else is refused - a deliberate `pin.py` binary drifts
@@ -18,7 +18,7 @@ downgrades the refusal to a printed hazard, and reads where a hand would put it,
 after the verb.
 
 It fired on its first invocation in this tree, against a `zig-out` older than
-`src/surface/face/outliner/state.zig`. **It also caught the lane that wrote it**:
+`src/surface/face/joints/state.zig`. **It also caught the lane that wrote it**:
 a specimen pass taken earlier through a stale pin read 7 of 22, and the same
 suite against a binary built from the current tree reads 15 of 22 - swift's
 `multiline-comment` and `nested-comment` and kotlin's three string specimens had

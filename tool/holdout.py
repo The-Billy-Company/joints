@@ -70,7 +70,7 @@ scored a file HELD against a binary that had not read a byte of it.
 
     --json on the read verbs · --grammar N (repeatable) · --patience S
 
-    OUTLINER_BIN=<path>   measure a pinned binary (`tool/pin.py`), not `zig-out`
+    JOINTS_BIN=<path>   measure a pinned binary (`tool/pin.py`), not `zig-out`
 
 Exit 0 ran, 1 a clean negative answer (the seal refused you, a check failed),
 2 could not run.
@@ -103,8 +103,8 @@ MANIFEST = HOME / "holdout.toml"
 LEDGER = HOME / "ledger.json"
 VENDOR = HOME / "vendor"          # gitignored: the bytes, re-fetchable from the pins
 SEATING = HOME / "oracle.json"    # which copy of each oracle answered, by digest
-WORK = Path(os.environ.get("OUTLINER_HOLDOUT", ROOT / ".local" / "generalize" / "holdout"))
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
+WORK = Path(os.environ.get("JOINTS_HOLDOUT", ROOT / ".local" / "generalize" / "holdout"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
 
 WANT = 20            # the size of the holdout, fixed by SELECTION.md
 FLOOR, CEIL = 1024, 65536
@@ -850,7 +850,7 @@ def unseal(name: str, reason: str) -> int:
     got = ledger()
     got["unsealed"].append({
         "grammar": name, "reason": reason.strip(), "when": stamp.iso(time.time()),
-        "by": os.environ.get("OUTLINER_LANE", os.environ.get("USER", "unknown")),
+        "by": os.environ.get("JOINTS_LANE", os.environ.get("USER", "unknown")),
         "left": len(live) - 1,
     })
     LEDGER.write_text(json.dumps(got, indent=2))
@@ -955,7 +955,7 @@ def forked(name: str, patience: float, as_json: bool) -> int:
     against each copy can.
 
     Everything except the oracle is held fixed: same grammar.json handed to
-    outliner, same source bytes, same binary, same `score()`. Each copy gets
+    joints, same source bytes, same binary, same `score()`. Each copy gets
     its own seat, so the two compiled libraries cannot collide on one name in
     one libdir - which is the quiet way this comparison would otherwise measure
     itself.

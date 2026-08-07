@@ -30,5 +30,5 @@ after it: a column that reads zero both when the answer is zero and when nobody
 asked is two facts wearing one glyph, and the board cannot tell the reader
 which one it is holding.
 
-Measured on `outliner e51716d6c`, tree `61c93c367`, 12 grammars with a wall, no
+Measured on `joints e51716d6c`, tree `61c93c367`, 12 grammars with a wall, no
 oracle - `shear` is a self-comparison and does not need one.

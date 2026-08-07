@@ -60,7 +60,7 @@ python3 tool/rung1.py c rust       # narrow to a few
 python3 tool/rung1.py --json
 ```
 
-Needs `zig-out/bin/outliner`, so run `zig build` first; `OUTLINER_BIN` points it
+Needs `zig-out/bin/joints`, so run `zig build` first; `JOINTS_BIN` points it
 somewhere else. It takes about 13 seconds over the whole corpus in ReleaseFast
 and minutes in Debug, so build the release binary.
 
@@ -74,11 +74,11 @@ Which corpus file belongs to which grammar comes out of
 own table, not a copy of it here - that table is what you edit when you add a
 language, and a gate that restated it would drift by exactly one file.
 
-`outliner joints` exits 1 whenever anything refused, which is nine grammars out
+`joints survey` exits 1 whenever anything refused, which is nine grammars out
 of eleven today, so this reads what the run *said* rather than what it returned.
-A `--json` on `joints` would retire the scraping.
+A `--json` on `survey` would retire the scraping.
 
-## `differential.py` - is outliner's tree the tree tree-sitter builds?
+## `differential.py` - is joints's tree the tree tree-sitter builds?
 
 Node names are the whole compatibility surface: every `highlights.scm` and every
 editor integration in the ecosystem is keyed on them, and a tree built from a
@@ -123,7 +123,7 @@ library, so:
   `tree-sitter generate` on c and cpp costs minutes, so it is worth queueing
   for. `alone()` is a readers-writer `flock` per language - exclusive for a
   build, shared for a measurement. A lane that queues says so; one that waits
-  past `OUTLINER_ORACLE_PATIENCE` (300 s) refuses rather than writing beside
+  past `JOINTS_ORACLE_PATIENCE` (300 s) refuses rather than writing beside
   the holder; and a run that queued *and* skipped says not to quote it.
 - **Owned outright.** `seat/<lane>/` holds the compiled `.dylib`
   (`TREE_SITTER_LIBDIR`) and the CLI's own cache (`XDG_CACHE_HOME`). The CLI
@@ -133,7 +133,7 @@ library, so:
   get there at once. Compiling is seconds, so owning one beats any protocol for
   sharing it. The lane is the calling shell by default - two runs in one
   terminal reuse everything, two terminals share nothing writable -
-  and `OUTLINER_LANE` names it explicitly.
+  and `JOINTS_LANE` names it explicitly.
 
 Sharing a seat on purpose is a knob, and it reproduces the fault: four lanes on
 one seat skip 55 of 76 cases with `printer says value, its query says
@@ -171,7 +171,7 @@ fails if any `#include` resolves above `lang/<name>/`.
 
 **tree-sitter is an oracle, never a dependency.** `install` puts the CLI under
 gitignored `.local/differential/` and nothing else in the package looks for it:
-outliner does not link, vendor, or ship tree-sitter, and that is a hard
+joints does not link, vendor, or ship tree-sitter, and that is a hard
 contract. With no CLI present `run` prints what is missing and exits **0**, so a
 clone without node is not a failing build.
 
@@ -262,7 +262,7 @@ python3 tool/standing.py --unbound    # rubble + spoil, which is NOT the work or
 python3 tool/standing.py --set=corpus # or --set=breadth
 python3 tool/standing.py --json
 python3 tool/standing.py --settle     # re-measure any row an artifact moved under
-OUTLINER_WORK=/tmp/mine python3 tool/standing.py   # a private folio cache
+JOINTS_WORK=/tmp/mine python3 tool/standing.py   # a private folio cache
 ```
 
 ### Three axes, and the only count that means what `parse whole` sounds like
@@ -303,7 +303,7 @@ quote:
                 the only count that means what `17 parse whole` sounds like
 ```
 
-Read on `pin-handoff` 2026-08-06: outliner `1885792a7` · tree `4f018b60f` (pin)
+Read on `pin-handoff` 2026-08-06: joints `1885792a7` · tree `4f018b60f` (pin)
 · oracle `d85e736fa` (30 of 30 live, 30 attributed).
 
 **The gap this split was cut to expose has closed, and that is a fact about one
@@ -339,10 +339,10 @@ no press, just the world.
 
 ```
 python3 tool/standing.py --cite                             # ~130 ms, one markdown line
-outliner `a525dc9b8` · tree `3d0d2e481` (live) · **no oracle** — outliner's own words
+joints `a525dc9b8` · tree `3d0d2e481` (live) · **no oracle** — joints's own words
 
 python3 tool/standing.py --cite=board.json --quote=built    # ~100 ms off a saved board
-`built` reads **400,044** over 30 row(s) — outliner `346d880fc` · tree `c3d371769` (live) · oracle `d85e736fa` (30 attributed)
+`built` reads **400,044** over 30 row(s) — joints `346d880fc` · tree `c3d371769` (live) · oracle `d85e736fa` (30 attributed)
 ```
 
 Those two lines were taken four minutes apart and name different binaries,
@@ -494,12 +494,12 @@ optional `UNSOUND:` clause, and `stamp.Outcome` carries `surveyed`/`arena` off
 it:
 
 ```
-outliner: /t/a.toml: accepted, 1 root, surveyed 731 of 731 nodes
-outliner: /t/b.zig: stray byte at 41, 4 roots, surveyed 31 of 31 nodes, UNSOUND: 1 loose, 0 disorder, 0 torn
+joints: /t/a.toml: accepted, 1 root, surveyed 731 of 731 nodes
+joints: /t/b.zig: stray byte at 41, 4 roots, surveyed 31 of 31 nodes, UNSOUND: 1 loose, 0 disorder, 0 torn
 ```
 
 A row with no clause is `UNASKED` and fails, loudly, naming `verdict` in
-`src/surface/face/outliner/parse.zig`. `survey_test.zig` holds the arenas that
+`src/surface/face/joints/parse.zig`. `survey_test.zig` holds the arenas that
 make the walk say no across all four violation classes plus the two legal
 shapes a naive containment check would wrongly flag - but no unit test can tell
 you the binary in front of *this* board still calls `survey`, which is what the
@@ -623,7 +623,7 @@ whole 67 KB sits behind **one** token.
 It mints a folio per grammar rather than pressing per hop, because a press is
 109 ms against 6 ms for a minted folio and this walks a file thousands of times.
 
-## `bench.py` - what does outliner cost, against what tree-sitter costs?
+## `bench.py` - what does joints cost, against what tree-sitter costs?
 
 The differential asks whether the tree is right. This asks whether the rest of
 the pitch is true, and it runs against the same oracle, from the same install,
@@ -652,12 +652,12 @@ last person built, and a debug binary measured by accident reads as a
 catastrophic regression that is not there. When the tree does not compile - it
 often does not, with lanes in `src` - the run falls back to the last good build
 in that prefix and stamps the line with the date it was built, so the commit in
-the header and the binary under it can be seen to disagree. `OUTLINER_BIN`
+the header and the binary under it can be seen to disagree. `JOINTS_BIN`
 overrides the whole thing and is reported as unverified, because at that point
 somebody else chose the optimisation mode.
 
 Six axes, each a **cost**, so `ratio = ours / theirs` and under 1.0 always
-means outliner is cheaper:
+means joints is cheaper:
 
 | axis | what it puts side by side |
 |---|---|
@@ -674,12 +674,12 @@ flattered.
 **A partial parse is never a throughput number.** Ten of the eleven grammars
 stop somewhere in the middle today, and a parser that quits early looks fast. A
 timing case is admitted only when *both* parsers swallow the whole input -
-outliner says `accepted`, tree-sitter's `--json-summary` says `successful` -
+joints says `accepted`, tree-sitter's `--json-summary` says `successful` -
 and every grammar that fails that gate is printed with the verdict that failed
 it rather than dropped.
 
 **Nothing is subtracted from one side that is not subtracted from the other.**
-`outliner parse` presses the grammar on every run and `tree-sitter parse` loads
+`joints parse` presses the grammar on every run and `tree-sitter parse` loads
 a library somebody already compiled, so a head-to-head wall clock would be
 timing our press. Instead both sides parse the same file k times in one process
 and the *slope* between two k's is the marginal cost of one parse - which
@@ -736,7 +736,7 @@ python3 tool/pin.py build --name before   ... under a name you'll recognise
 python3 tool/pin.py arm before            the three exports a measurement needs
 python3 tool/pin.py list                  every pin, newest first
 python3 tool/pin.py show before           one pin in full
-python3 tool/pin.py path before           the binary, for OUTLINER_BIN=$(...)
+python3 tool/pin.py path before           the binary, for JOINTS_BIN=$(...)
 python3 tool/pin.py verify                every pin's bytes still hash to its record
 ```
 
@@ -753,7 +753,7 @@ python3 tool/standing.py --against=before.json    # every cell, plus what differ
 python3 tool/standing.py --twice=3                # is this row stable at all?
 ```
 
-`OUTLINER_WORK` is a folio cache **under the pin**, because a folio is a derived
+`JOINTS_WORK` is a folio cache **under the pin**, because a folio is a derived
 artifact of a binary and two pins sharing one cache read whichever pressed last
 (the ticket in `order.py` now catches that, and re-mints rather than lying - but
 a shared cache still costs both arms a full re-press every time they alternate).
@@ -768,7 +768,7 @@ agreement is true, verifiable, and about the wrong object. `still.py against`
 refuses that clearance now (`vacuous`), and the control you actually want is the
 isolation arm: today's tree with only your rows deleted. See the fifth house rule
 in [`research/joinery/TESTING.md`](../research/joinery/TESTING.md).
-`OUTLINER_LANE` is an oracle seat named after the pin, because without one the
+`JOINTS_LANE` is an oracle seat named after the pin, because without one the
 seat is keyed on `os.getppid()` - *which shell you ran from* - and the oracle is
 the other parser in every audited column.
 
@@ -826,7 +826,7 @@ Anything after `build` goes to `zig build` (`build --name fast
 
 `zig build -p <dir>` is the whole cure and has always been there, so the flag is
 not the useful part. **A prefix is still a path**: point at
-`.local/mine/bin/outliner` a day later and nothing on disk says what it was
+`.local/mine/bin/joints` a day later and nothing on disk says what it was
 built from. A pin is a prefix *plus* a record - the source digest at build time,
 the commit, how dirty the tree was, the flags, and the sha256 of the bytes that
 came out - and that record is what `stamp.py` reads.
@@ -863,7 +863,7 @@ context around it.
 
 Four hazards, four detectors, because each sees something the others cannot:
 
-- **`TOLD`** - `OUTLINER_BIN` chose this binary rather than the tree's own. A
+- **`TOLD`** - `JOINTS_BIN` chose this binary rather than the tree's own. A
   lane once left it exported from a scratch build and every instrument here
   silently measured a pre-fix binary for an afternoon. Note that `STALE` cannot
   catch this: a freshly-copied scratch binary has a new mtime and reads as
@@ -894,7 +894,7 @@ Three of them, each of which used to exist in two or three copies that drifted
 apart. They live here because this module depends on nothing, so every
 instrument can import it and none has an excuse to restate it.
 
-- **`behind(line, source)`** - strips the `outliner: <path>: ` prefix using the
+- **`behind(line, source)`** - strips the `joints: <path>: ` prefix using the
   path the caller passed in. Nothing infers a prefix; two readers used to, with
   a non-greedy `.*?: ` that takes too little the moment a payload contains the
   delimiter.
@@ -1123,7 +1123,7 @@ finds the surprise. The gate prints its own reach on every run so this cannot be
 inferred wrongly from a green line alone.
 
 **`gate` also holds the two code paths together.** A grammar can be named to
-`outliner parse` as a `grammar.json` or as a minted folio, and for one afternoon
+`joints parse` as a `grammar.json` or as a minted folio, and for one afternoon
 those differed by 110x because the reachability mask was derived at import and
 never written through. That loss was in **cost**; the gate asserts it was never
 in **meaning**, peeling both ways over the same nine grammars at a smaller
@@ -1137,7 +1137,7 @@ family, just an enumeration of operators that had never met those two. Anything
 tempted to add a row to a list here should ask what predicate the list is
 approximating.
 
-**The refused terminal is not always the diagnosis.** `outliner state <grammar>
+**The refused terminal is not always the diagnosis.** `joints state <grammar>
 <n>` prints what the state *admits*, and a state admitting one unproducible
 external refuses whatever arrives next - kotlin 110 is six distinct walls and
 one cause. Read the row before believing the terminal.
@@ -1199,7 +1199,7 @@ python3 tool/specimen.py list | status
 ```
 
 Four populations. **declared** is `externals[]` in `grammar.json`. **blind** is
-what outliner has no stand-in for, read from `lex` and **not** from `grammar`'s
+what joints has no stand-in for, read from `lex` and **not** from `grammar`'s
 closing `note: external scanner tokens cannot be lexed here:` - that note names
 every declared external rather than the blind ones, and believing it produced a
 first gate reporting `seated 0` for all twenty-three scorable grammars.
@@ -1269,7 +1269,7 @@ read makes true for free.
 
 **Exercising an external is not the same as being right about it.** html's
 specimen `<p>x</q>` exercises `erroneous_end_tag_name` at the correct extent
-and fails anyway, on the `element` above it that outliner never closes - three
+and fails anyway, on the `element` above it that joints never closes - three
 roots where the oracle has one. A coverage gate at 100% would have called that
 row done, which is the argument for claims over counts stated as a measurement.
 See `research/joinery/specimen/RESULT-3-html.md`.

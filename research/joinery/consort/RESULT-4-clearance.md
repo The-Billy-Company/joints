@@ -13,7 +13,7 @@ found and two of which follow from the same construction.
 
 ### 1. It is not a claim about agreement with another parser (measured)
 
-Every arm was given its own `OUTLINER_WORK` by the third house rule.
+Every arm was given its own `JOINTS_WORK` by the third house rule.
 `standing.py`'s oracle overlay is a per-work-dir `audit.json` written by
 `--audit`, and no arm re-ran it. So on the retained base board and on every
 retained arm board:
@@ -25,7 +25,7 @@ square 0 · crooked 0 · unframed 0 · graded — · unaudited = built
 30 of 30 rows, 6 of 6 retained boards, and `graded: —` on all fourteen
 single-row and five pair ledger entries. `square` is the only column that is a
 claim about agreement with tree-sitter, and the ablation family never computed
-one. The clearance is entirely in outliner's own words about its own forest.
+one. The clearance is entirely in joints's own words about its own forest.
 
 That is checkable rather than fatal - `--audit` in an arm's own work dir would
 mint real squares - and it is expensive (thirty grammars racked per arm), which
@@ -126,7 +126,7 @@ one opinion agreeing is not two opinions.
 and every number on this page is `built`. `gate.py` cannot produce a `square` at
 all: it has no oracle seat, and the fixtures it invented for the falsifiers have
 no tree-sitter tree to be square against. So my central result - *the residual
-follows the fixture* - is a statement about how outliner's own reach responds to
+follows the fixture* - is a statement about how joints's own reach responds to
 where a construct sits, defended by a metric that never asks a second parser
 anything.
 
@@ -150,7 +150,7 @@ But they are frozen on a tree with a live press regression in it, which is why
 `still.py against <arm> <arm> --mine …` could not reach these pins: it resolves
 `ROOT` from its own location, so it looked for `.local/still/witness/aud-base.json`
 in the repo while the audit family's pins live under
-`.local/aud-iso/outliner/.local/pin/`. Not wrong - the pins were minted with
+`.local/aud-iso/joints/.local/pin/`. Not wrong - the pins were minted with
 `pin.py` inside that checkout - but it meant the `--mine` predicate had to be
 taken by hand out of each pin's `world.json`. That is recorded here rather than
 worked around silently, and the hand-taken result is in `README.md`: eleven

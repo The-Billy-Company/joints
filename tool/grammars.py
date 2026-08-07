@@ -15,7 +15,7 @@ what `differential.py` sweeps would be a held-out set that changed the thing it
 was measuring. Ask for the other one by name.
 
 Exit 0 ran, 1 a clean negative answer (something missing or drifted), 2 an
-error. That is the same family the outliner CLI uses, so a shell script can
+error. That is the same family the joints CLI uses, so a shell script can
 treat both the same way.
 """
 
@@ -381,7 +381,7 @@ def fetch_kin(pins: list[Pin], dest: Path) -> int:
 def _api(url: str) -> Any:
     req = urllib.request.Request(url, headers={
         "Accept": "application/vnd.github+json",
-        "User-Agent": "outliner-grammars.py",
+        "User-Agent": "joints-grammars.py",
     })
     try:
         with urllib.request.urlopen(req, timeout=60) as r:  # noqa: S310 - https literal

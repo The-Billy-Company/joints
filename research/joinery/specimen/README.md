@@ -26,7 +26,7 @@ whether interpolation nested twice came back correctly shaped.
 **"Which of this grammar's declared externals does anything here exercise?"** is
 the coverage gate, and it is the larger deliverable. Both halves of that join
 already existed and had never been put together: a grammar declares its
-externals in `grammar.json`, and outliner already knows which terminals it has
+externals in `grammar.json`, and joints already knows which terminals it has
 no stand-in for.
 
 ## Layout
@@ -73,7 +73,7 @@ python3 tool/specimen.py list | status
 ## Four populations, and how much each is worth
 
 **declared** — the named entries of `externals[]`. Exact; it is a field in a
-file. **blind** — what outliner has no stand-in for. Exact, but it has to be
+file. **blind** — what joints has no stand-in for. Exact, but it has to be
 pried out: every reporting path caps its list at eight names and appends
 `+N more`, so the gate rotates `externals[]` by eight and unions the windows.
 That is sound because `provision` resolves a troupe **by name**, never by

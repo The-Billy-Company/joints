@@ -53,7 +53,7 @@ from stamp import ask, digest, fed, swapped, take  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT / "research" / "joinery" / "order"
 GRAMMARS = ROOT / "upstream" / "grammars"
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
 
 ROWS = 4000  # small tokens in the many half
 BULK = 100_000  # bytes in the one big token
@@ -336,7 +336,7 @@ def miss(folio: Path) -> str:
     **`foreign` was `older`, and `older` was the wrong question.** The rule here
     used to be `folio.st_mtime < BIN.st_mtime` - "was this made before the
     binary" - asked of a **path**. Two pinned binaries sharing one
-    `OUTLINER_WORK` are *both* older than a folio either of them minted five
+    `JOINTS_WORK` are *both* older than a folio either of them minted five
     minutes ago, so the rule never fired for either and both arms of a
     before/after read whichever folio was written last. A lane's before-arm read
     its after-arm's verilog table (`811e808412d78cbc` on both sides, where the
@@ -540,8 +540,8 @@ def one(work: Path, name: str, how: str | None) -> tuple[str, str, bool]:
     elif how == "another binary pressed it":
         # A second binary staged without a second binary: the ticket is the
         # whole claim, so a ticket naming somebody else is exactly the state a
-        # second pin's `OUTLINER_WORK` would leave behind.
-        ticket(folio).write_text(f"{'0' * 64}  /some/other/pin/bin/outliner\n", encoding="utf-8")
+        # second pin's `JOINTS_WORK` would leave behind.
+        ticket(folio).write_text(f"{'0' * 64}  /some/other/pin/bin/joints\n", encoding="utf-8")
     elif how == "no record of which binary pressed it":
         ticket(folio).unlink(missing_ok=True)
     elif how is not None:
@@ -626,7 +626,7 @@ def cache(name: str = "json") -> int:
         # The refusal is quoted verbatim from the binary; only the scratch path
         # in it is elided, because a tmpdir name is not part of the finding.
         def short(said: str) -> str:
-            return said.replace(f"{work}/", "").replace("outliner: ", "")
+            return said.replace(f"{work}/", "").replace("joints: ", "")
         trials: tuple[tuple[str, str | None, str], ...] = (
             ("nothing yet", None, "re-minted"),
             ("a folio this binary just minted", None, "kept"),

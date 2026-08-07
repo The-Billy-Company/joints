@@ -334,7 +334,7 @@ with a price on it rather than a thing I argued might happen.
 
 ### Where the second move is off, and why that is scoping and not gating
 
-`Gather.init` leaves `supplying` **false**; `outliner parse` turns it on. The
+`Gather.init` leaves `supplying` **false**; `joints parse` turns it on. The
 one caller measured is the CLI, and it is also the only one that reads a file
 once. The **incremental** path does not: an amend replays a recorded trail whose
 alignment marks are one per `read`, indexed by token count and offered to a

@@ -1,7 +1,7 @@
 # Prediction 1 — what the 18 "grammar gaps" turn out to be
 
 Written after locating all eighteen constructs in the corpus and reading each
-grammar's `externals` array, and **before running tree-sitter or outliner over a
+grammar's `externals` array, and **before running tree-sitter or joints over a
 single witness.** That ordering is deliberate and it is the only ordering that
 makes a score mean anything here; it also means these predictions are informed
 rather than blind, and the informed half is written down below so a reader can
@@ -14,7 +14,7 @@ What I knew when I wrote this:
 * the `externals` array of every grammar involved, so I know which rows *could*
   be scanner work and which structurally cannot be.
 
-What I did not know: whether tree-sitter accepts any of them, whether outliner
+What I did not know: whether tree-sitter accepts any of them, whether joints
 accepts any of them standing alone, or what either tree looks like.
 
 ## The eighteen, as located
@@ -56,7 +56,7 @@ and the state-0 `` ` `` row are all this.
 For each row: author a minimal, self-contained file in that language holding the
 construct, then
 
-* **outliner** parses it (`outliner parse <folio> <witness>`) — whole or walled;
+* **joints** parses it (`joints parse <folio> <witness>`) — whole or walled;
 * **tree-sitter 0.26.11** parses it from the same `grammar.json` — tree, with or
   without `ERROR`/`MISSING`;
 * **tree-sitter again with a stubbed external scanner** — every
@@ -139,9 +139,9 @@ If P5 holds, `gap` is not merely over-claimed; the question it asks is
 undefined whenever the lexer has already gone wrong, and no fix to `settled`
 repairs that.
 
-## P6 — a witness that outliner parses whole
+## P6 — a witness that joints parses whole
 
-**≥ 4 of 18 witnesses parse whole in outliner**, i.e. the construct is
+**≥ 4 of 18 witnesses parse whole in joints**, i.e. the construct is
 derivable here and the corpus wall is context, not the construct.
 
 Falsified at 0. **Named limit, before the fact:** a minimal witness parsing
@@ -163,6 +163,6 @@ there is less room to be creatively wrong.
 ## What would make me retract the whole exercise
 
 If the innocent controls — constructs from these grammars that have never
-walled — come back walled in outliner too, then the witnesses are measuring my
+walled — come back walled in joints too, then the witnesses are measuring my
 ability to write valid PHP rather than anything about the grammar, and none of
 the eighteen verdicts survive that.

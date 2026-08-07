@@ -10,7 +10,7 @@ The witness handed to me is 21 bytes and every leaf agrees:
 defp f(x) do x end
 ```
 
-Outliner hangs `do_block` inside the inner `call`'s `arguments`; tree-sitter
+Joints hangs `do_block` inside the inner `call`'s `arguments`; tree-sitter
 makes it a sibling of `arguments` under the outer `defp` call.
 
 ## P1 — this is a CONFLICT, not a GAP
@@ -28,10 +28,10 @@ could ever seat it.
 
 At the byte where `do` arrives — after `f(x)` is complete on the stack — the
 state will hold **both** a shift of `do` (continuing the inner call) and a
-reduce of the inner call (handing `do` to the outer one). Outliner takes the
+reduce of the inner call (handing `do` to the outer one). Joints takes the
 shift.
 
-**Falsifier.** `outliner state elixir.json <n>` at that point shows a single
+**Falsifier.** `joints state elixir.json <n>` at that point shows a single
 action with no rival. That would mean the wrong tree was already decided when
 the table was built — a lost production, not a resolved contest — and would be
 a strictly worse defect than a mis-resolution.

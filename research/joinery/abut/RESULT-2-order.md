@@ -75,7 +75,7 @@ rather than a token nobody can lex. 241 unbound bytes is what is left.
 
 ## P9 — held. 29 of 30 tree-identical, julia the thirtieth
 
-Compared as trees, per the control the last lane set. `outliner parse`'s stdout
+Compared as trees, per the control the last lane set. `joints parse`'s stdout
 hashed per grammar; the verdict line kept out of the hash and reported beside it,
 because a verdict moves for reasons a tree does not and item 2 changes one of
 those on purpose.

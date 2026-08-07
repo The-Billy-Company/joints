@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""What does outliner cost, against what tree-sitter costs for the same job?
+"""What does joints cost, against what tree-sitter costs for the same job?
 
 `differential.py` asks whether the tree is right. This asks whether the rest of
 the pitch is true - smaller, one artifact, no compiler in the loop - and it is
@@ -10,11 +10,11 @@ every measurement here:
   * **a partial parse is never a throughput number.** Ten of the eleven
     grammars stop somewhere in the middle today, and a parser that quits early
     reads as fast. So a throughput case is admitted only when *both* parsers
-    swallow the whole scaled input - outliner says `accepted`, tree-sitter says
+    swallow the whole scaled input - joints says `accepted`, tree-sitter says
     `successful` - and every grammar that fails that gate is listed by name
     with the reason rather than quietly dropped.
   * **nothing is subtracted from one side that is not subtracted from the
-    other.** `outliner parse` presses the grammar on every run; `tree-sitter
+    other.** `joints parse` presses the grammar on every run; `tree-sitter
     parse` loads a `.dylib` somebody already compiled. Timing them head to head
     would measure the press, not the parse. So both sides are run over the same
     file repeated k times and the *marginal* cost of one more parse is the
@@ -24,7 +24,7 @@ every measurement here:
     is the whole story and we lose badly.
 
 Every axis is a **cost**, so `ratio = ours / theirs` and under 1.0 always means
-outliner is cheaper. Throughput is carried as nanoseconds per byte for that
+joints is cheaper. Throughput is carried as nanoseconds per byte for that
 reason, with the bytes-per-second spelled beside it.
 
 The tree-sitter CLI is a **dev-only oracle**, on the terms `differential.py`
@@ -65,7 +65,7 @@ GRAMMARS = ROOT / "upstream" / "grammars"
 CORPUS = ROOT / "research" / "joinery" / "corpus"
 WORK = ROOT / ".local" / "bench"
 PREFIX = WORK / "build"  # our own install prefix; `zig-out` belongs to whoever built last
-BIN = Path(os.environ.get("OUTLINER_BIN", PREFIX / "bin" / "outliner"))
+BIN = Path(os.environ.get("JOINTS_BIN", PREFIX / "bin" / "joints"))
 BASELINE = Path(__file__).resolve().parent / "bench.baseline.json"
 # npm's `.bin/tree-sitter` is a node script that spawns this one.
 NATIVE = TS.parent.parent / "tree-sitter-cli" / "tree-sitter"
@@ -82,7 +82,7 @@ TARGET = 128 << 10
 COPIES = (1, 5)  # the two points the marginal cost is the slope between
 
 USAGE = """\
-bench.py - what does outliner cost against tree-sitter?
+bench.py - what does joints cost against tree-sitter?
 
 usage:
   bench.py run       measure every axis (offline; skips if no oracle)
@@ -201,28 +201,28 @@ def sharpen() -> str:
     our own ReleaseFast one and say which of four things happened, because a
     run that cannot say what it measured is not a measurement:
 
-      * `OUTLINER_BIN` was set - somebody chose the binary, mode unknown to us;
+      * `JOINTS_BIN` was set - somebody chose the binary, mode unknown to us;
       * the tree compiled just now, and this is that;
       * the tree does not compile at HEAD, so this is our last good build,
         which is older than the commit stamped beside it;
       * neither, and there is nothing to run.
     """
     global BIN
-    if "OUTLINER_BIN" in os.environ:
+    if "JOINTS_BIN" in os.environ:
         # Somebody chose the binary, so the flag that built it is not ours to
         # report - but the *mode* still is, and the mode is the half that moves
         # a parse loop. Reading it out of the bytes is the difference between
         # "we cannot say" and "this is a debug binary and every timing below is
         # a lie". Pinning a binary across two runs is the legitimate case, and
         # it is exactly the case that must not be allowed to go unverified.
-        return f"OUTLINER_BIN, and {safety(BIN)}" if BIN.exists() else ""
+        return f"JOINTS_BIN, and {safety(BIN)}" if BIN.exists() else ""
     made = say(["zig", "build", "-Dcli-optimize=ReleaseFast", "--prefix", str(PREFIX)], ROOT)
     if made.returncode == 0 and BIN.exists():
         return "-Dcli-optimize=ReleaseFast"
     if BIN.exists():
         old = time.strftime("%Y-%m-%d %H:%M", time.localtime(BIN.stat().st_mtime))
         return f"-Dcli-optimize=ReleaseFast, built {old}; the tree does not compile at this commit"
-    stale = ROOT / "zig-out" / "bin" / "outliner"
+    stale = ROOT / "zig-out" / "bin" / "joints"
     if stale.exists():
         BIN = stale
         return f"UNVERIFIED: {here(stale)}, built by another lane, {safety(stale)}"
@@ -283,7 +283,7 @@ def _forge(name: str, reps: int) -> Forge:
     mint = [str(BIN), "mint", str(grammar), "-o", str(folio)]
     got = say(mint, ROOT)
     if got.returncode != 0 or not folio.exists():
-        return empty._replace(why=f"outliner mint: {tail(got.stdout or got.stderr)}")
+        return empty._replace(why=f"joints mint: {tail(got.stdout or got.stderr)}")
     runs = best(mint, reps, ROOT)
     folio_ms, folio_spread = min(runs), spread_of(runs)
 
@@ -412,7 +412,7 @@ def whole(inp: Input, dylib: Path) -> tuple[str, float]:
     ours = say([str(BIN), "parse", str(folio_for(inp.grammar)), str(inp.path), "--quiet"], ROOT)
     end = outcome(ours.stderr, inp.path, inp.path.stat().st_size)
     if end.kind != "whole":
-        return f"outliner stopped early ({end.verdict})", 0.0
+        return f"joints stopped early ({end.verdict})", 0.0
     got = say([str(NATIVE), "parse", "-l", str(dylib), "--lang-name", inp.grammar,
                "-q", "-j", str(inp.path)], WORK)
     try:
@@ -502,7 +502,7 @@ def bench(names: list[str], axes: tuple[str, ...], reps: int) -> tuple[list[Row]
         if runtime:
             rows.append(Row("install", f"runtime x{n}", BIN.stat().st_size + folios,
                             runtime.stat().st_size + dylibs, "bytes",
-                            note=f"outliner has no library artifact yet, so its binary stands in; "
+                            note=f"joints has no library artifact yet, so its binary stands in; "
                                  f"theirs is {here(runtime)}"))
         else:
             skips.append(Skip("install", f"runtime x{n}", "no libtree-sitter on this machine"))
@@ -688,11 +688,11 @@ def keys_once(ours: list[str], theirs: list[str], inp: Input) -> tuple[Keys, str
     none = Keys(0.0, 0.0, 0.0, 0.0)
     got = say(ours, ROOT)
     if got.returncode != 0:
-        return none, f"outliner amend: {tail(got.stderr)}"
+        return none, f"joints amend: {tail(got.stderr)}"
     rows = [m for ln in got.stderr.splitlines()
             if (rest := behind(ln, inp.path)) and (m := ROW.match(rest))]
     if len(rows) < 2:
-        return none, f"outliner amend said nothing measurable: {tail(got.stderr)}"
+        return none, f"joints amend said nothing measurable: {tail(got.stderr)}"
     # Judged against the `opened:` row rather than against the word "accepted".
     # These bytes already cleared `whole`, so the open is the ground truth for
     # them and an edit row saying anything *else* is a stop, whatever it says.
@@ -721,14 +721,14 @@ def state(build: str) -> tuple[dict[str, Any], Stamp]:
     benchmark is the measurement `TOLD` exists for: `sharpen` builds into a
     private prefix, so *every* run here is against a binary that is not the
     tree's own, and the one thing that could quietly happen instead is somebody
-    else's `OUTLINER_BIN` deciding what gets benchmarked.
+    else's `JOINTS_BIN` deciding what gets benchmarked.
     """
     mark = take(BIN)
     return {
         "date": time.strftime("%Y-%m-%d %H:%M:%S%z"),
         "commit": mark.commit[:9],
         "dirty": mark.dirty,
-        "outliner": say([str(BIN), "--version"], ROOT).stdout.split()[-1:][0] or "unknown",
+        "joints": say([str(BIN), "--version"], ROOT).stdout.split()[-1:][0] or "unknown",
         "tree_sitter": oracle_ready().split()[-1],
         "build": build,
         "binary": here(BIN),
@@ -754,7 +754,7 @@ def show(rows: list[Row], skips: list[Skip], as_json: bool, head: dict[str, Any]
         w = lost[0]
         print(f"worst: {w.axis} {w.case} costs {w.ratio:.1f}x tree-sitter "
               f"({amount(w.ours, w.unit)} against {amount(w.theirs, w.unit)}) · {w.note}\n")
-    print(f"{'axis':<11} {'case':<18} {'outliner':>14} {'tree-sitter':>14} {'ratio':>7} "
+    print(f"{'axis':<11} {'case':<18} {'joints':>14} {'tree-sitter':>14} {'ratio':>7} "
           f"{'±':>5}  note")
     for r in rows:
         mark = "" if r.ratio <= 1.0 else "  <-- tree-sitter wins"
@@ -770,8 +770,8 @@ def show(rows: list[Row], skips: list[Skip], as_json: bool, head: dict[str, Any]
         print(f"{'·'.join(axes):<11} {case:<18} {'-':>14} {'-':>14} {'-':>7} {'':>5}  "
               f"skipped: {why}")
     print(f"\n{len(rows)} measured, {len(grouped)} skipped · "
-          f"{len(rows) - len(lost)} rows to outliner, {len(lost)} to tree-sitter")
-    print(f"outliner {head['outliner']} {head['build']} · "
+          f"{len(rows) - len(lost)} rows to joints, {len(lost)} to tree-sitter")
+    print(f"joints {head['joints']} {head['build']} · "
           f"tree-sitter {head['tree_sitter']} · {head['machine']} · load {head['load']}")
     print(tree.line())
     return 0

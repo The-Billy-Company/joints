@@ -58,7 +58,7 @@ That is 89% of the class by damage and no press can reach it. julia and swift
 are undiagnosed. **zig's 1,375 bytes is what is left** - 1.2% of remaining
 damage, not 61.5%.
 
-Every figure on this page is read off outliner `beb695b5d` · tree `e973ce73c`
+Every figure on this page is read off joints `beb695b5d` · tree `e973ce73c`
 (pin) · oracle `d85e736fa` (30 of 30 live, 30 attributed); each result page
 carries its own stamp.
 
@@ -80,9 +80,9 @@ walls were unattributable before.
 Everything here is the shipped CLI - no new script.
 
 ```sh
-outliner grammar <grammar.json>               # the floor tally: agreed/alone/stuck/open
-outliner state <grammar.json> <n>             # one state: its items and its row
-outliner state <grammar.json> --holding <item> # which states hold a reading
-outliner state <grammar.json> --chain <n>     # how a parse reaches n
-outliner parse <grammar.json> <file> --scars  # the wall, and the mechanism verdict
+joints grammar <grammar.json>               # the floor tally: agreed/alone/stuck/open
+joints state <grammar.json> <n>             # one state: its items and its row
+joints state <grammar.json> --holding <item> # which states hold a reading
+joints state <grammar.json> --chain <n>     # how a parse reaches n
+joints parse <grammar.json> <file> --scars  # the wall, and the mechanism verdict
 ```

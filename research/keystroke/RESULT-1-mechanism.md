@@ -33,7 +33,7 @@ language's file-scope opener is spelled as a word.
 
 ## The 1x, in one line
 
-Outliner's incremental cost is `(1 − p) × cold` where `p` is the edit's position
+Joints's incremental cost is `(1 − p) × cold` where `p` is the edit's position
 in the file, **except** where the tiling was dropped, and then it is `cold`.
 Both halves of reuse are independently off, for two independent and completely
 separate reasons, and the split across the corpus is exact.

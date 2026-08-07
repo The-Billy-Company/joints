@@ -5,7 +5,7 @@ oracle verdict"* — with the reason column reading *"plumb rule, byte by byte"*
 a row whose plumb count is zero.
 
 `unwindowed` is the `not t_sp[k]` branch of `rack.survey`: *the oracle has nothing
-strictly inside this window here and outliner does*. Its docstring is right that
+strictly inside this window here and joints does*. Its docstring is right that
 the oracle's silence inside a window is not a verdict. What the column cannot say
 is **why** the oracle has nothing inside — and on every one of haskell's 295 runs
 the narrowest oracle bracket covering the window is the oracle's own root.

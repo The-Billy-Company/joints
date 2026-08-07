@@ -10,7 +10,7 @@ before/after on a tail row is worth anything.
 
 ## The three tiers, and what I expect each to say
 
-**Tier 1 — one pinned binary, a private `OUTLINER_WORK`, folios minted once,
+**Tier 1 — one pinned binary, a private `JOINTS_WORK`, folios minted once,
 the board run five times.**
 
 > **Nothing moves.** Every byte column identical on all five runs, including
@@ -60,7 +60,7 @@ tenon lane already suspected it and explicitly declined to claim it).
 
 `standing.py --audit` caches each grammar's verdict in `audit.json` keyed on
 three digests — **folio, binary, source** — and refuses a verdict whose
-generation has moved. All three describe *outliner*. The oracle is the other
+generation has moved. All three describe *joints*. The oracle is the other
 parser in every one of those comparisons and **none of the three names it**.
 
 > A sibling rebuilding one grammar's tree-sitter sources changes `crooked` while

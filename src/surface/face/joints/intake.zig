@@ -2,8 +2,8 @@
 //!
 //! Five verbs used to read a file five ways: two copies of the same block
 //! inside `main.zig`, a third pasted into `parse.zig` and re-exported for
-//! `amend.zig` to borrow, a fourth and fifth inlined in `joints.zig` and
-//! `mint.zig`. All five said the same thing - `outliner: cannot read <path>:
+//! `amend.zig` to borrow, a fourth and fifth inlined in `survey.zig` and
+//! `mint.zig`. All five said the same thing - `joints: cannot read <path>:
 //! <errName>` - which is exactly the danger: five copies of one sentence drift
 //! the moment one of them is edited and the other four are not. This is the
 //! only place that sentence is spelled, and every verb that needs a file's
@@ -13,7 +13,7 @@
 //! not the caller's either, so the caller does not `try` it - the diagnostic
 //! is printed here, on the writer the caller already owns, and `null` is the
 //! whole of what comes back. That also means the diagnostic write itself
-//! cannot abort a run: a verb walking several files (`parse`, `joints`) must
+//! cannot abort a run: a verb walking several files (`parse`, `survey`) must
 //! reach the rest of them even if one path's error line loses a race with a
 //! closed pipe, and a verb reading exactly one file has no "rest" to protect
 //! but should not behave differently on that account. One signature, one
@@ -28,7 +28,7 @@ const std = @import("std");
 /// `path`'s whole contents, or `null` after printing why not to `w`.
 ///
 /// `-` is standard input, spelled the way every other Unix filter spells it,
-/// so `fmt something | outliner parse g.folio -` works without a temp file.
+/// so `fmt something | joints parse g.folio -` works without a temp file.
 /// A named file called `-` is reachable as `./-`, which is also the answer
 /// every other filter gives.
 ///
@@ -40,12 +40,12 @@ pub fn slurp(gpa: std.mem.Allocator, io: std.Io, w: *std.Io.Writer, path: []cons
         var buf: [4096]u8 = undefined;
         var reader = std.Io.File.stdin().readerStreaming(io, &buf);
         return reader.interface.allocRemaining(gpa, .limited(64 << 20)) catch |err| {
-            w.print("outliner: cannot read stdin: {s}\n", .{@errorName(err)}) catch {};
+            w.print("joints: cannot read stdin: {s}\n", .{@errorName(err)}) catch {};
             return null;
         };
     }
     return std.Io.Dir.cwd().readFileAlloc(io, path, gpa, .limited(64 << 20)) catch |err| {
-        w.print("outliner: cannot read {s}: {s}\n", .{ path, @errorName(err) }) catch {};
+        w.print("joints: cannot read {s}: {s}\n", .{ path, @errorName(err) }) catch {};
         return null;
     };
 }

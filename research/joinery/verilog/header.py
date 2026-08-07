@@ -7,7 +7,7 @@ run of forty-four `wire [31:0] dbg_reg_xN = cpuregs[N];` declarations, each
 round losing exactly that line's bytes. A stop that moves to the next line when
 you delete the line it named, and costs you the deleted bytes, is not a wall -
 it is the parser resynchronising at the next statement boundary. Every one of
-those 61 names is `outliner parse`'s failure *location*, and none is its
+those 61 names is `joints parse`'s failure *location*, and none is its
 diagnosis.
 
 Which puts the defect upstream of all of them. The module's body is being
@@ -39,7 +39,7 @@ from named import WALLS  # noqa: E402
 from order import folio_for  # noqa: E402
 from stamp import outcome, take  # noqa: E402
 
-BIN = Path(os.environ["OUTLINER_BIN"])
+BIN = Path(os.environ["JOINTS_BIN"])
 NAME = "verilog"
 SRC = ROOT / "upstream" / "sources" / "picorv32.v"
 

@@ -1,7 +1,7 @@
 # PREDICTION 2 — the numbers, written before the measurement that judges them
 
 Baseline, taken with `.local/lane-seat3/before-bin` against the frozen oracle
-`attest.py freeze seat3`, in its own empty `OUTLINER_WORK`:
+`attest.py freeze seat3`, in its own empty `JOINTS_WORK`:
 
 ```
 grammar   built  square  askew  racked  unframed  crooked%   roots  damage
@@ -105,7 +105,7 @@ Inherited open, from the php lane attacking its own work:
 ## 2g — the folio hazard, obeyed rather than argued with
 
 `tool/order.py::miss` keys freshness on a path plus an mtime, so two pinned
-binaries sharing an `OUTLINER_WORK` read whichever folio was written last, and
+binaries sharing an `JOINTS_WORK` read whichever folio was written last, and
 the error is always flattering because two runs of the same table agree.
 
 **Predicted:** each arm gets its own directory, started empty, and the 28

@@ -95,10 +95,10 @@ for a press change, and that is the finding worth carrying forward.
 They located the bug correctly and diagnosed its home wrongly, which is worth
 saying plainly because it points a fix at the wrong repository.
 
-> *"the cause is not in outliner's press at all"* … *"irregex's compiled
+> *"the cause is not in joints's press at all"* … *"irregex's compiled
 > program"*
 
-**The compiled program is fine. Outliner's serializer of it was not.** The
+**The compiled program is fine. Joints's serializer of it was not.** The
 evidence is that the fix is twelve lines in `src/kernel/lex/lexicon.zig`, this
 repository, and it takes the corpus to thirty of thirty. If irregex's
 determinization were itself nondeterministic - different state numbering,

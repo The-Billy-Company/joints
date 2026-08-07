@@ -3,7 +3,7 @@
 Written before a single grammar outside `upstream/grammars/` was pressed. What
 I had read first: `README.md`, `tool/README.md`, `grammars.toml`'s header,
 `tool/standing.py`'s docstring, `tool/rack.py`'s docstring, and the output shape
-of `outliner grammar` on five corpus grammars (json · scala · kotlin · swift ·
+of `joints grammar` on five corpus grammars (json · scala · kotlin · swift ·
 markdown · haskell) to fix the outcome vocabulary. Nothing off-corpus has been
 fetched or pressed.
 
@@ -15,7 +15,7 @@ different purpose, and I did not choose which languages are on it.
 
 ## The vocabulary, fixed before the sweep
 
-`outliner grammar <grammar.json>` is the press. Its report carries the four
+`joints grammar <grammar.json>` is the press. Its report carries the four
 facts an outcome is made of, and I am naming them now so no bucket can be
 invented after the fact to make a number read better:
 
@@ -36,7 +36,7 @@ invented after the fact to make a number read better:
 
 `unlexable` is a separate bucket because yaml already proves the trap: it
 presses to **0 RESIDUAL** with 113 external terminals, 0 literal, 0 regex, and
-`outliner parse` exits 2 with "no lexable terminal at all". A taxonomy that
+`joints parse` exits 2 with "no lexable terminal at all". A taxonomy that
 called that `clean` would report the project's single hardest stop as a success.
 
 ## P1.1 — we press ≥ 85% of the grammars we can obtain, `clean` or better

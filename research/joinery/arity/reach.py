@@ -44,8 +44,8 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 def binary() -> Path:
-    told = os.environ.get("OUTLINER_BIN")
-    return Path(told) if told else ROOT / "zig-out/bin/outliner"
+    told = os.environ.get("JOINTS_BIN")
+    return Path(told) if told else ROOT / "zig-out/bin/joints"
 
 
 def sections(blob: bytes) -> dict[int, tuple[int, int, int]]:
@@ -161,7 +161,7 @@ def trace(grammar: Path, src: Path) -> bytes:
     r = subprocess.run(
         [str(binary()), "parse", str(grammar), str(src)],
         capture_output=True,
-        env=dict(os.environ, OUTLINER_TRACE="quire"),
+        env=dict(os.environ, JOINTS_TRACE="quire"),
     )
     if not SPLIT.search(r.stderr) and not REFUTED.search(r.stderr):
         raise SystemExit(

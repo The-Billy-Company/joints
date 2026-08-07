@@ -21,7 +21,7 @@ clean.
 is soft.** An extra - a comment, a blank line - attaches wherever a parser
 chooses, and the walk charges every byte of it to whichever spine it isn't on.
 tree-sitter swallows a leading scaladoc into the `function_definition` it
-precedes; outliner keeps it a sibling; neither has misread anything. Scala is
+precedes; joints keeps it a sibling; neither has misread anything. Scala is
 78.7% soft, which moves it from third-worst to behind ocaml. `rack.py soft`
 prints the subtraction so the headline cannot be quoted without meeting it: the
 defensible number is **60,138 bytes, 15.63% of `built`**. On toml's 29 bytes I
@@ -44,7 +44,7 @@ RUN HERE` for verilog, sql and yaml rather than reading its own silence as
 agreement.
 
 **The instruments that lied, both of them mine.** A containment rule that
-dropped tree-sitter's root for reaching past outliner's charged **11,914 bytes,
+dropped tree-sitter's root for reaching past joints's charged **11,914 bytes,
 81.3% of zig**, to a spine that was otherwise identical rung for rung - while
 the bracket-recall column beside it read 99.9%, which is what a byte number
 driven by one wide node looks like. And `inorder` broke same-extent ties

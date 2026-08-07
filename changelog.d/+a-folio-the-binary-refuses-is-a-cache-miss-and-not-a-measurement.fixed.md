@@ -28,7 +28,7 @@ unaccounted press-side field is untouched. `open` refusing a foreign folio is
 that system working. This change is entirely downstream of it: the format is
 still allowed to say no, and the cache now hears it.
 
-Reproduced before it was fixed, with `.local/bench/pin/outliner` (built Aug 4
+Reproduced before it was fixed, with `.local/bench/pin/joints` (built Aug 4
 12:45) as the poison - a real older binary rather than a staged corruption, so
 the event is the actual one. Twelve folios minted with it, all twelve
 `FolioBadVersion` to today's binary, cache mtime 11:40:35 against a binary mtime

@@ -5,7 +5,7 @@ Written **before any measurement**, 2026-08-06T00:20Z, from reading
 only. Each row names what falsifies it.
 
 The finding I am acting on: `research/collate/RESULT-2-cost.md` measures
-outliner's median keystroke gain over re-opening the file at **1x on 17 of 29
+joints's median keystroke gain over re-opening the file at **1x on 17 of 29
 grammars**, and php at **65x**. php is the innocent control.
 
 ## What I knew when I wrote this

@@ -1,6 +1,6 @@
 `collate.py honesty` asserts P4, and it is an identity rather than a statistic:
 `plumb`'s misread bytes are a subset of `built`, `damage` is the complement of
-`built` over the file, so a misread byte cannot be a flagged byte and outliner's
+`built` over the file, so a misread byte cannot be a flagged byte and joints's
 recall over its own misreadings is exactly `0.00` on every grammar forever. The
 board printed that `0.00` on **29 of 29 rows** and read as 29 pieces of
 evidence.
@@ -16,7 +16,7 @@ and the board could not say so because both facts printed `0.00`.
 the summary states the split rather than leaving it to be counted:
 
 ```
-726 bytes outliner reads wrong where the oracle is sound; it flags 0 of them — recall 0.00
+726 bytes joints reads wrong where the oracle is sound; it flags 0 of them — recall 0.00
 3 of 29 row(s) exercise it. The other 26 print `—` rather than `0.00`
 ```
 
@@ -28,5 +28,5 @@ line asks the same question of the sampled population instead - *at least one
 row has a misread byte* - so the guard survives the fix that would dissolve the
 witness, and prints the count it is standing on either way.
 
-Measured on `outliner e51716d6c`, tree `61c93c367`, oracle tree-sitter 0.26.11,
+Measured on `joints e51716d6c`, tree `61c93c367`, oracle tree-sitter 0.26.11,
 29 of 30 rows adjudicated (yaml has no lexable terminal and is `not measured`).

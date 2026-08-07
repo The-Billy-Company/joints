@@ -66,7 +66,7 @@ in the corpus, 611 bytes of 94,657 are structure tree-sitter agrees with.** The
 
 337 distinct spans the oracle frames and we do not. The widest is
 `module_declaration [1863, 71067)` - 69,204 bytes, the whole module - against
-the 3,544 roots outliner hands back, so most of this is the forest-versus-tree
+the 3,544 roots joints hands back, so most of this is the forest-versus-tree
 difference. `rack` already charges that separately: 8,573 of the 12,579 are the
 single widest missing frame on the row (`engulf`), leaving 4,006 that are
 genuinely a construct-by-construct absence. Under it, in descending width:
@@ -77,7 +77,7 @@ genuinely a construct-by-construct absence. Under it, in descending width:
 ### Where the 12,112 racked bytes go
 
 Right leaves under wrong parents, and the widest families name one confusion:
-outliner builds `list_of_variable_decl_assignments` where tree-sitter builds
+joints builds `list_of_variable_decl_assignments` where tree-sitter builds
 `blocking_assignment`, and `list_of_net_decl_assignments` where tree-sitter
 builds `list_of_net_assignments`. It is reading procedural assignments as
 declaration lists. That is a fork-selection question and belongs to the press
@@ -96,7 +96,7 @@ half of the file.
   state 0** that the two should be reconciled by whoever owns `walls.py`. This
   lane does not touch that arithmetic.
 - What this lane can say is that **both claims are about `damage`, and `damage`
-  is outliner's own words about its own forest.** They partition the 63,937
+  is joints's own words about its own forest.** They partition the 63,937
   bytes verilog never built. They are silent about the 30,720 it did build, and
   the oracle's verdict on those is 611 square.
 - So the expected value of converting damage into built, at verilog's own

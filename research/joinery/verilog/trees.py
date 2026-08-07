@@ -27,7 +27,7 @@ from standing import roster  # noqa: E402
 
 def capture(out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
-    binary = os.environ.get("OUTLINER_BIN", str(ROOT / "zig-out/bin/outliner"))
+    binary = os.environ.get("JOINTS_BIN", str(ROOT / "zig-out/bin/joints"))
     for name, src in roster():
         grammar = ROOT / "upstream/grammars" / f"{name}.json"
         r = subprocess.run(

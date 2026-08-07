@@ -1,4 +1,4 @@
-//! `outliner parse` - a file in, a tree out.
+//! `joints parse` - a file in, a tree out.
 //!
 //! The verb the whole package is for. Prints the tree as an s-expression in
 //! tree-sitter's own shape, because the fastest way to know whether two parsers
@@ -15,7 +15,7 @@
 //! than by its name. Anything else that goes wrong in a folio - a version this
 //! binary does not write, a broken seal - is that folio failing and is reported
 //! as such, because retrying it as JSON would turn "minted by an older
-//! outliner" into "malformed grammar" and bury the one fact worth having.
+//! joints" into "malformed grammar" and bury the one fact worth having.
 //!
 //! Thin on purpose. The parse belongs to `kernel/quire`, and the tree comes
 //! back from one call; what is here is presentation and a verdict. Seven
@@ -72,11 +72,11 @@
 //! must not find a status line in it. A parse that accepted and one that died
 //! partway both hand back a tree, so nothing but the verdict tells them apart:
 //!
-//!   outliner: <path>: accepted, 1 root, surveyed 9 of 9 nodes
-//!   outliner: <path>: stray byte at 41, 4 roots, surveyed 31 of 31 nodes
-//!   outliner: <path>: stray byte at 41, 9 roots, mended 3, surveyed 52 of 52 nodes
-//!   outliner: <path>: unexpected number at 3 in state 12, 2 roots, surveyed 6 of 6 nodes
-//!   outliner: <path>: truncated, 4 roots, surveyed 12 of 12 nodes
+//!   joints: <path>: accepted, 1 root, surveyed 9 of 9 nodes
+//!   joints: <path>: stray byte at 41, 4 roots, surveyed 31 of 31 nodes
+//!   joints: <path>: stray byte at 41, 9 roots, mended 3, surveyed 52 of 52 nodes
+//!   joints: <path>: unexpected number at 3 in state 12, 2 roots, surveyed 6 of 6 nodes
+//!   joints: <path>: truncated, 4 roots, surveyed 12 of 12 nodes
 //!
 //! **`surveyed N of M nodes` is on every one of them, and that is the point.**
 //! `Quire.survey` is the only interior check this binary runs, and until it
@@ -90,17 +90,17 @@
 //! early, 2 nothing could be read or pressed.
 
 const std = @import("std");
-const outliner = @import("outliner");
+const joints = @import("joints");
 const intake = @import("intake.zig");
 
-const folio = outliner.folio;
-const import = outliner.press.import;
-const press = outliner.press;
-const g = outliner.press.grammar;
-const lalr = outliner.press.lalr;
-const lr0 = outliner.press.lr0;
-const scanner = outliner.kernel.lex.scanner;
-const quire = outliner.kernel.quire;
+const folio = joints.folio;
+const import = joints.press.import;
+const press = joints.press;
+const g = joints.press.grammar;
+const lalr = joints.press.lalr;
+const lr0 = joints.press.lr0;
+const scanner = joints.kernel.lex.scanner;
+const quire = joints.kernel.quire;
 
 /// Where the tables came from. Both arms hand over the same three things; only
 /// what they cost to obtain differs, and that difference is the whole reason
@@ -171,7 +171,7 @@ pub fn run(
         else if (std.mem.startsWith(u8, a, "--language=")) language = a["--language=".len..] //
         else if (std.mem.startsWith(u8, a, "--mend=")) {
             mend = std.meta.stringToEnum(quire.Mend, a["--mend=".len..]) orelse {
-                try w.print("outliner: --mend wants none, keep, fell or relent, not '{s}'\n", .{
+                try w.print("joints: --mend wants none, keep, fell or relent, not '{s}'\n", .{
                     a["--mend=".len..],
                 });
                 return 2;
@@ -179,13 +179,13 @@ pub fn run(
         } else try paths.append(gpa, a);
     }
     if (paths.items.len == 0) {
-        try w.writeAll("outliner: parse needs at least one source file\n");
+        try w.writeAll("joints: parse needs at least one source file\n");
         return 2;
     }
     // Refused rather than ranked: a caller that asked for two shapes of stdout
     // at once should learn so now, not discover which one silently won.
     if (json and (ranges or scars)) {
-        try w.writeAll("outliner: --json is a whole answer; it does not combine" ++
+        try w.writeAll("joints: --json is a whole answer; it does not combine" ++
             " with --ranges or --scars\n");
         return 2;
     }
@@ -200,10 +200,10 @@ pub fn run(
     const gr = parser.grammar();
 
     var sc = (scanner.Scanner.compile(gpa, gr) catch |err| {
-        try e.print("outliner: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(err) });
+        try e.print("joints: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(err) });
         return 2;
     }) orelse {
-        try e.print("outliner: {s} has no lexable terminal at all\n", .{gr.name});
+        try e.print("joints: {s} has no lexable terminal at all\n", .{gr.name});
         return 2;
     };
     defer sc.deinit();
@@ -211,7 +211,7 @@ pub fn run(
         // Said once, before any tree: a terminal no lexer rule can produce is
         // why ten of the eleven corpus grammars stop partway, and a reader who
         // does not know that reads the stop as a parser bug.
-        try e.print("outliner: {s}: blind to {d} externally scanned terminal(s)\n", .{
+        try e.print("joints: {s}: blind to {d} externally scanned terminal(s)\n", .{
             gr.name, sc.blind.len,
         });
     }
@@ -229,7 +229,7 @@ pub fn run(
         // engine moved swift 49.5% -> 77.0% and julia 21.2% -> 67.2% of the file
         // under a root, on `upstream/sources/{Chunked.swift,set.jl}`. markdown's
         // `entity_reference` still declines - a 16 KB, 2,231-branch alternation.
-        try e.print("outliner: {s}: {d} pattern(s) the engine would not build:", .{
+        try e.print("joints: {s}: {d} pattern(s) the engine would not build:", .{
             gr.name, sc.declined.len,
         });
         for (sc.declined, 0..) |s, i| {
@@ -322,12 +322,12 @@ pub fn load(
                 return null;
             },
             else => {
-                try e.print("outliner: cannot open {s}: {s}\n", .{ path, @errorName(err) });
+                try e.print("joints: cannot open {s}: {s}\n", .{ path, @errorName(err) });
                 return null;
             },
         };
         const bound = folio.bind(gpa, &f) catch |err| {
-            try e.print("outliner: cannot bind {s}: {s}\n", .{ path, @errorName(err) });
+            try e.print("joints: cannot bind {s}: {s}\n", .{ path, @errorName(err) });
             return null;
         };
         return .{ .minted = .{ .mapped = mapped, .bound = bound } };
@@ -335,7 +335,7 @@ pub fn load(
         // Not a folio, so it is a grammar.json until proven otherwise.
         error.FolioBadMagic, error.FolioTooSmall => {},
         else => {
-            try e.print("outliner: {s} does not load: {s}\n", .{ path, @errorName(err) });
+            try e.print("joints: {s} does not load: {s}\n", .{ path, @errorName(err) });
             return null;
         },
     }
@@ -343,20 +343,20 @@ pub fn load(
     const source = intake.slurp(gpa, io, e, path) orelse return null;
     defer gpa.free(source);
     var gr = import.treeSitter(gpa, source) catch |err| {
-        try e.print("outliner: cannot import {s}: {s}\n", .{ path, @errorName(err) });
+        try e.print("joints: cannot import {s}: {s}\n", .{ path, @errorName(err) });
         return null;
     };
     errdefer gr.deinit();
     if (language) |want| {
         if (!std.mem.eql(u8, gr.name, want)) {
-            try e.print("outliner: {s} is the grammar for {s}, not {s}\n", .{
+            try e.print("joints: {s} is the grammar for {s}, not {s}\n", .{
                 path, gr.name, want,
             });
             return null;
         }
     }
     const built = press.tables(gpa, &gr) catch |err| {
-        try e.print("outliner: cannot press {s}: {s}\n", .{ gr.name, @errorName(err) });
+        try e.print("joints: cannot press {s}: {s}\n", .{ gr.name, @errorName(err) });
         return null;
     };
     return .{ .pressed = .{ .grammar = gr, .built = built } };
@@ -372,11 +372,11 @@ fn roster(
     ambiguous: bool,
 ) !void {
     if (ambiguous) {
-        try e.print("outliner: {s} holds {d} languages; say --language=<name>:", .{
+        try e.print("joints: {s} holds {d} languages; say --language=<name>:", .{
             path, v.count(),
         });
     } else {
-        try e.print("outliner: {s} holds no language named {s}; it holds:", .{
+        try e.print("joints: {s} holds no language named {s}; it holds:", .{
             path, language.?,
         });
     }
@@ -581,14 +581,14 @@ fn quoted(w: *std.Io.Writer, name: []const u8) !void {
 /// tree, several are the forest a stop left standing.
 pub fn verdict(
     e: *std.Io.Writer,
-    gr: *const outliner.press.grammar.Grammar,
+    gr: *const joints.press.grammar.Grammar,
     path: []const u8,
     q: *const quire.Quire,
     t: *const lalr.Tables,
     blind: []const g.Symbol,
     found: quire.Quire.Survey,
 ) !void {
-    try e.print("outliner: {s}: ", .{path});
+    try e.print("joints: {s}: ", .{path});
     switch (q.stop) {
         .accepted => try e.writeAll("accepted"),
         .stray => |off| try e.print("stray byte at {d}", .{off}),
@@ -668,7 +668,7 @@ pub fn verdict(
 /// Silent on an accepted parse, where the answer is `whole` and says nothing.
 fn owner(
     e: *std.Io.Writer,
-    gr: *const outliner.press.grammar.Grammar,
+    gr: *const joints.press.grammar.Grammar,
     q: *const quire.Quire,
     t: *const lalr.Tables,
     blind: []const g.Symbol,
@@ -694,7 +694,7 @@ fn owner(
         },
     };
     const found = press.inquest.over(t, gr, wall, blind);
-    try e.print("outliner: {s}: ", .{gr.name});
+    try e.print("joints: {s}: ", .{gr.name});
     try press.inquest.write(found, gr, wall, e);
     try e.writeAll("\n");
 }

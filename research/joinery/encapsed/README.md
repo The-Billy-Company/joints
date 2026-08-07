@@ -45,14 +45,14 @@ specimen failing to be the guard I claimed it was.
 ## The pins every number here was taken against
 
 A path is not a version in this tree, and two pinned binaries sharing an
-`OUTLINER_WORK` will measure one side twice — always flatteringly. So: both
+`JOINTS_WORK` will measure one side twice — always flatteringly. So: both
 halves named, and each arm given its own work directory from empty.
 
 | Half | What | Digest |
 |---|---|---|
-| before | `.local/pin/php-before/bin/outliner` | `93513d7c8`, tree `986eb8ece` |
-| after | `.local/pin/php-after/bin/outliner` | `3aeaca700`, tree `c34fdd082` |
-| falsifier | `.local/pin/php-widened/bin/outliner` | `17dda9b57`, tree `ccfefc0bc` — deliberately wrong, see RESULT-6 |
+| before | `.local/pin/php-before/bin/joints` | `93513d7c8`, tree `986eb8ece` |
+| after | `.local/pin/php-after/bin/joints` | `3aeaca700`, tree `c34fdd082` |
+| falsifier | `.local/pin/php-widened/bin/joints` | `17dda9b57`, tree `ccfefc0bc` — deliberately wrong, see RESULT-6 |
 | oracle | `attest.py freeze encapsed` | php `db2f75824`, tree-sitter 0.26.11 |
 
 The oracle is frozen with `tool/attest.py`, which landed mid-lane and replaces

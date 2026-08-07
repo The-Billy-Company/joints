@@ -20,7 +20,7 @@
 #     erroneous_end_tag [4, 8)
 #       erroneous_end_tag_name [6, 7)
 #
-# outliner produces three roots and no `element` at all - `start_tag`, `text`
+# joints produces three roots and no `element` at all - `start_tag`, `text`
 # and `erroneous_end_tag` side by side, then `truncated; input ended before the
 # start symbol closed`. Every leaf is identical to the oracle's, at identical
 # extents, including the external this specimen was written for. Only the

@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-BIN = ROOT / "zig-out/bin/outliner"
+BIN = ROOT / "zig-out/bin/joints"
 GRAMMARS = ROOT / "upstream/grammars"
 SOURCES = ROOT / "upstream/sources"
 

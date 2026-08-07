@@ -1,5 +1,5 @@
 "Fourteen rows, no collateral" was cleared on thirty-one columns of `damage`,
-`built` and `standing` - every one of them outliner's own words about its own
+`built` and `standing` - every one of them joints's own words about its own
 forest - because all twenty arms of the family read `square 0`. Re-taken with
 `standing.py --audit` paid inside each arm's own work dir, **29 of 30 rows are
 sighted in all twenty-one arms and the clearance holds**: every arm moves

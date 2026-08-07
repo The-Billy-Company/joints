@@ -8,7 +8,7 @@ Short version, for whoever is holding a baseline right now:
 
 ## The two numbers, and why they cannot be subtracted
 
-`standing.py` on this pin (`strandprice`, `outliner 1b4e50ce0`):
+`standing.py` on this pin (`strandprice`, `joints 1b4e50ce0`):
 
 | | verilog |
 |---|---|

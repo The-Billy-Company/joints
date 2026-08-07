@@ -1,7 +1,7 @@
-# flag — can outliner say "this region is untrustworthy"?
+# flag — can joints say "this region is untrustworthy"?
 
 Tree-sitter's `ERROR` node marks a region as not to be trusted, and gives its
-extent. Outliner has mends and damage buckets, and both of them describe bytes
+extent. Joints has mends and damage buckets, and both of them describe bytes
 it **failed** to place. Neither can point at a region it placed **confidently
 and wrongly** — which is where the damage actually is: swift once read
 `/* c\n d */` as a `custom_operator` over a multiplicative expression, with one
@@ -33,7 +33,7 @@ edited.
 ## Files
 
     spans.py    every built byte, filed by what the ORACLE said and by what
-                OUTLINER knew. `score` is the signal table, and it closes with
+                JOINTS knew. `score` is the signal table, and it closes with
                 the NULL — the same slate over guilt scattered at random inside
                 each grammar, which is the only column that can tell a signal
                 reading position from one reading how often it fires. `check`

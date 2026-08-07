@@ -8,7 +8,7 @@ row names what falsifies it.
 
 Measured by me, incidentally, while building the refusal census:
 
-- `outliner` is **1,764,104 bytes**, one binary, no per-grammar native code.
+- `joints` is **1,764,104 bytes**, one binary, no per-grammar native code.
 - Folios on disk: bash 887,376 · c 295,728 · cpp 726,288 · css 71,760 ·
   elixir 246,032. Thirty exist under `.local/standing/`.
 - tree-sitter dylibs already compiled on this machine: html 51,752 ·
@@ -19,7 +19,7 @@ Measured by me, incidentally, while building the refusal census:
   4045 bytes/ms` — about 4 MB/s, excluding process start and dylib load.
 - `tree-sitter parse` takes `--edits "<position> <delcount> <text>"` and
   `--json-summary`, so an incremental comparison can be like for like.
-- `outliner amend <grammar> <file> FROM..TO=TEXT` exists, with `--cold` to
+- `joints amend <grammar> <file> FROM..TO=TEXT` exists, with `--cold` to
   re-read the whole file per edit *for the comparison* — the flag is already
   the right shape for this measurement.
 - The README's claim, unverified here: **252 of 461 declared externals seated
@@ -35,12 +35,12 @@ Measured by me, incidentally, while building the refusal census:
 |---|---|---|
 | Q1 | The folio is smaller than the dylib on **at least 24 of 30**, median ratio **≤ 0.40** | fewer than 24, or median > 0.40 |
 | Q2 | **At least one grammar where the folio is bigger.** A claim with no losing row in it has not been measured | every one of the thirty is smaller |
-| Q3 | Grammar to usable artifact — `outliner mint` against `tree-sitter generate` plus the C compile — outliner is **at least 5× faster at the median** | median speedup < 5× |
-| Q4 | **Cold parse throughput is a loss, by at least 2× at the median.** The incumbent has had ten years of it and outliner's own README says not to reach for it | outliner is within 2×, or faster |
-| Q5 | Incremental re-parse is a **worse** loss than cold parse — a larger ratio — because tree-sitter's whole design is arranged around it and outliner's `amend` is new | the incremental ratio is smaller than the cold ratio |
+| Q3 | Grammar to usable artifact — `joints mint` against `tree-sitter generate` plus the C compile — joints is **at least 5× faster at the median** | median speedup < 5× |
+| Q4 | **Cold parse throughput is a loss, by at least 2× at the median.** The incumbent has had ten years of it and joints's own README says not to reach for it | joints is within 2×, or faster |
+| Q5 | Incremental re-parse is a **worse** loss than cold parse — a larger ratio — because tree-sitter's whole design is arranged around it and joints's `amend` is new | the incremental ratio is smaller than the cold ratio |
 | Q6 | **Zero of thirty folios need a C toolchain** and at least **20 of 30** tree-sitter grammars need a hand-written external scanner compiled per grammar | any folio needs a compiler, or fewer than 20 grammars ship a scanner |
 | Q7 | The 252/461 headline **does not survive being asked per grammar**: fewer than half of the thirty have *every* declared external seated, so a grammar-weighted rate is materially below 54.7% | at least 15 of 30 seat all of theirs |
-| Q8 | **My speed instrument flatters outliner on its first run**, by counting a cost on one side and not the other — process start, dylib load, folio load, or tree printing | the first numeric run is like-for-like on the first reading |
+| Q8 | **My speed instrument flatters joints on its first run**, by counting a cost on one side and not the other — process start, dylib load, folio load, or tree printing | the first numeric run is like-for-like on the first reading |
 
 ## Why each
 
@@ -66,7 +66,7 @@ seated (yaml) and a grammar with 12 seated none (php) both count once in the
 denominator that matters to a user, who has one language and not 461 tokens.
 
 **Q8.** The obvious asymmetry: `tree-sitter parse` is a process that starts,
-loads a dylib, parses, and prints a tree; `outliner parse --quiet` is a process
+loads a dylib, parses, and prints a tree; `joints parse --quiet` is a process
 that starts, loads a folio, parses, and prints nothing. Timing both with a
 shell clock measures four things and reports one.
 

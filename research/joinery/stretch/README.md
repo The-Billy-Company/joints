@@ -16,7 +16,7 @@ This lane asks the second parser instead. Tree-sitter's answer is **yes, and it
 is my rule too**: a parent inherits its first child's padding and swallows every
 later child's, each child's node starts *after* its own padding, and a node ends
 at `start + size` - so on tree-sitter's own tree the space between two tokens is
-inside every ancestor and inside no leaf. Outliner's `quire` says the same thing
+inside every ancestor and inside no leaf. Joints's `quire` says the same thing
 in its own comment and implements it by refusing to let a child that consumed
 nothing set the start.
 

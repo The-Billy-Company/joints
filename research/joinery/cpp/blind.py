@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """Where is `damage` blind? One row per grammar, both columns beside each other.
 
-`damage` is outliner's own words about its own forest; `square` is the only
+`damage` is joints's own words about its own forest; `square` is the only
 column that is a claim about a second parser. A row can be quiet on the first
 and ruinous on the second exactly when a wrong reduction is still a reduction -
 so this joins the two and sorts by the gap between them.
 
-The press census beside it (`outliner grammar`) is the third column, because a
+The press census beside it (`joints grammar`) is the third column, because a
 grammar whose author declared many conflicts is a grammar tree-sitter forks the
 stack in and we do not.
 
 Read-only: it re-reads a board `rack.py run --json` already wrote and shells
-`outliner grammar`, which builds a table in memory and prints its shape.
+`joints grammar`, which builds a table in memory and prints its shape.
 
     python3 research/joinery/cpp/blind.py .local/cpplane/rack-board.json
 """
@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-BIN = Path(os.environ.get("OUTLINER_BIN", ROOT / "zig-out" / "bin" / "outliner"))
+BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
 GRAMMARS = ROOT / "upstream" / "grammars"
 
 CONTEST = re.compile(r"contested\s+(\d+) cells")

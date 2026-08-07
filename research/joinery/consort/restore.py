@@ -32,12 +32,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 # The copy happens BEFORE `plumb` and `standing` are imported, because both
-# read `OUTLINER_WORK` at module load. An arm is its work dir; pointing the
+# read `JOINTS_WORK` at module load. An arm is its work dir; pointing the
 # import at the adverse one is what makes this a whole second arm rather than
 # a script writing into somebody's cache.
-ARM = Path(os.environ["OUTLINER_WORK"]) if os.environ.get("OUTLINER_WORK") else None
+ARM = Path(os.environ["JOINTS_WORK"]) if os.environ.get("JOINTS_WORK") else None
 if ARM is None:
-    print("restore.py: no OUTLINER_WORK - arm first: eval \"$(python3 tool/pin.py arm X)\"",
+    print("restore.py: no JOINTS_WORK - arm first: eval \"$(python3 tool/pin.py arm X)\"",
           file=sys.stderr)
     raise SystemExit(2)
 BENT = ARM.parent / f"{ARM.name}-borrowing"
@@ -45,7 +45,7 @@ BENT.mkdir(parents=True, exist_ok=True)
 for got in ARM.iterdir():
     if got.is_file() and got.name != "audit.json":
         shutil.copy2(got, BENT / got.name)
-os.environ["OUTLINER_WORK"] = str(BENT)
+os.environ["JOINTS_WORK"] = str(BENT)
 
 sys.path.insert(0, str(ROOT / "tool"))
 
@@ -110,7 +110,7 @@ def main() -> int:
           + " · ".join(f"{n} {w}" for n, w in sorted(over.items(), key=lambda kv: -kv[1])))
 
     ran = subprocess.run([sys.executable, "tool/standing.py"], cwd=ROOT, text=True,
-                         capture_output=True, env={**os.environ, "OUTLINER_WORK": str(BENT)})
+                         capture_output=True, env={**os.environ, "JOINTS_WORK": str(BENT)})
     said = [ln for ln in ran.stdout.splitlines() if ln.startswith(("CHECK", "**BROKEN**"))]
     print("\nthe board, reading it:\n")
     for ln in said:

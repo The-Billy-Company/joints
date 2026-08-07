@@ -11,7 +11,7 @@ elixir    46,089   46,089        0    100.0%   23,879   51.8%
 php and html are finished. elixir builds every byte of `router.ex` and derives
 22,210 of them under parents tree-sitter does not use - 48% of the file. `damage`
 and `standing` are structurally incapable of saying so, because both are
-outliner's own words about outliner's own forest, and the reader who copies that
+joints's own words about joints's own forest, and the reader who copies that
 row into a page copies a bare zero.
 
 **`damage 0` is not one fact.** It is *audited and clean* on php, and it is
@@ -42,5 +42,5 @@ Three more things fall out of the same distinction:
   stays silent rather than green when there is no corroborated row to exhibit
   it, because a check that passes over an empty set is the shape being fixed.
 
-Measured on `outliner e51716d6c`, tree `61c93c367`, no oracle - which is exactly
+Measured on `joints e51716d6c`, tree `61c93c367`, no oracle - which is exactly
 why every `damage` column on it now reads `—` or a charge and never a clearance.

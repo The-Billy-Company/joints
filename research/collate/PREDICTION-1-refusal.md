@@ -38,31 +38,31 @@ I had **not** run any oracle myself when this was written.
 
 1. **Refusal census.** For every one of the thirty corpus files, tree-sitter's
    whole tree, and the union of bytes under an `ERROR` or `MISSING` node —
-   over the *whole file*, not clipped to outliner's `built`. Symmetrically,
-   outliner's own damage (`orphan + rubble + spoil`) and its mend count.
+   over the *whole file*, not clipped to joints's `built`. Symmetrically,
+   joints's own damage (`orphan + rubble + spoil`) and its mend count.
 2. **What survives inside a refusal.** For the ERROR regions, the named
    descendants tree-sitter still hands back inside them, and the bytes they
    cover. A root-level ERROR is not the same claim as an empty tree.
-3. **Hand adjudication.** A sample of outliner's constructs inside the ERROR
+3. **Hand adjudication.** A sample of joints's constructs inside the ERROR
    region of `picorv32.v`, read against the Verilog grammar itself, each
    scored right / wrong / neutral by hand and written out so a reader can
    disagree with me case by case.
 
 | | prediction | falsified by |
 |---|---|---|
-| P1 | tree-sitter produces an `ERROR` or `MISSING` node on **at least 5** of the thirty corpus files, more than the two `plumb` sees, because `plumb` only looks inside outliner's `built` and a file outliner barely builds hides the oracle's own damage | fewer than five files carry one |
+| P1 | tree-sitter produces an `ERROR` or `MISSING` node on **at least 5** of the thirty corpus files, more than the two `plumb` sees, because `plumb` only looks inside joints's `built` and a file joints barely builds hides the oracle's own damage | fewer than five files carry one |
 | P2 | **tree-sitter's root ERROR on `picorv32.v` is not empty**: named descendants under it cover **≥ 50%** of the file. "Tree-sitter produces nothing usable for that file" is the brief's framing and I expect it to be wrong — the honest reading is that tree-sitter hands over structure *and says it is untrustworthy* | named descendants under ERROR cover < 50% of the file |
-| P3 | Of a hand-adjudicated sample of outliner constructs inside that region, **fewer than half are right**. The candidate win is mostly a gap in improvement's clothing | ≥ 50% of the sample adjudicates right |
-| P4 | Outliner's **self-report recall over its own misreadings is 0.00 by construction** on every grammar: `plumb`'s misread bytes are a subset of `built`, and `built` is disjoint from `damage`, so no misread byte can ever be a flagged byte. This is a structural property, not a measurement, and I expect to prove it as an identity rather than a statistic | any grammar reports a misread byte that also lies in `orphan + rubble + spoil` |
-| P5 | On **php** — the exhibit against us — tree-sitter flags **0 bytes** of `Str.php` as ERROR while outliner misreads 32,615 and reports 87.2% standing. So the honesty axis on php is a **gap**, and not a close one | tree-sitter's tree over `Str.php` contains an ERROR or MISSING node |
-| P6 | There is **at least one** file where the comparison runs the other way: tree-sitter ERRORs over bytes outliner both builds *and* builds right (`plumb`-clean under adjudication). If P6 fails, the entire candidate win is empty and the honest scoreboard says so | no file has a single adjudicated-right outliner construct inside an oracle ERROR |
+| P3 | Of a hand-adjudicated sample of joints constructs inside that region, **fewer than half are right**. The candidate win is mostly a gap in improvement's clothing | ≥ 50% of the sample adjudicates right |
+| P4 | Joints's **self-report recall over its own misreadings is 0.00 by construction** on every grammar: `plumb`'s misread bytes are a subset of `built`, and `built` is disjoint from `damage`, so no misread byte can ever be a flagged byte. This is a structural property, not a measurement, and I expect to prove it as an identity rather than a statistic | any grammar reports a misread byte that also lies in `orphan + rubble + spoil` |
+| P5 | On **php** — the exhibit against us — tree-sitter flags **0 bytes** of `Str.php` as ERROR while joints misreads 32,615 and reports 87.2% standing. So the honesty axis on php is a **gap**, and not a close one | tree-sitter's tree over `Str.php` contains an ERROR or MISSING node |
+| P6 | There is **at least one** file where the comparison runs the other way: tree-sitter ERRORs over bytes joints both builds *and* builds right (`plumb`-clean under adjudication). If P6 fails, the entire candidate win is empty and the honest scoreboard says so | no file has a single adjudicated-right joints construct inside an oracle ERROR |
 | P7 | **My own instrument lies first, in the direction that makes this lane look necessary.** Concretely: the first numeric run of the refusal census reports at least one file as oracle-ERROR that is really my own harness failing — a build, a printer disagreement, or a timeout — read as a refusal | the first numeric run's ERROR set contains no harness artefact |
 | P8 | Counting bytes under ERROR is itself a flattering metric for us, because an ERROR *root* charges the whole file. So the ERROR-byte total across the thirty will be **dominated by ≤ 2 files at ≥ 80%** of it, and any headline built on the raw total is one file wearing a corpus number — the same shape `plumb` found in php | the top two files are less than 80% of the ERROR byte total |
 
 ## Why each
 
 **P1.** `plumb` clips to `built`. verilog and sql are the two grammars where
-outliner builds enough *and* tree-sitter fails; a file where outliner builds
+joints builds enough *and* tree-sitter fails; a file where joints builds
 almost nothing (haskell at 23.8% covered, yaml at zero) could have an oracle
 ERROR that `plumb` never sees, because there is no built byte underneath it to
 report. The census is over whole files, so it can only go up.
@@ -108,8 +108,8 @@ scoreboard that leads with the total is doing what `unbound` did.
 **How many bytes the improvement is worth.** That is the number this lane
 exists to produce and predicting it would give the instrument a target to
 agree with. What is fixed in advance instead is the *rule*: a byte counts
-toward an improvement only if (a) tree-sitter refuses it, (b) outliner builds
-it, and (c) the structure outliner builds there is adjudicated right by hand
+toward an improvement only if (a) tree-sitter refuses it, (b) joints builds
+it, and (c) the structure joints builds there is adjudicated right by hand
 against the language's own grammar, with the adjudication written out. Bytes
 failing (c) are a gap, and bytes I did not adjudicate are neither.
 
@@ -118,7 +118,7 @@ failing (c) are a gap, and bytes I did not adjudicate are neither.
 Both sides, both known independently of the instrument:
 
 - **must be red** — `research/joinery/specimen/swift/multiline-comment.swift`.
-  Outliner reads that comment as arithmetic with zero mends; tree-sitter reads
+  Joints reads that comment as arithmetic with zero mends; tree-sitter reads
   it as a `multiline_comment`. Under my adjudication rule this file must score
   as a **gap** and must not appear anywhere in an improvements column. An
   instrument that scores it a win is broken in exactly the way this lane

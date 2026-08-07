@@ -118,5 +118,5 @@ half and a vacuous one for the runtime half. Both are needed and neither
 substitutes.
 
 **Not judged on verilog.** It is 100% `unjudged` while its oracle's CST and XML
-disagree, so its only live column is `damage`, and `damage` is outliner's own
+disagree, so its only live column is `damage`, and `damage` is joints's own
 words about its own forest. Verilog rows are reported and not scored.

@@ -20,7 +20,7 @@ place a real program leans on it, we stop.
 
 Reduced to four lines, it is not about `return` at all:
 
-| probe | outliner |
+| probe | joints |
 |---|---|
 | `const a = 1;` / `const b = 2;` | accepted, 1 root |
 | `const a = 1` / `const b = 2` | stray byte at 12 |

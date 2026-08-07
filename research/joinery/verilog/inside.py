@@ -41,7 +41,7 @@ from order import folio_for  # noqa: E402
 from procedural import hollow, procedurals, score  # noqa: E402
 from stamp import take  # noqa: E402
 
-BIN = Path(os.environ["OUTLINER_BIN"])
+BIN = Path(os.environ["JOINTS_BIN"])
 SRC = ROOT / "upstream" / "sources" / "picorv32.v"
 
 

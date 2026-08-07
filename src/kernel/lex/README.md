@@ -116,7 +116,7 @@ string_content: token.immediate(prec(1, /[^\\"\n]+/))
 which is legal only between quotes. Asked unconditionally, it is longest almost
 everywhere. Over `{"a": [1, true, null], "b": "x"}` it takes `: [1, true,
 null], ` in one bite, and thirty-two bytes that should be twenty-one tokens
-become thirteen. `outliner lex` prints exactly this, which is the cheapest way
+become thirteen. `joints lex` prints exactly this, which is the cheapest way
 to watch it happen.
 
 So `Scanner.next` takes an `Expected` - the terminals the parse state will
@@ -132,9 +132,9 @@ separate folders rather than one lexer that also parses.
 
 ## What the corpus says
 
-The measure that means anything is the state-directed one - `outliner joints
+The measure that means anything is the state-directed one - `joints survey
 <grammar.json> <file>`, which lexes from the live LALR row. Over
-`research/joinery/corpus/`, blind counts from `outliner lex`:
+`research/joinery/corpus/`, blind counts from `joints lex`:
 
 | Grammar | Where the walk stops, and whose problem that is |
 |---|---|

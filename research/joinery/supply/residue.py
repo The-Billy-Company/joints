@@ -7,7 +7,7 @@ ours and not the corpus's, with no grammar-gap excuse available. This lane gave
 the runtime insertion. This file asks what is left.
 
 Every refusal the arm meets falls in exactly one of five places, and the
-runtime now says which on `OUTLINER_TRACE=quire`:
+runtime now says which on `JOINTS_TRACE=quire`:
 
   supplied  one literal made the refused token readable again; a ghost went in
   spurned   *several* would have. The table declined to say which, and so did
@@ -151,9 +151,9 @@ def run(binary: Path, art: Path, src: Path, mend: str, supply: bool,
         trace: bool) -> tuple[str, str]:
     env = dict(os.environ)
     if trace:
-        env["OUTLINER_TRACE"] = "quire"
+        env["JOINTS_TRACE"] = "quire"
     else:
-        env.pop("OUTLINER_TRACE", None)
+        env.pop("JOINTS_TRACE", None)
     argv = [str(binary), "parse", str(art), str(src), "--scars", f"--mend={mend}"]
     if not supply:
         argv.append("--no-supply")
@@ -289,7 +289,7 @@ def main(argv: list[str]) -> int:
     if args.selftest:
         return selftest()
 
-    work = Path(os.environ.get("OUTLINER_WORK", ROOT / ".local" / "work"))
+    work = Path(os.environ.get("JOINTS_WORK", ROOT / ".local" / "work"))
     picked = [c for c in plumb.slate() if args.all or c.name in TWELVE]
     rows = [r for case in picked if (r := row(case, work, order.BIN, args.mend))]
     if not rows:

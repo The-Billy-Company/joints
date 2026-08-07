@@ -497,7 +497,7 @@ test "scanner: a terminal only an unreachable extra spells is not offered withou
     // ever hold `[^\n]*`; the state-directed path is therefore already right
     // about it for free. The state-free path has no set to be right with, so it
     // offered the whole slate - and `[^\n]*` out-matches `word` at every offset,
-    // which made "aa bb" one token and made `outliner lex` on a rust file hand
+    // which made "aa bb" one token and made `joints lex` on a rust file hand
     // back its first line whole, never seeing `fn`.
     //
     // The narrowing is worth having because it is not a guess. A terminal no

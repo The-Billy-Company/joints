@@ -1,8 +1,8 @@
 # Result 2 — how many readings a repair throws away
 
-Taken on `outliner 1885792a7` · tree `4f018b60f` (pin) · oracle `d85e736fa`
+Taken on `joints 1885792a7` · tree `4f018b60f` (pin) · oracle `d85e736fa`
 (30 of 30 live, 30 attributed). No source changed to get any number here; every
-figure below comes from `outliner parse --scars` and `OUTLINER_TRACE=quire`,
+figure below comes from `joints parse --scars` and `JOINTS_TRACE=quire`,
 both of which the runtime already emitted.
 
 This lane exists to answer one question the ranked work list has been carrying
@@ -145,7 +145,7 @@ is falsifiable from outside: a stale state would sometimes *admit* the very
 symbol it is reported as refusing.
 
 First run said 0 of 132 distinct (symbol, state) pairs, both grammars. It was
-wrong. `outliner state` refuses a folio - it exits 2 and prints nothing - and
+wrong. `joints state` refuses a folio - it exits 2 and prints nothing - and
 my check read that silence as "does not admit". **The zero was the tool's
 silence, not the table's answer**, which is the exact trap `TESTING.md` warns
 about and the same

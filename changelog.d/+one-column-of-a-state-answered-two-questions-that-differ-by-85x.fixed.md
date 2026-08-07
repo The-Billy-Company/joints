@@ -1,4 +1,4 @@
-`outliner state` printed one flat list of every terminal a state acts on, with
+`joints state` printed one flat list of every terminal a state acts on, with
 the verb in a second column. Complete and accurate, and worse than a known
 liar: "the terminals of this state" has two answers, and for swift's
 `_implicit_semi` they differ by 85x — 20 states admit it by shift against 1,712

@@ -10,7 +10,7 @@ for opposite reasons and recorded both under one name.
 Both still fork, so this is byte-identical on every instrument: all 30 rows of
 `tool/standing.py` are unchanged against the same tree with the class collapsed
 (only the cache lines move, because a new binary re-mints the folios).
-What changes is that `outliner state` can now tell two cells apart that used to
+What changes is that `joints state` can now tell two cells apart that used to
 print the same word, and that is the whole reason the rest of this is writable.
 
 **verilog `[89368,89412)` is attributed to a cell.** The witness is 193 bytes at
@@ -33,7 +33,7 @@ reading left. It shifts into state 819, whose entire shift row is
 `simple_identifier` and `\`. `offer` unions one reading, the scanner gets a
 two-symbol slate, `parameter`'s automaton never runs, and by surviving the
 orphan also suppresses the mend that used to rebuild the declaration whole.
-Under `OUTLINER_TRACE=quire` it is two lines: `split: state 324 on , at 125`
+Under `JOINTS_TRACE=quire` it is two lines: `split: state 324 on , at 125`
 and `refuted: state 126 on , at 125`.
 
 `[80096,80105)` is the same word in the same file and has never drifted,

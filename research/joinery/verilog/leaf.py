@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The leaf gap: bytes a real SystemVerilog lexer names and we stand nothing on.
 
-`judge.py --coverage` prints the headline — outliner leafs ~59% of the bytes
+`judge.py --coverage` prints the headline — joints leafs ~59% of the bytes
 Verible calls tokens, tree-sitter 98.8%, and our leaf set is a strict subset of
 theirs. That is a deficit with no shape. This gives it one.
 
@@ -69,7 +69,7 @@ def elements(text: str) -> list[tuple[int, int, int]]:
     """Top-level element spans of every `{...}` group, each with its group's `}`.
 
     A hand-written scan rather than a parse, because the thing being measured is
-    what happens when the parse is wrong: asking outliner to find its own
+    what happens when the parse is wrong: asking joints to find its own
     concatenations would make the counterfactual a function of the defect. It
     knows only what a lexer knows — strings, both comment shapes, and the three
     bracket pairs — which is enough to say where one element of a brace group
@@ -288,7 +288,7 @@ def report(g: Gap, top: int, only: str, as_json: bool) -> int:
     print(f"\n# leaf gap — {g.case.name}  {g.case.source.name}  {g.size} B")
     if ref is not None:
         print(f"  verible: {sum(ref)} B carry a non-blank token, in {len(g.tok)} tokens")
-    print(f"  outliner leafs {sum(g.ours)} B · tree-sitter {sum(g.theirs)} B"
+    print(f"  joints leafs {sum(g.ours)} B · tree-sitter {sum(g.theirs)} B"
           f" · DEFICIT {gap} B")
     if ref is not None:
         print(f"  of verible's token bytes we stand a leaf on {covered(g)}"

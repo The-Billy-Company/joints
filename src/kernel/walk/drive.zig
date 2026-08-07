@@ -1,6 +1,6 @@
 //! The ordinary parse, kept on purpose.
 //!
-//! Nothing in outliner's pitch is about walking a file left to right — that is
+//! Nothing in joints's pitch is about walking a file left to right — that is
 //! the thing the monoid is supposed to replace. This file exists anyway, for
 //! two reasons that are the same reason.
 //!

@@ -8,7 +8,7 @@ Scores `PREDICTION-2-mechanism.md` (P4–P6) and `PREDICTION-4-declared.md`
 **go** — `fmt.Print("x")`, seated as `specimen/go/selector-field.go`:
 
 ```
-  outliner                          tree-sitter
+  joints                          tree-sitter
   type_conversion_expression        call_expression
     qualified_type                    selector_expression
       package_identifier "fmt"          operand: identifier "fmt"
@@ -23,7 +23,7 @@ Same bytes, opposite meaning: convert `"x"` to the type `fmt.Print`, or call
 **python** — `print(x)`, seated as `specimen/python/print-as-statement.py`:
 
 ```
-  outliner                          tree-sitter
+  joints                          tree-sitter
   print_statement [0, 8)            call [0, 8)
     "print"                           function: identifier "print"
     parenthesized_expression          arguments: argument_list
@@ -46,13 +46,13 @@ Under `print_statement`, `print` is not a reference and `x` is not an argument.
 The go arity pair is the proof that a fork exists. A conversion takes exactly
 one operand; give it none or two and that limb dies, and the call limb — which
 was carried the whole time — is the one left standing. Both readings are alive
-in the table, the input kills one, and outliner reports the survivor. On one
+in the table, the input kills one, and joints reports the survivor. On one
 argument neither dies and the tie has to be broken by something else.
 
-`int(x)` is the control I did not expect: outliner reads the one input that
+`int(x)` is the control I did not expect: joints reads the one input that
 really *is* a conversion as a `call_expression`, agreeing with the oracle,
 because tree-sitter-go deliberately does not distinguish `f(x)` from a
-conversion without a selector. So outliner is not reaching greedily for
+conversion without a selector. So joints is not reaching greedily for
 `type_conversion_expression`. It reaches for it only where the `.` puts a
 second derivation on the table.
 
@@ -92,7 +92,7 @@ of construct, three different places in the pipeline.
 rank over the finished subtrees and the call wins by exactly one point. My "go
 resolves by GLR error-driven survival rather than by a rank" was half right —
 survival is what the arity controls show, and it is *also* ranked, and the rank
-is what settles the one-argument case. Outliner spends the same −1 per cell at
+is what settles the one-argument case. Joints spends the same −1 per cell at
 table-build time, which is not the same arithmetic and does not reach the same
 answer.
 
@@ -105,7 +105,7 @@ elixir state 272 do    read on
 ```
 
 `declared` on both, exactly as predicted, and `residual` on neither. So
-`joints`' `residual = 0` really is the press reporting that it answered every
+`survey`' `residual = 0` really is the press reporting that it answered every
 question the grammar author asked it not to answer. Elixir has no verdict of
 any class, which P10 did not allow for.
 
@@ -158,6 +158,6 @@ and python's 27 bytes are the same size and mean completely different things.
 
 Three of the four are the same *question* — an ambiguity the grammar author
 declared so that a GLR parser would carry both readings and let the input
-decide — and outliner answers it in three different places, none of which is
+decide — and joints answers it in three different places, none of which is
 where the input is. Two get answered by a ladder that ranks a cell; one gets
 answered by LALR merging deleting the alternative before any ladder runs.

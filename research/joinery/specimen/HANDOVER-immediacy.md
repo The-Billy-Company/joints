@@ -23,7 +23,7 @@ _immediate_paren  _immediate_bracket  _immediate_brace
 _immediate_string_start  _immediate_command_start
 ```
 
-Each says *this bracket is glued to the token before it*. `outliner lex` names
+Each says *this bracket is glued to the token before it*. `joints lex` names
 all five; the gate reports julia at `declared 16, seated 11`.
 
 ## What it costs, in constructs the corpus cannot see
@@ -50,7 +50,7 @@ and is not one. The hand never gets to start: the `$(` at byte 11 walls, and
 what survives is the inner string the recovery happened to find. A reader
 glancing at `spans string_literal 10 19 - got [13, 17)` would diagnose "the
 outer string closed at the inner opener", which is the classic stateless
-failure and the wrong answer here. `outliner parse`'s failure state being a
+failure and the wrong answer here. `joints parse`'s failure state being a
 location and not a diagnosis is exactly the trap; the stderr line naming
 `_immediate_paren` is what settles it.
 

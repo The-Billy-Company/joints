@@ -1,9 +1,9 @@
 # Result 2 — size, build, speed, and the keystroke
 
-**Outliner wins size and build by a wide margin, loses cold parse by 2.9x, and
+**Joints wins size and build by a wide margin, loses cold parse by 2.9x, and
 loses the keystroke by 5.6x — and the keystroke loss is not a ratio, it is a
 category.** On 17 of 29 grammars a keystroke costs what re-opening the file
-costs. Outliner is not incremental on most of the corpus, and incremental
+costs. Joints is not incremental on most of the corpus, and incremental
 re-parse is the reason editors adopted tree-sitter.
 
 That is the paragraph that contradicts the brief, and it is first because it is
@@ -25,7 +25,7 @@ inside the timed region.
 | Q5 | the incremental ratio is worse than the cold ratio | **held, and understated** — 5.6x against 2.9x, with a shape change underneath |
 | Q6 | 0 folios need a compiler, ≥20 of 30 grammars ship a scanner | **held** — 22 of 28 ship one, 486,301 bytes of C |
 | Q7 | fewer than 15 of 30 seat every declared external | **held by one** — 14 of 30 |
-| Q8 | my speed instrument flatters outliner on its first run | **held** — see below |
+| Q8 | my speed instrument flatters joints on its first run | **held** — see below |
 
 ## Improvement — the artifact is a third the size, and no compiler touches it
 
@@ -46,14 +46,14 @@ verilog's is 18.3 MB; a folio is data and a dylib is machine code, and that is
 the whole mechanism.
 
 **But Q2 was right to look for a losing row, and the per-grammar ratio hides
-one.** Each side has a fixed cost the ratio omits: outliner's 1,764,104-byte
+one.** Each side has a fixed cost the ratio omits: joints's 1,764,104-byte
 binary against libtree-sitter. At one language tree-sitter is smaller; the
 crossover is two.
 
 ```
-1 language  (median)   outliner 2.07 MB   tree-sitter ~1.6 MB    tree-sitter
-2 languages            outliner 2.38 MB   tree-sitter ~2.8 MB    outliner
-all thirty             outliner 16.0 MB   tree-sitter  76.0 MB   outliner
+1 language  (median)   joints 2.07 MB   tree-sitter ~1.6 MB    tree-sitter
+2 languages            joints 2.38 MB   tree-sitter ~2.8 MB    joints
+all thirty             joints 16.0 MB   tree-sitter  76.0 MB   joints
 ```
 
 (libtree-sitter is not measured here — only the 20 MB CLI is on this machine,
@@ -71,7 +71,7 @@ build  median 19.6x faster to mint
        the whole slate 8.6s against 212.1s
 ```
 
-`outliner mint` is one in-process press over `grammar.json`. Tree-sitter is
+`joints mint` is one in-process press over `grammar.json`. Tree-sitter is
 `tree-sitter generate` writing a `parser.c` and then a C compiler. sql is 916 ms
 against 61.7 s (67x), julia 115 ms against 16.8 s (146x), ocaml 92x, kotlin 83x.
 
@@ -90,14 +90,14 @@ parse  median 2.9x tree-sitter's time per byte
        faster on 1 of 27 resolvable rows; worst latex at 31.7x
 ```
 
-Both sides on comparable clocks: outliner from the **slope** of parsing the same
+Both sides on comparable clocks: joints from the **slope** of parsing the same
 file K times in one process (which charges it the file open, the read, the tree
 build and the free), tree-sitter from its own `--stat` bytes/ms (which charges
 it only `ts_parser_parse`). The asymmetry runs against us on purpose.
 
 The worst rows are the handover, and they cluster: **latex 31.7x, swift 14.3x,
 zig 12.8x, kotlin 12.4x, ocaml 12.4x, julia 9.8x, elixir 6.5x.** Everything else
-is between 1.0x and 4x. The single row outliner wins is **html at 0.96x**, a
+is between 1.0x and 4x. The single row joints wins is **html at 0.96x**, a
 dead heat on a 72 KB file — call it a tie rather than a win.
 
 json is printed as `noise` and excluded: 774 bytes came back at 254,965 B/ms,
@@ -116,7 +116,7 @@ theirs median    98 us per keystroke,  8x cheaper than re-opening
 ```
 
 The ratio is the smaller half of the story. **The `gain` column is the story:**
-outliner's median gain from having an existing tree is **1x**. On 17 of 29
+joints's median gain from having an existing tree is **1x**. On 17 of 29
 grammars, typing one character costs the same as opening the file.
 
 ```
@@ -133,14 +133,14 @@ verilog  94,657B    57,555 us/key   gain 1x   theirs 11,997 us→    5x
 30 ms per keystroke on a 28 KB Swift file is a dropped frame on every character.
 Tree-sitter answers the same edit in 73 microseconds.
 
-Both numbers are each side's **own inner clock** — `outliner amend` prints
+Both numbers are each side's **own inner clock** — `joints amend` prints
 microseconds per edit, `tree-sitter parse -t` prints one `Edit:` total — because
 `tree-sitter parse` spends ~295 ms per path resolving the language, which would
 drown a 10-microsecond re-parse three hundred times over. Twenty-four edits per
 file, one character each, inserted into identifier interiors so the edit grows a
 real token and keeps both files valid.
 
-**Handover:** the mechanism is visible in `amend`'s own report. Where outliner is
+**Handover:** the mechanism is visible in `amend`'s own report. Where joints is
 incremental it says `2/307 leaves reminted`; where it is not, it reminted
 everything. The owning layer is whatever decides the re-mint window — `amend`
 already takes `--policy=prove|snap|whole`, so the knob exists and this
@@ -193,7 +193,7 @@ declared 461   seated 263 (57% of declared)
 ```
 
 The README's headline is 252 of 461; it is now **263 of 461**. Measured with
-`tool/specimen.py coverage`, which is the authority here — **`outliner grammar`
+`tool/specimen.py coverage`, which is the authority here — **`joints grammar`
 is not.** Its `note: external scanner tokens cannot be lexed here` lists all 33
 of swift's externals, while 22 of them are in fact seated; that note is about
 the ordinary lexer, not about troupe seating, and reading it as a seating census
@@ -220,7 +220,7 @@ yaml. `tree-sitter generate` succeeds; the compile does not, because
 `scanner.c` does `#include _file(YAML_SCHEMA)` and no fetcher can see a
 macro-constructed include. `fatal error: 'schema.core.c' file not found`.
 
-This is labelled a **gap on our side too**, because outliner's yaml row is
+This is labelled a **gap on our side too**, because joints's yaml row is
 0 built of 18,935 bytes — it seats all 113 externals and still builds nothing.
 Neither system parses yaml on this machine. Tree-sitter's failure is at install
 time and loud; ours is at parse time and reported as 100% damage, which is at
@@ -251,7 +251,7 @@ predicted on the correctness lane, which also fired.
 ## Reproducing
 
 ```bash
-export OUTLINER_BIN=.local/pin/collate/bin/outliner
+export JOINTS_BIN=.local/pin/collate/bin/joints
 python3 tool/collate.py cost --fresh --runs=3     # size, build, cold parse   (~12 min)
 python3 tool/collate.py keystroke --runs=3        # incremental               (~2 min)
 python3 tool/specimen.py coverage                 # declared / seated / exercised

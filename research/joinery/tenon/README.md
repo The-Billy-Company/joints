@@ -4,7 +4,7 @@ A diagnosis lane. It produces witnesses and ownership verdicts and edits
 nothing in `src/press/`. Pin `tenon` (`4d7074db7`, tree `fa7fcaee5`, repo
 `f7ba40004+106`).
 
-The four defects are all places outliner **succeeds** — `accepted, 1 root`, no
+The four defects are all places joints **succeeds** — `accepted, 1 root`, no
 wall, no stop, and on three of the four the board reads `whole` at 100.0%
 standing. Nothing in this repository reddens on any of them, which is why the
 only instrument that can show one is a pair of trees side by side. That is
@@ -24,9 +24,9 @@ count, because it says where each fix lives.
 
 A `conflicts:` entry in a tree-sitter grammar is not a hint about how to
 resolve an ambiguity. It is the author telling the parser **not to** resolve it
-— to carry both readings and let the input decide. Outliner is LALR and cannot
+— to carry both readings and let the input decide. Joints is LALR and cannot
 carry two, so every declared cell is a fork collapsed at press time by a fixed
-ladder that never sees the input. Read that way, `joints`' `residual = 0` is not
+ladder that never sees the input. Read that way, `survey`' `residual = 0` is not
 health; it is the press reporting that it answered every question it was asked
 not to answer.
 
@@ -36,7 +36,7 @@ LALR merging dropped `do` from the competing reduction's lookahead. Nothing was
 collapsed — the second reading was never there. No re-ranking in the ladder can
 reach it.
 
-toml is neither. Both parsers derive the identical tree; outliner's `pair`
+toml is neither. Both parsers derive the identical tree; joints's `pair`
 simply ends before a `comment` it has already adopted as a child. `standing.py`
 has been printing `UNSOUND — child outside its parent` on that grammar the whole
 time, on a row the board scores 100.0%.
@@ -82,10 +82,10 @@ ok   toml/pair-without-comment.toml             4/4
 FAIL toml/comment-after-pair.toml               5/6
 ```
 
-The controls are the argument. `defp f do x end` is green, so outliner attaches
+The controls are the argument. `defp f do x end` is green, so joints attaches
 a do-block to a definition correctly when it is the only candidate. `y =
-print(x)` is green, so outliner does not think `print` is a keyword — it thinks
-so exactly where the grammar offers it a choice. `int(x)` is green, so outliner
+print(x)` is green, so joints does not think `print` is a keyword — it thinks
+so exactly where the grammar offers it a choice. `int(x)` is green, so joints
 is not reaching greedily for `type_conversion_expression`; it reaches for it
 only where a `.` puts a rival derivation on the table.
 
