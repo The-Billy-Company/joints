@@ -11,12 +11,13 @@
 //! folio a future version could silently misread is worse than one it refuses
 //! to load. Version, seal, and a named refusal per malformed field.
 //!
-//! Six moving parts. `leaf` is the on-disk vocabulary both sides speak, `forme`
-//! locks the parse table into the interned shape that makes a folio small,
-//! `impose` writes, `collate` reads and validates the layout, `audit` validates
-//! what is inside it, and `bind` hands the result back as the three types a
-//! parse takes. The seam is here so the lane building it never has to touch
-//! `src/root.zig`.
+//! Seven moving parts. `leaf` is the on-disk vocabulary both sides speak,
+//! `forme` locks the parse table into the interned shape that makes a folio
+//! small, `impose` writes, `collate` reads and validates the layout, `audit`
+//! validates what is inside it, `bind` hands the result back as the three
+//! types a parse takes, and `codex` binds several folios into the one file the
+//! "N languages" claim is about. The seam is here so the lane building it
+//! never has to touch `src/root.zig`.
 //!
 //! ```
 //! var pressed = try press.tables(gpa, &grammar);
@@ -38,8 +39,10 @@ pub const impose = @import("impose.zig");
 pub const collate = @import("collate.zig");
 pub const audit = @import("audit.zig");
 pub const rebind = @import("bind.zig");
+pub const codex = @import("codex.zig");
 
 pub const Folio = collate.Folio;
+pub const Codex = codex.Codex;
 pub const Error = leaf.Error;
 pub const WriteError = impose.Error;
 pub const Action = leaf.Action;
@@ -53,6 +56,72 @@ pub const align_bytes = leaf.section_align;
 pub const pack = impose.pack;
 pub const open = collate.open;
 pub const bind = rebind.bind;
+
+/// What picking a language out of a volume can refuse on, beyond the member
+/// folio's own failures. Two names because they demand different sentences: an
+/// unknown title wants the roster printed, an ambiguous one wants the flag.
+pub const PickError = error{
+    /// The named language is not in this file.
+    TitleUnknown,
+    /// Several languages, and nothing said which. Never raised by a volume of
+    /// one, which is its own default.
+    TitleAmbiguous,
+};
+
+/// Whichever of the two artifacts a `.folio` path holds: one grammar, or a
+/// codex binding several. Every consumer opens through this rather than
+/// sniffing magics itself, so the two spellings cannot drift apart.
+pub const Volume = union(enum) {
+    one: Folio,
+    many: codex.Codex,
+
+    pub fn count(v: *const Volume) u32 {
+        return switch (v.*) {
+            .one => 1,
+            .many => |*c| c.count,
+        };
+    }
+
+    pub fn titleAt(v: *const Volume, i: u32) []const u8 {
+        return switch (v.*) {
+            .one => |*f| f.title(),
+            .many => |*c| c.titleAt(i),
+        };
+    }
+
+    /// The one folio a parse should use. `language` null means "the obvious
+    /// one", which exists only when the volume holds exactly one; a codex of
+    /// several refuses rather than guessing, because a guess that parses
+    /// python with the rust tables produces a tree that looks fine and is
+    /// wrong - which is the failure this whole format refuses everywhere else.
+    pub fn pick(v: *const Volume, language: ?[]const u8) (Error || PickError)!Folio {
+        switch (v.*) {
+            .one => |f| {
+                if (language) |want| {
+                    if (!std.mem.eql(u8, f.title(), want)) return PickError.TitleUnknown;
+                }
+                return f;
+            },
+            .many => |*c| {
+                if (language) |want| {
+                    return c.openAt(c.find(want) orelse return PickError.TitleUnknown);
+                }
+                if (c.count == 1) return c.openAt(0);
+                return PickError.TitleAmbiguous;
+            },
+        }
+    }
+};
+
+/// Prove whichever artifact these bytes are. The first eight bytes decide
+/// which reader judges the rest; anything wearing neither magic is refused in
+/// the folio's own vocabulary.
+pub fn openVolume(bytes: []align(leaf.section_align) const u8) Error!Volume {
+    if (bytes.len >= codex.magic.len and std.mem.eql(u8, bytes[0..codex.magic.len], codex.magic)) {
+        return .{ .many = try codex.open(bytes) };
+    }
+    return .{ .one = try open(bytes) };
+}
 
 /// Publish a folio at `path`, atomically: written whole to a neighbouring
 /// temporary and renamed over the target, so a reader sees the old file or the
@@ -93,6 +162,31 @@ pub fn map(io: std.Io, dir: std.Io.Dir, path: []const u8) !Mapped {
     return .{ .folio = try open(bytes), .bytes = bytes };
 }
 
+/// A mapped volume - `Mapped`'s twin for the path that does not yet know
+/// whether the file holds one language or several.
+pub const MappedVolume = struct {
+    volume: Volume,
+    bytes: []align(std.heap.page_size_min) const u8,
+
+    pub fn close(m: *MappedVolume) void {
+        irregex.portal.unmap(m.bytes);
+        m.* = undefined;
+    }
+};
+
+/// Map whichever artifact `path` holds and prove it - the directory of a
+/// codex, the whole of a lone folio. Members of a codex are proven as they
+/// are picked, so the cost of this stays proportional to what gets used.
+pub fn mapVolume(io: std.Io, dir: std.Io.Dir, path: []const u8) !MappedVolume {
+    const file = try dir.openFile(io, path, .{});
+    defer file.close(io);
+    const size: usize = @intCast((try file.stat(io)).size);
+    if (size == 0) return Error.FolioTooSmall;
+    const bytes = try irregex.portal.map(file.handle, size);
+    errdefer irregex.portal.unmap(bytes);
+    return .{ .volume = try openVolume(bytes), .bytes = bytes };
+}
+
 test {
     std.testing.refAllDecls(@This());
     _ = leaf;
@@ -101,5 +195,6 @@ test {
     _ = collate;
     _ = audit;
     _ = rebind;
+    _ = codex;
     _ = @import("folio_test.zig");
 }

@@ -34,6 +34,13 @@ const testing = std.testing;
 /// happen to be zero round-trips perfectly no matter what the writer forgot,
 /// and the conflict section is the one where that already happened once.
 fn sample(gpa: std.mem.Allocator) !g.Grammar {
+    return titled(gpa, "sample");
+}
+
+/// The same grammar wearing a caller's name, because a codex of two members
+/// needs two titles and everything else about the members may as well be the
+/// structure the round-trip tests already trust.
+fn titled(gpa: std.mem.Allocator, name: []const u8) !g.Grammar {
     var b = g.Builder.init(gpa);
     defer b.deinit();
 
@@ -83,7 +90,7 @@ fn sample(gpa: std.mem.Allocator) !g.Grammar {
     try b.addProduction(stmt, &.{ id, body }, &.{ .{ .prec = .{ .level = -1 } }, .{} });
     try b.addProduction(tag, &.{id}, &.{});
     try b.addProduction(body, &.{ open, close }, &.{});
-    return b.finish("sample", start, &.{ws}, &.{});
+    return b.finish(name, start, &.{ws}, &.{});
 }
 
 const Pressed = struct {
@@ -91,7 +98,11 @@ const Pressed = struct {
     result: press.Result,
 
     fn of(gpa: std.mem.Allocator) !Pressed {
-        var gr = try sample(gpa);
+        return named(gpa, "sample");
+    }
+
+    fn named(gpa: std.mem.Allocator, name: []const u8) !Pressed {
+        var gr = try titled(gpa, name);
         errdefer gr.deinit();
         return .{ .grammar = gr, .result = try press.tables(gpa, &gr) };
     }
@@ -656,6 +667,240 @@ test "arbitrary bytes are refused, never followed" {
         const len = 1 + rand.uintLessThan(usize, buf.len);
         const view = buf[0..std.mem.alignBackward(usize, len, leaf.section_align)];
         if (folio.open(view)) |f| sweep(&f) else |_| {}
+    }
+}
+
+// ── the codex: several folios bound as one file ──
+
+const codex = folio.codex;
+
+/// Two members with two titles, pressed from the same structure - the codex
+/// is about binding, not about what is bound, so everything inside each
+/// member is shape the single-folio tests already prove.
+const Two = struct {
+    alpha: Pressed,
+    beta: Pressed,
+    parts: [2][]align(leaf.section_align) u8,
+
+    fn of(gpa: std.mem.Allocator) !Two {
+        var alpha = try Pressed.named(gpa, "alpha");
+        errdefer alpha.deinit();
+        var beta = try Pressed.named(gpa, "beta");
+        errdefer beta.deinit();
+        const first = try folio.pack(gpa, &alpha.grammar, &alpha.result);
+        errdefer gpa.free(first);
+        const second = try folio.pack(gpa, &beta.grammar, &beta.result);
+        return .{ .alpha = alpha, .beta = beta, .parts = .{ first, second } };
+    }
+
+    fn deinit(t: *Two, gpa: std.mem.Allocator) void {
+        for (t.parts) |part| gpa.free(part);
+        t.beta.deinit();
+        t.alpha.deinit();
+    }
+};
+
+/// Re-seal a codex directory after mutating it, so a rejection test trips the
+/// check it is named for rather than stopping at the seal.
+fn resealCodex(buf: []u8) void {
+    const count = std.mem.readInt(u32, buf[12..16], .little);
+    const arena = std.mem.readInt(u32, buf[16..20], .little);
+    const dir = codex.header_len + @as(usize, count) * codex.entry_len + arena;
+    leaf.signet.sealAt(buf, dir);
+}
+
+test "two folios bind into a codex and come back out whole" {
+    var two = try Two.of(testing.allocator);
+    defer two.deinit(testing.allocator);
+    const bytes = try codex.pack(testing.allocator, &two.parts);
+    defer testing.allocator.free(bytes);
+
+    const c = try codex.open(bytes);
+    try testing.expectEqual(@as(u32, 2), c.count);
+    try testing.expectEqualStrings("alpha", c.titleAt(0));
+    try testing.expectEqualStrings("beta", c.titleAt(1));
+    try testing.expectEqual(@as(?u32, 0), c.find("alpha"));
+    try testing.expectEqual(@as(?u32, 1), c.find("beta"));
+    try testing.expectEqual(@as(?u32, null), c.find("gamma"));
+
+    // Each member's bytes are exactly the lone file's - binding adds a
+    // directory in front and changes nothing behind it.
+    try testing.expectEqualSlices(u8, two.parts[0], c.sliceAt(0));
+    try testing.expectEqualSlices(u8, two.parts[1], c.sliceAt(1));
+
+    // And a picked member is a real, bindable folio.
+    const f = try c.openAt(1);
+    try testing.expectEqualStrings("beta", f.title());
+    var bound = try folio.bind(testing.allocator, &f);
+    defer bound.deinit();
+    try testing.expectEqual(two.beta.grammar.symbolCount(), bound.grammar.symbolCount());
+}
+
+test "a volume answers for both shapes, and pick refuses to guess" {
+    var two = try Two.of(testing.allocator);
+    defer two.deinit(testing.allocator);
+    const bytes = try codex.pack(testing.allocator, &two.parts);
+    defer testing.allocator.free(bytes);
+
+    const many = try folio.openVolume(bytes);
+    try testing.expectEqual(@as(u32, 2), many.count());
+    try testing.expectEqualStrings("alpha", many.titleAt(0));
+    // Two languages and no name is a refusal, not a default: a guess that
+    // parses one language with the other's tables produces a tree that looks
+    // fine and is wrong.
+    try testing.expectError(folio.PickError.TitleAmbiguous, many.pick(null));
+    try testing.expectError(folio.PickError.TitleUnknown, many.pick("gamma"));
+    const picked = try many.pick("beta");
+    try testing.expectEqualStrings("beta", picked.title());
+
+    // A lone folio through the same door: its title is the default.
+    const one = try folio.openVolume(two.parts[0]);
+    try testing.expectEqual(@as(u32, 1), one.count());
+    const sole = try one.pick(null);
+    try testing.expectEqualStrings("alpha", sole.title());
+    try testing.expectError(folio.PickError.TitleUnknown, one.pick("beta"));
+}
+
+test "a codex of one still picks its member by default" {
+    var two = try Two.of(testing.allocator);
+    defer two.deinit(testing.allocator);
+    const bytes = try codex.pack(testing.allocator, two.parts[0..1]);
+    defer testing.allocator.free(bytes);
+    const v = try folio.openVolume(bytes);
+    const f = try v.pick(null);
+    try testing.expectEqualStrings("alpha", f.title());
+}
+
+test "packing refuses nothing, twice the same title, and a non-folio part" {
+    var two = try Two.of(testing.allocator);
+    defer two.deinit(testing.allocator);
+
+    try testing.expectError(codex.PackError.CodexEmpty, codex.pack(testing.allocator, &.{}));
+
+    const twice: [2][]align(leaf.section_align) const u8 = .{ two.parts[0], two.parts[0] };
+    try testing.expectError(codex.PackError.TitleRepeated, codex.pack(testing.allocator, &twice));
+
+    var junk: [64]u8 align(leaf.section_align) = @splat(0);
+    const parts: [1][]align(leaf.section_align) const u8 = .{&junk};
+    try testing.expectError(leaf.Error.FolioBadMagic, codex.pack(testing.allocator, &parts));
+}
+
+test "the same members pack to the same codex bytes" {
+    var two = try Two.of(testing.allocator);
+    defer two.deinit(testing.allocator);
+    const first = try codex.pack(testing.allocator, &two.parts);
+    defer testing.allocator.free(first);
+    const again = try codex.pack(testing.allocator, &two.parts);
+    defer testing.allocator.free(again);
+    try testing.expectEqualSlices(u8, first, again);
+}
+
+test "a codex is refused for its magic, version, length, and seal" {
+    var two = try Two.of(testing.allocator);
+    defer two.deinit(testing.allocator);
+    const good = try codex.pack(testing.allocator, &two.parts);
+    defer testing.allocator.free(good);
+    const buf = try testing.allocator.alignedAlloc(u8, comptime .fromByteUnits(leaf.section_align), good.len);
+    defer testing.allocator.free(buf);
+
+    @memcpy(buf, good);
+    buf[0] = 'X';
+    resealCodex(buf);
+    try testing.expectError(leaf.Error.FolioBadMagic, codex.open(buf));
+
+    @memcpy(buf, good);
+    std.mem.writeInt(u16, buf[8..10], codex.version + 1, .little);
+    resealCodex(buf);
+    try testing.expectError(leaf.Error.FolioBadVersion, codex.open(buf));
+
+    @memcpy(buf, good);
+    resealCodex(buf);
+    try testing.expectError(leaf.Error.FolioBadLength, codex.open(buf[0 .. buf.len - leaf.section_align]));
+
+    @memcpy(buf, good);
+    // A flipped bit inside the directory - a title byte - is the seal's to
+    // catch, because no layout check reads a title's spelling.
+    buf[codex.header_len + 2 * codex.entry_len] ^= 0x20;
+    try testing.expectError(leaf.Error.FolioBadSeal, codex.open(buf));
+}
+
+test "a codex directory that lies about a member is refused" {
+    var two = try Two.of(testing.allocator);
+    defer two.deinit(testing.allocator);
+    const good = try codex.pack(testing.allocator, &two.parts);
+    defer testing.allocator.free(good);
+    const buf = try testing.allocator.alignedAlloc(u8, comptime .fromByteUnits(leaf.section_align), good.len);
+    defer testing.allocator.free(buf);
+
+    // A member offset off the eight-byte grid: its records could not be
+    // viewed where they lie.
+    @memcpy(buf, good);
+    const was = std.mem.readInt(u64, buf[codex.header_len + 8 ..][0..8], .little);
+    std.mem.writeInt(u64, buf[codex.header_len + 8 ..][0..8], was + 4, .little);
+    resealCodex(buf);
+    try testing.expectError(leaf.Error.FolioSectionMisaligned, codex.open(buf));
+
+    // A member running past the end of the file.
+    @memcpy(buf, good);
+    std.mem.writeInt(u64, buf[codex.header_len + 16 ..][0..8], buf.len + 4096, .little);
+    resealCodex(buf);
+    try testing.expectError(leaf.Error.FolioSectionOutOfBounds, codex.open(buf));
+
+    // A title running past the arena.
+    @memcpy(buf, good);
+    std.mem.writeInt(u32, buf[codex.header_len + 4 ..][0..4], 1 << 20, .little);
+    resealCodex(buf);
+    try testing.expectError(leaf.Error.FolioBadText, codex.open(buf));
+
+    // Two rows wearing one title: `find` could answer for neither honestly.
+    @memcpy(buf, good);
+    @memcpy(
+        buf[codex.header_len + codex.entry_len ..][0..8],
+        buf[codex.header_len..][0..8],
+    );
+    resealCodex(buf);
+    try testing.expectError(leaf.Error.FolioBadDirectory, codex.open(buf));
+}
+
+test "a corrupt member is caught by its own seal, exactly when it is picked" {
+    var two = try Two.of(testing.allocator);
+    defer two.deinit(testing.allocator);
+    const good = try codex.pack(testing.allocator, &two.parts);
+    defer testing.allocator.free(good);
+    const buf = try testing.allocator.alignedAlloc(u8, comptime .fromByteUnits(leaf.section_align), good.len);
+    defer testing.allocator.free(buf);
+    @memcpy(buf, good);
+
+    // Deep inside the second member's payload. The directory seal does not
+    // cover member bytes - that is the proportional-cost trade stated on the
+    // tin - so the directory still opens, the healthy member still opens, and
+    // the damaged one is refused at the moment somebody picks it.
+    buf[buf.len - leaf.signet.len - 5] ^= 0x40;
+    const c = try codex.open(buf);
+    _ = try c.openAt(0);
+    try testing.expectError(leaf.Error.FolioBadSeal, c.openAt(1));
+}
+
+test "arbitrary bytes wearing the codex magic are refused, never followed" {
+    var prng: std.Random.DefaultPrng = .init(0xc0dec5);
+    const rand = prng.random();
+    const buf = try testing.allocator.alignedAlloc(u8, comptime .fromByteUnits(leaf.section_align), 8192);
+    defer testing.allocator.free(buf);
+
+    for (0..512) |round| {
+        rand.bytes(buf);
+        if (round % 2 == 0) @memcpy(buf[0..codex.magic.len], codex.magic);
+        const len = 1 + rand.uintLessThan(usize, buf.len);
+        const view = buf[0..std.mem.alignBackward(usize, len, leaf.section_align)];
+        if (codex.open(@alignCast(view))) |c| {
+            var sink: usize = 0;
+            for (0..c.count) |i| {
+                sink +%= c.titleAt(@intCast(i)).len;
+                // Members may be garbage; picking one must refuse, not crash.
+                if (c.openAt(@intCast(i))) |f| sink +%= f.title().len else |_| {}
+            }
+            std.mem.doNotOptimizeAway(sink);
+        } else |_| {}
     }
 }
 
