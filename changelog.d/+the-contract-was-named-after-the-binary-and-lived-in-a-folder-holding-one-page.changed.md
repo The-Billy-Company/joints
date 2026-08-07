@@ -13,5 +13,5 @@ document something different.
 `kernel.zone`, `service.zone` - because there the path already says which one it
 is. Identity was never in the filename: the `package` block is what every
 verdict, every `--package` filter, and every workspace lookup reads, so nothing
-downstream can tell the two spellings apart. Needs `zoning` 1.3.0, which is
+downstream can tell the two spellings apart. Needs `zoning` 1.3.1, which is
 where a contract at a package root is first discovered; the pin moves with this.
