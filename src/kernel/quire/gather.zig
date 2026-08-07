@@ -806,6 +806,23 @@ pub const Gather = struct {
     /// file than the one that did not.
     refused: u32,
     spent: u32,
+    /// The reduces the token in hand drove before it was refused, in the order
+    /// it drove them. Cleared as each token enters the absorb loops and appended
+    /// only for the table's own reading, so it describes the same stack
+    /// `refused` and `spent` do rather than a speculation's.
+    ///
+    /// Kept because a wall's state is where the folds ran out, not where the
+    /// reading stood: `press/inquest.zig` can name the cell that killed a parse
+    /// and its `lalr.Floor` bucket, but only over this path. Without it every
+    /// verdict on a table with any damage on that terminal degrades to "cannot
+    /// rule the press out".
+    folded: std.ArrayList(quire.Fold),
+    /// The chain as it stood at the stop this parse will report, which is not
+    /// the same list. `folded` is cleared by the next token, and a mended parse
+    /// reports its *first* refusal while absorbing many more after it - so a
+    /// chain read at the end describes a token the reported stop never names.
+    /// Sealed once, at the moment a stop becomes the one that will be reported.
+    wall: std.ArrayList(quire.Fold),
 
     /// What to do about a token the parse cannot read. Off is the answer this
     /// loop gave before recovery existed, and is still the answer for anyone
@@ -940,6 +957,8 @@ pub const Gather = struct {
             .stowed = false,
             .refused = 0,
             .spent = 0,
+            .folded = .empty,
+            .wall = .empty,
             .mend = .fell,
             .mends = 0,
             .skipped = 0,
@@ -959,6 +978,8 @@ pub const Gather = struct {
         for (x.strands.items) |*st| st.deinit(x.gpa);
         x.strands.deinit(x.gpa);
         x.perches.deinit(x.gpa);
+        x.folded.deinit(x.gpa);
+        x.wall.deinit(x.gpa);
         x.stand.deinit(x.gpa);
         x.borne.deinit(x.gpa);
         x.live.deinit(x.gpa);
@@ -1010,6 +1031,8 @@ pub const Gather = struct {
         x.leads = 0;
         x.refused = 0;
         x.spent = 0;
+        x.folded.clearRetainingCapacity();
+        x.wall.clearRetainingCapacity();
         x.stood = null;
         if (x.bough) |b| {
             if (try x.alight(b, bytes)) |i| x.stood = try x.remount(b, i);
@@ -1081,6 +1104,7 @@ pub const Gather = struct {
                             // The state that refused it, which is where the folds ran
                             // out - not `here`, where they started.
                             .state = x.refused,
+                            .folded = try x.seal(),
                         },
                     };
                     if (try x.mended(stop, x.spent, tok.start, tok.end())) continue;
@@ -1381,9 +1405,23 @@ pub const Gather = struct {
         try x.live.append(x.gpa, .{ .top = grown });
         x.lone = true;
 
-        if (x.why == null) x.why = .{
-            .unexpected = .{ .symbol = tok.symbol, .at = tok.start, .state = x.refused },
-        };
+        if (x.why == null) {
+            // Sealed into a name first, because the literal below is built *in
+            // place* in `x.why` - so the tag lands before the field expression
+            // runs, and a `seal` called inside it would find the stop it is
+            // being called for already remembered and decline. That read as a
+            // supply-only null chain, on exactly the grammars whose first
+            // refusal is a supply.
+            const chain = try x.seal();
+            x.why = .{
+                .unexpected = .{
+                    .symbol = tok.symbol,
+                    .at = tok.start,
+                    .state = x.refused,
+                    .folded = chain,
+                },
+            };
+        }
         x.supplies += 1;
         try x.scars.append(x.gpa, .{
             .at = anchor,
@@ -1932,13 +1970,22 @@ pub const Gather = struct {
         errdefer x.gpa.free(scars);
         const nodes = try x.nodes.toOwnedSlice(x.gpa);
         errdefer x.gpa.free(nodes);
+        // The chain is borrowed until here and owned after: `seal` parked it on
+        // the gather, which does not outlive the answer. Duped from wherever the
+        // reported stop points rather than from `x.wall`, because a resumed
+        // parse adopts the previous one's stop and that chain is the old quire's.
+        var stop = why;
+        if (stop == .unexpected) if (stop.unexpected.folded) |f| {
+            stop.unexpected.folded = try x.gpa.dupe(quire.Fold, f);
+        };
+        errdefer if (stop == .unexpected) if (stop.unexpected.folded) |f| x.gpa.free(f);
         return .{
             .gpa = x.gpa,
             .gr = x.gr,
             .nodes = nodes,
             .kids = try x.kids.toOwnedSlice(x.gpa),
             .roots = roots,
-            .stop = why,
+            .stop = stop,
             .mends = x.mends,
             .skipped = x.skipped,
             .supplied = x.supplies,
@@ -2288,7 +2335,28 @@ pub const Gather = struct {
     /// is enforced, and it is enforced by declining to split rather than by
     /// evicting: the reading in hand always has at least as good a claim as the
     /// one being considered.
+    /// Keep the chain in hand for a stop being built, where the tokens after it
+    /// cannot reach it.
+    ///
+    /// Null once a stop is already remembered, because that earlier one is what
+    /// the parse will report and this one is about to be recovered from and
+    /// discarded. So the test is not an optimisation: sealing every refusal
+    /// would leave the *last* one's folds under the *first* one's stop, which is
+    /// a chain that describes a different token and would attribute a wall to a
+    /// cell no part of it ever stood in.
+    fn seal(x: *Gather) !?[]const quire.Fold {
+        if (x.why != null) return null;
+        x.wall.clearRetainingCapacity();
+        try x.wall.appendSlice(x.gpa, x.folded.items);
+        return x.wall.items;
+    }
+
     fn absorb(x: *Gather, tok: Token) !Moved {
+        // Per token, not per parse: the chain describes how *this* token reached
+        // the state that refused it, and a token that shifts leaves no wall to
+        // explain. Both loops below clear through here, including the `alone`
+        // fast path, so neither can inherit the previous token's folds.
+        x.folded.clearRetainingCapacity();
         if (!x.forking) return x.alone(tok);
         x.work.clearRetainingCapacity();
         x.next.clearRetainingCapacity();
@@ -2430,6 +2498,11 @@ pub const Gather = struct {
                         // folded production's own declaration. See
                         // `Reading.beats`.
                         heft += x.gr.productions[act.value].dynamic;
+                        // Only rank 0, on the same principle `x.refused` is: a
+                        // stack that took the losing side of a conflict explains
+                        // the file worse than the one that did not, and a chain
+                        // mixing both explains nothing.
+                        if (rank == 0) try x.folded.append(x.gpa, .{ .state = state, .prod = act.value });
                         top = try x.fold(top, act.value) orelse {
                             if (rank == 0) {
                                 x.refused = state;
@@ -2617,6 +2690,10 @@ pub const Gather = struct {
                 // called with; treat it as "nothing further to shift".
                 .accept => {},
                 .reduce => {
+                    // One reading, so it is the table's own by construction and
+                    // the `rank == 0` test the forking loop makes is already
+                    // answered here.
+                    try x.folded.append(x.gpa, .{ .state = state, .prod = act.value });
                     top = try x.fold(top, act.value) orelse {
                         // A fold the table names but the stack cannot make is
                         // a refusal too, and `unwind` needs a perch that is

@@ -493,11 +493,19 @@ fn owner(
         // it, so it is handed over here rather than parsed back out of the line
         // - which is what let `inquest`'s cell arguments run at all.
         .stray => |off| .{ .stray = .{ .at = off } },
-        .unexpected => |u| .{ .refused = .{ .terminal = u.symbol, .state = u.state } },
+        .unexpected => |u| .{
+            .refused = .{
+                .terminal = u.symbol,
+                .state = u.state,
+                // The path the token drove to reach that state, which is what turns
+                // "the table is damaged on this terminal somewhere" into a cell and
+                // its `lalr.Floor` bucket. Empty is not null: a token refused
+                // without folding drove no reduces, and saying so is a fact about
+                // the wall rather than a gap in the instrument.
+                .folded = u.folded,
+            },
+        },
     };
-    // No fold chain: `Quire` keeps the stop, not the path the token drove to
-    // reach it, so a table-damage answer here comes back `proven = false` and
-    // prints with a `?`. That is the honest strength of it and not a rounding.
     const found = press.inquest.over(t, gr, wall, blind);
     try e.print("outliner: {s}: ", .{gr.name});
     try press.inquest.write(found, gr, wall, e);
@@ -515,8 +523,7 @@ fn owner(
 /// dragging a pressed grammar in would make the test cost a press and stop
 /// being a test of this file. Same trick, same reason, as
 /// `kernel/quire/survey_test.zig`'s `arena`.
-fn said(gpa: std.mem.Allocator, gr: *const g.Grammar, q: *const quire.Quire,
-        found: quire.Quire.Survey) ![]u8 {
+fn said(gpa: std.mem.Allocator, gr: *const g.Grammar, q: *const quire.Quire, found: quire.Quire.Survey) ![]u8 {
     const tables: *const lalr.Tables = undefined;
     var out: std.Io.Writer.Allocating = .init(gpa);
     errdefer out.deinit();
@@ -530,10 +537,8 @@ fn named(names: []const []const u8) g.Grammar {
     return gr;
 }
 
-fn accepted(gr: *const g.Grammar, nodes: []const quire.Node, kids: []const quire.Ref,
-            roots: []const quire.Ref) quire.Quire {
-    return .{ .gpa = std.testing.allocator, .gr = gr, .nodes = nodes,
-              .kids = kids, .roots = roots, .stop = .accepted };
+fn accepted(gr: *const g.Grammar, nodes: []const quire.Node, kids: []const quire.Ref, roots: []const quire.Ref) quire.Quire {
+    return .{ .gpa = std.testing.allocator, .gr = gr, .nodes = nodes, .kids = kids, .roots = roots, .stop = .accepted };
 }
 
 fn leaf(start: u32, len: u32) quire.Node {

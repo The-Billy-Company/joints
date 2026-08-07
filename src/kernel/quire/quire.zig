@@ -96,10 +96,37 @@ pub const Stop = union(enum) {
     /// A token that lexed and that no sequence of folds makes legal here. The
     /// state comes with it, since "state 803 has no `=`" is a diagnosis where
     /// "unexpected `=`" is a complaint.
-    unexpected: struct { symbol: g.Symbol, at: u32, state: u32 },
+    ///
+    /// `folded` is the rest of that diagnosis: the reduces this token drove on
+    /// its way to `state`, in the order it drove them. Without it a verdict can
+    /// only say the table is damaged on this terminal *somewhere*, which names a
+    /// suspect and proves nothing - see `press/inquest.zig`'s `dropped_elsewhere`.
+    ///
+    /// Optional because empty already means something else. A token refused
+    /// before it folded anything drove no reduces, and that is a fact about the
+    /// wall; `null` is the absence of the record, which is what a stop carried
+    /// over from a previous parse or hung on a `Scar` has. Only the stop the
+    /// parse reports is recorded, and the `Quire` holding it owns the slice -
+    /// the gather that walked the folds is gone by the time anyone asks.
+    unexpected: struct {
+        symbol: g.Symbol,
+        at: u32,
+        state: u32,
+        folded: ?[]const Fold = null,
+    },
     /// Input ended before the start symbol did.
     truncated,
 };
+
+/// One reduce a refused token drove, as the state it ran in and the production
+/// it folded.
+///
+/// Press's declaration rather than a third mirror of it. `kernel/walk/drive.zig`
+/// keeps its own because it predates the verdict having a caller; there is no
+/// reason for the loop that *feeds* `inquest` to add another, and a copy here
+/// would need converting at every hand-off - in a diagnostic print path that has
+/// no allocator to convert with.
+pub const Fold = @import("../../press/inquest.zig").Fold;
 
 /// One repair: a stop the parse recovered from instead of ending on.
 ///
@@ -312,6 +339,7 @@ pub const Quire = struct {
         q.gpa.free(q.kids);
         q.gpa.free(q.roots);
         q.gpa.free(q.scars);
+        if (q.stop == .unexpected) if (q.stop.unexpected.folded) |f| q.gpa.free(f);
         q.* = undefined;
     }
 

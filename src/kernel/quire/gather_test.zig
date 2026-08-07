@@ -478,8 +478,7 @@ test "quire: an extra between two symbols is theirs, and one after the last is n
     defer f.deinit();
 
     const pair = "(pair (item) (comment) (item))";
-    try expectTree(f, "a # one\nb # two\nc # three\nd", .named,
-        "(doc " ++ pair ++ " (comment) " ++ pair ++ ")");
+    try expectTree(f, "a # one\nb # two\nc # three\nd", .named, "(doc " ++ pair ++ " (comment) " ++ pair ++ ")");
 }
 
 test "quire: an extra sinks no deeper than the reduction that popped it" {
@@ -500,8 +499,7 @@ test "quire: an extra sinks no deeper than the reduction that popped it" {
     defer f.deinit();
 
     const inner = "(inner (comment) (item) (comment))";
-    try expectTree(f, "[ # a\n{ # b\nx # c\n} # d\ny # e\n] # f\n", .named,
-        "(doc (outer (comment) " ++ inner ++ " (comment) (item) (comment)) (comment))");
+    try expectTree(f, "[ # a\n{ # b\nx # c\n} # d\ny # e\n] # f\n", .named, "(doc (outer (comment) " ++ inner ++ " (comment) (item) (comment)) (comment))");
 }
 
 test "quire: an extra spliced in from a field-bearing step does not carry the field" {
@@ -536,9 +534,8 @@ test "quire: the extras nothing reduced over are the root's outermost children" 
     var f = try Fixture.init(t.allocator, src);
     defer f.deinit();
 
-    try expectTree(f, "# lead\n(a # in\nb # last\n) # between\n(c) # trail\n", .named,
-        "(doc (comment) (group (item) (comment) (item) (comment))" ++
-            " (comment) (group (item)) (comment))");
+    try expectTree(f, "# lead\n(a # in\nb # last\n) # between\n(c) # trail\n", .named, "(doc (comment) (group (item) (comment) (item) (comment))" ++
+        " (comment) (group (item)) (comment))");
 }
 
 test "quire: the root reaches end of input, and every other node stops at its tokens" {
@@ -575,8 +572,7 @@ test "quire: json's own comments are nodes, and say they are extras" {
 
     // json declares `comment` in its `extras`, so the same placement rule
     // applies on a grammar nobody wrote for this test.
-    try expectTree(f, "/* a */ [1 /* b */] // c\n", .named,
-        "(document (comment) (array (number) (comment)) (comment))");
+    try expectTree(f, "/* a */ [1 /* b */] // c\n", .named, "(document (comment) (array (number) (comment)) (comment))");
 
     var q = try f.parse("/* a */ 1");
     defer q.deinit();
@@ -645,6 +641,44 @@ test "quire: the tree loop and the oracle read the same tokens in the same state
         "@",
     };
     for (cases) |case| try differ(f, case);
+}
+
+test "quire: a refusal reports the folds that reached it, and says so even when there were none" {
+    var f = try Fixture.init(t.allocator, json_src);
+    defer f.deinit();
+
+    // `2` is refused where a `,` or `]` belongs - but only after `1` has folded
+    // up through the value rules, and those folds are the whole of why the wall
+    // is where it is. `press/inquest.zig` can name the cell that killed the
+    // parse over this path and cannot without it.
+    {
+        var q = try f.parse("[1 2]");
+        defer q.deinit();
+        try t.expectEqual(quire.Stop.unexpected, std.meta.activeTag(q.stop));
+        const chain = q.stop.unexpected.folded orelse
+            return error.TestExpectedChain;
+        try t.expect(chain.len > 0);
+        // Each step names a state that exists and a production of this grammar,
+        // which is the least a verdict has to be able to look up.
+        for (chain) |step| {
+            try t.expect(step.state < f.built.tables.action.len / f.built.tables.width);
+            try t.expect(step.prod < f.gr.productions.len);
+        }
+    }
+
+    // The other half of the contract, and the reason the field is optional
+    // rather than a plain slice: a `}` in the opening state drove no reduces at
+    // all. Empty is the measurement - this token folded through nothing, so no
+    // cell on its path can be blamed - where null would mean nobody looked, and
+    // a verdict reading the two the same reports a suspicion as a proof.
+    {
+        var q = try f.parse("}");
+        defer q.deinit();
+        try t.expectEqual(quire.Stop.unexpected, std.meta.activeTag(q.stop));
+        const chain = q.stop.unexpected.folded orelse
+            return error.TestExpectedChain;
+        try t.expectEqual(@as(usize, 0), chain.len);
+    }
 }
 
 test "quire: the two loops agree on a whole real file" {
