@@ -162,6 +162,74 @@ test "scanner: an external this lexer can spell joins the slate under its own na
     try expectStep(&f, source, 4, &inside, "string_close", 1);
 }
 
+test "scanner: scala's string body and its end part on which one reaches the quote" {
+    // Scala splits a string body across two externals where rust uses one, and
+    // the split is not arbitrary: `_single_line_string_end` takes the closing
+    // quote with it, so at the offset after the opener BOTH match and the end
+    // is longer by exactly that quote. A backslash is what takes the quote away
+    // from it - neither pattern crosses one - and then the middle is the only
+    // reading left, which is how the grammar's own `escape_sequence` gets its
+    // turn.
+    const src =
+        \\{"name":"t","rules":{
+        \\ "doc":{"type":"SEQ","members":[
+        \\   {"type":"SYMBOL","name":"_simple_string_start"},
+        \\   {"type":"REPEAT","content":{"type":"SEQ","members":[
+        \\     {"type":"SYMBOL","name":"_simple_string_middle"},
+        \\     {"type":"SYMBOL","name":"escape_sequence"}]}},
+        \\   {"type":"SYMBOL","name":"_single_line_string_end"}]},
+        \\ "escape_sequence":{"type":"PATTERN","value":"\\\\."}},
+        \\ "externals":[{"type":"SYMBOL","name":"_simple_string_start"},
+        \\   {"type":"SYMBOL","name":"_simple_string_middle"},
+        \\   {"type":"SYMBOL","name":"_single_line_string_end"},
+        \\   {"type":"SYMBOL","name":"_simple_multiline_string_start"}]}
+    ;
+    var f = try Fixture.init(src);
+    defer f.deinit();
+
+    // All four are spelled, and nothing here is blind.
+    try t.expect(f.sc.provided.isSet(f.symbolOf("_simple_string_start")));
+    try t.expect(f.sc.provided.isSet(f.symbolOf("_simple_string_middle")));
+    try t.expect(f.sc.provided.isSet(f.symbolOf("_single_line_string_end")));
+    try t.expect(f.sc.provided.isSet(f.symbolOf("_simple_multiline_string_start")));
+    try t.expectEqual(@as(usize, 0), f.sc.blind.len);
+
+    var opening = try f.sc.expecting(t.allocator);
+    defer opening.deinit(t.allocator);
+    opening.admit(&f.sc, f.symbolOf("_simple_string_start"));
+    opening.admit(&f.sc, f.symbolOf("_simple_multiline_string_start"));
+
+    var inside = try f.sc.expecting(t.allocator);
+    defer inside.deinit(t.allocator);
+    inside.admit(&f.sc, f.symbolOf("_simple_string_middle"));
+    inside.admit(&f.sc, f.symbolOf("_single_line_string_end"));
+
+    // The wall this row was written for: byte 20093 of scala's own corpus file.
+    // The opener is one byte because the scanner marks its end after the first
+    // quote, and the end takes the rest in one token including the quote.
+    try expectStep(&f, "\"None.get\"", 0, &opening, "_simple_string_start", 1);
+    try expectStep(&f, "\"None.get\"", 1, &inside, "_single_line_string_end", 9);
+
+    // With an escape in the way the end cannot reach a quote, so the middle
+    // takes the run in front of the backslash and stops before it.
+    try expectStep(&f, "\"a\\tb\"", 1, &inside, "_simple_string_middle", 1);
+    // And past the escape the end is reachable again.
+    try expectStep(&f, "\"a\\tb\"", 4, &inside, "_single_line_string_end", 2);
+
+    // An empty string is the opener plus an end that is nothing but its quote,
+    // which is the case a `+` on the end's pattern would have broken.
+    try expectStep(&f, "\"\")", 1, &inside, "_single_line_string_end", 1);
+
+    // The fail-closed half, and the reason the longer opener is a row rather
+    // than a guard on the shorter one. A stand-in that only refuses does not
+    // take the position: a failed trailing context declines the priority pass
+    // and the ordinary slate still answers, so a guarded `"` matched one quote
+    // of the triple and read `""` as an empty string. Spelling `"""` is what
+    // lets longest-match settle it, and its end stays blind, so a multiline
+    // string refuses instead of building a wrong tree.
+    try expectStep(&f, "\"\"\"x\"\"\"", 0, &opening, "_simple_multiline_string_start", 3);
+}
+
 fn expectStep(
     f: *Fixture,
     src: []const u8,
@@ -1359,9 +1427,9 @@ test "scanner: a row claims the terminals it is pinned to and no others" {
         .{
             .troupe = "marrow/julia_quoted#_content_str_1",
             .claims = &.{
-                "_content_str_1 \" i",   "_content_str_3 \"x3 i", "_content_cmd_1 ` i",
-                "_content_cmd_3 `x3 i",  "_content_str_1_raw \"", "_content_str_3_raw \"x3",
-                "_content_cmd_1_raw `",  "_content_cmd_3_raw `x3", "_end_str",
+                "_content_str_1 \" i",  "_content_str_3 \"x3 i",  "_content_cmd_1 ` i",
+                "_content_cmd_3 `x3 i", "_content_str_1_raw \"",  "_content_str_3_raw \"x3",
+                "_content_cmd_1_raw `", "_content_cmd_3_raw `x3", "_end_str",
                 "_end_cmd",
             },
         },
@@ -1371,16 +1439,16 @@ test "scanner: a row claims the terminals it is pinned to and no others" {
             // from a sibling by nothing but `wide = 3`.
             .troupe = "marrow/elixir_quoted#_quoted_content_double",
             .claims = &.{
-                "_quoted_content_i_single ' i",         "_quoted_content_i_double \" i",
+                "_quoted_content_i_single ' i",           "_quoted_content_i_double \" i",
                 "_quoted_content_i_heredoc_single 'x3 i", "_quoted_content_i_heredoc_double \"x3 i",
-                "_quoted_content_i_parenthesis ) i",    "_quoted_content_i_curly } i",
-                "_quoted_content_i_square ] i",         "_quoted_content_i_angle > i",
-                "_quoted_content_i_bar | i",            "_quoted_content_i_slash / i",
-                "_quoted_content_single '",             "_quoted_content_double \"",
-                "_quoted_content_heredoc_single 'x3",   "_quoted_content_heredoc_double \"x3",
-                "_quoted_content_parenthesis )",        "_quoted_content_curly }",
-                "_quoted_content_square ]",             "_quoted_content_angle >",
-                "_quoted_content_bar |",                "_quoted_content_slash /",
+                "_quoted_content_i_parenthesis ) i",      "_quoted_content_i_curly } i",
+                "_quoted_content_i_square ] i",           "_quoted_content_i_angle > i",
+                "_quoted_content_i_bar | i",              "_quoted_content_i_slash / i",
+                "_quoted_content_single '",               "_quoted_content_double \"",
+                "_quoted_content_heredoc_single 'x3",     "_quoted_content_heredoc_double \"x3",
+                "_quoted_content_parenthesis )",          "_quoted_content_curly }",
+                "_quoted_content_square ]",               "_quoted_content_angle >",
+                "_quoted_content_bar |",                  "_quoted_content_slash /",
             },
         },
         .{
@@ -1658,4 +1726,51 @@ test "scanner: spot is state-free by construction, not by a caller remembering" 
 
     // Past the end there is nothing to name, and nothing is what it says.
     try t.expectEqual(scanner.Step.end, f.sc.spot(src, @intCast(src.len)));
+}
+
+test "scanner: an extra carrying a payload does not orphan the grammar out of spot" {
+    // ocaml's shape, reduced. `note` is a nonterminal extra whose body re-enters
+    // the main grammar - ocaml spells `attribute` as `[@ id payload ]` with the
+    // payload a whole `_structure`, so the closure from that one extra is every
+    // nonterminal there is.
+    //
+    // The orphan filter reads "reachable only through an unskippable extra",
+    // and it used to decide that by complement: a terminal was kept if some
+    // production *outside* the extra's closure spelled it. That holds only
+    // while the closure is small, which is true of every extra that motivated
+    // it and false of this one. With no production left outside, nothing was
+    // kept, every terminal was orphaned, and both state-free cuts came back
+    // empty - so `spot` answered `stray` at every offset of every file. The
+    // parse never noticed, because a caller with a state is narrowed by its own
+    // permission set and never reads these; `blame`'s second tier is the caller
+    // that does, and it is the one that separates "no terminal lexes here" from
+    // "one lexes and no reading can use it".
+    const src =
+        \\{"name":"t","rules":{
+        \\ "doc":{"type":"REPEAT1","content":{"type":"SYMBOL","name":"word"}},
+        \\ "word":{"type":"PATTERN","value":"[a-z]+"},
+        \\ "note":{"type":"SEQ","members":[
+        \\   {"type":"STRING","value":"[@"},{"type":"SYMBOL","name":"doc"},
+        \\   {"type":"STRING","value":"]"}]},
+        \\ "space":{"type":"PATTERN","value":"\\s"}},
+        \\ "extras":[{"type":"SYMBOL","name":"note"},{"type":"SYMBOL","name":"space"}]}
+    ;
+    var f = try Fixture.init(src);
+    defer f.deinit();
+
+    // The seam is live: the extra really is a rule the skip cannot step over.
+    try t.expectEqual(@as(usize, 1), f.sc.unskippable.len);
+    try t.expectEqualStrings("note", f.gr.nameOf(f.sc.unskippable[0]));
+
+    // And the state-free cut still answers. `word` is spelled by `doc`, which
+    // the parse reaches on its own, so no amount of an extra also reaching it
+    // makes it a terminal no state can name.
+    const at = f.sc.spot("abc", 0).token;
+    try t.expectEqualStrings("word", f.gr.nameOf(at.symbol));
+    try t.expectEqual(@as(u32, 0), at.start);
+
+    // The narrowing is still a narrowing, not a retreat: `[@` opens the extra
+    // and nothing else, so it stays out of the cut and a file starting with one
+    // reads as the stray it is to a caller with no state to admit it.
+    try t.expectEqual(scanner.Step{ .stray = 0 }, f.sc.spot("[@", 0));
 }

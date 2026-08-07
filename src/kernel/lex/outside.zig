@@ -339,6 +339,95 @@ pub const roll = swift_roll ++ [_]Provision{
         .lexis = .{ .immediate = true },
         .cohort = &.{ "_template_chars", "_ternary_qmark" },
     },
+
+    // Kotlin. Both are the preamble's own case: an ordinary spelling that is
+    // only legal somewhere, written in C because the DSL cannot say where.
+    // `_import_dot` appears in exactly two rules - `_import_identifier` and
+    // the wildcard tail of `import_header` - so the dot between `kotlin` and
+    // `contracts` is the only dot in the language a state admits it at, and
+    // `constructor` likewise heads `primary_constructor` and nothing else.
+    // Neither states trailing context, so both defer to anything the grammar
+    // spelled itself: where a state admits the literal `.` or a
+    // `simple_identifier` as well, the grammar's own terminal still wins and
+    // these fire only where it has none. Kotlin's third external,
+    // `_by_delegation_hint`, gets no row and needs no hand either: its own
+    // scanner never emits it. It is declared so that it appears in
+    // `valid_symbols`, where the automatic-semicolon branch reads it as a flag
+    // for "we are in a delegation context" - so it is not a token at all, and
+    // nothing here could stand in for one. Its absence costs no structure.
+    .{
+        .name = "_import_dot",
+        .pattern = "\\.",
+        .cohort = &.{ "_primary_constructor_keyword", "_by_delegation_hint" },
+    },
+    .{
+        .name = "_primary_constructor_keyword",
+        .pattern = "constructor",
+        .cohort = &.{ "_import_dot", "_by_delegation_hint" },
+    },
+
+    // Scala's simple strings. Read off the scanner rather than inferred from
+    // the rule, because the scanner the oracle builds is on disk and it settles
+    // three things the grammar leaves open:
+    //
+    //   * the opener marks its end after the FIRST quote and only then looks
+    //     for two more, so the start is exactly one byte and `"""` is a
+    //     different terminal rather than a longer reading of this one;
+    //   * in the body a `"` is consumed and ends the token, while a `\` ends it
+    //     *before* itself - the escape is the grammar's own `escape_sequence`;
+    //   * a newline or EOF returns false, so a simple string cannot span a
+    //     line, and `$` is ordinary here because the interpolation branch is
+    //     reached with a different mode.
+    //
+    // Three rows and one machine. The `string_mode` that C function carries is
+    // the memory a hand would exist to keep, and here the state already has it:
+    // `string -> _simple_string_start (_simple_string_middle escape_sequence)*
+    // _single_line_string_end`, so the middle and the end are admitted only
+    // after the start, and interpolation is a separate production the slate
+    // already lexes through a literal `imm('"')`.
+    //
+    // The pair splits the body the way rust's does, and for the same reason: at
+    // the offset after the opener both the middle and the end match, the end
+    // reaches one byte further because it takes the closing quote, and longest
+    // wins. Where a backslash stops the end from reaching a quote at all, the
+    // middle is the only reading left.
+    .{
+        .name = "_simple_string_start",
+        .pattern = "\"",
+        .cohort = &.{ "_simple_string_middle", "_single_line_string_end", "_simple_multiline_string_start" },
+    },
+    // The opener the scanner reaches from the same branch, and the reason this
+    // row exists rather than a guard on the one above. `"""` has to lose the
+    // position to something, and a stand-in that merely refuses does not take
+    // it away: a failed trailing context declines the priority pass and the
+    // slate still answers, so a guarded `"` would match one quote of a triple
+    // and hand the parse an empty string. Spelling the longer opener is what
+    // makes longest-match settle it, the way the C settles it by looking for
+    // two more quotes before it commits.
+    //
+    // Its own end gets no row and stays blind on purpose. `_multiline_string_end`
+    // closes on three-or-more quotes not followed by a quote, and a
+    // longest-match engine with no lazy repeat cannot spell a body that stops
+    // at the first of them. So a multiline string refuses here - which is what
+    // it did before any of these rows existed, and the outcome the board
+    // charges least of the two available.
+    .{
+        .name = "_simple_multiline_string_start",
+        .pattern = "\"\"\"",
+        .cohort = &.{ "_simple_string_start", "_simple_string_middle", "_single_line_string_end" },
+    },
+    .{
+        .name = "_simple_string_middle",
+        .pattern = "[^\"\\\\\n]+",
+        .lexis = .{ .immediate = true },
+        .cohort = &.{ "_simple_string_start", "_single_line_string_end", "_simple_multiline_string_start" },
+    },
+    .{
+        .name = "_single_line_string_end",
+        .pattern = "[^\"\\\\\n]*\"",
+        .lexis = .{ .immediate = true },
+        .cohort = &.{ "_simple_string_start", "_simple_string_middle", "_simple_multiline_string_start" },
+    },
 };
 
 /// The spelling declared for an external terminal, if this lexer has one *and*
