@@ -1,13 +1,22 @@
 # Contributing
 
-Most of this is not built yet. There is no parser: what exists is the press (a
-tree-sitter `grammar.json` importer that reaches zero residual conflicts on
-eleven real grammars), the stack-effect monoid and the cursor that composes it,
-a terminal scanner, a single-stack reference walk to check the algebra against,
-and the CLI that measures all of it. The tree, repair, the quotient, the folio
-and `libotl` are ahead. So the useful contributions right now are the ones that
-make a measurement sharper or a claim harder to hold, and the fastest way to
-know whether you have one is to reproduce rung 1 yourself.
+There is a parser, and this paragraph spent a long time saying there wasn't.
+What exists: the press (a tree-sitter `grammar.json` importer that reaches zero
+residual conflicts on eleven real grammars), the stack-effect monoid and the
+cursor that composes it, a terminal scanner, a single-stack reference walk to
+check the algebra against, a GLR parse loop in [`src/kernel/quire/`](src/kernel/quire)
+that hands back a forest and mends past what it cannot read, the folio those
+tables ship as, and the CLI that measures all of it. The quotient and `libotl`
+are still ahead.
+
+How much of that works is deliberately not written here. It moves most days, and
+a count pasted into a page is a count that ages into a lie - which is the same
+argument the rest of this file makes about pins and stamps, so it would be an odd
+place to make an exception. `python3 tool/standing.py` is the board, and it
+answers coverage, structure and agreement as three separate questions. The useful
+contributions are still the ones that make a measurement sharper or a claim
+harder to hold, and the fastest way to know whether you have one is to reproduce
+rung 1 yourself.
 
 ## Get to a green test run
 
