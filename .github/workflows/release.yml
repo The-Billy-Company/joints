@@ -1,0 +1,153 @@
+# Publish the Python package to PyPI when a version tag is pushed.
+#
+# ONE-TIME SETUP: this uses PyPI Trusted Publishing, so there is no API token to
+# rotate or leak. On PyPI, add a trusted publisher for the `joints` project
+# pointing at this repository, workflow `release.yml`, environment `pypi`. Until
+# the project exists it is a "pending" publisher, which - PyPI is explicit about
+# this - does NOT reserve the name and is invalidated if somebody else registers
+# `joints` first. The name is only held once this workflow has actually run.
+#
+# DELIBERATELY SMALLER THAN THE SIBLINGS. `irregex` runs the full house release
+# contract: a `release.toml`, the shared `package-release` action gating version
+# parity across every mirror, changelog fragment quality, CI-green and
+# tag-ancestor checks, a wheel matrix, a cross-ABI smoke, and a parallel
+# crates.io leg. None of that is load-bearing yet, because the wheel here is pure
+# metadata: `0.0.0` exports nothing, bundles no native library, and is
+# `py3-none-any`. Porting gates that guard a native artifact before the artifact
+# exists would be ceremony that has never been exercised on a real release, which
+# is the kind of thing that fails the first time it matters. It arrives with the
+# first version that ships a binding.
+#
+# crates.io is absent for the same reason and one more: `joints 0.0.0` was
+# published there by hand, because crates.io will not accept a trusted-publisher
+# configuration for a crate that does not exist yet.
+
+name: release
+
+on:
+  push:
+    tags: [ "v*" ]
+  # A manual run builds and verifies and stops short of publishing, so the
+  # pipeline can be exercised without spending a version number.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  # Never cancel a release mid-flight: a cancelled upload is the one state that
+  # is neither published nor safe to retry blindly.
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          enable-cache: false
+
+      # On a tag, the tag IS the claim about what is being published, so it has
+      # to agree with the metadata before anything is built. Read out of
+      # `pyproject.toml` with tomllib rather than a grep, so a version that moved
+      # into a different table cannot read as a match.
+      - name: The tag must name the version being published
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, sys, tomllib, pathlib
+          declared = tomllib.loads(
+              pathlib.Path("bindings/python/pyproject.toml").read_text()
+          )["project"]["version"]
+          tagged = os.environ["TAG"].removeprefix("v")
+          if declared != tagged:
+              print(f"::error::tag {os.environ['TAG']} names {tagged!r} but "
+                    f"bindings/python/pyproject.toml declares {declared!r}")
+              sys.exit(1)
+          print(f"tag and metadata agree on {declared}")
+          PY
+
+      - name: Build the sdist and the wheel
+        working-directory: bindings/python
+        run: uv build
+
+      # What the index will read, checked before the index is asked to read it.
+      - name: Check the metadata the index will read
+        working-directory: bindings/python
+        run: uvx twine check dist/*
+
+      # The wheel has to install and import on a clean interpreter. Trivial while
+      # the package is metadata only, and exactly the step that stops being
+      # trivial the moment it carries a native library - so it is here from the
+      # start rather than added after the first broken wheel.
+      - name: Install the built wheel and import it
+        working-directory: bindings/python
+        run: |
+          set -euo pipefail
+          uv venv /tmp/verify
+          uv pip install --python /tmp/verify/bin/python dist/*.whl
+          /tmp/verify/bin/python -c \
+            "import joints; print('import OK, __version__ =', joints.__version__)"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dist
+          path: bindings/python/dist/*
+          if-no-files-found: error
+
+  publish:
+    name: publish
+    # Only a tag publishes. A manual run stops after `build`.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      # The OIDC token Trusted Publishing exchanges for an upload credential.
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dist
+          path: dist
+
+      - id: tag
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      # Probed before the OIDC token is minted: a retry after a flake, or a
+      # dispatch on a tag that already shipped, must land on "already there"
+      # rather than spend a credential on an upload PyPI will reject anyway. A
+      # published version is immutable on PyPI, so "already present" is success
+      # and not a collision - and a registry that does not answer is never
+      # treated as absent, because that is the reading that double-publishes.
+      - id: probe
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/probe.json -w '%{http_code}' \
+            "https://pypi.org/pypi/joints/${VERSION}/json" || echo 000)
+          case "$code" in
+            200) state=present ;;
+            404) state=absent ;;
+            *)   state=error ;;
+          esac
+          echo "state=$state" >> "$GITHUB_OUTPUT"
+          echo "joints ${VERSION} on PyPI: $state (HTTP $code)"
+          [ "$state" != error ] || {
+            echo "::error::PyPI did not answer for joints ${VERSION} —" \
+                 "a network failure is never treated as \"absent\"." >&2
+            exit 1
+          }
+
+      - if: steps.probe.outputs.state == 'absent'
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
