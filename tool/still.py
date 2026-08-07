@@ -191,13 +191,27 @@ class Witness(NamedTuple):
     rule: str = ""  # the version of the identity RULE those digests obey
     asked: bool = False  # did this run put a question to them, or only cite them
     lowered: dict[str, str] = {}  # grammar -> generated digest, when asked
+    # Live verdicts on THIS arm, over held. `oracles` above is a property of the
+    # REPO - which tree-sitter would answer, if asked - and reads thirty on an
+    # arm whose seat is empty, so a citation built on it alone says a figure was
+    # judged when its `square` reads 0 for want of a verdict. This pair is what
+    # separates those.
+    #
+    # `None` is "did not look" and is the only honest reading of a witness
+    # written before this field, or of an arm that declared no seat. `(0, 0)` is
+    # "looked, and this arm holds nothing" - a measurement, and the one the
+    # citation has to be loudest about. Folding those two into one value is how
+    # the absence got quiet in the first place.
+    verdicts: tuple[int, int] | None = None
 
     def as_dict(self) -> dict:
         return {**self._asdict(), "subject_files": len(self.subject)}
 
     def line(self) -> str:
         how = "consulted" if self.asked else "attributed"
-        oracle = (f"{len(self.oracles)} oracle(s) {self.court[:9]} {how}"
+        seat = ("" if self.verdicts is None
+                else f", {self.verdicts[0]} of {self.verdicts[1]} live here")
+        oracle = (f"{len(self.oracles)} oracle(s) {self.court[:9]} {how}{seat}"
                   if self.oracles else "no oracle")
         return (f"witness {self.arm}: binary {self.binary[:9]} · subject {self.tree[:9]}"
                 f" ({len(self.subject)} file(s), {self.origin}) · live {self.live[:9]}"
@@ -220,17 +234,39 @@ class Witness(NamedTuple):
         lie this string cannot catch. What it removes is the excuse: the honest
         form now costs one command and one paste.
         """
-        oracle = (f"oracle `{self.court[:9]}`"
-                  f" ({len(self.oracles)}"
-                  f" {'consulted' if self.asked else 'attributed'})"
-                  if self.oracles else "**no oracle** — outliner's own words")
+        how = "consulted" if self.asked else "attributed"
+        alive, held = self.verdicts or (0, 0)
+        if not self.oracles:
+            oracle = "**no oracle** — outliner's own words"
+        elif self.verdicts is not None and not alive:
+            # The state that had no spelling, and the reason this is three
+            # branches and not two. `oracles` says thirty parsers would answer;
+            # this arm has asked none of them and holds no live verdict either,
+            # so every `square` and `crooked` off it reads 0 - the same 0 that
+            # thirty agreeing grammars print. Citing the court alone here hands
+            # the next page the stronger of the two available lies.
+            oracle = (f"oracle `{self.court[:9]}` seated but **no verdict live"
+                      f" on this arm**{f' (0 of {held} held)' if held else ''}"
+                      f" — `square` and `crooked` off it are unmeasured zeroes")
+        else:
+            oracle = (f"oracle `{self.court[:9]}`"
+                      f" ({f'{alive} of {held} live, ' if self.verdicts else ''}"
+                      f"{len(self.oracles)} {how})")
         return (f"outliner `{self.binary[:9]}` · tree `{self.tree[:9]}`"
                 f" ({self.origin}) · {oracle}")
 
 
-def take(arm: str, binary: Path | None = None) -> Witness:
+def take(arm: str, binary: Path | None = None, work: Path | None = None) -> Witness:
     """Record the world at one arm. Reads `stamp.FED`, so an instrument that
-    already feeds its artifacts gets the artifact field for nothing."""
+    already feeds its artifacts gets the artifact field for nothing.
+
+    `work` is the seat to count live verdicts in, and it is a parameter rather
+    than a default because the default belongs to the caller: `standing`,
+    `plumb` and `collate` each spell `OUTLINER_WORK or ROOT/.local/standing`,
+    and a fourth copy here is how a witness would come to disagree with the
+    board it witnesses about which seat was read. Unset and unpassed means the
+    liveness question was never put, which `Witness.verdicts` spells `None`.
+    """
     binary = binary or Path(os.environ.get("OUTLINER_BIN", stamp.usual()))
     mani, origin = subject_of(binary)
     try:
@@ -255,7 +291,46 @@ def take(arm: str, binary: Path | None = None) -> Witness:
         rule=oracle_rule(),
         asked=any(r.asked for r in rows),
         lowered={r.name: r.lower for r in rows if r.asked and r.lower},
+        # `None`, not `(0, 0)`: an arm nobody named a seat for has not been
+        # looked at, and saying "looked, holds nothing" of it would be the same
+        # conflation this field exists to undo, one level up.
+        verdicts=live_verdicts(Path(seat), binary)
+        if (seat := work or os.environ.get("OUTLINER_WORK")) else None,
     )
+
+
+def live_verdicts(work: Path, binary: Path) -> tuple[int, int]:
+    """How many of an arm's cached verdicts a board on it would actually accept.
+
+    `Held.matches` minus `source`, which is a property of the repo and not of
+    the arm: the folio digest, the binary digest, and a non-empty oracle. All
+    three have been the difference between a four-minute sweep and nothing -
+    two caches on this disk carry thirty verdicts apiece under `folio: missing`,
+    minted by lanes that ran `--audit` in a work dir cold enough that the folio
+    they were about had not been pressed yet.
+
+    Cheap on purpose (~18 ms over thirty): `pin.py arm` is a line of shell a
+    lane evaluates constantly, and a check that opened thirty folios would be a
+    check somebody turns off.
+
+    It lives here rather than in `pin.py` because the *witness* is what needs
+    it, and an arm is not always a pin - `(work, binary)` is the pair every arm
+    has. `pin.oracled` is now a caller. Two copies of this would be two
+    instruments disagreeing about whether an arm can see, which is the same
+    class of split the identity rule is kept in `attest` to avoid.
+    """
+    try:
+        got = json.loads((work / "audit.json").read_text())
+    except (OSError, ValueError):
+        return 0, 0
+    mine = stamp.digest(binary)[:16] if binary.is_file() else ""
+    live = 0
+    for name, v in got.items():
+        folio = work / f"{name}.folio"
+        if (isinstance(v, dict) and v.get("oracle") and v.get("binary") == mine
+                and folio.is_file() and v.get("folio") == stamp.digest(folio)[:16]):
+            live += 1
+    return live, len(got)
 
 
 def oracle_rule() -> str:
@@ -1723,7 +1798,7 @@ def main(argv: list[str]) -> int:
     g.add_argument("b")
     g.add_argument("--mine", action="append", default=[],
                    help="a file, directory or glob this lane claims as its own"
-                        " change; repeatable")
+                        " change; repeatable and comma-separable")
     g.add_argument("--null", action="store_true",
                    help="a null arm: the subject is byte-identical either side,"
                         " so the binary must NOT have moved")
@@ -1742,7 +1817,16 @@ def main(argv: list[str]) -> int:
         print(f"still: kept at {stamp.here(keep(it))}")
         return 0
     if got.verb == "against":
-        return against(got.a, got.b, tuple(got.mine), got.null, got.inert)
+        # One `--mine src/a/,src/b.zig` is the spelling `standing.py` takes and
+        # the one `tool/README.md` documents for the flag of this name, so a
+        # lane arrives here with it already in hand. Appended whole it became a
+        # single claim naming no file, and the refusal that followed reported
+        # *more* unclaimed files than the correctly-spelled run - so the
+        # mis-parse read as "your isolation is worse than you thought" rather
+        # than as a flag that did not parse. Split here so the two flags of one
+        # name cannot disagree about their own syntax.
+        mine = tuple(p for a in got.mine for p in a.split(",") if p.strip())
+        return against(got.a, got.b, mine, got.null, got.inert)
     if got.verb == "mark":
         return print(f"still: {mark(Path(got.where))} file(s)") or 0
     if got.verb == "verify":

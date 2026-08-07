@@ -246,31 +246,15 @@ def seat(where: Path) -> tuple[Path, dict[str, str]]:
 
 
 def oracled(where: Path) -> tuple[int, int]:
-    """How many of this arm's cached verdicts a board here would actually accept.
+    """How many of this pin's cached verdicts a board here would actually accept.
 
-    `Held.matches` minus `source`, which is a property of the repo and not of
-    the arm: the folio digest, the binary digest, and a non-empty oracle. All
-    three have been the difference between a four-minute sweep and nothing -
-    two caches on this disk carry thirty verdicts apiece under `folio: missing`,
-    minted by lanes that ran `--audit` in a work dir cold enough that the folio
-    they were about had not been pressed yet.
-
-    Cheap on purpose: `arm` is a line of shell a lane evaluates constantly, and
-    a check that opened thirty folios would be a check somebody turns off.
+    The body moved to `still.live_verdicts`, which takes the `(work, binary)`
+    pair every arm has rather than the pin layout only a pin has - because the
+    witness needs the same answer and a witness is not always taken on a pin.
+    A pin is the case where those two paths are derivable, so this is now the
+    spelling of that derivation and nothing else.
     """
-    work = where / "work"
-    try:
-        got = json.loads((work / "audit.json").read_text())
-    except (OSError, ValueError):
-        return 0, 0
-    mine = digest(where / BINARY)[:16] if (where / BINARY).is_file() else ""
-    live = 0
-    for name, v in got.items():
-        folio = work / f"{name}.folio"
-        if (isinstance(v, dict) and v.get("oracle") and v.get("binary") == mine
-                and folio.is_file() and v.get("folio") == digest(folio)[:16]):
-            live += 1
-    return live, len(got)
+    return still.live_verdicts(where / "work", where / BINARY)
 
 
 def oracle(name: str) -> int:

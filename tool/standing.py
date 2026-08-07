@@ -2285,7 +2285,16 @@ def main(argv: list[str]) -> int:
         # board is an attribution that gets skipped. This is the supply side of
         # `sighting.py --gate`: the gate refuses a page that names no tree, and
         # a refusal with no cheap remedy beside it is a gate that gets disabled.
-        print(still.take(os.environ.get("OUTLINER_LANE") or "board", BIN).cite())
+        #
+        # `bench()` first, and it is not optional. Skipping the survey also
+        # skipped the only call that seats a court, so the line this command
+        # exists to mint said `**no oracle** — outliner's own words` on every
+        # arm ever cited, including one whose board printed `30 oracle(s)
+        # d85e736fa attributed` in the same terminal. It costs 0.35 s, reads no
+        # `parser.c` (see `bench`), and `verdicts` in the witness is what keeps
+        # seating a court from becoming the opposite claim on a blind arm.
+        bench()
+        print(still.take(os.environ.get("OUTLINER_LANE") or "board", BIN, WORK).cite())
         return 0
     if any(a == "--twice" or a.startswith("--twice=") for a in argv):
         many = next((int(a.split("=", 1)[1]) for a in argv if a.startswith("--twice=")), 2)
@@ -2313,7 +2322,7 @@ def main(argv: list[str]) -> int:
     # it, which is the entire design constraint. Kept unbidden, because a
     # witness a lane has to remember to record is a witness the pairs that
     # needed it will not have.
-    seen = still.take(os.environ.get("OUTLINER_LANE") or "board", BIN)
+    seen = still.take(os.environ.get("OUTLINER_LANE") or "board", BIN, WORK)
     still.keep(seen)
     if "--json" in argv:
         # The checks ride the machine output too. A gate whose only reader is a
