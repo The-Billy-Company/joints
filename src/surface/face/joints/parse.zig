@@ -94,11 +94,7 @@ const joints = @import("joints");
 const intake = @import("intake.zig");
 
 const folio = joints.folio;
-const import = joints.press.import;
 const press = joints.press;
-const g = joints.press.grammar;
-const lalr = joints.press.lalr;
-const lr0 = joints.press.lr0;
 const scanner = joints.kernel.lex.scanner;
 const quire = joints.kernel.quire;
 
@@ -107,7 +103,7 @@ const quire = joints.kernel.quire;
 /// the folio exists.
 pub const Parser = union(enum) {
     minted: struct { mapped: folio.MappedVolume, bound: folio.Bound },
-    pressed: struct { grammar: g.Grammar, built: press.Result },
+    pressed: struct { grammar: press.Grammar, built: press.Result },
 
     pub fn deinit(p: *Parser) void {
         switch (p.*) {
@@ -122,21 +118,21 @@ pub const Parser = union(enum) {
         }
     }
 
-    pub fn grammar(p: *const Parser) *const g.Grammar {
+    pub fn grammar(p: *const Parser) *const press.Grammar {
         return switch (p.*) {
             .minted => |*m| &m.bound.grammar,
             .pressed => |*x| &x.grammar,
         };
     }
 
-    pub fn collection(p: *const Parser) *const lr0.Collection {
+    pub fn collection(p: *const Parser) *const press.Collection {
         return switch (p.*) {
             .minted => |*m| &m.bound.collection,
             .pressed => |*x| &x.built.collection,
         };
     }
 
-    pub fn tables(p: *const Parser) *const lalr.Tables {
+    pub fn tables(p: *const Parser) *const press.Tables {
         return switch (p.*) {
             .minted => |*m| &m.bound.tables,
             .pressed => |*x| &x.built.tables,
@@ -342,7 +338,7 @@ pub fn load(
 
     const source = intake.slurp(gpa, io, e, path) orelse return null;
     defer gpa.free(source);
-    var gr = import.treeSitter(gpa, source) catch |err| {
+    var gr = press.treeSitter(gpa, source) catch |err| {
         try e.print("joints: cannot import {s}: {s}\n", .{ path, @errorName(err) });
         return null;
     };
@@ -428,7 +424,7 @@ fn outline(
 /// second wall. An instrument that priced the two separately was double-counting
 /// one break - which is what `research/joinery/reprice/` caught the warm peel
 /// doing across a whole corpus, at the cost of a second parse per byte.
-fn seams(q: *const quire.Quire, w: *std.Io.Writer, gr: *const g.Grammar) !void {
+fn seams(q: *const quire.Quire, w: *std.Io.Writer, gr: *const press.Grammar) !void {
     var shifted: u32 = 0;
     for (q.scars) |s| {
         // Two moves and two spellings. A deletion says how many bytes it walked
@@ -480,7 +476,7 @@ fn seams(q: *const quire.Quire, w: *std.Io.Writer, gr: *const g.Grammar) !void {
 fn machine(
     q: *const quire.Quire,
     w: *std.Io.Writer,
-    gr: *const g.Grammar,
+    gr: *const press.Grammar,
     path: []const u8,
     show: quire.Show,
     found: quire.Quire.Survey,
@@ -581,11 +577,11 @@ fn quoted(w: *std.Io.Writer, name: []const u8) !void {
 /// tree, several are the forest a stop left standing.
 pub fn verdict(
     e: *std.Io.Writer,
-    gr: *const joints.press.grammar.Grammar,
+    gr: *const joints.press.Grammar,
     path: []const u8,
     q: *const quire.Quire,
-    t: *const lalr.Tables,
-    blind: []const g.Symbol,
+    t: *const press.Tables,
+    blind: []const press.Symbol,
     found: quire.Quire.Survey,
 ) !void {
     try e.print("joints: {s}: ", .{path});
@@ -668,10 +664,10 @@ pub fn verdict(
 /// Silent on an accepted parse, where the answer is `whole` and says nothing.
 fn owner(
     e: *std.Io.Writer,
-    gr: *const joints.press.grammar.Grammar,
+    gr: *const joints.press.Grammar,
     q: *const quire.Quire,
-    t: *const lalr.Tables,
-    blind: []const g.Symbol,
+    t: *const press.Tables,
+    blind: []const press.Symbol,
 ) !void {
     const wall: press.inquest.Wall = switch (q.stop) {
         .accepted => return,
@@ -686,7 +682,7 @@ fn owner(
                 .state = u.state,
                 // The path the token drove to reach that state, which is what turns
                 // "the table is damaged on this terminal somewhere" into a cell and
-                // its `lalr.Floor` bucket. Empty is not null: a token refused
+                // its `press.Floor` bucket. Empty is not null: a token refused
                 // without folding drove no reduces, and saying so is a fact about
                 // the wall rather than a gap in the instrument.
                 .folded = u.folded,
@@ -710,21 +706,21 @@ fn owner(
 /// dragging a pressed grammar in would make the test cost a press and stop
 /// being a test of this file. Same trick, same reason, as
 /// `kernel/quire/survey_test.zig`'s `arena`.
-fn said(gpa: std.mem.Allocator, gr: *const g.Grammar, q: *const quire.Quire, found: quire.Quire.Survey) ![]u8 {
-    const tables: *const lalr.Tables = undefined;
+fn said(gpa: std.mem.Allocator, gr: *const press.Grammar, q: *const quire.Quire, found: quire.Quire.Survey) ![]u8 {
+    const tables: *const press.Tables = undefined;
     var out: std.Io.Writer.Allocating = .init(gpa);
     errdefer out.deinit();
     try verdict(&out.writer, gr, "/x/a.json", q, tables, &.{}, found);
     return out.toOwnedSlice();
 }
 
-fn named(names: []const []const u8) g.Grammar {
-    var gr: g.Grammar = undefined;
+fn named(names: []const []const u8) press.Grammar {
+    var gr: press.Grammar = undefined;
     gr.names = names;
     return gr;
 }
 
-fn accepted(gr: *const g.Grammar, nodes: []const quire.Node, kids: []const quire.Ref, roots: []const quire.Ref) quire.Quire {
+fn accepted(gr: *const press.Grammar, nodes: []const quire.Node, kids: []const quire.Ref, roots: []const quire.Ref) quire.Quire {
     return .{ .gpa = std.testing.allocator, .gr = gr, .nodes = nodes, .kids = kids, .roots = roots, .stop = .accepted };
 }
 

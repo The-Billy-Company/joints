@@ -30,9 +30,7 @@ const weave = @import("weave.zig");
 const quire = @import("../quire/quire.zig");
 const scanner = @import("../lex/scanner.zig");
 const press = @import("../../press/press.zig");
-const import = @import("../../press/import.zig");
-const g = @import("../../press/grammar.zig");
-const effect = @import("../joint/effect.zig");
+const joint = @import("../joint/joint.zig");
 
 /// One edit, recorded as magnitudes rather than as byte offsets, which is the
 /// whole reason a script can be shrunk: an offset recorded against a file that
@@ -67,7 +65,7 @@ const Kind = enum {
 /// checking that two hash tables happened to fill in the same order.
 const Bolt = struct {
     gpa: std.mem.Allocator,
-    gr: g.Grammar,
+    gr: press.Grammar,
     built: press.Result,
     sc: scanner.Scanner,
     loom: weave.Loom = undefined,
@@ -76,7 +74,7 @@ const Bolt = struct {
         const b = try gpa.create(Bolt);
         errdefer gpa.destroy(b);
         b.* = .{ .gpa = gpa, .gr = undefined, .built = undefined, .sc = undefined };
-        b.gr = try import.treeSitter(gpa, source);
+        b.gr = try press.treeSitter(gpa, source);
         errdefer b.gr.deinit();
         b.built = try press.tables(gpa, &b.gr);
         errdefer b.built.deinit();
@@ -387,9 +385,9 @@ const Run = struct {
         for (1..leaves.len) |i| {
             const l = leaves[i - 1];
             const n = leaves[i];
-            if (l.element.entry == effect.Effect.broken) continue;
-            if (n.element.entry == effect.Effect.broken) continue;
-            if (try effect.compose(x, l.element, n.element) != null) continue;
+            if (l.element.entry == joint.Effect.broken) continue;
+            if (n.element.entry == joint.Effect.broken) continue;
+            if (try joint.compose(x, l.element, n.element) != null) continue;
 
             const at = r.w.starts.items[i];
             // Coarser than the cold parse over the same bytes is what a lift

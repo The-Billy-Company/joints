@@ -20,10 +20,7 @@
 //! being obviously correct, not in being fast.
 
 const std = @import("std");
-const g = @import("../../press/grammar.zig");
-const lr0 = @import("../../press/lr0.zig");
 const press = @import("../../press/press.zig");
-const lalr = @import("../../press/lalr.zig");
 const lex = @import("../lex/scanner.zig");
 
 pub const Token = lex.Token;
@@ -72,9 +69,9 @@ pub const Trace = struct {
 
 pub const Drive = struct {
     gpa: std.mem.Allocator,
-    gr: *const g.Grammar,
-    c: *const lr0.Collection,
-    t: *const lalr.Tables,
+    gr: *const press.Grammar,
+    c: *const press.Collection,
+    t: *const press.Tables,
     scanner: *lex.Scanner,
 
     /// The LR state stack. Symbols are not kept: nothing here needs them, and
@@ -88,9 +85,9 @@ pub const Drive = struct {
 
     pub fn init(
         gpa: std.mem.Allocator,
-        gr: *const g.Grammar,
-        c: *const lr0.Collection,
-        t: *const lalr.Tables,
+        gr: *const press.Grammar,
+        c: *const press.Collection,
+        t: *const press.Tables,
         scanner: *lex.Scanner,
     ) !Drive {
         return .{
@@ -206,7 +203,7 @@ pub const Drive = struct {
 
     /// Fold until the token can be shifted, then shift it. False means no
     /// sequence of folds makes this token legal here.
-    fn absorb(d: *Drive, sym: g.Symbol) !bool {
+    fn absorb(d: *Drive, sym: press.Symbol) !bool {
         d.folded.clearRetainingCapacity();
         while (true) {
             const act = d.t.at(d.states.getLast(), sym);
@@ -261,17 +258,17 @@ const testing = std.testing;
 /// lexing from the parse state.
 const Doc = struct {
     f: *Fixture,
-    lbrace: g.Symbol = 0,
-    rbrace: g.Symbol = 1,
-    comma: g.Symbol = 2,
-    colon: g.Symbol = 3,
-    quote: g.Symbol = 4,
-    text: g.Symbol = 5,
-    space: g.Symbol = 6,
+    lbrace: press.Symbol = 0,
+    rbrace: press.Symbol = 1,
+    comma: press.Symbol = 2,
+    colon: press.Symbol = 3,
+    quote: press.Symbol = 4,
+    text: press.Symbol = 5,
+    space: press.Symbol = 6,
 
     const Fixture = struct {
         gpa: std.mem.Allocator,
-        gr: g.Grammar,
+        gr: press.Grammar,
         built: press.Result,
         scanner: lex.Scanner,
         drive: Drive,
@@ -288,7 +285,7 @@ const Doc = struct {
     };
 
     fn init(gpa: std.mem.Allocator) !Doc {
-        var b = g.Builder.init(gpa);
+        var b = press.Builder.init(gpa);
         defer b.deinit();
         const lbrace = try b.intern("{", "{", .{ .literal = "{" });
         const rbrace = try b.intern("}", "}", .{ .literal = "}" });
@@ -324,7 +321,7 @@ const Doc = struct {
     }
 };
 
-fn names(gpa: std.mem.Allocator, gr: *const g.Grammar, tokens: []const Token) ![]const u8 {
+fn names(gpa: std.mem.Allocator, gr: *const press.Grammar, tokens: []const Token) ![]const u8 {
     var out: std.ArrayList(u8) = .empty;
     for (tokens, 0..) |tok, i| {
         if (i != 0) try out.append(gpa, ' ');

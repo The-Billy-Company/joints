@@ -59,8 +59,7 @@
 
 const std = @import("std");
 const irregex = @import("irregex");
-const g = @import("../../press/grammar.zig");
-const lexeme = @import("../../press/lexeme.zig");
+const press = @import("../../press/press.zig");
 const admit = @import("admit.zig");
 const outside = @import("outside.zig");
 pub const lexicon = @import("lexicon.zig");
@@ -131,7 +130,7 @@ test {
 }
 
 pub const Token = struct {
-    symbol: g.Symbol,
+    symbol: press.Symbol,
     start: u32,
     len: u32,
 
@@ -164,7 +163,7 @@ pub const Scanner = struct {
     /// alone - and then the carried automata name terminals that have moved.
     stamp: u64,
     /// Pattern ordinal -> the terminal it stands for.
-    owners: []const g.Symbol,
+    owners: []const press.Symbol,
     /// Terminal -> is it skipped between tokens (whitespace, comments)?
     skipped: std.DynamicBitSetUnmanaged,
     /// Terminal -> is it an extra the grammar also spells inside a rule?
@@ -203,12 +202,12 @@ pub const Scanner = struct {
     /// pass that reads it runs before the ordinary search - see `refusing`.
     guarded: ?Munch.Allow,
     /// The terminal a keyword is spelled as, when the grammar named one.
-    word: ?g.Symbol,
+    word: ?press.Symbol,
     /// Terminals no slate can recognize because they are externally scanned and
     /// no hand answers them. Ascending. Non-empty means any token stream from
     /// this scanner is incomplete, and every consumer is required to say so
     /// rather than present a partial lex as a whole one.
-    blind: []const g.Symbol,
+    blind: []const press.Symbol,
     /// Terminals whose pattern the regex engine would not build: a syntax it
     /// does not parse, the powerset safety bound, or a word-boundary assertion
     /// reached through the body. Ascending, and the same incompleteness as
@@ -226,7 +225,7 @@ pub const Scanner = struct {
     /// grammars and is not ours. Keep the field at zero rather than deleting
     /// it: it is the one of the two that a reader can act on, and a population
     /// nobody counts is how it got to eighty-seven unnoticed the first time.
-    declined: []const g.Symbol,
+    declined: []const press.Symbol,
     /// Extras this scanner cannot step over: the grammar declared them, but they
     /// are rules rather than terminals, so there is no token to skip and no seat
     /// to skip it with. lua spells `comment` as a rule around `--`, julia spells
@@ -240,7 +239,7 @@ pub const Scanner = struct {
     /// externally scanned terminal. Being outside `blind` is also exactly how it
     /// stayed invisible: `blind` is the honesty surface, and a fact that is not a
     /// terminal had nowhere in it to sit.
-    unskippable: []const g.Symbol,
+    unskippable: []const press.Symbol,
     /// The hand-written scanners this grammar binds, with their terminal names
     /// already resolved to symbols. Empty for a grammar whose externals are all
     /// spellings, which is most of them.
@@ -291,14 +290,14 @@ pub const Scanner = struct {
     /// difference between two milliseconds of startup and eighty. Everything
     /// else about the scanner is derived here either way, because everything
     /// else is cheap; only the automata are worth carrying.
-    pub fn compile(gpa: std.mem.Allocator, gr: *const g.Grammar) CompileError!?Scanner {
+    pub fn compile(gpa: std.mem.Allocator, gr: *const press.Grammar) CompileError!?Scanner {
         var arena_state = std.heap.ArenaAllocator.init(gpa);
         defer arena_state.deinit();
         const arena = arena_state.allocator();
 
         var slate: std.ArrayList([]const u8) = .empty;
-        var owners: std.ArrayList(g.Symbol) = .empty;
-        var blind: std.ArrayList(g.Symbol) = .empty;
+        var owners: std.ArrayList(press.Symbol) = .empty;
+        var blind: std.ArrayList(press.Symbol) = .empty;
 
         var literal: std.DynamicBitSetUnmanaged = try .initEmpty(gpa, gr.terminal_count);
         errdefer literal.deinit(gpa);
@@ -318,11 +317,11 @@ pub const Scanner = struct {
         var casts: std.ArrayList(outside.Cast) = .empty;
         errdefer casts.deinit(gpa);
         const names: struct {
-            gr: *const g.Grammar,
-            pub fn external(n: @This(), name: []const u8) ?g.Symbol {
+            gr: *const press.Grammar,
+            pub fn external(n: @This(), name: []const u8) ?press.Symbol {
                 return externalNamed(n.gr, name);
             }
-            pub fn terminal(n: @This(), name: []const u8) ?g.Symbol {
+            pub fn terminal(n: @This(), name: []const u8) ?press.Symbol {
                 return terminalNamed(n.gr, name);
             }
         } = .{ .gr = gr };
@@ -336,9 +335,9 @@ pub const Scanner = struct {
         // IR, which has no wrapper on an external to read it off - and the
         // tiers below need the same answer this loop used, or a terminal lexes
         // in one rank and is admitted in another.
-        const lexis = try arena.alloc(g.Lexis, gr.terminal_count);
+        const lexis = try arena.alloc(press.Lexis, gr.terminal_count);
         for (0..gr.terminal_count) |i| {
-            const sym: g.Symbol = @intCast(i);
+            const sym: press.Symbol = @intCast(i);
             lexis[i] = gr.lexisOf(sym);
             // `patterns` is optional per symbol because nonterminals have none,
             // so nothing in the type says a terminal has one. Panicking here is
@@ -366,7 +365,7 @@ pub const Scanner = struct {
                 .literal => |lit| {
                     literal.set(i);
                     var rx: std.ArrayList(u8) = .empty;
-                    try lexeme.escape(&rx, arena, lit);
+                    try press.lexeme.escape(&rx, arena, lit);
                     try slate.append(arena, rx.items);
                     try owners.append(gpa, sym);
                 },
@@ -419,17 +418,17 @@ pub const Scanner = struct {
         // none of them, and neither does anything else; the corpus total is
         // zero, and it only got there because the fields were split before
         // anyone went looking.
-        var declined: std.ArrayList(g.Symbol) = .empty;
+        var declined: std.ArrayList(press.Symbol) = .empty;
         errdefer declined.deinit(gpa);
         for (munch.declined) |ordinal| try declined.append(gpa, owners.items[ordinal]);
-        std.mem.sort(g.Symbol, blind.items, {}, std.sort.asc(g.Symbol));
-        std.mem.sort(g.Symbol, declined.items, {}, std.sort.asc(g.Symbol));
+        std.mem.sort(press.Symbol, blind.items, {}, std.sort.asc(press.Symbol));
+        std.mem.sort(press.Symbol, declined.items, {}, std.sort.asc(press.Symbol));
 
         var skipped: std.DynamicBitSetUnmanaged = try .initEmpty(gpa, gr.terminal_count);
         errdefer skipped.deinit(gpa);
         var kept: std.DynamicBitSetUnmanaged = try .initEmpty(gpa, gr.terminal_count);
         errdefer kept.deinit(gpa);
-        var unskippable: std.ArrayList(g.Symbol) = .empty;
+        var unskippable: std.ArrayList(press.Symbol) = .empty;
         errdefer unskippable.deinit(gpa);
         for (gr.extras) |e| {
             // A nonterminal extra is a subtree the parser has to reduce, which is
@@ -481,7 +480,7 @@ pub const Scanner = struct {
         var orphan: std.DynamicBitSetUnmanaged = try .initEmpty(arena, gr.terminal_count);
         if (unskippable.items.len > 0) {
             var within: std.DynamicBitSetUnmanaged = try .initEmpty(arena, gr.symbolCount());
-            var stack: std.ArrayList(g.Symbol) = .empty;
+            var stack: std.ArrayList(press.Symbol) = .empty;
             for (unskippable.items) |e| {
                 within.set(e);
                 try stack.append(arena, e);
@@ -642,10 +641,10 @@ pub const Scanner = struct {
     /// The terminal spelled `name`, if the grammar has one. Linear, and asked
     /// once per troupe member at compile; a map would cost more to build than
     /// the twenty scans it would save.
-    fn terminalNamed(gr: *const g.Grammar, name: []const u8) ?g.Symbol {
+    fn terminalNamed(gr: *const press.Grammar, name: []const u8) ?press.Symbol {
         if (name.len == 0) return null;
         for (0..gr.terminal_count) |i| {
-            const sym: g.Symbol = @intCast(i);
+            const sym: press.Symbol = @intCast(i);
             if (std.mem.eql(u8, gr.nameOf(sym), name)) return sym;
         }
         return null;
@@ -654,7 +653,7 @@ pub const Scanner = struct {
     /// The same, restricted to terminals the grammar declared external. A
     /// grammar that happens to spell an ordinary token `string_start` means its
     /// own token by it, and binding a hand to that would be us renaming it.
-    fn externalNamed(gr: *const g.Grammar, name: []const u8) ?g.Symbol {
+    fn externalNamed(gr: *const press.Grammar, name: []const u8) ?press.Symbol {
         const sym = terminalNamed(gr, name) orelse return null;
         const pattern = gr.patterns[sym] orelse return null;
         return if (pattern == .external) sym else null;
@@ -780,7 +779,7 @@ pub const Scanner = struct {
     ///
     /// With no state to consult every extra is stepped over, which is the only
     /// honest reading of the whole slate.
-    fn stepping(s: *const Scanner, sym: g.Symbol, expected: ?*const Expected) bool {
+    fn stepping(s: *const Scanner, sym: press.Symbol, expected: ?*const Expected) bool {
         if (!s.skipped.isSet(sym)) return false;
         if (!s.meant.isSet(sym)) return true;
         return if (expected) |e| !e.named.isSet(sym) else true;
@@ -950,7 +949,7 @@ pub const Scanner = struct {
         const hit = s.munch.longestAmong(bytes, i, allow) orelse return null;
         if (hit.len == 0) return null;
         const end = i + @as(u32, @intCast(hit.len));
-        var best: ?g.Symbol = null;
+        var best: ?press.Symbol = null;
         for (hit.patterns) |ordinal| {
             const sym = s.owners[ordinal];
             if (!expected.wanted.isSet(sym)) continue;
@@ -1032,7 +1031,7 @@ pub const Scanner = struct {
     /// ever sees tokens the grammar file defined, and bash's `variable_name` is
     /// a subset of its `word` that is emphatically not a keyword of it. Without
     /// the exclusion every bare bash word would come back as an assignment.
-    fn choose(s: *const Scanner, tied: []const u32, expected: ?*const Expected) g.Symbol {
+    fn choose(s: *const Scanner, tied: []const u32, expected: ?*const Expected) press.Symbol {
         const plain = s.pick(tied, false, expected).?;
         if (s.word) |w| if (plain == w) return s.pick(tied, true, expected) orelse plain;
         return plain;
@@ -1045,8 +1044,8 @@ pub const Scanner = struct {
         tied: []const u32,
         keywords: bool,
         expected: ?*const Expected,
-    ) ?g.Symbol {
-        var best: ?g.Symbol = null;
+    ) ?press.Symbol {
+        var best: ?press.Symbol = null;
         var strength: u3 = 0;
         for (tied) |ordinal| {
             const sym = s.owners[ordinal];
@@ -1097,7 +1096,7 @@ pub const Scanner = struct {
     /// regress. Confining the refinement to the literal class scores the same
     /// (30,377), so the pattern half is carried on the argument rather than on
     /// the corpus - julia is the only grammar that reads it, at three bytes.
-    fn standing(s: *const Scanner, sym: g.Symbol, expected: ?*const Expected) u3 {
+    fn standing(s: *const Scanner, sym: press.Symbol, expected: ?*const Expected) u3 {
         if (s.skipped.isSet(sym) and s.stepping(sym, expected)) return 0;
         const narrow: u3 = @intFromBool(s.immediate.isSet(sym));
         if (s.provided.isSet(sym)) return 1 + narrow;

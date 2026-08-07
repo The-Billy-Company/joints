@@ -53,48 +53,11 @@ pub const irgx_lenses = enum { press, lex, joint, weave, folio, quire };
 /// never-writes-your-stderr contract by construction rather than by audit.
 pub const assay = irregex.assay;
 
-/// Build time: a grammar becomes tables.
-pub const press = struct {
-    /// A grammar in, an automaton and its table out. Build tables through this
-    /// rather than pairing `lr0` with `lalr` by hand: it owns the unfolding
-    /// that an LALR merge artifact needs, and nothing else does.
-    pub const tables = @import("press/press.zig").tables;
-    /// What `tables` hands back. Exported because a caller that can get one and
-    /// cannot name one has to reach for `anytype`, which trades the type check
-    /// away at exactly the seam — the CLI, the folio writer — where the tables
-    /// stop being this package's private business.
-    pub const Result = @import("press/press.zig").Result;
-    pub const setTrace = @import("press/press.zig").setTrace;
-    pub const setGrowth = @import("press/press.zig").setGrowth;
-    /// The IR every front end lowers to and the LR construction reads.
-    pub const grammar = @import("press/grammar.zig");
-    /// The tree-sitter front end. The whole go-to-market: three hundred
-    /// maintained grammars are imported, never rewritten.
-    pub const import = @import("press/import.zig");
-    /// Flattening a token rule tree down to the one regex the lexer compiles.
-    pub const lexeme = @import("press/lexeme.zig");
-    /// Substituting a nonterminal away into the productions that use it.
-    pub const fold = @import("press/fold.zig");
-    /// LALR(1) lookaheads and the action table they decide.
-    pub const lalr = @import("press/lalr.zig");
-    /// Which reading wins a cell two of them want: precedence, associativity,
-    /// and the attribution of whatever neither settles.
-    pub const settle = @import("press/settle.zig");
-    /// Whose wall a stopped parse is, decided from the artifact. Exported
-    /// because the answer is for a person: it was computed, acted on, and
-    /// reachable from nothing outside `press` for long enough that a lane
-    /// wrote a second instrument to guess at what it already knew.
-    pub const inquest = @import("press/inquest.zig");
-    /// The LR(0) canonical collection — the automaton's shape, no lookahead.
-    pub const lr0 = @import("press/lr0.zig");
-    /// The automaton read backwards, for the questions about a fold's origin
-    /// that its destination state cannot answer.
-    pub const retrace = @import("press/retrace.zig");
-    /// Nullability and FIRST, over the whole symbol space.
-    pub const first = @import("press/first.zig");
-    /// Equal-width bit sets in one buffer, the currency of set fixpoints.
-    pub const sets = @import("press/sets.zig");
-};
+/// Build time: a grammar becomes tables. `press.zig` publishes the IR - the
+/// twenty-five names that cross that directory's boundary - so this file names
+/// one door where it used to re-export thirteen submodules and leave the other
+/// hundred and fifty public symbols reachable by accident.
+pub const press = @import("press/press.zig");
 
 /// Run time: pure compute over bytes and tables, no I/O.
 pub const kernel = struct {
@@ -104,28 +67,15 @@ pub const kernel = struct {
     pub const lex = struct {
         pub const scanner = @import("kernel/lex/scanner.zig");
     };
-    /// M2 — the stack-effect monoid, the algebra a parse is folded in.
-    pub const joint = struct {
-        pub const effect = @import("kernel/joint/effect.zig");
-        /// Hash-consed persistent columns, and the one over grammar symbols.
-        pub const stack = @import("kernel/joint/stack.zig");
-        /// Hash-consed sets of states — one claim an effect makes about what was
-        /// standing under the part of the stack it popped away.
-        pub const roster = @import("kernel/joint/roster.zig");
-        /// All of those claims at once, one per popped depth. The guard.
-        pub const ledger = @import("kernel/joint/ledger.zig");
-        /// The goto automaton backwards: what a pop below a segment's own base
-        /// could have exposed.
-        pub const reverse = @import("kernel/joint/reverse.zig");
-        /// Running a segment against the tables to get one monoid element.
-        pub const cursor = @import("kernel/joint/cursor.zig");
-    };
+    /// M2 — the stack-effect monoid, the algebra a parse is folded in. Six
+    /// files behind one door: `joint.zig` publishes the fourteen names that
+    /// cross the boundary and keeps the other eighty-two to itself.
+    pub const joint = @import("kernel/joint/joint.zig");
     /// The ordinary left-to-right parse — the oracle every claim about
     /// composing segments is checked against, and the only honest source of a
-    /// token stream for a grammar with context-dependent terminals.
-    pub const walk = struct {
-        pub const drive = @import("kernel/walk/drive.zig");
-    };
+    /// token stream for a grammar with context-dependent terminals. One file, so
+    /// the file is the door.
+    pub const walk = @import("kernel/walk/drive.zig");
     /// M3 — the monoid-annotated balanced tree the joints hang from, which is
     /// what makes an edit cost `O(log n)` regardless of where it landed. One
     /// entry point per subpackage from here down: a subpackage re-exports its

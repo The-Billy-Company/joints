@@ -18,7 +18,7 @@
 //!
 //! A grammar author declares the ambiguities their language really has, and
 //! `settle` records the cell where each one bites along with the reading it had
-//! to drop. `settle.Forks` turns that record into a bit per cell. On every
+//! to drop. `press.Forks` turns that record into a bit per cell. On every
 //! action this loop asks it one masked load, and on a grammar that declares
 //! nothing - json - the answer is always no and nothing else changes: one
 //! reading, one perch pushed per symbol, the same walk a deterministic LR
@@ -112,10 +112,7 @@
 
 const std = @import("std");
 const assay = @import("irregex").assay;
-const g = @import("../../press/grammar.zig");
-const lr0 = @import("../../press/lr0.zig");
-const lalr = @import("../../press/lalr.zig");
-const settle = @import("../../press/settle.zig");
+const press = @import("../../press/press.zig");
 const lex = @import("../lex/scanner.zig");
 const quire = @import("quire.zig");
 const graft = @import("graft.zig");
@@ -154,7 +151,7 @@ pub const Move = union(enum) {
     /// what it is, a symbol the parse acquired without deriving it. `from` is
     /// where the symbol's own bytes begin, which is past the whitespace the
     /// segment ending here also covers; only a lift needs to tell them apart.
-    read: struct { at: u32, symbol: g.Symbol, from: u32, end: u32 },
+    read: struct { at: u32, symbol: press.Symbol, from: u32, end: u32 },
     /// A wall, and the byte the parse began reading again at. Not a move the
     /// stack made - it is the parse declining to make one - but the trail is
     /// the record of what happened between two bytes, and what happened here
@@ -264,7 +261,7 @@ const Turn = struct {
     rank: u32,
     seg: u32 = sole,
     heft: i32 = 0,
-    act: ?lalr.Action = null,
+    act: ?press.Action = null,
     /// The work item that cast this one off a `sided` cell, and whether that
     /// caster survived the token. Instrumentation for the question of whether
     /// an orphaned speculation is ever *confirmed* by what follows it, which
@@ -298,7 +295,7 @@ const Sprig = struct {
     prod: u32,
     /// The terminal that can begin it, hoisted so `offer` can admit it without
     /// reaching back into the production table on every token.
-    first: g.Symbol,
+    first: press.Symbol,
 
     /// Every spelling of every rule-shaped extra this grammar has.
     ///
@@ -307,7 +304,7 @@ const Sprig = struct {
     /// corpus asks for one - lua's is `-- content` and `[[ content ]]`,
     /// julia's are `# .*` and `#= rest` - so the ones that would are declined
     /// here rather than half-read somewhere further in.
-    fn all(gpa: std.mem.Allocator, gr: *const g.Grammar) ![]const Sprig {
+    fn all(gpa: std.mem.Allocator, gr: *const press.Grammar) ![]const Sprig {
         var out: std.ArrayList(Sprig) = .empty;
         errdefer out.deinit(gpa);
         for (gr.extras) |e| {
@@ -333,8 +330,8 @@ const Grown = struct { ref: quire.Ref, start: u32 };
 /// carries its production index because the rule is the limb - two rules with
 /// the same left-hand side are two different answers.
 const Limb = struct {
-    gr: *const g.Grammar,
-    act: lalr.Action,
+    gr: *const press.Grammar,
+    act: press.Action,
 
     pub fn format(l: Limb, w: *std.Io.Writer) std.Io.Writer.Error!void {
         switch (l.act.kind) {
@@ -541,7 +538,7 @@ const Ahead = struct {
         unsure,
     };
 
-    fn take(a: *Ahead, sym: g.Symbol) Step {
+    fn take(a: *Ahead, sym: press.Symbol) Step {
         for (0..chase) |_| {
             const here = a.state();
             if (a.x.forking) if (a.x.forks.at(here, sym).len != 0) return a.gave(.forked);
@@ -638,14 +635,14 @@ fn ident(c: u8) bool {
 
 pub const Gather = struct {
     gpa: std.mem.Allocator,
-    gr: *const g.Grammar,
-    c: *const lr0.Collection,
-    t: *const lalr.Tables,
+    gr: *const press.Grammar,
+    c: *const press.Collection,
+    t: *const press.Tables,
     scanner: *lex.Scanner,
 
     /// Which cells the author declared ambiguous, and what the table dropped
     /// there. Empty for a grammar that declares nothing.
-    forks: settle.Forks,
+    forks: press.Forks,
     /// Whether `forks` has anything in it at all, so the common grammar pays a
     /// predicted branch on a field rather than a load from a bitset.
     forking: bool,
@@ -813,7 +810,7 @@ pub const Gather = struct {
     ///
     /// Kept because a wall's state is where the folds ran out, not where the
     /// reading stood: `press/inquest.zig` can name the cell that killed a parse
-    /// and its `lalr.Floor` bucket, but only over this path. Without it every
+    /// and its `press.Floor` bucket, but only over this path. Without it every
     /// verdict on a table with any damage on that terminal degrades to "cannot
     /// rule the press out".
     folded: std.ArrayList(quire.Fold),
@@ -880,7 +877,7 @@ pub const Gather = struct {
     /// set a supply chooses from, and the whole reason `supply` is a loop over
     /// a short list rather than over `terminal_count` with a shape test inside
     /// it - most grammars spell far more patterns than literals.
-    literals: []const g.Symbol,
+    literals: []const press.Symbol,
     wide: u32,
     why: ?quire.Stop,
     /// Whether the last mend kept the stack rather than felling it. Read only
@@ -890,18 +887,18 @@ pub const Gather = struct {
 
     pub fn init(
         gpa: std.mem.Allocator,
-        gr: *const g.Grammar,
-        c: *const lr0.Collection,
-        t: *const lalr.Tables,
+        gr: *const press.Grammar,
+        c: *const press.Collection,
+        t: *const press.Tables,
         scanner: *lex.Scanner,
     ) !Gather {
         std.debug.assert(gr.field_names.len < Mark.none);
         std.debug.assert(gr.aliases.len < Mark.none);
-        var forks = try settle.Forks.of(gpa, t.conflicts, c.states.len, t.width);
+        var forks = try press.Forks.of(gpa, t.conflicts, c.states.len, t.width);
         errdefer forks.deinit(gpa);
         const sprigs = try Sprig.all(gpa, gr);
         errdefer gpa.free(sprigs);
-        var literals: std.ArrayList(g.Symbol) = .empty;
+        var literals: std.ArrayList(press.Symbol) = .empty;
         errdefer literals.deinit(gpa);
         for (0..gr.terminal_count) |sym| {
             if (gr.shapeOf(@intCast(sym)) == .anonymous) try literals.append(gpa, @intCast(sym));
@@ -1341,7 +1338,7 @@ pub const Gather = struct {
         const heads: u32 = @intCast(x.live.items.len);
         const shifted: u32 = @intCast(x.tokens.items.len);
 
-        var give: ?g.Symbol = null;
+        var give: ?press.Symbol = null;
         // The positive test. `none` claims *no literal terminal could stand
         // for the refused external* - a claim about the table. A walk that ran
         // out of `climb` or `chase`, or hit a declared fork, did not establish
@@ -1498,7 +1495,7 @@ pub const Gather = struct {
     /// a later parse re-lexing the recorded stream finds no zero-width literal
     /// there and declines the ring - a cold resume on a file that was
     /// repaired, which is the conservative half of the trade.
-    fn plant(x: *Gather, top: u32, sym: g.Symbol, at: u32) !?u32 {
+    fn plant(x: *Gather, top: u32, sym: press.Symbol, at: u32) !?u32 {
         const ghost: Token = .{ .symbol = sym, .start = at, .len = 0 };
         var t = top;
         for (0..chase) |_| {
@@ -1928,8 +1925,8 @@ pub const Gather = struct {
         state: u32,
         tok: Token,
         rank: u32,
-        keep: lalr.Action,
-        cast: lalr.Action,
+        keep: press.Action,
+        cast: press.Action,
     ) void {
         if (!assay.lit(.quire)) return;
         assay.trace(.quire, "{s}: state {d} on {s} at {d} rank {d} - keeps {f}, casts {f}\n", .{
@@ -2222,7 +2219,7 @@ pub const Gather = struct {
     /// can push forever, so past `climb` pretend-perches or `chase` steps the
     /// answer is yes: admitting a terminal the parse then refuses is the old
     /// behaviour, and losing one it could have shifted would be a wrong tree.
-    fn shiftable(x: *const Gather, top: u32, sym: g.Symbol) bool {
+    fn shiftable(x: *const Gather, top: u32, sym: press.Symbol) bool {
         var a: Ahead = .on(x, top);
         // A fork is a yes without looking: one branch reaching a shift is
         // enough to make the terminal real. So is a walk that gave up - see
@@ -2308,7 +2305,7 @@ pub const Gather = struct {
     /// say which it had, and `supply`'s `none` is precisely a claim that every
     /// literal was a *table* no. A spent budget masquerading as that claim is
     /// the residual `residue.py` could not see into.
-    fn follows(x: *const Gather, top: u32, give: g.Symbol, want: g.Symbol) Ahead.Says {
+    fn follows(x: *const Gather, top: u32, give: press.Symbol, want: press.Symbol) Ahead.Says {
         var a: Ahead = .on(x, top);
         const to = switch (a.take(give)) {
             .reads => |s| s,
@@ -3105,7 +3102,7 @@ pub const Gather = struct {
     /// One reduction's worth of tree: apply the recipe to each child, then
     /// either mint a node for the left-hand side or leave the children to
     /// splice into whatever reduces next.
-    fn reduce(x: *Gather, p: g.Production, mine: []const Perch, under: u32, to: u32) !u32 {
+    fn reduce(x: *Gather, p: press.Production, mine: []const Perch, under: u32, to: u32) !u32 {
         // The span, from the perches that actually consumed something. A
         // nullable child sits at the offset the previous token ended, and
         // letting it set the start would pull the node back over the

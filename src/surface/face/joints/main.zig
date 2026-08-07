@@ -14,8 +14,8 @@
 
 const std = @import("std");
 const joints = @import("joints");
+const press = joints.press;
 const assay = joints.assay;
-const import = joints.press.import;
 const scanner = joints.kernel.lex.scanner;
 const survey = @import("survey.zig");
 const state = @import("state.zig");
@@ -222,7 +222,7 @@ fn lex(
 ) !u8 {
     const source = intake.slurp(gpa, io, w, grammar_path) orelse return 2;
     defer gpa.free(source);
-    var gr = import.treeSitter(gpa, source) catch |e| {
+    var gr = press.treeSitter(gpa, source) catch |e| {
         try w.print("joints: cannot import {s}: {s}\n", .{ grammar_path, @errorName(e) });
         return 2;
     };
@@ -317,7 +317,7 @@ fn writeClipped(w: *std.Io.Writer, text: []const u8) !void {
 
 const Show = struct { rules: bool = false, conflicts: bool = false };
 
-const Symbol = joints.press.grammar.Symbol;
+const Symbol = joints.press.Symbol;
 
 /// Contested cells grouped by *whose* ambiguity they are, commonest first.
 ///
@@ -329,17 +329,17 @@ const Symbol = joints.press.grammar.Symbol;
 fn parties(
     gpa: std.mem.Allocator,
     w: *std.Io.Writer,
-    gr: *const joints.press.grammar.Grammar,
-    conflicts: []const joints.press.lalr.Conflict,
+    gr: *const joints.press.Grammar,
+    conflicts: []const joints.press.Conflict,
 ) !void {
     const Group = struct {
         party: []const Symbol,
-        class: joints.press.lalr.Conflict.Class,
+        class: joints.press.Conflict.Class,
         cells: u32 = 0,
         reduce_reduce: u32 = 0,
         /// One cell of the group, so the report can show the actual two rules
         /// rather than only how many times they disagreed.
-        witness: joints.press.lalr.Conflict,
+        witness: joints.press.Conflict,
     };
     var groups: std.ArrayList(Group) = .empty;
     defer groups.deinit(gpa);
@@ -396,7 +396,7 @@ fn describe(
     // Two spans rather than one span lapped twice: the reporting between the
     // phases is not either phase, and lapping would fold it into the second.
     const importing = assay.Span.open(io);
-    var gr = import.treeSitter(gpa, source) catch |e| {
+    var gr = press.treeSitter(gpa, source) catch |e| {
         try w.print("joints: cannot import {s}: {s}\n", .{ path, @errorName(e) });
         return 2;
     };

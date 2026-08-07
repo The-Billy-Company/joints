@@ -26,7 +26,6 @@
 //! what leaves the storage a decision that can still be revisited.
 
 const std = @import("std");
-const g = @import("../../press/grammar.zig");
 
 /// Building one: a parse loop that keeps what `walk/drive.zig` throws away.
 pub const gather = @import("gather.zig");
@@ -109,7 +108,7 @@ pub const Stop = union(enum) {
     /// parse reports is recorded, and the `Quire` holding it owns the slice -
     /// the gather that walked the folds is gone by the time anyone asks.
     unexpected: struct {
-        symbol: g.Symbol,
+        symbol: press.Symbol,
         at: u32,
         state: u32,
         folded: ?[]const Fold = null,
@@ -126,6 +125,7 @@ pub const Stop = union(enum) {
 /// reason for the loop that *feeds* `inquest` to add another, and a copy here
 /// would need converting at every hand-off - in a diagnostic print path that has
 /// no allocator to convert with.
+const press = @import("../../press/press.zig");
 pub const Fold = @import("../../press/inquest.zig").Fold;
 
 /// One repair: a stop the parse recovered from instead of ending on.
@@ -187,7 +187,7 @@ pub const Scar = struct {
     /// instance of a *named* terminal is a token no lexer could produce, and
     /// claiming one would be saying text is missing without being able to say
     /// which. See `Gather.supply`.
-    gave: ?g.Symbol = null,
+    gave: ?press.Symbol = null,
     /// Live readings standing when the token was refused - the GLR heads, not
     /// the tree's roots. A break met by one reading is a parse that knew where
     /// it was and could not go on; a break met by many is an ambiguity
@@ -245,12 +245,12 @@ pub const Kind = packed struct(u32) {
     extra: bool = false,
     index: u30,
 
-    pub fn of(symbol: g.Symbol) Kind {
+    pub fn of(symbol: press.Symbol) Kind {
         return .{ .renamed = false, .index = @intCast(symbol) };
     }
 
     /// A terminal the parse stepped over on its way to the next token.
-    pub fn aside(symbol: g.Symbol) Kind {
+    pub fn aside(symbol: press.Symbol) Kind {
         return .{ .renamed = false, .extra = true, .index = @intCast(symbol) };
     }
 
@@ -289,7 +289,7 @@ pub const Show = enum { named, all };
 pub const Quire = struct {
     gpa: std.mem.Allocator,
     /// Borrowed. Names live here and nowhere else.
-    gr: *const g.Grammar,
+    gr: *const press.Grammar,
     nodes: []const Node,
     kids: []const Ref,
     /// The nodes standing at the top when the parse stopped. One, for a whole

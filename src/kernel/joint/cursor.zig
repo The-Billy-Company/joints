@@ -47,10 +47,7 @@
 
 const std = @import("std");
 const assay = @import("irregex").assay;
-const g = @import("../../press/grammar.zig");
-const lr0 = @import("../../press/lr0.zig");
 const press = @import("../../press/press.zig");
-const lalr = @import("../../press/lalr.zig");
 const effect = @import("effect.zig");
 const stack = @import("stack.zig");
 const roster = @import("roster.zig");
@@ -161,9 +158,9 @@ const spawns = 16;
 
 pub const Cursor = struct {
     gpa: std.mem.Allocator,
-    gr: *const g.Grammar,
-    c: *const lr0.Collection,
-    t: *const lalr.Tables,
+    gr: *const press.Grammar,
+    c: *const press.Collection,
+    t: *const press.Tables,
     rev: *reverse.Reverse,
     pool: *stack.Pool,
     floors: *roster.Pool,
@@ -268,7 +265,7 @@ pub const Cursor = struct {
         floor: roster.Id,
         /// Symbols standing above the floor, bottom-to-top. Shared, because
         /// every scenario read the same tokens.
-        above: std.ArrayList(g.Symbol),
+        above: std.ArrayList(press.Symbol),
         /// A `above.len` × `|floor|` matrix in row-major order: `perch[d * w + k]`
         /// is where scenario `k` stands having read `above[0..d + 1]`.
         perch: std.ArrayList(u32),
@@ -299,9 +296,9 @@ pub const Cursor = struct {
 
     pub fn init(
         gpa: std.mem.Allocator,
-        gr: *const g.Grammar,
-        c: *const lr0.Collection,
-        t: *const lalr.Tables,
+        gr: *const press.Grammar,
+        c: *const press.Collection,
+        t: *const press.Tables,
         rev: *reverse.Reverse,
         pool: *stack.Pool,
         floors: *roster.Pool,
@@ -362,7 +359,7 @@ pub const Cursor = struct {
     }
 
     /// Run `terminals` as one segment, entered in `entry`.
-    pub fn run(x: *Cursor, entry: u32, terminals: []const g.Symbol) !Outcome {
+    pub fn run(x: *Cursor, entry: u32, terminals: []const press.Symbol) !Outcome {
         x.used = 0;
         x.alive = 0;
         x.entry = entry;
@@ -460,7 +457,7 @@ pub const Cursor = struct {
 
     /// The joint: the same segment entered from every state in `entries`,
     /// summarized. Rung one is a histogram of these.
-    pub fn survey(x: *Cursor, entries: []const u32, terminals: []const g.Symbol) !Survey {
+    pub fn survey(x: *Cursor, entries: []const u32, terminals: []const press.Symbol) !Survey {
         var seen: std.AutoHashMapUnmanaged(Effect.Shape, void) = .empty;
         defer seen.deinit(x.gpa);
         var s: Survey = .{};
@@ -602,7 +599,7 @@ pub const Cursor = struct {
     /// joint` is the ambient way in for an embedder with no argv to set. The
     /// lines go through assay's channel rather than straight to stderr, so a
     /// host that scoped a dark sink stays quiet even here.
-    fn confess(x: *Cursor, sym: g.Symbol) !void {
+    fn confess(x: *Cursor, sym: press.Symbol) !void {
         if (!x.confessing and !assay.lit(.joint)) return;
         assay.diag("  ceiling on {s}, {d} limbs:\n", .{ x.gr.nameOf(sym), x.used });
         for (0..x.used) |j| {
@@ -658,7 +655,7 @@ pub const Cursor = struct {
     }
 
     /// Run limb `j` until it has shifted `sym`, died, or split.
-    fn feed(x: *Cursor, j: usize, sym: g.Symbol) !Step {
+    fn feed(x: *Cursor, j: usize, sym: press.Symbol) !Step {
         x.trod.clearRetainingCapacity();
         while (true) {
             if (try x.treading(j)) {
@@ -752,7 +749,7 @@ pub const Cursor = struct {
     /// thrown away. Two scenarios told to shift are told the same thing even
     /// when they shift into different states — the symbol stack is what a limb
     /// is, and they both push `sym` onto it.
-    fn verdict(act: lalr.Action) u64 {
+    fn verdict(act: press.Action) u64 {
         const tag: u64 = @intFromEnum(act.kind);
         return (tag << 32) | if (act.kind == .reduce) act.value else 0;
     }
@@ -899,7 +896,7 @@ pub const Cursor = struct {
     /// splits here any more: a scenario with no goto is refuted and leaves, and
     /// the rest disagreeing about *where* they land is the whole reason `perch`
     /// has a column each.
-    fn raise(x: *Cursor, j: usize, lhs: g.Symbol) !Step {
+    fn raise(x: *Cursor, j: usize, lhs: press.Symbol) !Step {
         const w = x.width(j);
         x.mark.clearRetainingCapacity();
         x.row.clearRetainingCapacity();
@@ -987,7 +984,7 @@ const testing = std.testing;
 /// cursor holds pointers into it and a struct that moves would dangle them.
 const Fixture = struct {
     gpa: std.mem.Allocator,
-    gr: g.Grammar,
+    gr: press.Grammar,
     built: press.Result,
     rev: reverse.Reverse,
     pool: stack.Pool,
@@ -996,7 +993,7 @@ const Fixture = struct {
     cur: Cursor,
 
     /// Takes ownership of `gr`.
-    fn wrap(gpa: std.mem.Allocator, gr: g.Grammar) !*Fixture {
+    fn wrap(gpa: std.mem.Allocator, gr: press.Grammar) !*Fixture {
         const f = try gpa.create(Fixture);
         f.gpa = gpa;
         f.gr = gr;
@@ -1034,16 +1031,16 @@ const Fixture = struct {
 /// `E -> E + E | E * E | ( E ) | id`, precedence-resolved. Ambiguous on paper
 /// and deterministic in the table, which is the shape every real grammar has.
 const Expr = struct {
-    plus: g.Symbol = 0,
-    star: g.Symbol = 1,
-    lp: g.Symbol = 2,
-    rp: g.Symbol = 3,
-    id: g.Symbol = 4,
-    e: g.Symbol = undefined,
+    plus: press.Symbol = 0,
+    star: press.Symbol = 1,
+    lp: press.Symbol = 2,
+    rp: press.Symbol = 3,
+    id: press.Symbol = 4,
+    e: press.Symbol = undefined,
     f: *Fixture = undefined,
 
     fn init(gpa: std.mem.Allocator) !Expr {
-        var b = g.Builder.init(gpa);
+        var b = press.Builder.init(gpa);
         defer b.deinit();
         const plus = try b.intern("+", "+", .{ .literal = "+" });
         const star = try b.intern("*", "*", .{ .literal = "*" });
@@ -1077,8 +1074,8 @@ test "a segment entered where it really began pushes exactly what it read" {
     const after_e = x.f.built.collection.goto(0, x.e).?;
     const one = try only(&x.f.cur, after_e, &.{ x.plus, x.id });
     try testing.expectEqual(@as(u32, 0), one.effect.reaches(x.f.arena()));
-    var buf: [4]g.Symbol = undefined;
-    try testing.expectEqualSlices(g.Symbol, &.{ x.plus, x.id }, x.f.pool.read(one.effect.push, &buf));
+    var buf: [4]press.Symbol = undefined;
+    try testing.expectEqualSlices(press.Symbol, &.{ x.plus, x.id }, x.f.pool.read(one.effect.push, &buf));
 }
 
 test "a fold longer than the segment charges the difference to whoever comes before" {
@@ -1091,8 +1088,8 @@ test "a fold longer than the segment charges the difference to whoever comes bef
     const after_e = x.f.built.collection.goto(0, x.e).?;
     const one = try only(&x.f.cur, after_e, &.{ x.plus, x.id, x.plus });
     try testing.expectEqual(@as(u32, 1), one.effect.reaches(x.f.arena()));
-    var buf: [4]g.Symbol = undefined;
-    try testing.expectEqualSlices(g.Symbol, &.{ x.e, x.plus }, x.f.pool.read(one.effect.push, &buf));
+    var buf: [4]press.Symbol = undefined;
+    try testing.expectEqualSlices(press.Symbol, &.{ x.e, x.plus }, x.f.pool.read(one.effect.push, &buf));
 }
 
 test "the effect is the same however the segment is cut" {
@@ -1103,7 +1100,7 @@ test "the effect is the same however the segment is cut" {
     // state, then cut it in two at every position and compose the halves. The
     // second half is entered where the first one landed, which is what the
     // monoid says composition means.
-    const whole_tokens = [_]g.Symbol{ x.lp, x.id, x.plus, x.id, x.star, x.id, x.rp };
+    const whole_tokens = [_]press.Symbol{ x.lp, x.id, x.plus, x.id, x.star, x.id, x.rp };
     const whole = (try only(&x.f.cur, 0, &whole_tokens)).effect;
 
     var cuts: u32 = 0;
@@ -1135,7 +1132,7 @@ test "a limb walking a grammar's cycle is refuted rather than walked forever" {
     // from it without complaint — a cycle is a reduce/reduce contest only where
     // both folds are legal on the same token, and here they never are — so the
     // only thing standing between a survey and a spin is the cursor.
-    var b = g.Builder.init(testing.allocator);
+    var b = press.Builder.init(testing.allocator);
     defer b.deinit();
     const w = try b.intern("w", "w", .{ .literal = "w" });
     const z = try b.intern("z", "z", .{ .literal = "z" });
@@ -1195,7 +1192,7 @@ test "a segment that stays above its own base is rank one, however it was entere
     // that lets it compose with anything on its left without consulting it.
     var buf: [16]u32 = undefined;
     const every = x.f.every(&buf);
-    for ([_][]const g.Symbol{
+    for ([_][]const press.Symbol{
         &.{ x.lp, x.id, x.rp },
         &.{ x.lp, x.lp, x.id, x.rp, x.rp },
         &.{ x.lp, x.id, x.plus, x.id, x.rp },
@@ -1227,7 +1224,7 @@ test "a segment that reaches below its base is multi-valued, and every value owe
 /// The one effect a segment had, failing the test if it had any other number.
 /// Most claims here are about the singleton case, and unwrapping it by hand
 /// each time reads as ceremony rather than as the claim.
-fn only(x: *Cursor, entry: u32, terminals: []const g.Symbol) !Yield {
+fn only(x: *Cursor, entry: u32, terminals: []const press.Symbol) !Yield {
     const out = try x.run(entry, terminals);
     if (out != .ran or out.ran.len != 1) return error.NotSingleValued;
     return out.ran[0];
@@ -1255,9 +1252,9 @@ test "a segment beginning mid-operand is many-valued, and the neighbour picks on
         .ran => |ys| try ran.appendSlice(testing.allocator, ys),
         else => return error.NotRan,
     }
-    var buf: [8]g.Symbol = undefined;
+    var buf: [8]press.Symbol = undefined;
     for (ran.items) |y| {
-        try testing.expectEqualSlices(g.Symbol, &.{ x.e, x.plus, x.id }, x.f.pool.read(y.effect.push, &buf));
+        try testing.expectEqualSlices(press.Symbol, &.{ x.e, x.plus, x.id }, x.f.pool.read(y.effect.push, &buf));
     }
 
     // One answer per depth, and the reason it is not one per interior history is
@@ -1303,5 +1300,5 @@ test "a segment beginning mid-operand is many-valued, and the neighbour picks on
     // pop is empty. Same push, different debt: the cut decides who owes it.
     const held = try only(&x.f.cur, 0, &.{ x.id, x.plus, x.id });
     try testing.expectEqual(@as(u32, 0), held.effect.reaches(x.f.arena()));
-    try testing.expectEqualSlices(g.Symbol, &.{ x.e, x.plus, x.id }, x.f.pool.read(held.effect.push, &buf));
+    try testing.expectEqualSlices(press.Symbol, &.{ x.e, x.plus, x.id }, x.f.pool.read(held.effect.push, &buf));
 }

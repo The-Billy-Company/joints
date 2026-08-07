@@ -41,17 +41,10 @@ const joints = @import("joints");
 const assay = joints.assay;
 const intake = @import("intake.zig");
 
-const import = joints.press.import;
 const press = joints.press;
-const lalr = joints.press.lalr;
-const g = joints.press.grammar;
 const scanner = joints.kernel.lex.scanner;
-const drive = joints.kernel.walk.drive;
-const cursor = joints.kernel.joint.cursor;
-const reverse = joints.kernel.joint.reverse;
-const jstack = joints.kernel.joint.stack;
-const jroster = joints.kernel.joint.roster;
-const jledger = joints.kernel.joint.ledger;
+const drive = joints.kernel.walk;
+const joint = joints.kernel.joint;
 
 /// Segment lengths, in tokens and in bytes. `TESTING.md` asks for both: a byte
 /// span is what an editor's viewport and a parallel split look like, a token
@@ -104,10 +97,10 @@ pub fn run(
     var dump = false;
     var confess = false;
     var sample: u32 = entry_sample;
-    var limbs: u32 = cursor.limb_ceiling;
-    var fan: u32 = reverse.fan_ceiling;
+    var limbs: u32 = joint.limb_ceiling;
+    var fan: u32 = joint.fan_ceiling;
     var churn: u32 = 0;
-    var fusion: cursor.Cursor.Fusion = .depth;
+    var fusion: joint.Cursor.Fusion = .depth;
     var paths: std.ArrayList([]const u8) = .empty;
     defer paths.deinit(gpa);
     var rest = argv;
@@ -140,7 +133,7 @@ pub fn run(
     const source = intake.slurp(gpa, io, w, grammar_path) orelse return 2;
     defer gpa.free(source);
 
-    var gr = import.treeSitter(gpa, source) catch |e| {
+    var gr = press.treeSitter(gpa, source) catch |e| {
         try w.print("joints: cannot import {s}: {s}\n", .{ grammar_path, @errorName(e) });
         return 2;
     };
@@ -153,16 +146,16 @@ pub fn run(
     defer built.deinit();
     const c = &built.collection;
     const t = &built.tables;
-    var rev = try reverse.Reverse.build(gpa, &gr, c, t);
+    var rev = try joint.Reverse.build(gpa, &gr, c, t);
     defer rev.deinit();
     rev.fan = fan;
-    var pool = jstack.Pool.init(gpa);
+    var pool = joint.stack.Pool.init(gpa);
     defer pool.deinit();
-    var floors = jroster.Pool.init(gpa);
+    var floors = joint.roster.Pool.init(gpa);
     defer floors.deinit();
-    var guards = jledger.Pool.init(gpa);
+    var guards = joint.ledger.Pool.init(gpa);
     defer guards.deinit();
-    var cur = cursor.Cursor.init(gpa, &gr, c, t, &rev, &pool, &floors, &guards);
+    var cur = joint.Cursor.init(gpa, &gr, c, t, &rev, &pool, &floors, &guards);
     defer cur.deinit();
     cur.fusion = fusion;
     cur.confessing = confess;
@@ -242,7 +235,7 @@ pub fn run(
         }
         if (trace.tokens.len == 0) continue;
 
-        const symbols = try gpa.alloc(g.Symbol, trace.tokens.len);
+        const symbols = try gpa.alloc(press.Symbol, trace.tokens.len);
         defer gpa.free(symbols);
         for (symbols, trace.tokens) |*s, tok| s.* = tok.symbol;
 
@@ -394,7 +387,7 @@ fn spread(gpa: std.mem.Allocator, total: u32, want: u32) ![]u32 {
 }
 
 /// One production, in the grammar's own vocabulary.
-fn shape(w: *std.Io.Writer, gr: *const g.Grammar, prod: u32) !void {
+fn shape(w: *std.Io.Writer, gr: *const press.Grammar, prod: u32) !void {
     const p = gr.productions[prod];
     try w.print("{s} ->", .{gr.nameOf(p.lhs)});
     if (p.rhs.len == 0) try w.writeAll(" \u{3b5}");
@@ -411,9 +404,9 @@ fn shape(w: *std.Io.Writer, gr: *const g.Grammar, prod: u32) !void {
 /// lookaheads that is a dozen mixed names, and a reader counting them reads a
 /// state that consumes three tokens as one that consumes twelve. The same
 /// conflation cost a lane a night in `state --census` and named the wrong
-/// scanner in `inquest`; the split is `lalr.Half` in all three, so none of them
+/// scanner in `inquest`; the split is `press.Half` in all three, so none of them
 /// can drift from the others.
-fn legal(w: *std.Io.Writer, gr: *const g.Grammar, t: *const lalr.Tables, state: u32) !void {
+fn legal(w: *std.Io.Writer, gr: *const press.Grammar, t: *const press.Tables, state: u32) !void {
     const shift = try side(w, gr, t, state, .shift);
     const fold = try side(w, gr, t, state, .fold);
     if (shift + fold == 0) try w.writeAll("      it accepts: nothing\n");
@@ -425,14 +418,14 @@ fn legal(w: *std.Io.Writer, gr: *const g.Grammar, t: *const lalr.Tables, state: 
 /// scanner did.
 fn side(
     w: *std.Io.Writer,
-    gr: *const g.Grammar,
-    t: *const lalr.Tables,
+    gr: *const press.Grammar,
+    t: *const press.Tables,
     state: u32,
-    half: lalr.Half,
+    half: press.Half,
 ) !u32 {
     var shown: u32 = 0;
     for (0..gr.terminal_count) |sym| {
-        if (lalr.Half.of(t.at(state, @intCast(sym)).kind) != half) continue;
+        if (press.Half.of(t.at(state, @intCast(sym)).kind) != half) continue;
         shown += 1;
         if (shown > 12) continue;
         if (shown == 1) try w.print("      it {s}:", .{
@@ -447,7 +440,7 @@ fn side(
 
 /// The last few tokens that did parse. Where a walk stopped is rarely where it
 /// went wrong, and this is the cheapest thing that shows the difference.
-fn tail(w: *std.Io.Writer, gr: *const g.Grammar, tokens: []const drive.Token) !void {
+fn tail(w: *std.Io.Writer, gr: *const press.Grammar, tokens: []const drive.Token) !void {
     const from = tokens.len -| 6;
     for (tokens[from..]) |tok| try w.print(" {s}@{d}", .{ gr.nameOf(tok.symbol), tok.start });
     try w.writeAll("\n");
@@ -496,22 +489,22 @@ const Probe = struct {
     gpa: std.mem.Allocator,
     io: std.Io,
     w: *std.Io.Writer,
-    gr: *const g.Grammar,
+    gr: *const press.Grammar,
     /// Composition consults the goto graph and both intern pools: a right
     /// neighbour's floor is a claim about where the left one landed, and only
     /// the automaton settles it.
-    x: cursor.Arena,
-    cur: *cursor.Cursor,
-    pool: *jstack.Pool,
+    x: joint.Arena,
+    cur: *joint.Cursor,
+    pool: *joint.stack.Pool,
     entries: []const u32,
-    symbols: []const g.Symbol,
+    symbols: []const press.Symbol,
     /// The state the walk really was in at each token.
     enter: []const u32,
     dump: bool,
     /// The chain's running product: every pairing not yet refuted. Two buffers
     /// because a step reads one and writes the other.
-    live: std.ArrayList(cursor.Effect) = .empty,
-    next: std.ArrayList(cursor.Effect) = .empty,
+    live: std.ArrayList(joint.Effect) = .empty,
+    next: std.ArrayList(joint.Effect) = .empty,
 
     fn deinit(p: *Probe) void {
         p.live.deinit(p.gpa);
@@ -597,7 +590,7 @@ const Probe = struct {
             // Composition itself never asks — see `Effect.grounded`.
             p.next.clearRetainingCapacity();
             for (p.live.items) |acc| for (ways) |y| {
-                const joined = try effectCompose(p.x, acc, y.effect) orelse continue;
+                const joined = try joint.compose(p.x, acc, y.effect) orelse continue;
                 if (!joined.grounded(p.x)) continue;
                 for (p.next.items) |seen| {
                     if (seen.eql(joined)) break;
@@ -616,7 +609,7 @@ const Probe = struct {
                 },
             };
             widest = @max(widest, @as(u32, @intCast(p.next.items.len)));
-            std.mem.swap(std.ArrayList(cursor.Effect), &p.live, &p.next);
+            std.mem.swap(std.ArrayList(joint.Effect), &p.live, &p.next);
         }
         const last: u32 = @intCast(p.symbols.len);
         const whole = switch (try p.cur.run(p.enter[0], p.symbols)) {
@@ -670,7 +663,7 @@ const Probe = struct {
     /// each one made. "2 way(s)" says the sieve leaked; this says through which
     /// hole, which is the difference between a number and a lead.
     fn witness(p: *Probe, w: *std.Io.Writer, b: Chain.Break) !void {
-        var acc: cursor.Effect = .identity;
+        var acc: joint.Effect = .identity;
         var at: u32 = 0;
         while (at < b.lo) {
             // Re-walk the prefix the same way the oracle did. It cannot break
@@ -680,8 +673,8 @@ const Probe = struct {
                 .ran => |ys| ys,
                 else => return,
             };
-            var next: ?cursor.Effect = null;
-            for (ways) |y| if (try effectCompose(p.x, acc, y.effect)) |j| {
+            var next: ?joint.Effect = null;
+            for (ways) |y| if (try joint.compose(p.x, acc, y.effect)) |j| {
                 if (j.grounded(p.x)) next = j;
             };
             acc = next orelse return;
@@ -694,7 +687,7 @@ const Probe = struct {
             else => return,
         };
         for (ways) |y| {
-            const joined = try effectCompose(p.x, acc, y.effect) orelse continue;
+            const joined = try joint.compose(p.x, acc, y.effect) orelse continue;
             if (!joined.grounded(p.x)) continue;
             try w.writeAll("           kept: ");
             try p.tell(y.effect);
@@ -705,7 +698,7 @@ const Probe = struct {
 
     /// One effect: where it began, how deep it reached, and what it claimed at
     /// every depth on the way down.
-    fn tell(p: *Probe, e: cursor.Effect) !void {
+    fn tell(p: *Probe, e: joint.Effect) !void {
         try p.w.print("from {d} -{d} +{d}  claims", .{
             e.entry,
             e.reaches(p.x),
@@ -714,7 +707,7 @@ const Probe = struct {
         var d: u32 = 1;
         const deep = p.x.guards.depth(e.guard);
         while (d <= deep) : (d += 1) {
-            const claim = jledger.at(p.x.guards, e.guard, d);
+            const claim = joint.ledger.at(p.x.guards, e.guard, d);
             try p.w.writeAll(" ");
             try p.name(claim.symbols, true);
             try p.w.writeAll("@");
@@ -725,8 +718,8 @@ const Probe = struct {
 
     /// One half of a claim: symbol names or state numbers, `*` for a belief
     /// nobody ever narrowed.
-    fn name(p: *Probe, set: jroster.Id, symbols: bool) !void {
-        if (set == jledger.anywhere) return p.w.writeAll("*");
+    fn name(p: *Probe, set: joint.roster.Id, symbols: bool) !void {
+        if (set == joint.ledger.anywhere) return p.w.writeAll("*");
         const members = p.x.floors.members(set);
         if (members.len != 1) try p.w.writeAll("{");
         for (members, 0..) |m, i| {
@@ -746,7 +739,7 @@ const Probe = struct {
         for (p.entries) |q| switch (try p.cur.run(q, p.symbols[lo..hi])) {
             .ran => |ys| for (ys) |y| {
                 try p.w.print("        {d: >4}  -{d} +[", .{ q, y.effect.reaches(p.x) });
-                var buf: [64]g.Symbol = undefined;
+                var buf: [64]press.Symbol = undefined;
                 const depth = p.pool.depth(y.effect.push);
                 if (depth <= buf.len) {
                     for (p.pool.read(y.effect.push, &buf), 0..) |s, i| {
@@ -761,8 +754,6 @@ const Probe = struct {
         };
     }
 };
-
-const effectCompose = joints.kernel.joint.effect.compose;
 
 /// Whether the segments multiplied back to the whole.
 const Chain = union(enum) {
@@ -785,7 +776,7 @@ const Chain = union(enum) {
         /// `residue_ceiling` standing, so the algebra is not narrowing the way
         /// the design says it does. `ceiling`, `unmoored` and `churn` are the
         /// cursor's three capacity limits, kept apart because they indict
-        /// different things — see `cursor.Fork.why`.
+        /// different things — see `joint.Fork.why`.
         why: enum { unguarded, ceiling, unmoored, churn, refuted },
         ways: u32 = 1,
     };

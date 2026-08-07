@@ -27,9 +27,6 @@
 
 const std = @import("std");
 const leaf = @import("leaf.zig");
-const g = @import("../press/grammar.zig");
-const lalr = @import("../press/lalr.zig");
-const lr0 = @import("../press/lr0.zig");
 const press = @import("../press/press.zig");
 
 pub const Error = std.mem.Allocator.Error;
@@ -74,7 +71,7 @@ pub const Forme = struct {
 /// verdicts in a grid, and a folio has no reason to inherit that split.
 pub fn lock(
     gpa: std.mem.Allocator,
-    gr: *const g.Grammar,
+    gr: *const press.Grammar,
     result: *const press.Result,
 ) Error!Forme {
     var arena = std.heap.ArenaAllocator.init(gpa);
@@ -174,7 +171,7 @@ const Locker = struct {
     }
 
     /// The terminal half of a state's row: every cell the table filled in.
-    fn verdicts(b: *Locker, q: u32, t: lalr.Tables) Error!void {
+    fn verdicts(b: *Locker, q: u32, t: press.Tables) Error!void {
         const base = q * b.width;
         for (0..b.width) |i| {
             const a = t.action[base + i];
@@ -189,7 +186,7 @@ const Locker = struct {
     /// Edges arrive sorted by symbol and terminals are numbered below
     /// nonterminals, so the nonterminal ones are a sorted tail and land in
     /// ascending column order behind the terminals already appended.
-    fn walk(b: *Locker, st: lr0.State) Error!void {
+    fn walk(b: *Locker, st: press.State) Error!void {
         for (st.edges) |e| {
             if (e.symbol < b.terminals) continue;
             try b.cells.append(b.gpa, .{
@@ -266,7 +263,7 @@ const Locker = struct {
     /// here rather than assumed away, because an edge the table cannot see is
     /// exactly what a reader asking what the automaton *could* have done wants,
     /// and getting it wrong would be silent.
-    fn stray(b: *Locker, q: u32, st: lr0.State, t: lalr.Tables) Error!void {
+    fn stray(b: *Locker, q: u32, st: press.State, t: press.Tables) Error!void {
         const base = q * b.width;
         var e: usize = 0;
         var col: u32 = 0;
@@ -306,7 +303,7 @@ const Locker = struct {
 /// One cell, in the folio's encoding. The one place the two action spellings
 /// meet: a verb the press grows later lands here as a missing switch prong, not
 /// as a number that reads back as something else.
-pub fn cell(a: lalr.Action) u32 {
+pub fn cell(a: press.Action) u32 {
     return @bitCast(leaf.Action{
         .verb = switch (a.kind) {
             .err => .err,

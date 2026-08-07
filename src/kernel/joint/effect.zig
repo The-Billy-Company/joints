@@ -73,7 +73,6 @@ const std = @import("std");
 const stack = @import("stack.zig");
 const roster = @import("roster.zig");
 const ledger = @import("ledger.zig");
-const lr0 = @import("../../press/lr0.zig");
 const press = @import("../../press/press.zig");
 
 pub const Symbol = stack.Symbol;
@@ -88,7 +87,7 @@ pub const Arena = struct {
     guards: *ledger.Pool,
     /// The goto graph, which is what turns a guess about the floor into a
     /// question with an answer.
-    c: *const lr0.Collection,
+    c: *const press.Collection,
 };
 
 pub const Effect = struct {
@@ -301,13 +300,11 @@ pub fn shift(x: Arena, at: roster.State, terminal: Symbol) !Effect {
 }
 
 const testing = std.testing;
-const gram = @import("../../press/grammar.zig");
-const lalr = @import("../../press/lalr.zig");
 
 /// `S -> ( S ) | x`, and its automaton — the guard is a claim about a real
 /// goto graph, so the algebra cannot be tested against invented states.
 const Fix = struct {
-    gr: gram.Grammar,
+    gr: press.Grammar,
     built: press.Result,
     p: Pool,
     r: roster.Pool,
@@ -319,7 +316,7 @@ const Fix = struct {
 
     fn init() !*Fix {
         const gpa = testing.allocator;
-        var b = gram.Builder.init(gpa);
+        var b = press.Builder.init(gpa);
         defer b.deinit();
         const lp = try b.intern("(", "(", .{ .literal = "(" });
         const rp = try b.intern(")", ")", .{ .literal = ")" });

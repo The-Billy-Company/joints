@@ -29,8 +29,6 @@ const joints = @import("joints");
 
 const folio = joints.folio;
 const press = joints.press;
-const import = joints.press.import;
-const g = joints.press.grammar;
 const scanner = joints.kernel.lex.scanner;
 const quire = joints.kernel.quire;
 
@@ -101,7 +99,7 @@ pub fn lastError() [*:0]const u8 {
 pub const Bank = struct {
     source: union(enum) {
         mapped: folio.MappedVolume,
-        pressed: struct { gr: g.Grammar, built: press.Result },
+        pressed: struct { gr: press.Grammar, built: press.Result },
     },
 
     pub fn count(bk: *const Bank) u32 {
@@ -152,7 +150,7 @@ pub fn open(path_z: ?[*:0]const u8, out: ?**Bank) Status {
         return fail(.io, "cannot read {s}: {s}", .{ path, @errorName(err) });
     };
     defer gpa.free(source);
-    var gr = import.treeSitter(gpa, source) catch |err| {
+    var gr = press.treeSitter(gpa, source) catch |err| {
         return fail(.grammar, "cannot import {s}: {s}", .{ path, @errorName(err) });
     };
     var built = press.tables(gpa, &gr) catch |err| {
@@ -193,7 +191,7 @@ pub const Parser = struct {
     sc: scanner.Scanner,
     gather: quire.Gather,
 
-    pub fn grammar(p: *const Parser) *const g.Grammar {
+    pub fn grammar(p: *const Parser) *const press.Grammar {
         return if (p.bound) |*b| &b.grammar else &p.bank.source.pressed.gr;
     }
 };

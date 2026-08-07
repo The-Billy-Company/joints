@@ -9,7 +9,7 @@ Consuming a run of tokens does exactly one thing to an LR stack: it takes some
 symbols off the top and leaves some string of symbols in their place. Write that
 as `(k, σ)` — pop `k`, push `σ` — and composing two of them is
 
-```
+```text
 |σ₁| ≥ k₂   →   (k₁,               σ₁[0 .. |σ₁|−k₂] · σ₂)
 |σ₁| <  k₂   →   (k₁ + k₂ − |σ₁|,   σ₂)
 ```
@@ -30,6 +30,7 @@ is still what an element is.
 
 | File | What it is |
 |---|---|
+| `joint.zig` | The door, and the only file anything outside this folder imports. Thirteen declarations, against the ninety-six public symbols these six files hold behind them - the interface as measured rather than as assumed. |
 | `stack.zig` | A persistent, hash-consed stack of grammar symbols. Composition truncates one stack and appends another, and the surviving prefix is shared rather than copied; hash-consing makes a stack one `u32` and stack equality one comparison. |
 | `roster.zig` | A hash-consed *set* of automaton states — the guard an element carries about what was standing under the part of the stack it popped away. Interned for the same reason a stack is: every question about it is an equality question. |
 | `effect.zig` | The monoid itself: `Effect{floor, pop, push}`, a **partial** `compose`, `fold`, and the two generators every parse is built from — `shift` and `reduce`. |

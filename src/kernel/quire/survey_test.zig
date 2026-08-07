@@ -20,15 +20,14 @@
 
 const std = @import("std");
 const t = std.testing;
-const g = @import("../../press/grammar.zig");
 const quire = @import("quire.zig");
+const press = @import("../../press/press.zig");
 
 /// An arena in the terms `survey` reads it in, and in no others. `survey`
 /// touches `nodes`, `kids` and `roots` and never reaches the grammar - names
 /// belong to the report, and this asks for the counts.
-fn arena(nodes: []const quire.Node, kids: []const quire.Ref,
-         roots: []const quire.Ref) quire.Quire {
-    const gr: *const g.Grammar = undefined;
+fn arena(nodes: []const quire.Node, kids: []const quire.Ref, roots: []const quire.Ref) quire.Quire {
+    const gr: *const press.Grammar = undefined;
     return .{
         .gpa = t.allocator,
         .gr = gr,
@@ -40,8 +39,7 @@ fn arena(nodes: []const quire.Node, kids: []const quire.Ref,
 }
 
 fn node(start: u32, len: u32, kids_at: u32, kids_len: u32) quire.Node {
-    return .{ .kind = .of(0), .start = start, .len = len,
-              .kids_at = kids_at, .kids_len = kids_len };
+    return .{ .kind = .of(0), .start = start, .len = len, .kids_at = kids_at, .kids_len = kids_len };
 }
 
 test "a well-formed tree is sound" {

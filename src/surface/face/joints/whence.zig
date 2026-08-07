@@ -66,9 +66,9 @@
 const std = @import("std");
 const joints = @import("joints");
 
-const Grammar = joints.press.grammar.Grammar;
-const Collection = joints.press.lr0.Collection;
-const Item = joints.press.lr0.Item;
+const Grammar = joints.press.Grammar;
+const Collection = joints.press.Collection;
+const Item = joints.press.Item;
 
 /// The automaton read backwards. `press` already owns this — a CSR of inverted
 /// edges and an unwind that crosses only edges labelled by the body symbol at

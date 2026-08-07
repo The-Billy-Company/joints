@@ -19,8 +19,8 @@
 
 const std = @import("std");
 const irregex = @import("irregex");
-const g = @import("../../press/grammar.zig");
 const Scanner = @import("scanner.zig").Scanner;
+const press = @import("../../press/press.zig");
 const Munch = irregex.Munch;
 
 /// One precedence tier: every terminal of that rank, and the same set without
@@ -150,7 +150,7 @@ pub const Expected = struct {
         while (it.next()) |i| e.open(s, @intCast(i));
     }
 
-    pub fn admit(e: *Expected, s: *const Scanner, sym: g.Symbol) void {
+    pub fn admit(e: *Expected, s: *const Scanner, sym: press.Symbol) void {
         if (sym >= s.seat.len) return;
         e.named.set(sym);
         e.open(s, sym);
@@ -158,7 +158,7 @@ pub const Expected = struct {
 
     /// Admit without claiming the state named it, which is how the extras are
     /// seeded: they are lexable everywhere and meant by nobody.
-    fn open(e: *Expected, s: *const Scanner, sym: g.Symbol) void {
+    fn open(e: *Expected, s: *const Scanner, sym: press.Symbol) void {
         e.wanted.set(sym);
         const ordinal = s.seat[sym];
         if (ordinal == Scanner.no_seat) return;

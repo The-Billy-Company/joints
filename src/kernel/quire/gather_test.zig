@@ -6,7 +6,7 @@
 //! running: an expectation copied out of the code under test proves the code
 //! is deterministic and nothing else.
 //!
-//! The naming rules being applied, from `import.zig` and `grammar.zig`:
+//! The naming rules being applied, from `press.zig` and `grammar.zig`:
 //!
 //!   - A rule whose whole body is one lexical atom becomes a *terminal* under
 //!     its own rule name, so json's `true`, `number` and `string_content` are
@@ -24,8 +24,6 @@
 
 const std = @import("std");
 const t = std.testing;
-const g = @import("../../press/grammar.zig");
-const import = @import("../../press/import.zig");
 const press = @import("../../press/press.zig");
 const lex = @import("../lex/scanner.zig");
 const drive = @import("../walk/drive.zig");
@@ -35,7 +33,7 @@ const quire = @import("quire.zig");
 /// allocated because `Gather` and `Drive` both borrow the other fields.
 const Fixture = struct {
     gpa: std.mem.Allocator,
-    gr: g.Grammar,
+    gr: press.Grammar,
     built: press.Result,
     scanner: lex.Scanner,
     gather: quire.Gather,
@@ -44,7 +42,7 @@ const Fixture = struct {
         const f = try gpa.create(Fixture);
         errdefer gpa.destroy(f);
         f.gpa = gpa;
-        f.gr = try import.treeSitter(gpa, source);
+        f.gr = try press.treeSitter(gpa, source);
         errdefer f.gr.deinit();
         f.built = try press.tables(gpa, &f.gr);
         errdefer {

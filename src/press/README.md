@@ -12,6 +12,13 @@ meet only at `grammar.zig`, which is deliberately smaller than a tree-sitter
 grammar: EBNF is already gone by the time the builder sees anything, so the
 builder never learns what a `repeat` is.
 
+One door out. `press.zig` publishes the IR that crosses this boundary, and the
+list is short because it was measured rather than chosen: a sweep for what files
+outside `press/` actually name found twenty-nine symbols, where a hundred and
+seventy-five were reachable. Everything else here is internal, so the files below
+can be moved and renamed without a search across the repository first. Reach for
+`press.Grammar`, not `grammar.zig`.
+
 ## The front end
 
 `import.zig` is the door. It was one file until the seam got obvious, which is
@@ -33,7 +40,7 @@ that one of these looks at a rule body and the rest look at the grammar.
 | File | Role |
 |---|---|
 | `grammar.zig` | The IR both halves meet at, and the builder that interns into it. |
-| `press.zig` | The entry point the rest of the package builds tables through, and the loop that exists because LALR is not quite enough. |
+| `press.zig` | The door. It publishes the IR - the twenty-five names anything outside this directory may use - and it is the entry point tables are built through, including the loop that exists because LALR is not quite enough. |
 | `first.zig` | Nullability and FIRST over the whole symbol space, in one fixpoint because they are one fixpoint. |
 | `lr0.zig` | The canonical collection - the automaton's shape, before any question of lookahead. |
 | `lalr.zig` | LALR(1) lookaheads by DeRemer-Pennello, and the action table they decide. |

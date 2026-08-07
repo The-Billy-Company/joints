@@ -38,7 +38,7 @@
 
 const std = @import("std");
 const tree = @import("tree.zig");
-const effect = @import("../joint/effect.zig");
+const joint = @import("../joint/joint.zig");
 
 /// The structure. See `tree.zig` for what `M` has to declare.
 pub const Tree = tree.Tree;
@@ -51,11 +51,11 @@ pub const Id = tree.Id;
 /// produced, which the tree treats as an absorbing zero. Nothing is adapted and
 /// nothing is wrapped.
 pub const Joint = Tree(struct {
-    pub const Element = effect.Effect;
-    pub const Ctx = effect.Arena;
+    pub const Element = joint.Effect;
+    pub const Ctx = joint.Arena;
     pub const identity: Element = .identity;
-    pub const compose = effect.compose;
-    pub const eql = effect.Effect.eql;
+    pub const compose = joint.compose;
+    pub const eql = joint.Effect.eql;
 });
 
 test "the joint binds to the spine without an adapter" {
@@ -73,7 +73,7 @@ test "the joint binds to the spine without an adapter" {
     _ = &Joint.replace;
     _ = &Joint.verify;
     _ = &struct {
-        fn bind(s: *Joint, x: effect.Arena, cut: Joint.Cut) !?effect.Effect {
+        fn bind(s: *Joint, x: joint.Arena, cut: Joint.Cut) !?joint.Effect {
             return s.edit(x, cut, Nothing{});
         }
     }.bind;

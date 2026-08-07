@@ -31,10 +31,7 @@
 const std = @import("std");
 const collate = @import("collate.zig");
 const leaf = @import("leaf.zig");
-const g = @import("../press/grammar.zig");
-const lalr = @import("../press/lalr.zig");
-const lr0 = @import("../press/lr0.zig");
-const settle = @import("../press/settle.zig");
+const press = @import("../press/press.zig");
 
 pub const Error = std.mem.Allocator.Error;
 
@@ -45,9 +42,9 @@ pub const Error = std.mem.Allocator.Error;
 /// them by a line.
 pub const Bound = struct {
     arena: std.heap.ArenaAllocator,
-    grammar: g.Grammar,
-    collection: lr0.Collection,
-    tables: lalr.Tables,
+    grammar: press.Grammar,
+    collection: press.Collection,
+    tables: press.Tables,
 
     pub fn deinit(b: *Bound) void {
         b.grammar.deinit();
@@ -81,13 +78,13 @@ pub fn bind(gpa: std.mem.Allocator, f: *const collate.Folio) Error!Bound {
     return out;
 }
 
-fn vocabulary(a: std.mem.Allocator, f: *const collate.Folio) Error!g.Grammar {
+fn vocabulary(a: std.mem.Allocator, f: *const collate.Folio) Error!press.Grammar {
     const n = f.symbolCount();
     const names = try a.alloc([]const u8, n);
-    const patterns = try a.alloc(?g.Pattern, n);
-    const lexis = try a.alloc(g.Lexis, n);
-    const shapes = try a.alloc(g.Shape, n);
-    var externals: std.ArrayList(g.Symbol) = .empty;
+    const patterns = try a.alloc(?press.Pattern, n);
+    const lexis = try a.alloc(press.Lexis, n);
+    const shapes = try a.alloc(press.Shape, n);
+    var externals: std.ArrayList(press.Symbol) = .empty;
     for (0..n) |i| {
         const s: u32 = @intCast(i);
         names[i] = f.nameOf(s);
@@ -109,7 +106,7 @@ fn vocabulary(a: std.mem.Allocator, f: *const collate.Folio) Error!g.Grammar {
         };
     }
 
-    const aliases = try a.alloc(g.Alias, f.aliasCount());
+    const aliases = try a.alloc(press.Alias, f.aliasCount());
     for (aliases, 0..) |*slot, i| {
         const al = f.aliasOf(@intCast(i));
         slot.* = .{ .name = al.name, .named = al.named };
@@ -117,8 +114,8 @@ fn vocabulary(a: std.mem.Allocator, f: *const collate.Folio) Error!g.Grammar {
     const fields = try a.alloc([]const u8, f.fieldCount());
     for (fields, 0..) |*slot, i| slot.* = f.fieldOf(@intCast(i));
 
-    const productions = try a.alloc(g.Production, f.head.production_count);
-    const steps = try a.alloc(g.Step, f.view(.rhs, u32).len);
+    const productions = try a.alloc(press.Production, f.head.production_count);
+    const steps = try a.alloc(press.Step, f.view(.rhs, u32).len);
     for (productions, f.productions(), 0..) |*slot, rec, i| {
         const mine = steps[rec.rhs_off..][0..rec.rhs_len];
         const refs = f.stepsOf(@intCast(i));
@@ -174,7 +171,7 @@ fn vocabulary(a: std.mem.Allocator, f: *const collate.Folio) Error!g.Grammar {
 /// `by_lhs`: which productions each nonterminal has. Rebuilt rather than
 /// written, because it is an index over the production list and a folio that
 /// carried it would be carrying a second opinion about its own contents.
-fn index(a: std.mem.Allocator, productions: []const g.Production, nts: u32, base: u32) Error![]const []const u32 {
+fn index(a: std.mem.Allocator, productions: []const press.Production, nts: u32, base: u32) Error![]const []const u32 {
     const counts = try a.alloc(u32, nts);
     @memset(counts, 0);
     for (productions) |p| counts[p.lhs - base] += 1;
@@ -199,13 +196,13 @@ fn index(a: std.mem.Allocator, productions: []const g.Production, nts: u32, base
 /// Takes the dense table because `tabulation` has just built it. Expanding the
 /// same rows twice to answer two questions about them would be the sort of
 /// tidiness that shows up in the load time.
-fn automaton(a: std.mem.Allocator, f: *const collate.Folio, dense: []const lalr.Action) Error!lr0.Collection {
+fn automaton(a: std.mem.Allocator, f: *const collate.Folio, dense: []const press.Action) Error!press.Collection {
     const n = f.head.state_count;
     const width = f.head.width;
     const terminals = f.head.terminal_count;
-    const states = try a.alloc(lr0.State, n);
+    const states = try a.alloc(press.State, n);
 
-    var all: std.ArrayList(lr0.Edge) = .empty;
+    var all: std.ArrayList(press.Edge) = .empty;
     const spans = try a.alloc(u32, n + 1);
     const strays = f.odds();
     var s: usize = 0;
@@ -247,11 +244,11 @@ fn automaton(a: std.mem.Allocator, f: *const collate.Folio, dense: []const lalr.
             for (0..cols.len()) |j| {
                 const at = cols.at(@intCast(j));
                 if (at < width) continue;
-                const act: lalr.Action = @bitCast(rec.cell);
+                const act: press.Action = @bitCast(rec.cell);
                 try all.append(a, .{ .symbol = f.symbolAt(at), .target = act.value });
             }
         }
-        std.mem.sort(lr0.Edge, all.items[nts..], {}, bySymbol);
+        std.mem.sort(press.Edge, all.items[nts..], {}, bySymbol);
     }
     spans[n] = @intCast(all.items.len);
     for (states, 0..) |*slot, i| slot.* = .{
@@ -263,12 +260,12 @@ fn automaton(a: std.mem.Allocator, f: *const collate.Folio, dense: []const lalr.
     return .{ .arena = std.heap.ArenaAllocator.init(a), .states = states };
 }
 
-fn bySymbol(_: void, x: lr0.Edge, y: lr0.Edge) bool {
+fn bySymbol(_: void, x: press.Edge, y: press.Edge) bool {
     return x.symbol < y.symbol;
 }
 
-fn tabulation(a: std.mem.Allocator, f: *const collate.Folio, dense: []const lalr.Action) Error!lalr.Tables {
-    const conflicts = try a.alloc(lalr.Conflict, f.conflicts().len);
+fn tabulation(a: std.mem.Allocator, f: *const collate.Folio, dense: []const press.Action) Error!press.Tables {
+    const conflicts = try a.alloc(press.Conflict, f.conflicts().len);
     for (conflicts, f.conflicts()) |*slot, rec| slot.* = .{
         .state = rec.state,
         .terminal = rec.terminal,
@@ -290,7 +287,7 @@ fn tabulation(a: std.mem.Allocator, f: *const collate.Folio, dense: []const lalr
         .rest = @ptrCast(f.rivalsOf(rec)),
         .party = f.partyOf(rec),
     };
-    const frayed = try a.alloc(settle.Frayed, f.frayed().len);
+    const frayed = try a.alloc(press.Frayed, f.frayed().len);
     for (frayed, f.frayed()) |*slot, rec| slot.* = .{
         .state = rec.state,
         .terminal = rec.terminal,
@@ -323,17 +320,17 @@ fn tabulation(a: std.mem.Allocator, f: *const collate.Folio, dense: []const lalr
 /// `@bitCast` on the cell is sound because `mirrors` proves the two spellings
 /// are the same thirty-two bits, and `collate.open` already proved every cell
 /// in this file names something that is there.
-fn cells(a: std.mem.Allocator, f: *const collate.Folio) Error![]const lalr.Action {
+fn cells(a: std.mem.Allocator, f: *const collate.Folio) Error![]const press.Action {
     comptime mirrors();
     const width = f.head.width;
-    const out = try a.alloc(lalr.Action, @as(usize, f.head.state_count) * width);
+    const out = try a.alloc(press.Action, @as(usize, f.head.state_count) * width);
     @memset(out, .{ .kind = .err, .value = 0 });
     for (0..f.head.state_count) |i| {
         const row = out[i * width ..][0..width];
         const groups = f.groupsOf(f.rowOf(@intCast(i)));
         for (0..groups.len()) |k| {
             const rec = f.groupAt(groups.at(@intCast(k)));
-            const act: lalr.Action = @bitCast(rec.cell);
+            const act: press.Action = @bitCast(rec.cell);
             const cols = f.columnsOf(rec.set);
             for (0..cols.len()) |j| {
                 const at = cols.at(@intCast(j));
@@ -350,10 +347,10 @@ fn cells(a: std.mem.Allocator, f: *const collate.Folio) Error![]const lalr.Actio
 /// comparison rather than a comment so that the day either struct is reordered,
 /// this stops being a build.
 fn mirrors() void {
-    if (@bitSizeOf(leaf.Action) != @bitSizeOf(lalr.Action)) @compileError("action width drifted");
+    if (@bitSizeOf(leaf.Action) != @bitSizeOf(press.Action)) @compileError("action width drifted");
     for (std.enums.values(leaf.Action.Verb)) |verb| {
         const mine: leaf.Action = .{ .verb = verb, .value = 0x2A2A2A };
-        const theirs: lalr.Action = @bitCast(@as(u32, @bitCast(mine)));
+        const theirs: press.Action = @bitCast(@as(u32, @bitCast(mine)));
         if (theirs.value != mine.value) @compileError("the action value moved");
         if (!std.mem.eql(u8, @tagName(theirs.kind), @tagName(verb))) {
             @compileError("action verb " ++ @tagName(verb) ++ " no longer means itself");

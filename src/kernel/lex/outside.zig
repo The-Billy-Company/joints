@@ -67,7 +67,6 @@
 //! of a shape, which is the most that is true.
 
 const std = @import("std");
-const g = @import("../../press/grammar.zig");
 const offside = @import("offside.zig");
 const fence = @import("fence.zig");
 const marrow = @import("marrow.zig");
@@ -75,6 +74,7 @@ const caesura = @import("caesura.zig");
 const scry = @import("scry.zig");
 const lineage = @import("lineage.zig");
 const writ = @import("writ.zig");
+const press = @import("../../press/press.zig");
 
 test {
     _ = offside;
@@ -94,7 +94,7 @@ pub const Provision = struct {
     /// `token.immediate` and no `prec` in the IR - there is no wrapper to read
     /// them off - so the ones that need them declare them here. A string body
     /// that is not immediate is a body whose leading space the extras ate.
-    lexis: g.Lexis = .{},
+    lexis: press.Lexis = .{},
     /// Bytes that must follow the match for it to be this terminal, any one of
     /// them. Flex spells this trailing context and several of these scanners
     /// are doing exactly that: bash's `variable_name` is `word` plus "and the
@@ -436,7 +436,7 @@ pub const roll = swift_roll ++ [_]Provision{
 /// The cohort is what makes the second half true. Without it the name alone
 /// decided, and a name is shared by languages that mean different bytes by it;
 /// with it, a row fires only where the whole scanner's output is present.
-pub fn provisionFor(gr: *const g.Grammar, name: []const u8) ?*const Provision {
+pub fn provisionFor(gr: *const press.Grammar, name: []const u8) ?*const Provision {
     for (&roll) |*p| {
         if (!std.mem.eql(u8, p.name, name)) continue;
         for (p.cohort) |kin| if (!declaresExternal(gr, kin)) return null;
@@ -448,7 +448,7 @@ pub fn provisionFor(gr: *const g.Grammar, name: []const u8) ?*const Provision {
 /// Whether the grammar declares `name` as an external terminal. An ordinary
 /// terminal of the same name is not the evidence a cohort asks for: the point
 /// is what the scanner emitted, and a spelled token was never in the scanner.
-fn declaresExternal(gr: *const g.Grammar, name: []const u8) bool {
+fn declaresExternal(gr: *const press.Grammar, name: []const u8) bool {
     for (0..gr.terminal_count) |i| {
         // Not the same question `compile` asks. This one is a predicate, and a
         // terminal carrying no pattern is a true "not an external" rather than
@@ -1498,7 +1498,7 @@ pub fn provision(t: *const Troupe, names: anytype) ?Cast {
 }
 
 pub fn seated(t: *const Troupe, c: *const Cast) bool {
-    const named = [_]struct { name: []const u8, got: ?g.Symbol }{
+    const named = [_]struct { name: []const u8, got: ?press.Symbol }{
         .{ .name = t.newline, .got = c.newline },
         .{ .name = t.indent, .got = c.indent },
         .{ .name = t.dedent, .got = c.dedent },
@@ -1586,51 +1586,51 @@ pub fn claimed(t: *const Troupe, name: []const u8) bool {
 /// once at compile so the scan never compares a string.
 pub const Cast = struct {
     troupe: *const Troupe,
-    newline: ?g.Symbol = null,
-    indent: ?g.Symbol = null,
-    dedent: ?g.Symbol = null,
+    newline: ?press.Symbol = null,
+    indent: ?press.Symbol = null,
+    dedent: ?press.Symbol = null,
     /// Parallel to `troupe.writs`, and read as a set: the hand asks how many of
     /// them the permission set admits, never which one by name.
-    writs: [8]?g.Symbol = @splat(null),
+    writs: [8]?press.Symbol = @splat(null),
     /// Parallel to `troupe.brackets`, holding only the two symbols. The frame
     /// each pair leaves is read back off `c.troupe.brackets[k]` at the offset a
     /// slot resolved at, exactly as `roster` reads its `mark` - a `Cast` field
     /// resolves spellings and nothing else, and duplicating the frame here gave
     /// one fact two homes that could disagree.
-    brackets: [4]struct { open: ?g.Symbol = null, shut: ?g.Symbol = null } = @splat(.{}),
-    brace: ?g.Symbol = null,
-    sever: ?g.Symbol = null,
-    seal: ?g.Symbol = null,
-    unbrace: ?g.Symbol = null,
-    hushed: [4]?g.Symbol = @splat(null),
-    kin: ?g.Symbol = null,
-    gate: ?g.Symbol = null,
-    sign: ?g.Symbol = null,
-    opens: [fence.tags]?g.Symbol = @splat(null),
+    brackets: [4]struct { open: ?press.Symbol = null, shut: ?press.Symbol = null } = @splat(.{}),
+    brace: ?press.Symbol = null,
+    sever: ?press.Symbol = null,
+    seal: ?press.Symbol = null,
+    unbrace: ?press.Symbol = null,
+    hushed: [4]?press.Symbol = @splat(null),
+    kin: ?press.Symbol = null,
+    gate: ?press.Symbol = null,
+    sign: ?press.Symbol = null,
+    opens: [fence.tags]?press.Symbol = @splat(null),
     /// Parallel to `troupe.sigils`, and read by the index `fence.Sigil` gives.
-    sigils: [fence.sigils]?g.Symbol = @splat(null),
+    sigils: [fence.sigils]?press.Symbol = @splat(null),
     /// Parallel to `troupe.roster`, so the hand reads a mark by the index it
     /// found a symbol at and never compares a string. Named for the field it
     /// resolves, because the fixture that seats every troupe pairs the two
     /// structs by field name.
-    roster: [marrow.widest]?g.Symbol = @splat(null),
+    roster: [marrow.widest]?press.Symbol = @splat(null),
     /// Parallel to `troupe.shuts`, found by the shut character rather than by
     /// the roster index, because two closes serve eight parts.
-    shuts: [4]?g.Symbol = @splat(null),
+    shuts: [4]?press.Symbol = @splat(null),
     /// Parallel to `troupe.glued`, so the hand reads the byte at the offset and
     /// finds the marker by the index the character sat at.
-    glued: [Troupe.glues]?g.Symbol = @splat(null),
+    glued: [Troupe.glues]?press.Symbol = @splat(null),
     /// Parallel to `troupe.seams` and indexed by `caesura.Seam`, so the hand
     /// emits the arm the rule decided rather than the first one that resolved.
-    seams: [Troupe.seats]?g.Symbol = @splat(null),
-    rival: [2]?g.Symbol = @splat(null),
-    body: ?g.Symbol = null,
-    spelled: ?g.Symbol = null,
-    close: ?g.Symbol = null,
-    escape: ?g.Symbol = null,
-    stray: ?g.Symbol = null,
-    implied: ?g.Symbol = null,
-    shut: ?g.Symbol = null,
+    seams: [Troupe.seats]?press.Symbol = @splat(null),
+    rival: [2]?press.Symbol = @splat(null),
+    body: ?press.Symbol = null,
+    spelled: ?press.Symbol = null,
+    close: ?press.Symbol = null,
+    escape: ?press.Symbol = null,
+    stray: ?press.Symbol = null,
+    implied: ?press.Symbol = null,
+    shut: ?press.Symbol = null,
 };
 
 /// The zero-width answers already given at one offset, and why that is a proof
@@ -1705,10 +1705,10 @@ pub const Spent = struct {
     len: u8 = 0,
     /// Past `len` this is `undefined`, like every other stack here, so `same`
     /// compares the live prefix and never the array.
-    syms: [cohort]g.Symbol = undefined,
+    syms: [cohort]press.Symbol = undefined,
 
     /// Whether this exact zero-extent answer already stands at this offset.
-    pub fn held(s: *const Spent, at: u32, shape: u64, sym: g.Symbol) bool {
+    pub fn held(s: *const Spent, at: u32, shape: u64, sym: press.Symbol) bool {
         if (s.at != at or s.shape != shape) return false;
         for (s.syms[0..s.len]) |seen| if (seen == sym) return true;
         return false;
@@ -1716,7 +1716,7 @@ pub const Spent = struct {
 
     /// Record one zero-width answer, or refuse it. False means the loop has
     /// already been here and `step` must return null.
-    fn admit(s: *Spent, at: u32, shape: u64, sym: g.Symbol) bool {
+    fn admit(s: *Spent, at: u32, shape: u64, sym: press.Symbol) bool {
         if (s.at != at) s.* = .{ .at = at, .shape = shape };
         if (s.total == ceiling) return false;
         if (s.shape != shape) {
@@ -1734,7 +1734,7 @@ pub const Spent = struct {
 
     fn same(a: *const Spent, b: *const Spent) bool {
         return a.at == b.at and a.shape == b.shape and a.total == b.total and
-            a.len == b.len and std.mem.eql(g.Symbol, a.syms[0..a.len], b.syms[0..b.len]);
+            a.len == b.len and std.mem.eql(press.Symbol, a.syms[0..a.len], b.syms[0..b.len]);
     }
 };
 
@@ -1788,7 +1788,7 @@ pub const Carry = struct {
     /// also starts at, and then the close waiting behind a branch that keeps
     /// winning. A hand offering one member per offset never needs this; for it
     /// `step`'s refusal is the whole rule.
-    pub fn answered(c: *const Carry, at: u32, sym: g.Symbol) bool {
+    pub fn answered(c: *const Carry, at: u32, sym: press.Symbol) bool {
         return c.spent.held(at, c.shape(), sym);
     }
 
@@ -1809,7 +1809,7 @@ pub const Carry = struct {
 /// token begins, which is tree-sitter's `advance(lexer, true)`: bytes the
 /// scanner stepped over without claiming. A hand that consumes what it reads
 /// leaves it zero, and every hand written before css did.
-pub const Hit = struct { symbol: g.Symbol, len: u32, skip: u32 = 0 };
+pub const Hit = struct { symbol: press.Symbol, len: u32, skip: u32 = 0 };
 
 /// Ask every bound hand, in the order the specifications imply, for a token at
 /// `at`. Null means none of them claims this offset and the slate should try.
@@ -2019,7 +2019,7 @@ fn unwritten(
     // A one-terminal tongue answers `body`, and its permission is the gate on
     // the whole hand. A several-terminal one has no `body` at all: each arm
     // carries its own permission into the rules and back out as a `Seam`.
-    var body: ?g.Symbol = null;
+    var body: ?press.Symbol = null;
     if (c.body) |sym| {
         if (!wanted.isSet(sym)) return null;
         if (c.spelled) |w| if (!wanted.isSet(w)) return null;
@@ -2278,7 +2278,7 @@ fn spelt(
 
 /// The close a family spells for one shut character, or null where it spells
 /// none. Two entries at most, so the scan is cheaper than the index would be.
-fn shutOf(c: *const Cast, at: u8) ?g.Symbol {
+fn shutOf(c: *const Cast, at: u8) ?press.Symbol {
     for (c.troupe.shuts, 0..) |s, k| {
         if (s.at == at and k < c.shuts.len) return c.shuts[k];
     }
@@ -2458,13 +2458,13 @@ fn tested(
 /// code are three arms of one comparison. So a state offering an order beside its
 /// brace - which is every `do`, `where` and `of` in the grammar - is offering one
 /// question, not two answers in conflict.
-fn mine(c: *const Cast, sym: g.Symbol) bool {
+fn mine(c: *const Cast, sym: press.Symbol) bool {
     for (c.writs) |w| if (w) |own| if (own == sym) return true;
     for (c.brackets) |b| {
         if (b.open) |own| if (own == sym) return true;
         if (b.shut) |own| if (own == sym) return true;
     }
-    const named = [_]?g.Symbol{ c.brace, c.sever, c.seal, c.unbrace };
+    const named = [_]?press.Symbol{ c.brace, c.sever, c.seal, c.unbrace };
     for (named) |own| if (own) |it| if (it == sym) return true;
     return false;
 }
@@ -2480,8 +2480,8 @@ fn sole(
     c: *const Cast,
     wanted: *const std.DynamicBitSetUnmanaged,
     named: ?*const std.DynamicBitSetUnmanaged,
-) ?g.Symbol {
-    var order: ?g.Symbol = null;
+) ?press.Symbol {
+    var order: ?press.Symbol = null;
     for (c.writs) |w| if (w) |sym| {
         if (!wanted.isSet(sym)) continue;
         if (order != null) return null;
@@ -2573,10 +2573,10 @@ pub fn ordered(
 /// `valid_symbols` would show, and haskell declares four of them - comment,
 /// haddock, cpp, pragma - so a warrant read off `wanted` is refused in every
 /// state in the grammar and this seat would be dead code that measured clean.
-fn unrivalled(c: *const Cast, sym: g.Symbol, named: *const std.DynamicBitSetUnmanaged) bool {
+fn unrivalled(c: *const Cast, sym: press.Symbol, named: *const std.DynamicBitSetUnmanaged) bool {
     var it = named.iterator(.{});
     while (it.next()) |other| {
-        if (@as(g.Symbol, @intCast(other)) == sym) continue;
+        if (@as(press.Symbol, @intCast(other)) == sym) continue;
         if (!mine(c, @intCast(other))) return false;
     }
     return true;
@@ -2630,7 +2630,7 @@ fn sighted(
     return .{ .symbol = sym, .len = cut.len, .skip = cut.skip };
 }
 
-fn want(wanted: *const std.DynamicBitSetUnmanaged, sym: ?g.Symbol) bool {
+fn want(wanted: *const std.DynamicBitSetUnmanaged, sym: ?press.Symbol) bool {
     return if (sym) |s| wanted.isSet(s) else false;
 }
 
@@ -2715,7 +2715,7 @@ test "outside: every troupe the eleven rely on can still seat" {
     // was written for, so each troupe is seated from its own declared parts.
     for (&troupes) |*t| {
         var c: Cast = .{ .troupe = t };
-        var next: g.Symbol = 0;
+        var next: press.Symbol = 0;
         // Every role a `Troupe` names and a `Cast` resolves, paired by field
         // name rather than by a list written out here. A hand-written list is
         // the thing this test exists to be, and the html row proved it can go
@@ -2737,19 +2737,19 @@ test "outside: every troupe the eleven rely on can still seat" {
         // a loop that understood one name per record skipped the field
         // silently, left both halves null, and failed the row it was seating.
         // So the record is now paired by field name too, exactly as the outer
-        // loop pairs the structs: every `?g.Symbol` in a seat slot is filled
+        // loop pairs the structs: every `?press.Symbol` in a seat slot is filled
         // from the spelling of the same name in the troupe's record. A role
         // carrying three names would need nothing here at all.
         inline for (@typeInfo(Troupe).@"struct".fields) |f| {
             if (@hasField(Cast, f.name)) {
                 const Seat = @FieldType(Cast, f.name);
-                if (Seat == ?g.Symbol) {
+                if (Seat == ?press.Symbol) {
                     if (@field(t, f.name).len > 0) {
                         @field(c, f.name) = next;
                         next += 1;
                     }
                 } else if (@typeInfo(Seat) == .array and
-                    @typeInfo(Seat).array.child == ?g.Symbol)
+                    @typeInfo(Seat).array.child == ?press.Symbol)
                 {
                     for (@field(t, f.name), 0..) |role, k| {
                         if (k >= @typeInfo(Seat).array.len) break;
@@ -2766,7 +2766,7 @@ test "outside: every troupe the eleven rely on can still seat" {
                     for (@field(t, f.name), 0..) |role, k| {
                         if (k >= @typeInfo(Seat).array.len) break;
                         inline for (@typeInfo(Slot).@"struct".fields) |sf| {
-                            if (comptime @FieldType(Slot, sf.name) == ?g.Symbol) {
+                            if (comptime @FieldType(Slot, sf.name) == ?press.Symbol) {
                                 if (@field(role, sf.name).len > 0) {
                                     @field(@field(c, f.name)[k], sf.name) = next;
                                     next += 1;
@@ -2795,14 +2795,14 @@ test "outside: the troupe fixture still refuses half a role" {
     } else unreachable;
 
     var half: Cast = .{ .troupe = hs };
-    var next: g.Symbol = 0;
+    var next: press.Symbol = 0;
     // Everything the row spells except the closes, so the only thing missing is
     // the half whose absence is the hazard.
     for (hs.writs, 0..) |w, k| if (w.len > 0) {
         half.writs[k] = next;
         next += 1;
     };
-    for ([_]*?g.Symbol{ &half.brace, &half.sever, &half.seal, &half.unbrace }) |slot| {
+    for ([_]*?press.Symbol{ &half.brace, &half.sever, &half.seal, &half.unbrace }) |slot| {
         slot.* = next;
         next += 1;
     }

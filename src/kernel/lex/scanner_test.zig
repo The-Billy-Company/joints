@@ -9,15 +9,14 @@ const t = std.testing;
 const scanner = @import("scanner.zig");
 const outside = @import("outside.zig");
 const marrow = @import("marrow.zig");
-const import = @import("../../press/import.zig");
-const g = @import("../../press/grammar.zig");
+const press = @import("../../press/press.zig");
 
 const Fixture = struct {
-    gr: g.Grammar,
+    gr: press.Grammar,
     sc: scanner.Scanner,
 
     fn init(src: []const u8) !Fixture {
-        var gr = try import.treeSitter(t.allocator, src);
+        var gr = try press.treeSitter(t.allocator, src);
         errdefer gr.deinit();
         const sc = (try scanner.Scanner.compile(t.allocator, &gr)) orelse return error.NothingLexable;
         return .{ .gr = gr, .sc = sc };
@@ -38,7 +37,7 @@ const Fixture = struct {
         return out;
     }
 
-    fn symbolOf(f: *Fixture, name: []const u8) g.Symbol {
+    fn symbolOf(f: *Fixture, name: []const u8) press.Symbol {
         for (0..f.gr.symbolCount()) |i| {
             if (std.mem.eql(u8, f.gr.nameOf(@intCast(i)), name)) return @intCast(i);
         }
@@ -576,7 +575,7 @@ test "scanner: a grammar of nothing but externals is not lexable at all" {
         \\{"name":"t","rules":{"doc":{"type":"SYMBOL","name":"indent"}},
         \\ "externals":[{"type":"SYMBOL","name":"indent"}]}
     ;
-    var gr = try import.treeSitter(t.allocator, src);
+    var gr = try press.treeSitter(t.allocator, src);
     defer gr.deinit();
     try t.expectEqual(@as(?scanner.Scanner, null), try scanner.Scanner.compile(t.allocator, &gr));
 }
@@ -1002,7 +1001,7 @@ test "scanner: a real grammar's context-free terminals are the trap, measured" {
     var structural = try f.sc.expecting(t.allocator);
     defer structural.deinit(t.allocator);
     for (0..f.gr.terminal_count) |i| {
-        const sym: g.Symbol = @intCast(i);
+        const sym: press.Symbol = @intCast(i);
         if (!std.mem.eql(u8, f.gr.nameOf(sym), "string_content")) structural.admit(&f.sc, sym);
     }
 
@@ -1275,12 +1274,12 @@ fn mechanism(t_: *const outside.Troupe) []const u8 {
 const Declared = struct {
     names: []const []const u8,
 
-    pub fn external(d: Declared, name: []const u8) ?g.Symbol {
+    pub fn external(d: Declared, name: []const u8) ?press.Symbol {
         if (name.len == 0) return null;
         for (d.names, 0..) |n, i| if (std.mem.eql(u8, n, name)) return @intCast(i);
         return null;
     }
-    pub fn terminal(d: Declared, name: []const u8) ?g.Symbol {
+    pub fn terminal(d: Declared, name: []const u8) ?press.Symbol {
         return d.external(name);
     }
 };
@@ -1636,7 +1635,7 @@ test "scanner: an extra no rule spells stays whitespace however wide the slate" 
     defer wide.deinit(t.allocator);
     for (0..f.gr.terminal_count) |i| wide.admit(&f.sc, @intCast(i));
     for (0..f.gr.terminal_count) |i| {
-        const sym: g.Symbol = @intCast(i);
+        const sym: press.Symbol = @intCast(i);
         if (f.sc.skipped.isSet(sym)) try t.expect(!f.sc.meant.isSet(sym));
     }
     const tok = f.sc.next(" a", 0, &wide).token;

@@ -54,7 +54,87 @@ const assay = @import("irregex").assay;
 const g = @import("grammar.zig");
 const lalr = @import("lalr.zig");
 const lr0 = @import("lr0.zig");
+const settle = @import("settle.zig");
+const import = @import("import.zig");
+
+// ---------------------------------------------------------------------------
+// The published IR.
+//
+// Everything below crosses this directory's boundary, and nothing else does.
+// Which of it crosses was measured rather than decided - a sweep for what files
+// outside `press/` actually name - and the answer was twenty-nine symbols out of
+// the hundred and seventy-five that were reachable from outside. Consumers named
+// a submodule and took whatever was in it, so `folio` held eight of `grammar`'s
+// types, `quire` reached into `settle`, and the same `Conflict` arrived through
+// two different doors depending on which file you happened to import.
+//
+// Published flat, because a name that means one thing should not need a
+// namespace to say so: `press.Grammar` is the grammar, `press.Tables` is the
+// table. The alias it replaces at each call site was `g`, which said nothing at
+// all. Where a name genuinely means several things it stays behind the module
+// that disambiguates it - see the doors at the bottom of this block.
+//
+// Deliberately NOT published: `lr0.build` and `lalr.build`. `tables` below is
+// how an automaton gets built, because it owns the unfolding an LALR merge
+// artifact needs; pairing the two by hand skips that. Six sites in
+// `kernel/joint/reverse.zig` still pair them, all inside tests, and they keep a
+// direct import until the `press/` split gives them somewhere better to reach.
+// Same for `fold.nonterminals`, wanted by exactly one test in `folio`. A facade
+// that grew a symbol per test would be a re-export list, not a contract.
+// ---------------------------------------------------------------------------
+
+/// The IR a front end lowers to and the LR construction reads.
+pub const Grammar = g.Grammar;
+pub const Symbol = g.Symbol;
+pub const Production = g.Production;
+pub const Step = g.Step;
+pub const Shape = g.Shape;
+pub const Pattern = g.Pattern;
+pub const Prec = g.Prec;
+pub const Assoc = g.Assoc;
+pub const Alias = g.Alias;
+pub const Lexis = g.Lexis;
+/// How a `Grammar` is built, and the only way to get one without a front end.
+pub const Builder = g.Builder;
+
+/// The automaton's shape, no lookahead: the LR(0) canonical collection.
+pub const Collection = lr0.Collection;
+pub const State = lr0.State;
+pub const Edge = lr0.Edge;
+pub const Item = lr0.Item;
+
+/// The decided table: what each state does on each terminal, and the two
+/// halves of the answer where a state does more than one thing.
+pub const Tables = lalr.Tables;
+pub const Action = lalr.Action;
+pub const Half = lalr.Half;
+pub const Floor = lalr.Floor;
+
+/// What a contested cell cost. `Conflict` is `settle`'s type; `lalr` re-exports
+/// it under the same name, which is how one type came to have two doors.
+pub const Conflict = settle.Conflict;
+pub const Frayed = settle.Frayed;
+pub const Forks = settle.Forks;
+
+/// The tree-sitter front end, and the whole go-to-market: three hundred
+/// maintained grammars get imported, never rewritten.
+pub const treeSitter = import.treeSitter;
+
+/// Whose wall a stopped parse is, decided from the artifact. Its own vocabulary
+/// and its own report, so it stays a door rather than dissolving into the IR.
 pub const inquest = @import("inquest.zig");
+
+/// The automaton read backwards, for the questions about a fold's origin that
+/// its destination state cannot answer. A door for the same reason `inquest` is,
+/// plus one of its own: `retrace.Step` is a path step and `Grammar.Step` is a
+/// production step, and flattening both would have to rename one of them.
+pub const retrace = @import("retrace.zig");
+
+/// Flattening a token rule tree down to the one regex the lexer compiles. A door
+/// because the scanner wants one function out of it - writing a literal so a
+/// regex engine reads it as those exact bytes - and that is a spelling question
+/// whose real home is the regex floor rather than a parser generator.
+pub const lexeme = @import("lexeme.zig");
 
 /// A ceiling on unfolding, not a schedule: the loop stops as soon as a round
 /// fails to improve, and no grammar tried has improved twice. It stays above one
@@ -525,11 +605,6 @@ const Worth = struct {
 };
 
 const testing = std.testing;
-// Test-only: the front end, for a proof that starts at `grammar.json` rather than
-// at a `Builder` call, and `Forks`, which is the shape a parse consumes a
-// contested cell in.
-const import = @import("import.zig");
-const settle = @import("settle.zig");
 
 /// The smallest grammar that is LR(1) and not LALR(1), and the shape of C++'s
 /// `A<int>;`.

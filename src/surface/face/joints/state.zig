@@ -35,12 +35,12 @@
 
 const std = @import("std");
 const joints = @import("joints");
-const import = joints.press.import;
 const intake = @import("intake.zig");
 const whence = @import("whence.zig");
 
-const Grammar = joints.press.grammar.Grammar;
-const Action = joints.press.lalr.Action;
+const press = joints.press;
+const Grammar = joints.press.Grammar;
+const Action = joints.press.Action;
 const Verb = @FieldType(Action, "kind");
 
 /// What this verb was asked for. One of the four, and the shape says so rather
@@ -67,7 +67,7 @@ pub fn run(
 ) !u8 {
     const source = intake.slurp(gpa, io, w, grammar_path) orelse return 2;
     defer gpa.free(source);
-    var gr = import.treeSitter(gpa, source) catch |e| {
+    var gr = press.treeSitter(gpa, source) catch |e| {
         try w.print("joints: cannot import {s}: {s}\n", .{ grammar_path, @errorName(e) });
         return 2;
     };
@@ -281,7 +281,7 @@ fn symbolOf(gr: *const Grammar, name: []const u8) ?u32 {
 /// `survey` prints what a state accepts, and both were answering the union
 /// while sounding like they meant the shifts. A shared definition is what makes
 /// "which half" one fact rather than three.
-const Half = joints.press.lalr.Half;
+const Half = joints.press.Half;
 
 const headings = std.enums.EnumArray(Half, []const u8).init(.{
     .shift =

@@ -17,11 +17,7 @@
 const std = @import("std");
 const forme = @import("forme.zig");
 const leaf = @import("leaf.zig");
-const g = @import("../press/grammar.zig");
-const lalr = @import("../press/lalr.zig");
-const lr0 = @import("../press/lr0.zig");
 const press = @import("../press/press.zig");
-const settle = @import("../press/settle.zig");
 const lex = @import("../kernel/lex/scanner.zig");
 
 const cell = forme.cell;
@@ -78,16 +74,16 @@ const ledger = struct {
 };
 
 comptime {
-    accounts(lalr.Conflict, ledger.conflict);
-    accounts(settle.Frayed, ledger.frayed);
-    accounts(lalr.Tables, ledger.tables);
-    accounts(g.Step, ledger.step);
+    accounts(press.Conflict, ledger.conflict);
+    accounts(press.Frayed, ledger.frayed);
+    accounts(press.Tables, ledger.tables);
+    accounts(press.Step, ledger.step);
     // The stored tag is an ordinal, so these three enums *are* the file format
     // for their column. Same names in the same order on both sides, or a folio
     // written today says something else to a reader built tomorrow.
-    concurs(settle.Conflict.Class, leaf.ConflictClass);
-    concurs(settle.Conflict.Kind, leaf.ConflictKind);
-    concurs(settle.Frayed.Harm, leaf.Harm);
+    concurs(press.Conflict.Class, leaf.ConflictClass);
+    concurs(press.Conflict.Kind, leaf.ConflictKind);
+    concurs(press.Frayed.Harm, leaf.Harm);
 }
 
 /// Every field of `T` is named in `roll`, and every name in `roll` is a field
@@ -154,7 +150,7 @@ pub const Error = error{
 /// with `gpa.free`.
 pub fn pack(
     gpa: std.mem.Allocator,
-    gr: *const g.Grammar,
+    gr: *const press.Grammar,
     result: *const press.Result,
 ) Error![]align(leaf.section_align) u8 {
     var plan = try Plan.of(gpa, gr, result);
@@ -175,7 +171,7 @@ pub fn pack(
 /// This is the one place the writer does real work rather than laying out work
 /// already done. It is worth it here for the same reason it is not worth it at
 /// load: a folio is written once and read every time a parse starts.
-fn slate(gpa: std.mem.Allocator, gr: *const g.Grammar) Error![]const u8 {
+fn slate(gpa: std.mem.Allocator, gr: *const press.Grammar) Error![]const u8 {
     // Both degradations this function exists to make are on the `orelse`s, and
     // that is the whole finding. A grammar with nothing lexable is real and
     // common - yaml declares 113 externals and not one pattern - and `compile`
@@ -231,7 +227,7 @@ const Plan = struct {
     /// format refuses - a folio without one costs startup, never correctness.
     lexicon: []const u8 = &.{},
 
-    fn of(gpa: std.mem.Allocator, gr: *const g.Grammar, result: *const press.Result) Error!Plan {
+    fn of(gpa: std.mem.Allocator, gr: *const press.Grammar, result: *const press.Result) Error!Plan {
         var p: Plan = .{};
         errdefer p.deinit(gpa);
         p.table = try forme.lock(gpa, gr, result);
@@ -282,7 +278,7 @@ const Plan = struct {
     /// A nonterminal has no pattern at all, which is not the same fact as
     /// `.external` - that one is a scanner we do not have, and a consumer has
     /// to be able to refuse over it.
-    fn pattern(p: *Plan, gpa: std.mem.Allocator, pat: ?g.Pattern) Error!leaf.PatternRecord {
+    fn pattern(p: *Plan, gpa: std.mem.Allocator, pat: ?press.Pattern) Error!leaf.PatternRecord {
         const spelling: []const u8, const kind: leaf.PatternKind = switch (pat orelse
             return .{ .kind = @intFromEnum(leaf.PatternKind.none), .off = 0, .len = 0 }) {
             .literal => |s| .{ s, .literal },
@@ -312,7 +308,7 @@ const Plan = struct {
         if (p.locked) p.table.deinit();
     }
 
-    fn count(p: *const Plan, k: leaf.Kind, gr: *const g.Grammar, result: *const press.Result) u32 {
+    fn count(p: *const Plan, k: leaf.Kind, gr: *const press.Grammar, result: *const press.Result) u32 {
         const states: u32 = @intCast(result.collection.states.len);
         return switch (k) {
             .text => @intCast(p.text.items.len),
@@ -344,7 +340,7 @@ const Plan = struct {
     /// How wide a section's records are. Only the narrow ones have a choice,
     /// and each is measured against what its ids point at rather than against
     /// how many of them there are.
-    fn stride(p: *const Plan, k: leaf.Kind, gr: *const g.Grammar, result: *const press.Result) u16 {
+    fn stride(p: *const Plan, k: leaf.Kind, gr: *const press.Grammar, result: *const press.Result) u16 {
         return leaf.strideFor(k, switch (k) {
             .groupref => @intCast(p.table.group.len),
             .setsym => result.tables.width + (@as(u32, @intCast(gr.names.len)) - gr.terminal_count),
@@ -356,7 +352,7 @@ const Plan = struct {
     fn emit(
         p: *const Plan,
         gpa: std.mem.Allocator,
-        gr: *const g.Grammar,
+        gr: *const press.Grammar,
         result: *const press.Result,
     ) Error![]align(leaf.section_align) u8 {
         var dir: [leaf.kind_count]leaf.Entry = undefined;
@@ -408,7 +404,7 @@ const Plan = struct {
         p: *const Plan,
         e: leaf.Entry,
         out: []u8,
-        gr: *const g.Grammar,
+        gr: *const press.Grammar,
         result: *const press.Result,
     ) void {
         var w: Writer = .{ .out = out, .narrow = e.stride == 2 };
@@ -516,7 +512,7 @@ const Plan = struct {
     }
 };
 
-fn shapeOf(s: g.Shape) leaf.ShapeKind {
+fn shapeOf(s: press.Shape) leaf.ShapeKind {
     return switch (s) {
         .named => .named,
         .anonymous => .anonymous,
@@ -525,7 +521,7 @@ fn shapeOf(s: g.Shape) leaf.ShapeKind {
     };
 }
 
-fn completeCount(st: lr0.State) usize {
+fn completeCount(st: press.State) usize {
     return st.complete.len;
 }
 
@@ -561,7 +557,7 @@ const Writer = struct {
 
     /// A prefix-sum span table: `n + 1` entries whose last is the total, so a
     /// state's slice is two loads and never a bounds question.
-    fn spans(w: *Writer, states: []const lr0.State, comptime lenOf: fn (lr0.State) usize) void {
+    fn spans(w: *Writer, states: []const press.State, comptime lenOf: fn (press.State) usize) void {
         var total: u32 = 0;
         w.put(total);
         for (states) |st| {

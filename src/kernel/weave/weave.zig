@@ -44,7 +44,7 @@
 //!
 //! What the parse did to the stack is push one symbol, from a known state,
 //! over a known span. That is a shift of a nonterminal, so `distil` composes
-//! `effect.shift` and does not branch: a lift is a read whose symbol happens
+//! `joint.shift` and does not branch: a lift is a read whose symbol happens
 //! to be a nonterminal and whose span happens to be long. It costs one
 //! composition rather than `log n`, needs nothing from the old spine, and
 //! composes to the same file product a cold parse derives - the constituents
@@ -59,14 +59,9 @@
 
 const std = @import("std");
 const assay = @import("irregex").assay;
-const g = @import("../../press/grammar.zig");
-const lr0 = @import("../../press/lr0.zig");
-const lalr = @import("../../press/lalr.zig");
+const press = @import("../../press/press.zig");
 const lex = @import("../lex/scanner.zig");
-const effect = @import("../joint/effect.zig");
-const jstack = @import("../joint/stack.zig");
-const roster = @import("../joint/roster.zig");
-const ledger = @import("../joint/ledger.zig");
+const joint = @import("../joint/joint.zig");
 const spine = @import("../spine/spine.zig");
 const quire = @import("../quire/quire.zig");
 const graft = @import("../quire/graft.zig");
@@ -74,7 +69,7 @@ const graft = @import("../quire/graft.zig");
 pub const Joint = spine.Joint;
 pub const Leaf = Joint.Leaf;
 pub const Cut = Joint.Cut;
-pub const Effect = effect.Effect;
+pub const Effect = joint.Effect;
 pub const Move = quire.gather.Move;
 
 /// How far to widen the re-mint window when an edit destabilises the entry
@@ -166,19 +161,19 @@ pub const Cost = struct {
 /// open would want it.
 pub const Loom = struct {
     gpa: std.mem.Allocator,
-    gr: *const g.Grammar,
-    c: *const lr0.Collection,
-    t: *const lalr.Tables,
+    gr: *const press.Grammar,
+    c: *const press.Collection,
+    t: *const press.Tables,
     sc: *lex.Scanner,
-    stacks: jstack.Pool,
-    floors: roster.Pool,
-    guards: ledger.Pool,
+    stacks: joint.stack.Pool,
+    floors: joint.roster.Pool,
+    guards: joint.ledger.Pool,
 
     pub fn init(
         gpa: std.mem.Allocator,
-        gr: *const g.Grammar,
-        c: *const lr0.Collection,
-        t: *const lalr.Tables,
+        gr: *const press.Grammar,
+        c: *const press.Collection,
+        t: *const press.Tables,
         sc: *lex.Scanner,
     ) Loom {
         return .{
@@ -187,9 +182,9 @@ pub const Loom = struct {
             .c = c,
             .t = t,
             .sc = sc,
-            .stacks = jstack.Pool.init(gpa),
-            .floors = roster.Pool.init(gpa),
-            .guards = ledger.Pool.init(gpa),
+            .stacks = joint.stack.Pool.init(gpa),
+            .floors = joint.roster.Pool.init(gpa),
+            .guards = joint.ledger.Pool.init(gpa),
         };
     }
 
@@ -200,7 +195,7 @@ pub const Loom = struct {
         l.* = undefined;
     }
 
-    pub fn arena(l: *Loom) effect.Arena {
+    pub fn arena(l: *Loom) joint.Arena {
         return .{ .stacks = &l.stacks, .floors = &l.floors, .guards = &l.guards, .c = l.c };
     }
 };
@@ -328,7 +323,7 @@ pub const Weave = struct {
         w.* = undefined;
     }
 
-    pub fn arena(w: *Weave) effect.Arena {
+    pub fn arena(w: *Weave) joint.Arena {
         return w.loom.arena();
     }
 
@@ -564,7 +559,7 @@ pub const Weave = struct {
                         head != null and rejoins: {
                         const tail = try w.spine.between(w.arena(), @intCast(j), @intCast(was.len));
                         break :rejoins tail != null and
-                            try effect.compose(w.arena(), head.?, tail.?) != null;
+                            try joint.compose(w.arena(), head.?, tail.?) != null;
                     },
                     .whole => unreachable,
                 };
@@ -624,7 +619,7 @@ pub const Weave = struct {
     }
 
     inline fn then(w: *Weave, acc: ?Effect, e: Effect) !?Effect {
-        return if (acc) |a| try effect.compose(w.arena(), a, e) else null;
+        return if (acc) |a| try joint.compose(w.arena(), a, e) else null;
     }
 
     /// Parse the text and derive everything that hangs off a parse: the tree,
@@ -749,8 +744,8 @@ pub const Weave = struct {
             // asking pairwise here would decline resumes the algebra accepts.
             const under = try w.spine.between(w.arena(), 0, leaf);
             const over = w.leaves.items[leaf].element;
-            if (under != null and over.entry != effect.Effect.broken and
-                try effect.compose(w.arena(), under.?, over) == null)
+            if (under != null and over.entry != joint.Effect.broken and
+                try joint.compose(w.arena(), under.?, over) == null)
             {
                 assay.trace(.weave, "seam refused: leaf={d} under.entry={d} over.entry={d}\n", .{
                     leaf, under.?.entry, over.entry,
@@ -813,12 +808,12 @@ pub const Weave = struct {
         for (w.trail.items[from..], from..) |mv, j| switch (mv) {
             .fold => |f| {
                 const p = w.loom.gr.productions[f.prod];
-                const e = try effect.reduce(x, f.under, p.rhs, p.lhs);
-                acc = try effect.compose(x, acc, e) orelse return w.torn(j, at, "fold", acc, e);
+                const e = try joint.reduce(x, f.under, p.rhs, p.lhs);
+                acc = try joint.compose(x, acc, e) orelse return w.torn(j, at, "fold", acc, e);
             },
             .read => |r| {
-                const e = try effect.shift(x, r.at, r.symbol);
-                acc = try effect.compose(x, acc, e) orelse return w.torn(j, at, "read", acc, e);
+                const e = try joint.shift(x, r.at, r.symbol);
+                acc = try joint.compose(x, acc, e) orelse return w.torn(j, at, "read", acc, e);
                 // A zero-width symbol is not a segment; it rides on the next
                 // one that covers a byte, which keeps every leaf spendable.
                 if (r.end == at) continue;
@@ -831,7 +826,7 @@ pub const Weave = struct {
                 // of that run and belongs to the leaf before the hole; the
                 // hole itself covers only the bytes nothing read.
                 if (if (acc.entry == Effect.nowhere) null else w.charge()) |last| {
-                    last.element = try effect.compose(x, last.element, acc) orelse {
+                    last.element = try joint.compose(x, last.element, acc) orelse {
                         if (w.leaves.items.len <= floor) return w.snapped(j, at, "mend");
                         return w.torn(j, at, "mend onto leaf", last.element, acc);
                     };
@@ -856,7 +851,7 @@ pub const Weave = struct {
         // any others, and there is no token left to hang them on.
         if (acc.entry != Effect.nowhere) if (w.charge()) |last| {
             const end: u32 = @intCast(w.trail.items.len);
-            last.element = try effect.compose(x, last.element, acc) orelse {
+            last.element = try joint.compose(x, last.element, acc) orelse {
                 if (w.leaves.items.len <= floor) return w.snapped(end, at, "close");
                 return w.torn(end, at, "close onto leaf", last.element, acc);
             };
@@ -907,7 +902,7 @@ pub const Weave = struct {
     inline fn charge(w: *Weave) ?*Joint.Leaf {
         if (w.leaves.items.len == 0) return null;
         const last = &w.leaves.items[w.leaves.items.len - 1];
-        return if (last.element.entry == effect.Effect.broken) null else last;
+        return if (last.element.entry == joint.Effect.broken) null else last;
     }
 
     inline fn lay(w: *Weave, at: u32, e: Effect, bytes: u32) !void {

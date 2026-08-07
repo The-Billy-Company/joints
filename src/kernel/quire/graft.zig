@@ -52,8 +52,8 @@
 //! slower one.
 
 const std = @import("std");
-const g = @import("../../press/grammar.zig");
 const quire = @import("quire.zig");
+const press = @import("../../press/press.zig");
 
 /// Where the old parse stood when it read the symbol beginning here. Sorted by
 /// `start`, which is what makes the lookup a binary search rather than a map.
@@ -266,7 +266,7 @@ pub const Graft = struct {
     /// overwrites the symbol, so the node can no longer say what it is - and a
     /// field is merely re-decided by whoever adopts it, which is why the lift
     /// clears it rather than refusing.
-    pub fn liftable(gr: *const Graft, ref: quire.Ref) ?g.Symbol {
+    pub fn liftable(gr: *const Graft, ref: quire.Ref) ?press.Symbol {
         const n = gr.old.nodes[ref];
         if (n.kind.renamed or n.kind.extra) return null;
         if (n.start + n.len > gr.ceiling) return null;

@@ -200,7 +200,7 @@ fn since(io: std.Io, from: std.Io.Timestamp) i64 {
 /// The height beside it is what one spliced leaf costs in compositions.
 fn report(
     e: *std.Io.Writer,
-    gr: *const joints.press.grammar.Grammar,
+    gr: *const joints.press.Grammar,
     path: []const u8,
     it: *const weave.Weave,
     cut: ?Cut,

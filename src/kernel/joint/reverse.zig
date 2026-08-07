@@ -23,14 +23,14 @@
 //! every parse of every file in that language.
 
 const std = @import("std");
-const g = @import("../../press/grammar.zig");
+const press = @import("../../press/press.zig");
 const lr0 = @import("../../press/lr0.zig");
 const lalr = @import("../../press/lalr.zig");
 
 /// A predecessor: state `from` reaches the state this link is filed under by
 /// consuming `symbol`.
 const Link = struct {
-    symbol: g.Symbol,
+    symbol: press.Symbol,
     from: u32,
 
     fn before(_: void, a: Link, b: Link) bool {
@@ -39,7 +39,7 @@ const Link = struct {
 };
 
 /// Whether a parse can really have arrived along this edge.
-fn walkable(gr: *const g.Grammar, t: *const lalr.Tables, from: u32, e: lr0.Edge) bool {
+fn walkable(gr: *const press.Grammar, t: *const lalr.Tables, from: u32, e: lr0.Edge) bool {
     if (!gr.isTerminal(e.symbol)) return true;
     const a = t.at(from, e.symbol);
     return a.kind == .shift and a.value == e.target;
@@ -98,7 +98,7 @@ pub const Reverse = struct {
     /// has no action cell to be resolved against.
     pub fn build(
         gpa: std.mem.Allocator,
-        gr: *const g.Grammar,
+        gr: *const press.Grammar,
         c: *const lr0.Collection,
         t: *const lalr.Tables,
     ) !Reverse {
@@ -155,7 +155,7 @@ pub const Reverse = struct {
     }
 
     /// Every state that reaches `to` over `symbol`, in one contiguous slice.
-    pub fn predecessors(r: *const Reverse, to: u32, symbol: g.Symbol) []const Link {
+    pub fn predecessors(r: *const Reverse, to: u32, symbol: press.Symbol) []const Link {
         const run = r.links[r.offset[to]..r.offset[to + 1]];
         var lo: usize = 0;
         var hi: usize = run.len;
@@ -220,7 +220,7 @@ pub const Reverse = struct {
 
     /// Walk `symbols` (bottom-to-top, as a right-hand side reads) backwards out
     /// of every state in `states`.
-    pub fn rewind(r: *Reverse, states: []const u32, symbols: []const g.Symbol) !Rewind {
+    pub fn rewind(r: *Reverse, states: []const u32, symbols: []const press.Symbol) !Rewind {
         r.front.clearRetainingCapacity();
         try r.front.appendSlice(r.gpa, states);
         r.flat.clearRetainingCapacity();
@@ -259,8 +259,8 @@ pub const Reverse = struct {
 const testing = std.testing;
 
 /// `S -> ( S ) | x`, the same grammar `lr0` proves itself against.
-fn parens(gpa: std.mem.Allocator) !g.Grammar {
-    var b = g.Builder.init(gpa);
+fn parens(gpa: std.mem.Allocator) !press.Grammar {
+    var b = press.Builder.init(gpa);
     defer b.deinit();
     const lp = try b.intern("(", "(", .{ .literal = "(" });
     const rp = try b.intern(")", ")", .{ .literal = ")" });
@@ -401,8 +401,8 @@ test "the trail holds every depth the walk passed, not just the far end" {
 /// `S -> u v | p v | q v`. Three ways to reach a `v`, one of which is over `u`,
 /// so rewinding `u v` passes through a wide interior — every state that could
 /// be about to read a `v` — and lands on a floor of exactly one.
-fn funnel(gpa: std.mem.Allocator) !g.Grammar {
-    var b = g.Builder.init(gpa);
+fn funnel(gpa: std.mem.Allocator) !press.Grammar {
+    var b = press.Builder.init(gpa);
     defer b.deinit();
     const v = try b.intern("v", "v", .{ .literal = "v" });
     const start = try b.intern("$start", "$start", null);

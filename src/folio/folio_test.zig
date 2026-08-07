@@ -18,9 +18,7 @@ const std = @import("std");
 const folio = @import("folio.zig");
 const leaf = @import("leaf.zig");
 const fold = @import("../press/fold.zig");
-const g = @import("../press/grammar.zig");
 const press = @import("../press/press.zig");
-const settle = @import("../press/settle.zig");
 
 const testing = std.testing;
 
@@ -33,15 +31,15 @@ const testing = std.testing;
 /// the round trip below has something to be about. A section whose records all
 /// happen to be zero round-trips perfectly no matter what the writer forgot,
 /// and the conflict section is the one where that already happened once.
-fn sample(gpa: std.mem.Allocator) !g.Grammar {
+fn sample(gpa: std.mem.Allocator) !press.Grammar {
     return titled(gpa, "sample");
 }
 
 /// The same grammar wearing a caller's name, because a codex of two members
 /// needs two titles and everything else about the members may as well be the
 /// structure the round-trip tests already trust.
-fn titled(gpa: std.mem.Allocator, name: []const u8) !g.Grammar {
-    var b = g.Builder.init(gpa);
+fn titled(gpa: std.mem.Allocator, name: []const u8) !press.Grammar {
+    var b = press.Builder.init(gpa);
     defer b.deinit();
 
     const id = try b.intern("id", "identifier", .{ .regex = "[a-z]+" });
@@ -94,7 +92,7 @@ fn titled(gpa: std.mem.Allocator, name: []const u8) !g.Grammar {
 }
 
 const Pressed = struct {
-    grammar: g.Grammar,
+    grammar: press.Grammar,
     result: press.Result,
 
     fn of(gpa: std.mem.Allocator) !Pressed {
@@ -180,12 +178,12 @@ test "a pressed grammar survives the round trip field by field" {
     comptime {
         const carried: []const []const u8 = &.{ "alias", "field" };
         const spent: []const []const u8 = &.{ "prec", "assoc", "spliced" };
-        for (std.meta.fields(g.Step)) |fld| {
+        for (std.meta.fields(press.Step)) |fld| {
             for (carried) |n| {
                 if (std.mem.eql(u8, n, fld.name)) break;
             } else for (spent) |n| {
                 if (std.mem.eql(u8, n, fld.name)) break;
-            } else @compileError("g.Step." ++ fld.name ++ " is neither asserted" ++
+            } else @compileError("press.Step." ++ fld.name ++ " is neither asserted" ++
                 " through the folio above nor listed as spent during the press." ++
                 " A field nobody round-trips is a field that vanishes quietly.");
         }
@@ -204,7 +202,7 @@ test "a spliced rank is spent by the press and reaches no reader through the fil
     // that all happen to be zero round-trips perfectly however wrong the writer
     // is, which is how a dropped field once reported thirty grammars moved
     // nothing at all.
-    var b = g.Builder.init(testing.allocator);
+    var b = press.Builder.init(testing.allocator);
     defer b.deinit();
     const word = try b.intern("word", "word", .{ .regex = "[a-z]+" });
     const open = try b.intern("open", "[", .{ .literal = "[" });
@@ -240,7 +238,7 @@ test "a spliced rank is spent by the press and reaches no reader through the fil
         for (prod.steps) |step| {
             if (!step.spliced) continue;
             spliced += 1;
-            try testing.expectEqual(g.Prec{ .level = 0 }, step.prec);
+            try testing.expectEqual(press.Prec{ .level = 0 }, step.prec);
         }
     }
     try testing.expectEqual(@as(usize, 1), spliced);
@@ -258,12 +256,12 @@ test "a spliced rank is spent by the press and reaches no reader through the fil
     // about a rank that is not in the file would be a bit about nothing.
     try testing.expectEqual(gr.productions.len, back.grammar.productions.len);
     for (gr.productions, back.grammar.productions) |want, got| {
-        try testing.expectEqualSlices(g.Symbol, want.rhs, got.rhs);
+        try testing.expectEqualSlices(press.Symbol, want.rhs, got.rhs);
         for (want.steps, got.steps) |a, c| {
             try testing.expectEqual(a.alias, c.alias);
             try testing.expectEqual(a.field, c.field);
-            try testing.expectEqual(g.Prec.none, c.prec);
-            try testing.expectEqual(g.Assoc.none, c.assoc);
+            try testing.expectEqual(press.Prec.none, c.prec);
+            try testing.expectEqual(press.Assoc.none, c.assoc);
             try testing.expect(!c.spliced);
         }
     }
@@ -314,7 +312,7 @@ test "the table and the automaton come back out of the interned form intact" {
     // comes back as its default, so a section of default-shaped records agrees
     // with itself however wrong it is - which is how a dropped `merged` flag
     // once reported thirty grammars byte-identical and nothing moved.
-    var seen: std.EnumSet(settle.Conflict.Class) = .initEmpty();
+    var seen: std.EnumSet(press.Conflict.Class) = .initEmpty();
     for (t.conflicts) |k| seen.insert(k.class);
     try testing.expect(seen.count() > 0);
     try testing.expect(seen.contains(.unwritten));

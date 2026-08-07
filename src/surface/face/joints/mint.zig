@@ -29,10 +29,7 @@ const intake = @import("intake.zig");
 
 const folio = joints.folio;
 const leaf = folio.leaf;
-const import = joints.press.import;
 const press = joints.press;
-const g = joints.press.grammar;
-const lr0 = joints.press.lr0;
 
 pub fn run(
     gpa: std.mem.Allocator,
@@ -177,7 +174,7 @@ fn gathering(
         /// Set when the member was pressed here, absent for one embedded as a
         /// ready folio - which is also the read-back check's dispatch: only a
         /// press leaves tables in memory to disagree with.
-        gr: ?g.Grammar = null,
+        gr: ?press.Grammar = null,
         built: ?press.Result = null,
         press_us: i64 = 0,
     };
@@ -229,7 +226,7 @@ fn gathering(
 
         const source = intake.slurp(gpa, io, w, path) orelse return 2;
         defer gpa.free(source);
-        var gr = import.treeSitter(gpa, source) catch |e| {
+        var gr = press.treeSitter(gpa, source) catch |e| {
             try w.print("joints: cannot import {s}: {s}\n", .{ path, @errorName(e) });
             return 2;
         };
@@ -338,7 +335,7 @@ fn write(
     const source = intake.slurp(gpa, io, w, path) orelse return 2;
     defer gpa.free(source);
 
-    var gr = import.treeSitter(gpa, source) catch |e| {
+    var gr = press.treeSitter(gpa, source) catch |e| {
         try w.print("joints: cannot import {s}: {s}\n", .{ path, @errorName(e) });
         return 2;
     };
@@ -488,32 +485,32 @@ const Footprint = struct {
 
 /// `built` is taken generically because `press.Result` is not part of the
 /// module root's public surface and adding it there is another lane's file.
-fn footprint(gr: *const g.Grammar, built: anytype) Footprint {
+fn footprint(gr: *const press.Grammar, built: anytype) Footprint {
     var m: Footprint = .{ .grammar = 0, .automaton = 0, .table = 0 };
     m.grammar += gr.name.len;
     for (gr.names) |n| m.grammar += n.len + @sizeOf([]const u8);
     for (gr.patterns) |p| {
-        m.grammar += @sizeOf(?g.Pattern) + switch (p orelse continue) {
+        m.grammar += @sizeOf(?press.Pattern) + switch (p orelse continue) {
             .literal, .regex => |text| text.len,
             .external => 0,
         };
     }
-    m.grammar += gr.lexis.len * @sizeOf(g.Lexis);
-    m.grammar += gr.shapes.len * @sizeOf(g.Shape);
-    m.grammar += gr.owner.len * @sizeOf(g.Symbol);
-    m.grammar += (gr.extras.len + gr.supertypes.len) * @sizeOf(g.Symbol);
-    for (gr.aliases) |a| m.grammar += a.name.len + @sizeOf(g.Alias);
+    m.grammar += gr.lexis.len * @sizeOf(press.Lexis);
+    m.grammar += gr.shapes.len * @sizeOf(press.Shape);
+    m.grammar += gr.owner.len * @sizeOf(press.Symbol);
+    m.grammar += (gr.extras.len + gr.supertypes.len) * @sizeOf(press.Symbol);
+    for (gr.aliases) |a| m.grammar += a.name.len + @sizeOf(press.Alias);
     for (gr.field_names) |n| m.grammar += n.len + @sizeOf([]const u8);
     for (gr.productions) |p| {
-        m.grammar += @sizeOf(g.Production) + p.rhs.len * @sizeOf(g.Symbol) + p.steps.len * @sizeOf(g.Step);
+        m.grammar += @sizeOf(press.Production) + p.rhs.len * @sizeOf(press.Symbol) + p.steps.len * @sizeOf(press.Step);
     }
     for (built.collection.states) |st| {
-        m.automaton += @sizeOf(lr0.State) +
-            st.kernel.len * @sizeOf(lr0.Item) +
-            st.edges.len * @sizeOf(lr0.Edge) +
+        m.automaton += @sizeOf(press.State) +
+            st.kernel.len * @sizeOf(press.Item) +
+            st.edges.len * @sizeOf(press.Edge) +
             st.complete.len * @sizeOf(u32);
     }
-    m.table = built.tables.action.len * @sizeOf(joints.press.lalr.Action);
+    m.table = built.tables.action.len * @sizeOf(joints.press.Action);
     return m;
 }
 
@@ -528,7 +525,7 @@ fn footprint(gr: *const g.Grammar, built: anytype) Footprint {
 fn disagrees(
     f: *const folio.Folio,
     b: *const folio.Bound,
-    gr: *const g.Grammar,
+    gr: *const press.Grammar,
     built: anytype,
 ) ?[]const u8 {
     if (f.symbolCount() != gr.symbolCount()) return "symbol count";
@@ -540,7 +537,7 @@ fn disagrees(
     }
     if (f.head.production_count != gr.productions.len) return "production count";
     for (gr.productions, 0..) |p, i| {
-        if (!std.mem.eql(g.Symbol, p.rhs, f.rhsOf(@intCast(i)))) return "a production body";
+        if (!std.mem.eql(press.Symbol, p.rhs, f.rhsOf(@intCast(i)))) return "a production body";
     }
     if (f.head.state_count != built.collection.states.len) return "state count";
     for (built.collection.states, b.collection.states) |st, back| {
@@ -568,12 +565,12 @@ fn disagrees(
         if (!alike(want.chosen, back.chosen) or !alike(want.other, back.other)) {
             return "a conflict's verdict";
         }
-        if (!std.mem.eql(g.Symbol, want.party, back.party)) return "a conflict's party";
+        if (!std.mem.eql(press.Symbol, want.party, back.party)) return "a conflict's party";
     }
     return null;
 }
 
-fn alike(a: joints.press.lalr.Action, b: joints.press.lalr.Action) bool {
+fn alike(a: joints.press.Action, b: joints.press.Action) bool {
     return a.kind == b.kind and a.value == b.value;
 }
 
