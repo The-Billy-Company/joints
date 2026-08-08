@@ -78,12 +78,6 @@ comptime {
     accounts(press.Frayed, ledger.frayed);
     accounts(press.Tables, ledger.tables);
     accounts(press.Step, ledger.step);
-    // The stored tag is an ordinal, so these three enums *are* the file format
-    // for their column. Same names in the same order on both sides, or a folio
-    // written today says something else to a reader built tomorrow.
-    concurs(press.Conflict.Class, leaf.ConflictClass);
-    concurs(press.Conflict.Kind, leaf.ConflictKind);
-    concurs(press.Frayed.Harm, leaf.Harm);
 }
 
 /// Every field of `T` is named in `roll`, and every name in `roll` is a field
@@ -105,23 +99,6 @@ fn accounts(comptime T: type, comptime roll: []const []const u8) void {
             if (std.mem.eql(u8, name, f.name)) break;
         } else @compileError(@typeName(T) ++ " has no field `" ++ name ++
             "`; `ledger` is stale, delete the entry.");
-    }
-}
-
-/// Two enums with the same names on the same ordinals.
-fn concurs(comptime Press: type, comptime Leaf: type) void {
-    const here = std.meta.fields(Press);
-    const disk = std.meta.fields(Leaf);
-    if (here.len != disk.len) @compileError(@typeName(Press) ++ " and " ++
-        @typeName(Leaf) ++ " differ in length; a class the press can produce" ++
-        " and the format cannot spell is a class that round-trips as another one." ++
-        " Append the missing member - never insert one.");
-    for (here, disk) |a, b| {
-        if (!std.mem.eql(u8, a.name, b.name) or a.value != b.value) {
-            @compileError(@typeName(Press) ++ "." ++ a.name ++ " sits where " ++
-                @typeName(Leaf) ++ "." ++ b.name ++ " does. The ordinal is what" ++
-                " is on disk, so reordering renames every folio already written.");
-        }
     }
 }
 
@@ -473,17 +450,8 @@ const Plan = struct {
                 for (result.tables.conflicts) |x| {
                     w.put(x.state);
                     w.put(x.terminal);
-                    w.put(@intFromEnum(switch (x.kind) {
-                        .shift_reduce => leaf.ConflictKind.shift_reduce,
-                        .reduce_reduce => leaf.ConflictKind.reduce_reduce,
-                    }));
-                    w.put(@intFromEnum(switch (x.class) {
-                        .repetition => leaf.ConflictClass.repetition,
-                        .declared => leaf.ConflictClass.declared,
-                        .residual => leaf.ConflictClass.residual,
-                        .unwritten => leaf.ConflictClass.unwritten,
-                        .sided => leaf.ConflictClass.sided,
-                    }));
+                    w.put(@intFromEnum(forme.same(leaf.ConflictKind, x.kind)));
+                    w.put(@intFromEnum(forme.same(leaf.ConflictClass, x.class)));
                     w.put(cell(x.chosen));
                     w.put(cell(x.other));
                     w.put(off);
@@ -503,10 +471,7 @@ const Plan = struct {
             .frayed => for (result.tables.frayed) |x| {
                 w.put(x.state);
                 w.put(x.terminal);
-                w.put(@intFromEnum(switch (x.harm) {
-                    .read_dropped => leaf.Harm.read_dropped,
-                    .fold_dropped => leaf.Harm.fold_dropped,
-                }));
+                w.put(@intFromEnum(forme.same(leaf.Harm, x.harm)));
             },
         }
     }

@@ -30,6 +30,7 @@
 
 const std = @import("std");
 const collate = @import("collate.zig");
+const forme = @import("forme.zig");
 const leaf = @import("leaf.zig");
 const press = @import("../press/press.zig");
 
@@ -244,7 +245,7 @@ fn automaton(a: std.mem.Allocator, f: *const collate.Folio, dense: []const press
             for (0..cols.len()) |j| {
                 const at = cols.at(@intCast(j));
                 if (at < width) continue;
-                const act: press.Action = @bitCast(rec.cell);
+                const act = forme.action(rec.cell);
                 try all.append(a, .{ .symbol = f.symbolAt(at), .target = act.value });
             }
         }
@@ -269,19 +270,10 @@ fn tabulation(a: std.mem.Allocator, f: *const collate.Folio, dense: []const pres
     for (conflicts, f.conflicts()) |*slot, rec| slot.* = .{
         .state = rec.state,
         .terminal = rec.terminal,
-        .kind = switch (@as(leaf.ConflictKind, @enumFromInt(rec.kind))) {
-            .shift_reduce => .shift_reduce,
-            .reduce_reduce => .reduce_reduce,
-        },
-        .class = switch (@as(leaf.ConflictClass, @enumFromInt(rec.class))) {
-            .repetition => .repetition,
-            .declared => .declared,
-            .residual => .residual,
-            .unwritten => .unwritten,
-            .sided => .sided,
-        },
-        .chosen = @bitCast(rec.chosen),
-        .other = @bitCast(rec.other),
+        .kind = forme.spelt(press.Conflict.Kind, leaf.ConflictKind, rec.kind),
+        .class = forme.spelt(press.Conflict.Class, leaf.ConflictClass, rec.class),
+        .chosen = forme.action(rec.chosen),
+        .other = forme.action(rec.other),
         // Same 32 bits either way: the file writes an action as its cell and a
         // reader hands the slice straight back rather than copying it.
         .rest = @ptrCast(f.rivalsOf(rec)),
@@ -291,10 +283,7 @@ fn tabulation(a: std.mem.Allocator, f: *const collate.Folio, dense: []const pres
     for (frayed, f.frayed()) |*slot, rec| slot.* = .{
         .state = rec.state,
         .terminal = rec.terminal,
-        .harm = switch (@as(leaf.Harm, @enumFromInt(rec.harm))) {
-            .read_dropped => .read_dropped,
-            .fold_dropped => .fold_dropped,
-        },
+        .harm = forme.spelt(press.Frayed.Harm, leaf.Harm, rec.harm),
     };
     return .{
         .arena = std.heap.ArenaAllocator.init(a),
@@ -317,11 +306,10 @@ fn tabulation(a: std.mem.Allocator, f: *const collate.Folio, dense: []const pres
 /// percent of it - so the cost here is the size of the answer rather than the
 /// size of the file.
 ///
-/// `@bitCast` on the cell is sound because `mirrors` proves the two spellings
-/// are the same thirty-two bits, and `collate.open` already proved every cell
-/// in this file names something that is there.
+/// Reading a cell back is `forme.action`, which is checked by the same comptime
+/// proof the write side is; `collate.open` already proved every cell in this
+/// file names something that is there.
 fn cells(a: std.mem.Allocator, f: *const collate.Folio) Error![]const press.Action {
-    comptime mirrors();
     const width = f.head.width;
     const out = try a.alloc(press.Action, @as(usize, f.head.state_count) * width);
     @memset(out, .{ .kind = .err, .value = 0 });
@@ -330,7 +318,7 @@ fn cells(a: std.mem.Allocator, f: *const collate.Folio) Error![]const press.Acti
         const groups = f.groupsOf(f.rowOf(@intCast(i)));
         for (0..groups.len()) |k| {
             const rec = f.groupAt(groups.at(@intCast(k)));
-            const act: press.Action = @bitCast(rec.cell);
+            const act = forme.action(rec.cell);
             const cols = f.columnsOf(rec.set);
             for (0..cols.len()) |j| {
                 const at = cols.at(@intCast(j));
@@ -343,17 +331,3 @@ fn cells(a: std.mem.Allocator, f: *const collate.Folio) Error![]const press.Acti
     return out;
 }
 
-/// The one place a folio cell is trusted as a press cell. Written as a
-/// comparison rather than a comment so that the day either struct is reordered,
-/// this stops being a build.
-fn mirrors() void {
-    if (@bitSizeOf(leaf.Action) != @bitSizeOf(press.Action)) @compileError("action width drifted");
-    for (std.enums.values(leaf.Action.Verb)) |verb| {
-        const mine: leaf.Action = .{ .verb = verb, .value = 0x2A2A2A };
-        const theirs: press.Action = @bitCast(@as(u32, @bitCast(mine)));
-        if (theirs.value != mine.value) @compileError("the action value moved");
-        if (!std.mem.eql(u8, @tagName(theirs.kind), @tagName(verb))) {
-            @compileError("action verb " ++ @tagName(verb) ++ " no longer means itself");
-        }
-    }
-}

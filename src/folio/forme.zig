@@ -300,17 +300,68 @@ const Locker = struct {
     }
 };
 
-/// One cell, in the folio's encoding. The one place the two action spellings
-/// meet: a verb the press grows later lands here as a missing switch prong, not
-/// as a number that reads back as something else.
+// Four things the press decides are stored as an ordinal, which makes the
+// ordinal the file format. Each has a `leaf` twin declared separately on
+// purpose - one type is a promise about a file and the other is a verdict - and
+// what keeps the two from drifting apart is `concurs`, below: same names, same
+// ordinals, checked at comptime. Every conversion in this file goes through it,
+// so there is no way to spell one that is not proved.
+comptime {
+    concurs(press.Action.Kind, leaf.Action.Verb);
+    concurs(press.Conflict.Class, leaf.ConflictClass);
+    concurs(press.Conflict.Kind, leaf.ConflictKind);
+    concurs(press.Frayed.Harm, leaf.Harm);
+}
+
+/// Two enums with the same names on the same ordinals.
+fn concurs(comptime Press: type, comptime Leaf: type) void {
+    const here = std.meta.fields(Press);
+    const disk = std.meta.fields(Leaf);
+    if (here.len != disk.len) @compileError(@typeName(Press) ++ " and " ++
+        @typeName(Leaf) ++ " differ in length; a class the press can produce" ++
+        " and the format cannot spell is a class that round-trips as another one." ++
+        " Append the missing member - never insert one.");
+    for (here, disk) |a, b| {
+        if (!std.mem.eql(u8, a.name, b.name) or a.value != b.value) {
+            @compileError(@typeName(Press) ++ "." ++ a.name ++ " sits where " ++
+                @typeName(Leaf) ++ "." ++ b.name ++ " does. The ordinal is what" ++
+                " is on disk, so reordering renames every folio already written.");
+        }
+    }
+}
+
+/// The same case, spelled in the other of two enums proved to concur. Both
+/// directions are this one function, because the proof is symmetric and so is
+/// the conversion: once `concurs` holds, the ordinal *is* the shared name, and a
+/// prong-by-prong `switch` restating that is eight copies of a fact one comptime
+/// block already establishes.
+pub fn same(comptime To: type, from: anytype) To {
+    comptime concurs(@TypeOf(from), To);
+    return @enumFromInt(@intFromEnum(from));
+}
+
+/// The same, from the raw ordinal a record holds. A folio names its enum columns
+/// as `u32`, so the type they mean has to be supplied by the reader; naming it
+/// here rather than at each call site is what keeps `concurs` in the path.
+pub fn spelt(comptime To: type, comptime Disk: type, ordinal: u32) To {
+    return same(To, @as(Disk, @enumFromInt(ordinal)));
+}
+
+/// One cell, in the folio's encoding, and the one place the two action
+/// spellings meet.
 pub fn cell(a: press.Action) u32 {
-    return @bitCast(leaf.Action{
-        .verb = switch (a.kind) {
-            .err => .err,
-            .shift => .shift,
-            .reduce => .reduce,
-            .accept => .accept,
-        },
-        .value = a.value,
-    });
+    return @bitCast(leaf.Action{ .verb = same(leaf.Action.Verb, a.kind), .value = a.value });
+}
+
+/// A cell, read back. This used to be a bare `@bitCast` at four call sites in
+/// `bind`, sound because a `mirrors` helper there proved the same thing
+/// `concurs` does - by hand, over the verbs only, and invoked from *one* of the
+/// four functions that depended on it. Which held, but held because all four
+/// were compiled together in one file: the proof sat beside the conversion
+/// rather than inside it, so nothing stopped a fifth reader elsewhere from
+/// bitcasting a cell with no proof at all. Here it cannot be reached without
+/// one.
+pub fn action(c: u32) press.Action {
+    const disk: leaf.Action = @bitCast(c);
+    return .{ .kind = same(press.Action.Kind, disk.verb), .value = disk.value };
 }
