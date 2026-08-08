@@ -60,6 +60,7 @@
 const std = @import("std");
 const irregex = @import("irregex");
 const press = @import("../../press/press.zig");
+const grain = @import("../grain/grain.zig");
 const admit = @import("admit.zig");
 const outside = @import("outside.zig");
 pub const lexicon = @import("lexicon.zig");
@@ -814,6 +815,47 @@ pub const Scanner = struct {
             .stray => |off| return .{ .stray = off },
             .end => return .end,
         };
+    }
+
+    /// Offer this scanner a line index for the bytes it is about to read, or
+    /// take one back with null.
+    ///
+    /// An operation on the scanner because that is what it is. Where the handle
+    /// happens to be kept - inside `Carry`, next to the offside stack - is this
+    /// file's business, and an installer reaching through `sc.carry.ruled` to
+    /// set it had to know both that and the field's whole lifetime rule. What
+    /// the caller owes is only the rule it can actually keep: the ruling
+    /// outlives every scan that can see this, and the owner passes null before
+    /// letting go of it.
+    ///
+    /// Nothing here is load-bearing for correctness. `grain.lead` checks a
+    /// ruling against the exact bytes in hand and walks them itself if it does
+    /// not describe them, so a stale index costs a measurement and never a
+    /// wrong column - which is why an installer that forgets to re-offer after
+    /// an edit produces a slow parse rather than a broken one, and why a bench
+    /// is the only instrument that catches it.
+    ///
+    /// A CACHE HANDLE, and not part of the scanner's state. `Carry` is copied
+    /// by value and `Save` is documented pointer-free (~1 KB, no allocation),
+    /// which holds while a save is a copy in this process and stops holding the
+    /// moment one is written to a file: a serialized `Save` carries a pointer
+    /// into a dead address space. Anything that ever persists one has to drop
+    /// this on the way out and re-offer on the way back in.
+    pub fn rule(s: *Scanner, ruled: ?*grain.Ruling) void {
+        s.carry.ruled = ruled;
+    }
+
+    test "a ruling is offered and taken back" {
+        // The rest of a scanner is not part of this question - `rule` reads none
+        // of it - and a real one needs a compiled grammar, which would only put
+        // a fixture between the reader and the handle.
+        var sc: Scanner = undefined;
+        sc.carry = .{};
+        var ruled: grain.Ruling = undefined;
+        sc.rule(&ruled);
+        try std.testing.expectEqual(@as(?*grain.Ruling, &ruled), sc.carry.ruled);
+        sc.rule(null);
+        try std.testing.expectEqual(@as(?*grain.Ruling, null), sc.carry.ruled);
     }
 
     /// Forget everything the hands remember. A file's worth of state, so the
