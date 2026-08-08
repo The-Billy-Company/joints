@@ -4,14 +4,27 @@ Seven verbs over one library. This folder's job is to turn whatever the
 library refuses to do into a sentence a terminal can read and an exit code a
 script can branch on - never a stack trace.
 
+One verb per file, and a dispatcher that knows nothing about any of them beyond
+the row in its table.
+
 | File | Role |
 |---|---|
-| `main.zig` | Dispatch, usage, and the four machinery verbs: `grammar`, `state`, `lex`, `--version`. |
-| `intake.zig` | The one door every verb reads a path through - `slurp`, and the diagnostic it never lets a caller skip. |
+| `main.zig` | The dispatcher, and only that: the `verbs` table, the arity guard it drives, the usage text built from it, and `--version`. |
+| `intake.zig` | The one door every verb turns a path into a parser through - `slurp`, `grammar`, `tables`, `scanner`, and the diagnostics it never lets a caller skip. |
+| `grammar.zig` | `grammar` - import a tree-sitter grammar, report its shape, group its conflicts by whose ambiguity they are. |
+| `lex.zig` | `lex` - run the terminal scanner over a file with no parse state gating it, on purpose. |
+| `state.zig` | `state` - one LR state whole, or a census, a holding search, or a chain. Owns its own four sub-forms. |
 | `parse.zig` | `parse` - load a grammar or a folio, build a tree, print it. |
 | `amend.zig` | `amend` - re-parse across an edit without re-reading the file. |
 | `mint.zig` | `mint` - press a grammar into a folio, or read one back and check it. |
 | `survey.zig` | `survey` - rung 1 of `research/joinery/TESTING.md`: does a segment collapse to one answer. |
+| `whence.zig` | Where a state came from, for `state`'s chain and holding forms. |
+
+Each verb's `run` has one signature - `(gpa, io, w, args) !u8`, where `args` is
+everything after the verb - so the table holds function pointers rather than a
+`switch`. A verb parses its own flags and its own sub-forms, because those are
+its grammar and nobody else's; the dispatcher supplies only the arity guard,
+from the `min` its row declares.
 
 ## The contract
 
@@ -45,36 +58,53 @@ travel through it.** Instead:
    when a grammar has no lexable terminal (a true fact about the grammar, not
    a defect in reading it) but `2` when the scanner fails to *compile* (the
    press's fault, not the grammar's shape).
-4. **Read exactly one way.** `intake.slurp` is the only path any verb takes to
-   a file's bytes. It returns `?[]u8` and prints its own diagnostic before
-   returning `null`, so a caller never `try`s a read and never spells the
-   "cannot read" sentence itself. See `intake.zig`'s own doc comment for why
-   that module exists - five verbs used to say the same sentence five
-   different ways.
+
+   **The same condition is `1` in one verb and `2` in another, deliberately.**
+   `lex` and `survey` were asked what a grammar tokenizes to, and "nothing" is
+   that question's answer, so a grammar with no lexable terminal is their `1`.
+   `parse` and `amend` were asked for a tree, and the same grammar is not a
+   tree they built and rejected but a tree they could not attempt, so it is
+   their `2`. The rule is the one above; only the question changes. This is
+   load-bearing outside the binary - `tool/sound.py` tells a yaml SKIP from a
+   wiring failure by exactly this code - so `intake.Unlexable` hands back
+   *which* failure happened and lets each verb say what it is worth, rather
+   than deciding for them.
+4. **Reach the library exactly one way.** `intake` owns all four steps from a
+   path to a parser - `slurp` for the bytes, `grammar` for the import, `tables`
+   for the press, `scanner` for the terminal scanner - and no verb in this
+   folder does any of them itself. The first three return `?T` and print their
+   own diagnostic before returning `null`, so a caller never `try`s one and
+   never spells the sentence itself. See `intake.zig`'s doc comment for why:
+   five verbs used to say "cannot read" five different ways, and the same
+   argument held for the other three, which were pasted seven, six, and four
+   times.
 
 ## What "properly handled" means, verb by verb
 
-Every call to a fallible library seam - `import.treeSitter`,
-`scanner.Scanner.compile`, `press.tables`, `folio.bind`, `folio.pack`,
-`folio.map`, `folio.writeTo` - is wrapped at its call site:
+Every call to a fallible library seam is wrapped, and for the four on the path
+from a path to a parser the wrapper is already written - a verb reads one line
+and the sentence is spelled in `intake.zig`:
 
 ```zig
-var gr = import.treeSitter(gpa, source) catch |e| {
-    try w.print("joints: cannot import {s}: {s}\n", .{ path, @errorName(e) });
-    return 2;
-};
+const source = intake.slurp(gpa, io, w, path) orelse return 2;
+var gr = intake.grammar(gpa, w, path, source) orelse return 2;
+var built = intake.tables(gpa, w, &gr) orelse return 2;
+var sc = intake.scanner(gpa, w, &gr) catch |r| return intake.tokenless(r);
 ```
 
-or, where the library returns an optional atop the error union (a scanner
-that compiled fine but found no lexable terminal is a `null`, not an error):
+`scanner` is the one that hands back an error rather than a `null`, because its
+two failures earn different exit codes and which one is a per-verb judgment -
+see contract point 3. `intake.tokenless` is the mapping for a verb that was
+asked about tokens; `parse` and `amend` write `catch return 2` instead.
+
+The seams `intake` does not cover - `folio.bind`, `folio.pack`, `folio.map`,
+`folio.writeTo` - are wrapped at their call sites, in the one verb that uses
+each, following the same sentence shape:
 
 ```zig
-var sc = (scanner.Scanner.compile(gpa, &gr) catch |e| {
-    try w.print("joints: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(e) });
+const bytes = folio.pack(gpa, &gr, &built) catch |e| {
+    try w.print("joints: cannot pack {s}: {s}\n", .{ gr.name, @errorName(e) });
     return 2;
-}) orelse {
-    try w.print("joints: {s} has no lexable terminal at all\n", .{gr.name});
-    return 1;
 };
 ```
 
@@ -95,7 +125,7 @@ folio can be malformed, `folio/impose.zig` names `GrammarTooLarge` and
 `||`, and `kernel/lex/scanner.zig` splits `CompileError` from `FreezeError`
 because those are different moments to fail at - all three are *public API
 boundaries*, where a caller outside the module needs to `switch` on what went
-wrong. `press/lr0.zig` and `press/press.zig`, by contrast, lean on Zig's
+wrong. `press/cast/lr0.zig` and `press/press.zig`, by contrast, lean on Zig's
 inferred `!T` for `build`/`tables`: every caller, in `press/` or here, either
 propagates the whole union or handles one specific member by name
 (`error.Unsplittable`, inside `press.zig` itself), so a hand-maintained set

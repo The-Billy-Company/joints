@@ -57,8 +57,57 @@ pub const Ask = union(enum) {
     chain: u32,
 };
 
-/// Import and press the grammar at `grammar_path`, then answer `ask`.
+/// Which of the four questions `args` asks, then ask it.
+///
+/// The sub-forms are parsed here rather than in the dispatcher because they are
+/// this verb's grammar and nobody else's: `--census` takes a list, `--holding`
+/// one item, `--chain` and the bare form a state number. A dispatcher that knew
+/// that would be a dispatcher that has to be edited when a fifth question is
+/// added.
 pub fn run(
+    gpa: std.mem.Allocator,
+    io: std.Io,
+    w: *std.Io.Writer,
+    args: []const []const u8,
+) !u8 {
+    const grammar_path = args[0];
+    const form = args[1];
+
+    if (std.mem.eql(u8, form, "--census")) {
+        if (args.len < 3) {
+            try w.writeAll("joints: --census needs at least one terminal name\n");
+            return 2;
+        }
+        return answer(gpa, io, w, grammar_path, .{ .census = args[2..] });
+    }
+    if (std.mem.eql(u8, form, "--holding")) {
+        if (args.len < 3) {
+            try w.writeAll("joints: --holding needs an item to look for," ++
+                " like 'variable_lvalue -> _identifier .' or '-> _identifier .'\n");
+            return 2;
+        }
+        return answer(gpa, io, w, grammar_path, .{ .holding = args[2] });
+    }
+    if (std.mem.eql(u8, form, "--chain")) {
+        if (args.len < 3) {
+            try w.writeAll("joints: --chain needs a state number\n");
+            return 2;
+        }
+        return answer(gpa, io, w, grammar_path, .{ .chain = number(w, args[2]) catch return 2 });
+    }
+    return answer(gpa, io, w, grammar_path, .{ .at = number(w, form) catch return 2 });
+}
+
+/// `spell` as a state number, or the one diagnostic both sites that need it use.
+fn number(w: *std.Io.Writer, spell: []const u8) !u32 {
+    return std.fmt.parseInt(u32, spell, 10) catch |err| {
+        try w.print("joints: {s} is not a state number\n", .{spell});
+        return err;
+    };
+}
+
+/// Import and press the grammar at `grammar_path`, then answer `ask`.
+fn answer(
     gpa: std.mem.Allocator,
     io: std.Io,
     w: *std.Io.Writer,
@@ -67,16 +116,10 @@ pub fn run(
 ) !u8 {
     const source = intake.slurp(gpa, io, w, grammar_path) orelse return 2;
     defer gpa.free(source);
-    var gr = press.treeSitter(gpa, source) catch |e| {
-        try w.print("joints: cannot import {s}: {s}\n", .{ grammar_path, @errorName(e) });
-        return 2;
-    };
+    var gr = intake.grammar(gpa, w, grammar_path, source) orelse return 2;
     defer gr.deinit();
 
-    var built = joints.press.tables(gpa, &gr) catch |e| {
-        try w.print("joints: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
-        return 2;
-    };
+    var built = intake.tables(gpa, w, &gr) orelse return 2;
     defer built.deinit();
 
     return switch (ask) {

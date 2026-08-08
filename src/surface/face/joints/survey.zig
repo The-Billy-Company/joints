@@ -42,7 +42,6 @@ const assay = joints.assay;
 const intake = @import("intake.zig");
 
 const press = joints.press;
-const scanner = joints.kernel.lex.scanner;
 const drive = joints.kernel.walk;
 const joint = joints.kernel.joint;
 
@@ -91,9 +90,10 @@ pub fn run(
     gpa: std.mem.Allocator,
     io: std.Io,
     w: *std.Io.Writer,
-    grammar_path: []const u8,
-    argv: []const []const u8,
+    args: []const []const u8,
 ) !u8 {
+    const grammar_path = args[0];
+    const argv = args[1..];
     var dump = false;
     var confess = false;
     var sample: u32 = entry_sample;
@@ -133,16 +133,10 @@ pub fn run(
     const source = intake.slurp(gpa, io, w, grammar_path) orelse return 2;
     defer gpa.free(source);
 
-    var gr = press.treeSitter(gpa, source) catch |e| {
-        try w.print("joints: cannot import {s}: {s}\n", .{ grammar_path, @errorName(e) });
-        return 2;
-    };
+    var gr = intake.grammar(gpa, w, grammar_path, source) orelse return 2;
     defer gr.deinit();
 
-    var built = press.tables(gpa, &gr) catch |e| {
-        try w.print("joints: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
-        return 2;
-    };
+    var built = intake.tables(gpa, w, &gr) orelse return 2;
     defer built.deinit();
     const c = &built.collection;
     const t = &built.tables;
@@ -162,13 +156,7 @@ pub fn run(
     cur.limbs_max = limbs;
     if (churn != 0) cur.born_max = churn;
 
-    var sc = (scanner.Scanner.compile(gpa, &gr) catch |e| {
-        try w.print("joints: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(e) });
-        return 2;
-    }) orelse {
-        try w.print("joints: {s} has no lexable terminal at all\n", .{gr.name});
-        return 1;
-    };
+    var sc = intake.scanner(gpa, w, &gr) catch |r| return intake.tokenless(r);
     defer sc.deinit();
     var walk = try drive.Drive.init(gpa, &gr, c, t, &sc);
     defer walk.deinit();

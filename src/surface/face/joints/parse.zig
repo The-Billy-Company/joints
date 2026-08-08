@@ -95,7 +95,6 @@ const intake = @import("intake.zig");
 
 const folio = joints.folio;
 const press = joints.press;
-const scanner = joints.kernel.lex.scanner;
 const quire = joints.kernel.quire;
 
 /// Where the tables came from. Both arms hand over the same three things; only
@@ -144,9 +143,10 @@ pub fn run(
     gpa: std.mem.Allocator,
     io: std.Io,
     w: *std.Io.Writer,
-    grammar_path: []const u8,
-    files: []const []const u8,
+    args: []const []const u8,
 ) !u8 {
+    const grammar_path = args[0];
+    const files = args[1..];
     var show: quire.Show = .named;
     var ranges = false;
     var quiet = false;
@@ -195,13 +195,11 @@ pub fn run(
     defer parser.deinit();
     const gr = parser.grammar();
 
-    var sc = (scanner.Scanner.compile(gpa, gr) catch |err| {
-        try e.print("joints: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(err) });
-        return 2;
-    }) orelse {
-        try e.print("joints: {s} has no lexable terminal at all\n", .{gr.name});
-        return 2;
-    };
+        // Both failures are `2` here and that is not the drift it looks like:
+    // this verb was asked for a tree, so a grammar with nothing to lex is
+    // a tree it could not attempt rather than one it built and refused.
+    // `intake.Unlexable` carries the whole argument.
+    var sc = intake.scanner(gpa, e, gr) catch return 2;
     defer sc.deinit();
     if (sc.blind.len > 0) {
         // Said once, before any tree: a terminal no lexer rule can produce is
@@ -338,10 +336,7 @@ pub fn load(
 
     const source = intake.slurp(gpa, io, e, path) orelse return null;
     defer gpa.free(source);
-    var gr = press.treeSitter(gpa, source) catch |err| {
-        try e.print("joints: cannot import {s}: {s}\n", .{ path, @errorName(err) });
-        return null;
-    };
+    var gr = intake.grammar(gpa, e, path, source) orelse return null;
     errdefer gr.deinit();
     if (language) |want| {
         if (!std.mem.eql(u8, gr.name, want)) {
@@ -351,10 +346,7 @@ pub fn load(
             return null;
         }
     }
-    const built = press.tables(gpa, &gr) catch |err| {
-        try e.print("joints: cannot press {s}: {s}\n", .{ gr.name, @errorName(err) });
-        return null;
-    };
+    const built = intake.tables(gpa, e, &gr) orelse return null;
     return .{ .pressed = .{ .grammar = gr, .built = built } };
 }
 

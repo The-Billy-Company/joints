@@ -226,13 +226,9 @@ fn gathering(
 
         const source = intake.slurp(gpa, io, w, path) orelse return 2;
         defer gpa.free(source);
-        var gr = press.treeSitter(gpa, source) catch |e| {
-            try w.print("joints: cannot import {s}: {s}\n", .{ path, @errorName(e) });
-            return 2;
-        };
+        var gr = intake.grammar(gpa, w, path, source) orelse return 2;
         const pressed_at = std.Io.Clock.awake.now(io);
-        var built = press.tables(gpa, &gr) catch |e| {
-            try w.print("joints: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
+        var built = intake.tables(gpa, w, &gr) orelse {
             gr.deinit();
             return 2;
         };
@@ -335,17 +331,11 @@ fn write(
     const source = intake.slurp(gpa, io, w, path) orelse return 2;
     defer gpa.free(source);
 
-    var gr = press.treeSitter(gpa, source) catch |e| {
-        try w.print("joints: cannot import {s}: {s}\n", .{ path, @errorName(e) });
-        return 2;
-    };
+    var gr = intake.grammar(gpa, w, path, source) orelse return 2;
     defer gr.deinit();
 
     const pressed_at = std.Io.Clock.awake.now(io);
-    var built = press.tables(gpa, &gr) catch |e| {
-        try w.print("joints: cannot press {s}: {s}\n", .{ gr.name, @errorName(e) });
-        return 2;
-    };
+    var built = intake.tables(gpa, w, &gr) orelse return 2;
     defer built.deinit();
     const press_us = since(io, pressed_at);
 

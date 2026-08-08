@@ -33,7 +33,6 @@ const joints = @import("joints");
 const parse = @import("parse.zig");
 const intake = @import("intake.zig");
 
-const scanner = joints.kernel.lex.scanner;
 const quire = joints.kernel.quire;
 const weave = joints.kernel.weave;
 
@@ -41,9 +40,10 @@ pub fn run(
     gpa: std.mem.Allocator,
     io: std.Io,
     w: *std.Io.Writer,
-    grammar_path: []const u8,
-    rest: []const []const u8,
+    args: []const []const u8,
 ) !u8 {
+    const grammar_path = args[0];
+    const rest = args[1..];
     var show: quire.Show = .named;
     var quiet = false;
     var cold = false;
@@ -92,13 +92,11 @@ pub fn run(
     defer parser.deinit();
     const gr = parser.grammar();
 
-    var sc = (scanner.Scanner.compile(gpa, gr) catch |err| {
-        try e.print("joints: cannot compile {s}'s scanner: {s}\n", .{ gr.name, @errorName(err) });
-        return 2;
-    }) orelse {
-        try e.print("joints: {s} has no lexable terminal at all\n", .{gr.name});
-        return 2;
-    };
+        // Both failures are `2` here and that is not the drift it looks like:
+    // this verb was asked for a tree, so a grammar with nothing to lex is
+    // a tree it could not attempt rather than one it built and refused.
+    // `intake.Unlexable` carries the whole argument.
+    var sc = intake.scanner(gpa, e, gr) catch return 2;
     defer sc.deinit();
 
     const text = intake.slurp(gpa, io, e, path.?) orelse return 2;
