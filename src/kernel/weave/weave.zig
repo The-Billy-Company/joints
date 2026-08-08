@@ -328,7 +328,16 @@ pub const Weave = struct {
     }
 
     /// Read a file cold. Everything an amend needs, from nothing.
-    pub fn open(w: *Weave, text: []const u8) !void {
+    ///
+    /// Warping a loom is mounting the lengthwise threads before any cloth
+    /// exists, which is this and not a metaphor stretched to fit. It was called
+    /// `open` and that was the package's one overloaded verb: `folio.open`,
+    /// `codex.open` and `bank.open` all mean *prove these bytes are an
+    /// artifact*, and a third sense on the parse path made `bolt.open()` and
+    /// `w.open(text)` neighbours in one test file meaning unrelated things.
+    /// `warp` and `amend` also read as the pair they are - dress the loom, then
+    /// mend the cloth.
+    pub fn warp(w: *Weave, text: []const u8) !void {
         w.text.clearRetainingCapacity();
         try w.text.appendSlice(w.gpa, text);
         _ = try w.rip(null);

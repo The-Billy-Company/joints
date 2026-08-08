@@ -373,7 +373,7 @@ const Limb = struct {
 /// **And "the cap is cheap" was true only of the fork population that existed
 /// when it was measured.** That sweep moved this number alone against tables
 /// that were resolving the author's declared ties away before the parse ever
-/// saw them. Once `bench.decide` spares an associativity-decided cell, the
+/// saw them. Once `workbench.decide` spares an associativity-decided cell, the
 /// population changes and 8 is far under the mark: swift alone is 4,006 square
 /// bytes, and it is 4,006 with no press change at all, so the old sweep was
 /// leaving them on the floor already. The reason it read as saturated is that

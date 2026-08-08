@@ -27,7 +27,7 @@ Three places in this tree already name the missing input, none of them mine:
   `Production.dynamic` is the press lane's."*
 
 So the runtime carries `prec.dynamic` through the folio (`leaf.zig`,
-`impose.zig`, `bind.zig` all round-trip it) and then never reads it.
+`impose.zig`, `binding.zig` all round-trip it) and then never reads it.
 
 ## What the oracle actually does
 

@@ -18,7 +18,7 @@ const g = @import("../copy/grammar.zig");
 const lr0 = @import("../cast/lr0.zig");
 const attribution = @import("attribution.zig");
 const column = @import("column.zig");
-const rungs = @import("ladder.zig");
+const ladder = @import("ladder.zig");
 const settle = @import("settle.zig");
 
 const Action = settle.Action;
@@ -26,8 +26,8 @@ const Case = settle.Case;
 const Conflict = settle.Conflict;
 const Folds = column.Folds;
 const Frayed = settle.Frayed;
-const Ladder = rungs.Ladder;
-const Survey = rungs.Survey;
+const Ladder = ladder.Ladder;
+const Survey = ladder.Survey;
 
 pub const Bench = struct {
     x: Case,

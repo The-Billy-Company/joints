@@ -23,7 +23,7 @@ pub const StepRecord = extern struct {
 };
 ```
 
-`prec` and `assoc` are not in it, and `bind.zig` says so out loud where it
+`prec` and `assoc` are not in it, and `binding.zig` says so out loud where it
 rebuilds a step: *"Precedence and associativity are press inputs and are not in
 the file; a bound step carries only what names a child."* A folio carries the
 table, not the argument that produced it, so the static ranks are consumed

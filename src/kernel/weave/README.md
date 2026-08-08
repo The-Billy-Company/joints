@@ -7,8 +7,13 @@ one question: apply this edit and give me both again.
 Until something owned both halves they were two subsystems with a hyphen
 between them. This is that something, and it is deliberately small: a `Loom`
 (one pressed grammar and the interning space its effects live in), a `Weave`
-(one open file on that loom), `open`, `amend`, `product`. The CLI verb is
+(one open file on that loom), `warp`, `amend`, `product`. The CLI verb is
 `joints amend`.
+
+`warp` reads a file cold and `amend` edits one already read - dressing the loom
+and then mending the cloth. `warp` was `open` until the vocabulary pass, which
+found that `open` already meant *prove these bytes are an artifact* in three
+other places (`folio`, `codex`, the C ABI's `bank`).
 
 ## What a leaf is
 

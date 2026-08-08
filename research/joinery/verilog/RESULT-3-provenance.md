@@ -51,7 +51,7 @@ That is load-bearing below, because it is what makes a clean control possible.
 The handover said `Step` is `leaf.StepRecord`, an `extern struct`, so the bit
 was a folio format change and `impose`'s ledger owned the decision. It is not.
 `leaf.StepRecord` holds `alias` and `field` and nothing else; `prec` and `assoc`
-are press inputs spent while the cells are decided, and `bind.zig` says so where
+are press inputs spent while the cells are decided, and `binding.zig` says so where
 it rebuilds a step. A bit *about* those two ranks lives where they do. No
 version bump, no `extern struct` widened, no padding to re-zero.
 

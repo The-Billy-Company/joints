@@ -26,6 +26,15 @@ const t = std.testing;
 const spine = @import("spine.zig");
 const toy = @import("toy.zig");
 
+/// Where a *passing* test narrates. brigade's `note` is stdout, which the build
+/// step captures and drops; `std.debug.print` is stderr, which the build runner
+/// renders through its failure printer even for a step that succeeded - so the
+/// boards below used to caption a green shard `failed command:`. Failure
+/// diagnostics stay on `std.debug.print`, because a red shard's stdout is dropped
+/// with the rest. CONTRIBUTING states the rule; brigade's own doc comment argues
+/// it. Reached through `root` because the test runner is this binary's root.
+const note = @import("root").note;
+
 /// One edit, recorded as magnitudes rather than as byte offsets. That is the
 /// whole reason a script can be shrunk: an offset recorded against a file that
 /// no longer exists is meaningless once an earlier edit is removed, where a
@@ -210,7 +219,7 @@ fn drive(comptime M: type, name: []const u8, seed: u64, bytes0: u32, edits: u32)
         r.apply(st) catch |e| return confess(M, name, seed, bytes0, &script, e);
         r.check() catch |e| return confess(M, name, seed, bytes0, &script, e);
     }
-    std.debug.print(
+    note(
         "  {s:<6} seed 0x{X:0>16}  {d:>5} edits  {d:>5} leaves at its widest  {d} held / {d} refused\n",
         .{ name, seed, edits, r.peak, r.live, r.dead },
     );
@@ -239,7 +248,7 @@ fn confess(
 }
 
 test "spine: the maintained product equals the from-scratch product, every edit" {
-    std.debug.print("\nspine: random edit streams\n", .{});
+    note("\nspine: random edit streams\n", .{});
 
     // Three file sizes on the total monoid, because the failures differ by
     // scale: a tiny file empties out and refills constantly, where a big one
@@ -313,7 +322,7 @@ test "spine: a failing stream shrinks to a reproducer with nothing spare in it" 
         try t.expect(!try breaks(Bent, gpa, bytes0, seed, script.items));
         try script.insert(gpa, i, held);
     }
-    std.debug.print(
+    note(
         "\nspine: a deliberately wrong compose broke a {d}-edit stream; shrank to {d}\n",
         .{ raw, script.items.len },
     );
@@ -361,7 +370,7 @@ test "spine: compositions per edit against leaf count" {
     const rounds = 4000;
     const wide = 4; // bytes per leaf, so a byte offset lands where intended
 
-    std.debug.print(
+    note(
         "\nspine: compositions per edit (seed 0x{X:0>16}, {d} edits per cell)\n" ++
             "  leaves  height  log2 n   splice  keystroke  resegment   splice/log2 n\n",
         .{ seed, rounds },
@@ -406,7 +415,7 @@ test "spine: compositions per edit against leaf count" {
         const cut = m.composes;
 
         const log2: f64 = @log2(@as(f64, @floatFromInt(n)));
-        std.debug.print("  {d:>6}  {d:>6}  {d:>6.1}  {d:>7.1}  {d:>9.1}  {d:>9.1}  {d:>14.2}\n", .{
+        note("  {d:>6}  {d:>6}  {d:>6.1}  {d:>7.1}  {d:>9.1}  {d:>9.1}  {d:>14.2}\n", .{
             n,
             tall,
             log2,

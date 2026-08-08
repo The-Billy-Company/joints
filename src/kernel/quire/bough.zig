@@ -312,7 +312,12 @@ pub const Bough = struct {
     /// append-and-backpatch and those nodes were snapshotted before the writes
     /// that came after. Roots come from the arena, whose starts and lengths
     /// nothing past a mend rewrites.
-    pub fn verify(b: *const Bough, gpa: std.mem.Allocator, q: *const quire.Quire) !void {
+    /// Hands the first fault back rather than printing or raising it, which is
+    /// `quire.survey`'s shape and for `quire.survey`'s reason: the one caller is
+    /// a fuzz whose negative control provokes these deliberately, so whether a
+    /// fault is news is the caller's question. `{f}` on the returned `Fault` is
+    /// the sentence this used to print itself.
+    pub fn verify(b: *const Bough, gpa: std.mem.Allocator, q: *const quire.Quire) !?Fault {
         var seen = try std.DynamicBitSet.initEmpty(gpa, q.nodes.len);
         defer seen.deinit();
 
@@ -330,19 +335,20 @@ pub const Bough = struct {
             // the left of everything the chain is still standing on.
             for (q.roots[0..r.roots]) |ref| {
                 if (ref >= r.nodes) return fault(i, r, ref, "root above the ring's own arena");
-                try step(&seen, &at, i, r, ref, q.nodes[ref]);
+                if (step(&seen, &at, i, r, ref, q.nodes[ref])) |f| return f;
             }
             for (b.chain(@intCast(i))) |p| {
                 for ([_][2]u32{ .{ p.lead, p.leads }, .{ p.own, p.owns } }) |span| {
                     if (span[0] + span[1] > stack.ref.len) return fault(i, r, quire.none, "perch run outside the kept stack");
                     for (stack.ref[span[0]..][0..span[1]], held[span[0]..][0..span[1]]) |ref, n| {
                         if (ref >= r.nodes) return fault(i, r, ref, "held node above the ring's own arena");
-                        try step(&seen, &at, i, r, ref, n);
+                        if (step(&seen, &at, i, r, ref, n)) |f| return f;
                     }
                 }
             }
             if (at > r.at) return fault(i, r, quire.none, "the carry reaches past where the ring stands");
         }
+        return null;
     }
 
     /// One node of a ring's carry: it comes after everything before it, and it
@@ -354,20 +360,35 @@ pub const Bough = struct {
         r: Ring,
         ref: quire.Ref,
         n: quire.Node,
-    ) !void {
+    ) ?Fault {
         if (seen.isSet(ref)) return fault(i, r, ref, "carried twice by one ring");
         seen.set(ref);
         if (n.start < at.*) return fault(i, r, ref, "carried out of order");
         at.* = n.end();
+        return null;
     }
 
-    fn fault(i: usize, r: Ring, ref: quire.Ref, why: []const u8) error{BoughCorrupt} {
-        std.debug.print(
-            "bough: {s} - ring {d} at byte {d} (token {d}, {d} nodes, {d} roots, {d} mends), node {d}\n",
-            .{ why, i, r.at, r.token, r.nodes, r.roots, r.mends, ref },
-        );
-        return error.BoughCorrupt;
+    fn fault(i: usize, r: Ring, ref: quire.Ref, why: []const u8) Fault {
+        return .{ .why = why, .ring = i, .at = r, .ref = ref };
     }
+
+    /// One thing wrong with a ring's carry, and the ring's own marks beside it -
+    /// a fault at byte 0 of a ring standing at byte 9000 is a different bug from
+    /// the same fault at its edge, and the ring is gone by the time a caller
+    /// could go looking.
+    pub const Fault = struct {
+        why: []const u8,
+        ring: usize,
+        at: Ring,
+        ref: quire.Ref,
+
+        pub fn format(f: Fault, w: *std.Io.Writer) std.Io.Writer.Error!void {
+            try w.print(
+                "bough: {s} - ring {d} at byte {d} (token {d}, {d} nodes, {d} roots, {d} mends), node {d}",
+                .{ f.why, f.ring, f.at.at, f.at.token, f.at.nodes, f.at.roots, f.at.mends, f.ref },
+            );
+        }
+    };
 
     /// Halve the rings and double the stride, compacting the storage behind
     /// them. The newest is always kept, because it is the one nearest the edit

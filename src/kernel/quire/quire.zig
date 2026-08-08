@@ -434,26 +434,46 @@ pub const Quire = struct {
     /// are legal and land where a nullable reduction put them, so the ordering
     /// is `end <= start` rather than a strict one.
     ///
-    /// Caller pays one bit per node, and one walk. `verify` is the falsifier a
-    /// fuzz wants - first fault, printed, raised. `survey` is the same walk
-    /// counted rather than thrown, which is what a parse and a census want.
-    pub fn verify(q: *const Quire, gpa: std.mem.Allocator) !void {
-        const found = try q.survey(gpa);
-        const f = found.first orelse return;
-        // Half the faults this reports are "that ref is not a node", so the
-        // report may not dereference the ref it is reporting on.
-        if (f.ref < q.nodes.len) {
-            const n = q.nodes[f.ref];
-            std.debug.print("quire: {s} - node {d} ({s}) at {d}..{d}, {d} roots over {d} nodes\n", .{
-                f.why, f.ref, q.name(f.ref), n.start, n.end(), q.roots.len, q.nodes.len,
-            });
-        } else {
-            std.debug.print("quire: {s} - ref {d} past {d} nodes, {d} roots\n", .{
-                f.why, f.ref, q.nodes.len, q.roots.len,
+    /// Caller pays one bit per node, and one walk. `survey` is the walk counted
+    /// rather than thrown, which is what a parse and a census want; `blame` turns
+    /// its first fault into the sentence a reader wants.
+    ///
+    /// There used to be a `verify` here that did all three - walked, printed the
+    /// first fault to stderr, and raised. It printed unconditionally, and its one
+    /// caller is a fuzz that runs a *negative control*: four deliberately wrong
+    /// composes whose whole job is to provoke faults like these. So a green run
+    /// narrated ten corrupt quires it had asked for, on the stream the build
+    /// runner reserves for failures, and every passing shard was captioned
+    /// `failed command:`. Deciding whether a fault is news is the caller's
+    /// question and only the caller has the answer, so the walk hands the fault
+    /// back and says nothing.
+    ///
+    /// Which is the shape `spine`'s own `verify` already had - named errors, no
+    /// stream - and the one this package should have been consistent about.
+    pub fn blame(q: *const Quire, f: Fault) Blame {
+        return .{ .q = q, .f = f };
+    }
+
+    /// A fault bound to the quire it was found in, because the sentence needs
+    /// both: the fault knows what is wrong, the quire knows what the node is
+    /// called and where it sits. `{f}` renders it.
+    pub const Blame = struct {
+        q: *const Quire,
+        f: Fault,
+
+        pub fn format(b: Blame, w: *std.Io.Writer) std.Io.Writer.Error!void {
+            // Half the faults reported here are "that ref is not a node", so the
+            // sentence may not dereference the ref it is reporting on.
+            if (b.f.ref >= b.q.nodes.len) return w.print(
+                "quire: {s} - ref {d} past {d} nodes, {d} roots",
+                .{ b.f.why, b.f.ref, b.q.nodes.len, b.q.roots.len },
+            );
+            const n = b.q.nodes[b.f.ref];
+            try w.print("quire: {s} - node {d} ({s}) at {d}..{d}, {d} roots over {d} nodes", .{
+                b.f.why, b.f.ref, b.q.name(b.f.ref), n.start, n.end(), b.q.roots.len, b.q.nodes.len,
             });
         }
-        return error.QuireCorrupt;
-    }
+    };
 
     /// One thing wrong, and enough to name it in the caller's own terms.
     pub const Fault = struct {

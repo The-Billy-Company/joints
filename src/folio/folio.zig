@@ -14,7 +14,7 @@
 //! Seven moving parts. `leaf` is the on-disk vocabulary both sides speak,
 //! `forme` locks the parse table into the interned shape that makes a folio
 //! small, `impose` writes, `collate` reads and validates the layout, `audit`
-//! validates what is inside it, `bind` hands the result back as the three
+//! validates what is inside it, `binding` hands the result back as the three
 //! types a parse takes, and `codex` binds several folios into the one file the
 //! "N languages" claim is about. The seam is here so the lane building it
 //! never has to touch `src/root.zig`.
@@ -38,7 +38,12 @@ pub const forme = @import("forme.zig");
 pub const impose = @import("impose.zig");
 pub const collate = @import("collate.zig");
 pub const audit = @import("audit.zig");
-pub const rebind = @import("bind.zig");
+// The file is `binding.zig` and not `bind.zig` because `bind` is the operation
+// this facade exports, and a module of that name would have taken it - which is
+// how it came to be imported here under `rebind`, a second name for it that
+// nothing else in the tree ever used. A binding is also the right noun: it is
+// the thing that makes loose sheets a book you can read.
+pub const binding = @import("binding.zig");
 pub const codex = @import("codex.zig");
 
 pub const Folio = collate.Folio;
@@ -48,14 +53,30 @@ pub const WriteError = impose.Error;
 pub const Action = leaf.Action;
 pub const Pattern = collate.Pattern;
 pub const Alias = collate.Alias;
-pub const Bound = rebind.Bound;
+pub const Bound = binding.Bound;
 pub const version = leaf.version;
 pub const magic = leaf.magic;
 pub const align_bytes = leaf.section_align;
 
 pub const pack = impose.pack;
 pub const open = collate.open;
-pub const bind = rebind.bind;
+pub const bind = binding.bind;
+
+// Loading is one operation over two axes, and the four names below are that 2×2
+// rather than four spellings of the same thing. The axes: what the file is
+// allowed to hold - one grammar (`open`, `map`) or either artifact (`openVolume`,
+// `mapVolume`) - and where its bytes come from - already in hand (`open*`) or
+// still on disk (`map*`).
+//
+// `map` is not a politer `open`. `open` proves bytes the caller owns and hands
+// back a value that borrows them; `map` acquires pages and hands back a handle
+// you must `close`. A shared verb would have hidden exactly the difference that
+// decides whether you leak. Which is also why the narrow name is the unmarked
+// one even though most callers with a path want `mapVolume`: a caller that knows
+// it wrote a lone folio should be refused by a codex, and `open`/`map` are how
+// it says so.
+//
+// Three of the four are below, each beside the type it returns.
 
 /// What picking a language out of a volume can refuse on, beyond the member
 /// folio's own failures. Two names because they demand different sentences: an
@@ -194,6 +215,6 @@ test {
     _ = impose;
     _ = collate;
     _ = audit;
-    _ = rebind;
+    _ = binding;
     _ = codex;
 }

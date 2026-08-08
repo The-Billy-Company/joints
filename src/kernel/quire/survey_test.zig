@@ -21,6 +21,7 @@
 const std = @import("std");
 const t = std.testing;
 const quire = @import("quire.zig");
+const bough = @import("bough.zig");
 const press = @import("../../press/press.zig");
 
 /// An arena in the terms `survey` reads it in, and in no others. `survey`
@@ -194,4 +195,63 @@ test "a zero-length child at its parent's edge is legal" {
 
     const found = try q.survey(t.allocator);
     try t.expect(found.sound());
+}
+
+test "the guard against naming a ref that is not a node" {
+    // `Blame.format` is the sentence you read the day a quire is corrupt, and
+    // nothing else in the suite executes it: its one caller is the honest arm of
+    // `amend_test`'s negative control, which fires only on a real defect. So this
+    // is the same hole `fold.zig`'s decline test was dug for - an untested
+    // diagnostic is a line that crashes the first time it is ever needed.
+    //
+    // And the way it would crash is the branch below. Half the faults a survey
+    // reports are "that ref is not a node", so the sentence may not dereference
+    // the ref it is reporting on; the guard is the whole reason the function has
+    // two arms rather than one. Inverted, or off by one, and asking what went
+    // wrong reads past the end of `nodes`.
+    //
+    // The other arm needs a grammar, because naming a node goes through `name`,
+    // and `arena` above deliberately does not have one - `survey` never reaches
+    // the grammar, which is what lets these tests be counts over a literal. So
+    // that arm stays covered by the negative control alone.
+    const q = arena(&.{node(0, 10, 0, 0)}, &.{}, &.{0});
+    const past: quire.Quire.Fault = .{ .why = "a ref that is not a node", .ref = 7, .under = quire.none };
+
+    var buf: [128]u8 = undefined;
+    try t.expectEqualStrings(
+        "quire: a ref that is not a node - ref 7 past 1 nodes, 1 roots",
+        try std.fmt.bufPrint(&buf, "{f}", .{q.blame(past)}),
+    );
+}
+
+test "a bough fault says which ring, and where that ring stood" {
+    // Same reasoning as the quire sentence above, and the ring's own marks are
+    // the point: a fault at byte 0 of a ring standing at byte 9000 is a different
+    // bug from the same fault at its edge, and the ring is gone by the time
+    // anybody could go looking. This one needs no grammar - it is all scalars -
+    // so there is no arm left uncovered.
+    const f: bough.Bough.Fault = .{
+        .why = "carried twice by one ring",
+        .ring = 3,
+        .at = .{
+            .at = 9000,
+            .token = 41,
+            .trail = 8800,
+            .nodes = 512,
+            .kids = 700,
+            .perch = 4,
+            .perched = 9,
+            .ref = 11,
+            .refed = 6,
+            .roots = 8,
+            .mends = 2,
+        },
+        .ref = 17,
+    };
+
+    var buf: [160]u8 = undefined;
+    try t.expectEqualStrings(
+        "bough: carried twice by one ring - ring 3 at byte 9000 (token 41, 512 nodes, 8 roots, 2 mends), node 17",
+        try std.fmt.bufPrint(&buf, "{f}", .{f}),
+    );
 }

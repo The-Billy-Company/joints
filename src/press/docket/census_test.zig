@@ -61,6 +61,14 @@ const lr0 = @import("../cast/lr0.zig");
 const press = @import("../press.zig");
 const lex = @import("../../kernel/lex/scanner.zig");
 const quire = @import("../../kernel/quire/quire.zig");
+
+/// The census board, on stdout. `zig build census` is run by a person who wants
+/// to read or pipe this, and `std.debug.print` would have put it on stderr -
+/// which the build runner renders through its failure printer, captioning a
+/// green run `failed command:`. brigade's `note` is the stdout channel for
+/// exactly this. Nothing here is a failure diagnostic: a grammar that cannot be
+/// asked prints its reason and the walk continues.
+const note = @import("root").note;
 const walk = @import("../../kernel/walk/drive.zig");
 
 const asked = ".local/orchestrate/census.txt";
@@ -93,10 +101,10 @@ test "census: who owns each wall" {
         rows += 1;
         var w: std.Io.Writer = .fixed(&out);
         const row = ask(gpa, io, grammar_path, source_path, &w) catch |e| {
-            std.debug.print("{s:<20} - {s}\n", .{ leaf(grammar_path), @errorName(e) });
+            note("{s:<20} - {s}\n", .{ leaf(grammar_path), @errorName(e) });
             continue;
         };
-        std.debug.print("{s}\n", .{w.buffered()});
+        note("{s}\n", .{w.buffered()});
         tally.getPtr(row.found.owner).* += 1;
         if (!row.found.proven) unproven += 1;
         if (row.whole) whole += 1;
@@ -113,7 +121,7 @@ test "census: who owns each wall" {
     // The product loop's own answer, which is the number a user of the parser sees
     // and a different question from who owns the first wall.
     w.print("quire read {d} of them whole; the two loops part on {d}\n", .{ whole, parted }) catch {};
-    std.debug.print("{s}", .{w.buffered()});
+    note("{s}", .{w.buffered()});
 }
 
 /// One grammar's answer: who owns its first wall, whether the product loop got a

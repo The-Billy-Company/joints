@@ -174,7 +174,13 @@ pub fn treeSitter(gpa: std.mem.Allocator, source: []const u8) Error!g.Grammar {
     // Folded before the tables see the grammar: `inline` rules are names the
     // author wanted, and substituting them away is how tree-sitter keeps them
     // from costing conflicts the language does not actually have.
-    _ = try fold.nonterminals(gpa, &builder, roots, try muster.readInline(&imp, root.get("inline")));
+    const victims = try muster.readInline(&imp, root.get("inline"));
+    const folded = try fold.nonterminals(gpa, &builder, roots, victims);
+    // The one thing a caller of the sweep owes a reader: an `inline` rule that did
+    // not fold is a rule the author never wanted in the tables, so every conflict
+    // it causes arrives as a wall in a state that should not exist. `told` is null
+    // when nothing declined, which is every grammar of the thirty today.
+    if (folded.told(&builder, victims)) |t| std.debug.print("{f}\n", .{t});
 
     // After the fold, because folding renumbers nothing but can retire a rule:
     // a word that survived is a word the lexer can still ask about.

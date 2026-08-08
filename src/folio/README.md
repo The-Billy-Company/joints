@@ -11,9 +11,12 @@ bytes, so one binary plus one folio is every language.
 |---|---|
 | `folio.zig` | The seam: re-exports, atomic publish (`writeTo`), and `map` - the mmap path that is the reason for the format. |
 | `leaf.zig` | The on-disk vocabulary both sides speak: magic, version, the section roster, and the fixed-width record behind each one. |
+| `forme.zig` | Locks the parse table into the interned shape that makes a folio small - the same job the metal frame of that name does for a page of type. |
 | `impose.zig` | The writer. Two passes: intern every string, then lay the sections out at eight-aligned offsets and seal. |
 | `collate.zig` | The reader. `open` proves the whole layout; after it, an accessor is a slice. |
 | `audit.zig` | The part of `open` that doubts the *contents* - every id, span, and tag inside the sections. |
+| `binding.zig` | Hands a mapped folio back as the three types a parse takes, so `joints parse x.folio` costs a map instead of a press. |
+| `codex.zig` | Binds several folios into one file, which is the whole of the "N languages, one binary" claim. |
 | `folio_test.zig` | Round-trip field by field, one rejection test per failure mode, and two fuzzers. |
 
 ## The shape

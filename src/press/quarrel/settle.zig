@@ -38,7 +38,7 @@
 //!
 //! **This file is the record and the entry point; the rungs are its siblings.**
 //! One rung per file, which is the seam the list above already draws: `column`
-//! is rung 1, `ladder` is rungs 2 and 3, `attribution` is rung 4, and `bench` is
+//! is rung 1, `ladder` is rungs 2 and 3, `attribution` is rung 4, and `workbench` is
 //! the fixture they are walked on. `forks` is the index a parse loop reads off a
 //! finished verdict, which is not settling at all. What stays here is what the
 //! rest of the press and the folio see — `Action`, `Conflict`, `Frayed`, `Tally`,
@@ -52,18 +52,23 @@ const g = @import("../copy/grammar.zig");
 const lr0 = @import("../cast/lr0.zig");
 const sets = @import("../cast/sets.zig");
 
+// Every import here is named for the file it opens, including the two that used
+// to read `rungs = @import("ladder.zig")` and `workbench = @import("bench.zig")`.
+// A local alias that renames the module is a name a reader cannot grep back to a
+// file, and a header sentence naming `ladder` while the code says `rungs` is drift
+// with nothing to catch it.
 const attribution = @import("attribution.zig");
 const column = @import("column.zig");
 const forks = @import("forks.zig");
-const rungs = @import("ladder.zig");
-const workbench = @import("bench.zig");
+const ladder = @import("ladder.zig");
+const workbench = @import("workbench.zig");
 
 pub const Attribution = attribution.Attribution;
 pub const Bench = workbench.Bench;
 pub const Folds = column.Folds;
 pub const Forks = forks.Forks;
-pub const Ladder = rungs.Ladder;
-pub const Survey = rungs.Survey;
+pub const Ladder = ladder.Ladder;
+pub const Survey = ladder.Survey;
 
 pub const Action = packed struct(u32) {
     kind: Kind,
@@ -286,7 +291,15 @@ pub fn all(x: Case, gpa: std.mem.Allocator, arena: std.mem.Allocator) !Verdict {
     };
 }
 
+// All five siblings, not just the two that have inline tests today. This block
+// is the only path from the test root into this directory, so a `test` added to
+// `attribution`, `forks` or `workbench` would otherwise be collected by nothing
+// and read exactly like a passing suite - the hazard `src/proof.zig` describes
+// one level up. Naming a module with no tests costs nothing.
 test {
+    _ = attribution;
     _ = column;
-    _ = rungs;
+    _ = forks;
+    _ = ladder;
+    _ = workbench;
 }

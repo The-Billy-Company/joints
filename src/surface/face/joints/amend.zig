@@ -110,7 +110,7 @@ pub fn run(
     it.reusing = !cold;
 
     const opened = std.Io.Clock.awake.now(io);
-    try it.open(text);
+    try it.warp(text);
     var worst: u8 = 0;
     try report(e, gr, path.?, &it, null, since(io, opened));
 

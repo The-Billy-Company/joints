@@ -174,7 +174,7 @@ pub const Step = struct {
     ///
     /// **Press-only, like the two ranks it describes.** `leaf.StepRecord`
     /// carries `alias` and `field` and nothing else, because a folio holds the
-    /// table rather than the argument that built it; see `bind.zig`. `impose`'s
+    /// table rather than the argument that built it; see `binding.zig`. `impose`'s
     /// ledger names this field anyway, so its absence from the file is a
     /// decision on the record instead of one nobody noticed.
     spliced: bool = false,

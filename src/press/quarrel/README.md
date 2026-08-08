@@ -23,5 +23,5 @@ rung per file, so a reader who has the ladder has the folder.
 | `column.zig` | **Rung 1** - reduction against reduction, inside one column of one state. `Folds` is the column; `keener` orders a tie the author ranked. |
 | `ladder.zig` | **Rungs 2 and 3** - read against fold, by precedence and then by associativity. `Survey` is what the state's readings said; `Ladder.step` is the verdict, including the exception on rung 2 that looks like a bug and is not. |
 | `attribution.zig` | **Rung 4** - whose ambiguity is left, once precedence and associativity have both declined to say. Traces a synthesized reading back to the rules that were expecting it. |
-| `bench.zig` | The fixture the rungs are walked on: one state's row at a time, and the scratch that makes doing it thirty thousand times affordable. |
+| `workbench.zig` | The fixture the rungs are walked on: one state's row at a time, and the scratch that makes doing it thirty thousand times affordable. |
 | `forks.zig` | Not settling at all - the index a parse loop reads off a finished verdict to know which cells it may split at. |

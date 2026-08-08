@@ -1,4 +1,4 @@
-//! The test build's root, and nothing else's root.
+//! The test build's root, and nothing else's root. e2
 //!
 //! `zig build test` collects only the tests reachable from its root module's
 //! own files. While `src/root.zig` was that root, the only way to reach a
@@ -26,6 +26,13 @@
 //! like a green run — the same hazard `build.zig` warns about where it explains
 //! why the library gets its own compilation. `tool/roll.py` is the gate that
 //! refuses it.
+//!
+//! Its sibling `idiom.zig` is the other test root, and exists for a reason worth
+//! knowing before you add a package-wide proof here: reaching a module's decls by
+//! name forces Zig to analyse them, which costs 3.4 s and cannot be filtered away,
+//! so a reflection walk in *this* file would have put that on
+//! `zig build test -Dtest-filter=<what you touched>` - the loop that is meant to
+//! answer in a tenth of a second.
 
 // The production modules, so the tests written inline beside the code they
 // check are collected. Each area root pulls in its own parts, so a new file

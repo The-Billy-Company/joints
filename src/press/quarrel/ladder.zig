@@ -96,7 +96,7 @@ pub const Ladder = struct {
     /// none of them is the fold's own production continuing, and the folds
     /// declared left and only left.
     ///
-    /// Asked by `bench.decide`, which has to tell two `.fold` verdicts apart
+    /// Asked by `workbench.decide`, which has to tell two `.fold` verdicts apart
     /// that look identical from the outside. A fold that won on precedence won
     /// on a comparison the author wrote *about these two readings*; a fold that
     /// won here won on a side the author wrote about the rule as a whole, which

@@ -41,38 +41,55 @@ pub const Report = struct {
     folded: usize,
     /// Victims still standing: recursive, or fanning out past the budget.
     declined: usize,
-};
 
-/// Name every victim still standing, on stderr, as `tally` counts it.
-///
-/// `Report` was computed on every import and read by nothing but this file's
-/// own tests: `import.zig` spells the call `_ = try fold.nonterminals(...)`.
-/// That is the shape that cost this project twenty thousand bytes elsewhere -
-/// `Scanner.declined` was also computed, also acted on, also printed by no
-/// reader, and the damage surfaced hundreds of bytes downstream wearing another
-/// family's name. Here the damage would be worse to trace: an `inline` rule
-/// that did not fold is a rule the author never wanted in the tables, so every
-/// conflict it causes arrives as a wall in a state that should not exist.
-///
-/// Measured 2026-08-05 over all thirty grammars in `upstream/grammars/`: zero
-/// standing, so this is a latent hole rather than a live one and no wall on the
-/// board today is its doing. It stays because the condition is reachable - a
-/// recursive `inline` rule, or one fanning past `fan_budget` - and because a
-/// counter nobody prints is how it stayed invisible the first time. Named
-/// rather than counted: which rule did not fold is the whole of what a reader
-/// needs, and a number would send them back here to find out.
-///
-/// Unconditional rather than behind the `press` trace lens, on `quire.fault`'s
-/// precedent: it fires only where something is already wrong, so a silent run
-/// is the run that had nothing to say.
-fn announce(b: *const g.Builder, victims: []const u32, r: Report) void {
-    if (r.declined == 0) return;
-    std.debug.print("joints: {d} inline rule(s) the press could not fold away:", .{r.declined});
-    for (victims) |v| {
-        if (standing(b, v)) std.debug.print(" {s}", .{b.nameRaw(v)});
+    /// The sentence a reader is owed when a fold declined, or `null` when there
+    /// is nothing to say. `{f}` renders it; `import.zig` is the one caller.
+    ///
+    /// This used to be an `announce` that `nonterminals` called itself, and the
+    /// docstring arguing for it was right about the hazard and wrong about where
+    /// to put the cure. The hazard: `Report` was computed on every import and read
+    /// by nobody, `import.zig` spelling the call `_ = try fold.nonterminals(...)`.
+    /// That is the shape that cost this project twenty thousand bytes elsewhere -
+    /// `Scanner.declined` was also computed, also acted on, also printed by no
+    /// reader, and the damage surfaced hundreds of bytes downstream wearing
+    /// another family's name. Here it would be worse to trace: an `inline` rule
+    /// that did not fold is a rule the author never wanted in the tables, so every
+    /// conflict it causes arrives as a wall in a state that should not exist.
+    ///
+    /// But printing from inside the sweep did not make anybody read the report -
+    /// it made the *library* the reader, and left the real caller still dropping
+    /// it. And the file's own `a recursive victim is declined` test provokes a
+    /// decline deliberately, being the only cover for this line at all: no grammar
+    /// of the thirty declines a fold, so a corpus run never reaches it. So the one
+    /// unconditional stderr write in the press fired from a *passing* test, and the
+    /// build runner captions any shard that writes to stderr `failed command:`.
+    ///
+    /// Handing the sentence back cures both. `import.zig` now reads the report it
+    /// was discarding, which is what the docstring wanted; the test asserts the
+    /// rendered bytes, which covers more than the old `nameRaw` probe did - and
+    /// `null` rather than an empty string means a caller cannot print a blank
+    /// warning by forgetting to check `declined`.
+    pub fn told(r: Report, b: *const g.Builder, victims: []const u32) ?Told {
+        return if (r.declined == 0) null else .{ .r = r, .b = b, .victims = victims };
     }
-    std.debug.print("\n", .{});
-}
+
+    /// A report bound to the grammar that can name its victims. `nameRaw` picks a
+    /// table off the symbol's bias, so this needs the builder the ids came from.
+    pub const Told = struct {
+        r: Report,
+        b: *const g.Builder,
+        victims: []const u32,
+
+        pub fn format(x: Told, w: *std.Io.Writer) std.Io.Writer.Error!void {
+            // Named rather than counted: which rule did not fold is the whole of
+            // what a reader needs, and a number sends them back here to find out.
+            try w.print("joints: {d} inline rule(s) the press could not fold away:", .{x.r.declined});
+            for (x.victims) |v| {
+                if (standing(x.b, v)) try w.print(" {s}", .{x.b.nameRaw(v)});
+            }
+        }
+    };
+};
 
 /// Does any right-hand side still mention `v`?
 fn standing(b: *const g.Builder, v: u32) bool {
@@ -249,7 +266,6 @@ fn tally(b: *const g.Builder, victims: []const u32) Report {
     for (victims) |v| {
         if (standing(b, v)) r.declined += 1 else r.folded += 1;
     }
-    announce(b, victims, r);
     return r;
 }
 
@@ -509,13 +525,22 @@ test "a recursive victim is declined, not chased forever" {
     const report = try nonterminals(testing.allocator, &b, &.{start}, &.{loop});
     try testing.expectEqual(@as(usize, 1), report.declined);
 
-    // …and the decline is SAYABLE. No grammar of the thirty declines a fold
-    // today, so `announce` fires nowhere in the corpus and this is the only
-    // thing standing between it and a line that crashes the first time it is
-    // ever needed. `nameRaw` picks a table off the symbol's bias, and picking
-    // the wrong one is an out-of-bounds read on a list that is usually longer.
-    try testing.expectEqualStrings("loop", b.nameRaw(loop));
-    try testing.expectEqualStrings("x", b.nameRaw(x));
+    // …and the decline is SAYABLE, in full. No grammar of the thirty declines a
+    // fold today, so this is the only thing standing between the sentence and the
+    // first time it is ever needed - and the naming is where it would break, since
+    // `nameRaw` picks a table off the symbol's bias and picking the wrong one is
+    // an out-of-bounds read on a list that is usually longer. Asserting the
+    // rendered bytes covers that and the whole line's grammar besides; it also
+    // costs no stderr, which the `announce` this replaced could not manage.
+    const told = report.told(&b, &.{loop}) orelse return error.NothingToSay;
+    var buf: [128]u8 = undefined;
+    try testing.expectEqualStrings(
+        "joints: 1 inline rule(s) the press could not fold away: loop",
+        try std.fmt.bufPrint(&buf, "{f}", .{told}),
+    );
+    // And a fold that declined nothing has nothing to say, rather than a blank
+    // warning: the check the caller would otherwise have to remember.
+    try testing.expectEqual(@as(?Report.Told, null), (Report{ .folded = 1, .declined = 0 }).told(&b, &.{loop}));
 
     // Declining is not damaging: the grammar it hands back is the one it was
     // given, still able to derive `x`.

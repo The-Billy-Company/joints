@@ -32,6 +32,15 @@ const scanner = @import("../lex/scanner.zig");
 const press = @import("../../press/press.zig");
 const joint = @import("../joint/joint.zig");
 
+/// Where a *passing* test narrates - the boards, the seam locators, the verdict
+/// line. brigade's `note` is stdout, which the build step captures and drops;
+/// `std.debug.print` is stderr, which the build runner renders through its
+/// failure printer even for a step that succeeded, so every green shard here
+/// used to be captioned `failed command:`. The four sites still on stderr each
+/// return an error within a line or two, and a red shard's stdout is dropped
+/// with the rest. `stream_test.zig` carries the same binding.
+const note = @import("root").note;
+
 /// One edit, recorded as magnitudes rather than as byte offsets, which is the
 /// whole reason a script can be shrunk: an offset recorded against a file that
 /// no longer exists is meaningless once an earlier edit is removed, where a
@@ -223,8 +232,8 @@ const Run = struct {
         r.cold.policy = .whole;
         r.cold.reusing = false;
         try r.text.appendSlice(r.gpa, seed0);
-        try r.w.open(seed0);
-        try r.plain.open(seed0);
+        try r.w.warp(seed0);
+        try r.plain.warp(seed0);
         return r;
     }
 
@@ -311,7 +320,7 @@ const Run = struct {
         try r.text.replaceRange(r.gpa, e.from, e.to - e.from, e.put);
         try r.w.amend(.{ .from = e.from, .to = e.to, .insert = wide }, e.put);
         try r.plain.amend(.{ .from = e.from, .to = e.to, .insert = wide }, e.put);
-        try r.cold.open(r.text.items);
+        try r.cold.warp(r.text.items);
         r.tally.edits += 1;
     }
 
@@ -397,7 +406,7 @@ const Run = struct {
             for (r.cold.starts.items) |c| {
                 if (c >= r.w.starts.items[i - 1] and c < at) under += 1;
             }
-            std.debug.print(
+            note(
                 "SEAM edit {d}: leaves {d}|{d} part at byte {d} (floor {d}, window {d}..{d} was {d})\n" ++
                     "  left  ends {d}  entry {d} guard {d} push {d}  gen {d}  cold leaves under it {d}\n" ++
                     "  right start {d}  entry {d} guard {d} push {d}  gen {d}\n" ++
@@ -434,7 +443,7 @@ const Run = struct {
         // neighbours did. Then the discontinuity is not at any seam and the
         // pairwise question is the wrong one, which is worth one line.
         if (r.algebra and !weave.Joint.same(r.w.product(), r.cold.product())) {
-            std.debug.print(
+            note(
                 "edit {d}: the product refuses and every adjacent pair composes\n",
                 .{r.seen},
             );
@@ -446,7 +455,7 @@ const Run = struct {
     /// nothing twice this project; this makes it mean something.
     fn verdict(r: *Run) void {
         if (r.bend != .none) return;
-        if (!r.told) std.debug.print(
+        if (!r.told) note(
             "every adjacent pair in the prefix agrees on state, all {d} edits\n",
             .{r.seen},
         );
@@ -458,6 +467,35 @@ const Run = struct {
     /// know that the policy lost it.
     fn agrees(r: *Run) bool {
         return weave.Joint.same(r.w.product(), r.cold.product()) and r.parted() == null;
+    }
+
+    /// The same verdict as `std.testing`'s, and a sentence only when somebody
+    /// wanted one.
+    ///
+    /// `expectEqual` prints the mismatch to stderr before it returns the error,
+    /// which is right when a mismatch is news and exactly wrong for the negative
+    /// control below - four deliberately wrong composes whose entire job is to
+    /// provoke mismatches. Thirteen `expected .accepted, found .unexpected` lines
+    /// were a green run narrating faults it had asked for, on the stream the build
+    /// runner reserves for failures, which is why passing shards were captioned
+    /// `failed command:`. A bent run compares silently; an honest one keeps std's
+    /// report, because there the mismatch is the whole point.
+    fn eq(r: *const Run, want: anytype, got: @TypeOf(want)) !void {
+        if (r.bend == .none) return t.expectEqual(want, got);
+        if (!std.meta.eql(want, got)) return error.TestExpectedEqual;
+    }
+
+    fn eqText(r: *const Run, want: []const u8, got: []const u8) !void {
+        if (r.bend == .none) return t.expectEqualStrings(want, got);
+        if (!std.mem.eql(u8, want, got)) return error.TestExpectedEqual;
+    }
+
+    /// A structural fault: raised either way, narrated only on the honest arm.
+    /// `{f}` is the library's own sentence - `quire.Blame`, `bough.Fault` - which
+    /// is why those two hand the fault back instead of printing it themselves.
+    fn blame(r: *const Run, what: anytype, e: anyerror) anyerror {
+        if (r.bend == .none) std.debug.print("{f}\n", .{what});
+        return e;
     }
 
     /// One weave's tree, spine and tiling against a cold parse of the same
@@ -475,21 +513,21 @@ const Run = struct {
         // two hundred edits before the tree it eventually corrupted. Asking
         // here means the edit that *makes* a bad snapshot is the edit that
         // reports it.
-        try got.verify(r.gpa);
-        try it.bough.verify(r.gpa, &got);
-        try t.expectEqual(std.meta.activeTag(cold.stop), std.meta.activeTag(got.stop));
+        if ((try got.survey(r.gpa)).first) |f| return r.blame(got.blame(f), error.QuireCorrupt);
+        if (try it.bough.verify(r.gpa, &got)) |f| return r.blame(f, error.BoughCorrupt);
+        try r.eq(std.meta.activeTag(cold.stop), std.meta.activeTag(got.stop));
         // Two parses can agree on every root and still have got there by
         // different routes; a reuse that skipped a wall the cold parse had to
         // mend past is exactly the shape of a wrong tree that prints right.
-        try t.expectEqual(cold.mends, got.mends);
-        try t.expectEqual(cold.roots.len, got.roots.len);
+        try r.eq(cold.mends, got.mends);
+        try r.eq(cold.roots.len, got.roots.len);
         for (cold.roots, got.roots) |a, b| {
             const one = try cold.sexp(r.gpa, a, .all);
             defer r.gpa.free(one);
             const two = try got.sexp(r.gpa, b, .all);
             defer r.gpa.free(two);
-            try t.expectEqualStrings(one, two);
-            try spans(&cold, a, &got, b);
+            try r.eqText(one, two);
+            try spans(r, &cold, a, &got, b);
         }
         if (!it.spun) return;
 
@@ -499,10 +537,10 @@ const Run = struct {
         // wrong one over the wrong bytes.
         var at: u32 = 0;
         for (it.leaves.items, it.starts.items) |l, from| {
-            try t.expectEqual(at, from);
+            try r.eq(at, from);
             at += l.bytes;
         }
-        try t.expectEqual(@as(u32, @intCast(r.text.items.len)), at);
+        try r.eq(@as(u32, @intCast(r.text.items.len)), at);
 
         try it.spine.verify(it.arena());
         try t.expect(weave.Joint.same(it.product(), try it.scratch()));
@@ -530,11 +568,7 @@ const Run = struct {
     /// product match - `same` has already asked of both weaves.
     fn derives(r: *Run) !void {
         const rift = r.parted() orelse return;
-        std.debug.print(
-            "tiling parts from cold at leaf {d} of {d}: {s} - cold {d}, warm {d}\n",
-            .{ rift.leaf, r.cold.leaves.items.len, rift.why, rift.cold, rift.warm },
-        );
-        return error.TilingParted;
+        return r.blame(rift.of(r.cold.leaves.items.len), error.TilingParted);
     }
 
     /// The first place the maintained tiling and a cold parse of the same text
@@ -588,19 +622,39 @@ const Rift = struct {
     why: []const u8,
     cold: u64,
     warm: u64,
+
+    /// The sentence, once somebody supplies the one fact a rift cannot know: how
+    /// many leaves the cold tiling had, which is what makes "leaf 283" a position
+    /// rather than a number. Split from the raise for the reason the whole file
+    /// now follows - the negative control provokes rifts on purpose and must not
+    /// narrate them.
+    fn of(rift: Rift, leaves: usize) Told {
+        return .{ .rift = rift, .leaves = leaves };
+    }
+
+    const Told = struct {
+        rift: Rift,
+        leaves: usize,
+
+        pub fn format(x: Told, w: *std.Io.Writer) std.Io.Writer.Error!void {
+            try w.print("tiling parts from cold at leaf {d} of {d}: {s} - cold {d}, warm {d}", .{
+                x.rift.leaf, x.leaves, x.rift.why, x.rift.cold, x.rift.warm,
+            });
+        }
+    };
 };
 
 /// Every node's span, in lockstep down two trees. The s-expression is blind to
 /// offsets, so this is the only check that can see a subtree lifted onto the
 /// wrong bytes.
-fn spans(a: *const quire.Quire, x: quire.Ref, b: *const quire.Quire, y: quire.Ref) !void {
-    try t.expectEqual(a.nodes[x].start, b.nodes[y].start);
-    try t.expectEqual(a.nodes[x].len, b.nodes[y].len);
-    try t.expectEqual(a.nodes[x].kind.extra, b.nodes[y].kind.extra);
+fn spans(r: *const Run, a: *const quire.Quire, x: quire.Ref, b: *const quire.Quire, y: quire.Ref) !void {
+    try r.eq(a.nodes[x].start, b.nodes[y].start);
+    try r.eq(a.nodes[x].len, b.nodes[y].len);
+    try r.eq(a.nodes[x].kind.extra, b.nodes[y].kind.extra);
     const one = a.children(x);
     const two = b.children(y);
-    try t.expectEqual(one.len, two.len);
-    for (one, two) |p, q| try spans(a, p, b, q);
+    try r.eq(one.len, two.len);
+    for (one, two) |p, q| try spans(r, a, p, b, q);
 }
 
 fn breaks(
@@ -685,7 +739,7 @@ fn drive(
     }
     const q = r.tally;
     r.verdict();
-    std.debug.print(
+    note(
         "  {s:<12} {s:<5} {d:>5} edits  {d:>4} whole  {d:>5} lifts  " ++
             "window {d:>5.1}/{d:<5.1}  nodes reused {d:>4.0}%  tokens read {d:>4.0}%  " ++
             "bytes lifted {d:>4.0}%  resumed {d:>4} past {d:>5.0}B  " ++
@@ -771,7 +825,7 @@ test "weave: the incremental tree equals a cold parse after every edit" {
     };
     defer gpa.free(seed0);
 
-    std.debug.print("\nweave: edit streams against a cold parse\n", .{});
+    note("\nweave: edit streams against a cold parse\n", .{});
     const p = try drive(bolt, "json", seed0, .prove, 0xA31E_5EED_0F10_0001, 1500);
     // A reuse test that never reused anything passes every assertion above by
     // doing nothing, so the floor is part of the claim.
@@ -842,7 +896,7 @@ test "weave: what each re-mint policy costs, and what the cheap one loses" {
     };
     defer gpa.free(seed0);
 
-    std.debug.print("\nweave: re-mint policies over one stream\n", .{});
+    note("\nweave: re-mint policies over one stream\n", .{});
     var minted: [3]f64 = undefined;
     for ([_]weave.Policy{ .snap, .prove, .whole }, 0..) |policy, k| {
         var prng = std.Random.DefaultPrng.init(0xA31E_5EED_0F10_0001);
@@ -866,7 +920,7 @@ test "weave: what each re-mint policy costs, and what the cheap one loses" {
             if (!r.agrees()) lost += 1;
         }
         minted[k] = ratio(r.tally.minted, r.tally.whole);
-        std.debug.print("  {s:<5} window {d:>5.1}/{d:<5.1} leaves   spine lost after {d} of {d} edits\n", .{
+        note("  {s:<5} window {d:>5.1}/{d:<5.1} leaves   spine lost after {d} of {d} edits\n", .{
             @tagName(policy), minted[k],     ratio(r.tally.leaves, r.tally.whole),
             lost,             r.tally.edits,
         });
@@ -894,7 +948,7 @@ test "weave: what a keystroke costs as the file grows" {
     };
     defer gpa.free(one);
 
-    std.debug.print("\nweave: one keystroke, against 4x the file each time\n", .{});
+    note("\nweave: one keystroke, against 4x the file each time\n", .{});
     for ([_]u32{ 1, 4, 16, 64 }) |copies| {
         // The same file over and over inside an array, which is a bigger file
         // of the same shape: the point is what the *height* does, and a
@@ -911,7 +965,7 @@ test "weave: what a keystroke costs as the file grows" {
         var w = try bolt.open();
         defer w.deinit();
         w.policy = .prove;
-        try w.open(text.items);
+        try w.warp(text.items);
         const cold = w.cost;
 
         // A space typed at evenly spaced points, which is the keystroke the
@@ -936,7 +990,7 @@ test "weave: what a keystroke costs as the file grows" {
         // cost the tail of the file. An average of those two populations
         // describes neither.
         std.mem.sort(u32, &window, {}, std.sort.asc(u32));
-        std.debug.print(
+        note(
             "  {d:>3}x  {d:>6} leaves  height {d:>4.1}  reminted p50 {d:>3} p90 {d:>4} max {d:>5}" ++
                 "   read {d:>5.1}% of {d}\n",
             .{
@@ -975,7 +1029,7 @@ test "weave: the same, on rust, which is the grammar that forks" {
     {
         var probe = try bolt.open();
         defer probe.deinit();
-        try probe.open(seed0);
+        try probe.warp(seed0);
         if (probe.tree.?.stop != .accepted) return error.SkipZigTest;
     }
 
@@ -1008,7 +1062,7 @@ test "weave: the same, on java, whose forks used to forfeit the file" {
     {
         var probe = try bolt.open();
         defer probe.deinit();
-        try probe.open(seed0);
+        try probe.warp(seed0);
         if (probe.tree.?.stop != .accepted) return error.SkipZigTest;
     }
 
@@ -1107,7 +1161,7 @@ test "weave: a deliberately broken reuse is caught and shrinks to a few edits" {
     };
     defer gpa.free(json_seed);
 
-    std.debug.print("\nweave: negative control\n", .{});
+    note("\nweave: negative control\n", .{});
 
     // A stream long enough to reach the flaw, and no longer: the shrinker
     // replays the whole script once per bite, so a hundred spare edits are a
@@ -1143,7 +1197,7 @@ test "weave: a deliberately broken reuse is caught and shrinks to a few edits" {
             try t.expect(!try breaks(bolt, json_seed, .prove, bend, script.items));
             try script.insert(gpa, i, held);
         }
-        std.debug.print("  {s:<6} broke a {d}-edit stream; shrank to {d}\n", .{
+        note("  {s:<6} broke a {d}-edit stream; shrank to {d}\n", .{
             @tagName(bend), raw, script.items.len,
         });
         // And the same script with the flaw stood down is not a failure at all,

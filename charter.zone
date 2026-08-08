@@ -6,15 +6,18 @@
 package joints {
     root     src
     language zig
-    // Two faces, not one. `root.zig` is the module's public door and imports
+    // Three faces, not one. `root.zig` is the module's public door and imports
     // everything because that is what a facade does. `proof.zig` is the test
     // build's root and imports everything for the same structural reason in the
     // other direction: a test is reachable to `zig build test` only if something
-    // names it, and naming all of them is its entire job. Listing it here is what
-    // lets the seals below mean something — a seal every file may cross is not a
-    // seal, and the alternative was writing `open to proof.zig` on each of them,
-    // which says the same thing twice and once per seal added later.
-    facade   root.zig proof.zig
+    // names it, and naming all of them is its entire job. `idiom.zig` is the third
+    // root — `zig build idiom` — and reaches every module for a third reason: a
+    // claim about the whole package's vocabulary has nowhere narrower to stand.
+    // Listing them here is what lets the seals below mean something — a seal every
+    // file may cross is not a seal, and the alternative was writing
+    // `open to proof.zig` on each of them, which says the same thing twice and
+    // once per seal added later.
+    facade   root.zig proof.zig idiom.zig
 }
 
 // Zones, low to high: an import may not point up the page. The order is a
