@@ -1355,7 +1355,57 @@ whitespace in a real rust file changes nothing (144 ms to 139 ms). It may still
 be separate, but it now shares a signature with the main defect and should be
 retested against the same fix rather than chased on its own.
 
-## Where we lose
+## Closed, 2026-08-08: both decision axes now sweep
+
+Everything in the section below this one is history. The two axes it documents
+losing - the ones that decide adoption - were re-taken on a current binary and
+both now go 9 of 9 to joints, every measurable grammar, no row excused:
+
+| axis | span | ratio | worst row | best row |
+|---|---|---:|---|---|
+| throughput | 9 grammars | **0.64x - 0.97x** | cpp 72.8 vs 74.8 ns/B | json 32.8 vs 51.6 ns/B |
+| incremental | 9 grammars | **0.17x - 0.85x** | json 86.5 vs 101.2 us | c 87.0 vs 517.4 us |
+
+```
+stamp: joints 7a109218d built 2026-08-08T21:26:30Z · tree-sitter 0.26.11
+tool/bench.baseline.json re-recorded from this run: 60 rows over 7 axes, 50 to joints
+```
+
+The 724x typescript throughput and the 153.8x typescript incremental below both
+fell to the chain of fixes this pass landed, in cause order:
+
+- **The quadratic scan died with the `Expected` rebuild.** A state's slate is
+  memoized per stack context (`Slate`/`Record`, 16-way associative, walk answers
+  in a 512-bit mask), and the permission set a veil describes is interned once
+  as a whole `Expected` (`Look`) and worn **by pointer** - the scan reads the
+  snapshot where it lies, so a token under a known veil copies nothing at all.
+- **`reduce` stopped paying the round trip through `born`.** In a lone parse the
+  popped runs already tile `borne` in order, so a fold with no alias applies
+  fields in place - a left-recursive list is O(n) in its own length now, not O(n²).
+- **`roost` rebuilds only the divergence.** A `keel` watermark pins where the
+  readings forked; a conflict refuted three tokens after it opened repays three
+  tokens of copying, not the whole stack - which it was doing 5,015 times over
+  one 129 KB C++ file.
+- **The lexer's per-byte loop lost two branches.** Pattern attribution is a
+  dense O(1) row instead of a run scan, and the final-byte table selection was
+  hoisted out of the DFA walk.
+- **Incremental was a different defect** - the veil replay in `holds`
+  (round 22) plus the `torn` fix already documented below - and the numbers
+  above are what those are worth once the throughput chain stopped hiding them.
+
+Two consequences worth naming. The startup axis unblocked itself - the section
+below that says it is "blocked behind the throughput defect" is now stale, and
+it measures: 7 of 9 to joints, tree-sitter keeping rust (1.35x) and typescript
+(1.55x), which is folio-mapping cost and a real open row. And memory is now the
+one axis tree-sitter wins broadly (7 of 9, worst typescript 2.67x) - the memo
+structures above are not free, and nobody has spent a pass on them yet. Both are
+in the re-recorded baseline with their real numbers.
+
+`tool/order.py run` holds the complexity claim the first fix makes: same bytes,
+same nodes, opposite order, every swing at or under 1.6x - the parse is linear
+in what it has read.
+
+## Where we lose (superseded 2026-08-08 - kept as the record of the defect)
 
 Two sweeps, and the second is the one to read. `incremental` was re-taken on a
 current binary after the `torn` fix; `throughput` has not been re-taken since the
