@@ -359,10 +359,17 @@ pub const Quire = struct {
     /// are this list folded - kept beside it because a fuse asks for the totals
     /// on every parse and only a reader asks for the sites.
     scars: []const Scar = &.{},
+    /// The true width of the allocations behind `nodes` and `kids`, when the
+    /// builder donated its arrays capacity and all rather than shrinking them
+    /// onto fresh exact-size allocations - which was a whole-tree memcpy per
+    /// parse, a third of a keystroke on the incremental path. Zero means the
+    /// slice is the allocation, which is every other constructor.
+    nodes_cap: usize = 0,
+    kids_cap: usize = 0,
 
     pub fn deinit(q: *Quire) void {
-        q.gpa.free(q.nodes);
-        q.gpa.free(q.kids);
+        q.gpa.free(q.nodes.ptr[0..@max(q.nodes_cap, q.nodes.len)]);
+        q.gpa.free(q.kids.ptr[0..@max(q.kids_cap, q.kids.len)]);
         q.gpa.free(q.roots);
         q.gpa.free(q.scars);
         if (q.stop == .unexpected) if (q.stop.unexpected.folded) |f| q.gpa.free(f);

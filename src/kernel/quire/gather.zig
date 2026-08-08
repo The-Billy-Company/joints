@@ -492,9 +492,16 @@ const Ahead = struct {
     /// Why the last `unsure` this walk returned was unsure. Meaningless
     /// unless a `Step.unsure` was actually handed back.
     hazy: Hazy,
+    /// How many real perches the walk descended below where it started, and
+    /// whether it was refused by the stack running out. Together they are the
+    /// walk's whole claim on the stack - it read nothing below `fell`, and
+    /// only a `bottom` walk read the depth itself - which is what lets a
+    /// caller memoize the answer against the stack states it covers.
+    fell: u32,
+    bottom: bool,
 
     fn on(x: *const Gather, top: u32) Ahead {
-        return .{ .x = x, .base = top, .up = undefined, .ups = 0, .hazy = .clear };
+        return .{ .x = x, .base = top, .up = undefined, .ups = 0, .hazy = .clear, .fell = 0, .bottom = false };
     }
 
     fn state(a: *const Ahead) u32 {
@@ -554,11 +561,15 @@ const Ahead = struct {
                     a.ups -= virtual;
                     n -= virtual;
                     if (n > 0) {
-                        if (a.x.deep(a.base) < n) return .stops;
+                        if (a.x.deep(a.base) < n) {
+                            a.bottom = true;
+                            return .stops;
+                        }
                         for (0..n) |_| a.base = a.x.below(a.base);
+                        a.fell += @intCast(n);
                     }
                     const under = a.state();
-                    const to = a.x.c.goto(under, p.lhs) orelse return .stops;
+                    const to = a.x.landing(under, p.lhs) orelse return .stops;
                     if (!a.push(to)) return a.gave(.climbed);
                 },
             }
@@ -662,11 +673,17 @@ pub const Gather = struct {
     work: std.ArrayList(Turn),
     next: std.ArrayList(Reading),
     /// The perches one reduction is popping, deepest first; and, in `roost`,
-    /// the whole of the surviving chain.
+    /// the divergent tail of the surviving chain.
     spine: std.ArrayList(Perch),
-    /// Where `roost` rebuilds the stack before swapping it in.
-    nest: std.ArrayList(Perch),
+    /// Where `roost` compacts the tail's runs before re-seating them.
     crop: Run,
+    /// The first perch index the standing rift can disagree about. Everything
+    /// below it is one flat prefix every reading shares — the array indices
+    /// ARE the chain, and its runs tile `borne` bottom-up — pinned where the
+    /// rift opened and lowered under every forked fold that pops into it, so
+    /// `roost` rebuilds the divergence rather than the file's whole stack.
+    /// Meaningful only while `grafted` stands; re-pinned at the next rift.
+    keel: u32,
     /// What the winning reading was holding when the parse ended, in source
     /// order. The tree's roots.
     roots: Run,
@@ -685,6 +702,16 @@ pub const Gather = struct {
     descent: std.ArrayList(quire.Ref),
     /// Refilled once per token from the live readings' action rows.
     expected: lex.Scanner.Expected,
+    /// Per state, the terminals worth asking about at all and the memo of
+    /// what the lookahead walks last answered there - built lazily on first
+    /// visit, kept for the life of the Gather. See `menuOf` and `Slate`.
+    menus: []Slate,
+    /// A direct-mapped cache over `Collection.goto`, because the goto is a
+    /// binary search down a per-state edge slice and the walks and folds ask
+    /// it for the same few (state, lhs) pairs all file long - it was the
+    /// single hottest line of a typescript parse. Fixed size, keyed exactly,
+    /// so a collision is one re-search and never a wrong answer. See `landing`.
+    lands: []Land,
     /// What the scanner stepped over on the way to the last token.
     keep: std.ArrayList(Token),
     /// The extras the grammar spells as rules, and their all-terminal
@@ -702,6 +729,47 @@ pub const Gather = struct {
     /// run.
     tokens: std.ArrayList(Token),
     enter: std.ArrayList(u32),
+    /// The slate each token was lexed under, as an index into `veils` -
+    /// parallel to `tokens`. `enter` names the state, but the state is not
+    /// the slate: `offer` narrows a row by walking the stack under it, so two
+    /// visits to one state can hand the scanner different sets, and `holds`
+    /// re-lexing from the row alone was declining rings whose bytes had not
+    /// changed - the probe disagreed with the parse about `=` versus `=>`,
+    /// and woke hands (`_automatic_semicolon`) the parse never woke. What was
+    /// admitted is recorded instead, so the probe asks the exact question the
+    /// parse asked. Round 22.
+    veil: std.ArrayList(u32),
+    /// The interned slates `veil` indexes: each one the terminals `admit` was
+    /// called with, in symbol order. A parse visits thousands of tokens and a
+    /// few dozen distinct slates, so they are deduplicated by their `named`
+    /// mask and kept for the life of the Gather - like `menus`, a fact about
+    /// the pressed table and the stacks it stands up, not about one file.
+    veils: std.ArrayList([]press.Symbol),
+    /// The dedup: a slate's `named` mask bytes, mapped to its `veils` index.
+    veiled: std.StringHashMapUnmanaged(u32),
+    /// Snapshots of the built `Expected`, indexed like `veils` - the whole
+    /// machine state `clear` plus a veil's admissions produces, kept so a
+    /// token whose record already knows its veil restores the scanner's
+    /// permission set with a handful of memcpys instead of re-admitting
+    /// hundreds of terminals through the tier machinery. Grown lazily:
+    /// entries minted by paths that never offer (`plant`, `blame`) stay
+    /// null until an offer wants them.
+    looks: std.ArrayList(?Look),
+    /// The permission set the next scan reads: `&expected` when `offer` had
+    /// to build one, or the interned Look itself on the fast path - which is
+    /// why a veiled token costs no copying at all. Only valid between an
+    /// `offer` and its scan; a growing `looks` may move the Look it points
+    /// at, and the next `offer` re-aims it before anything reads it again.
+    wearing: ?*const lex.Scanner.Expected,
+    /// Nodes below this index were restored whole by `remount` - already
+    /// worn, parents already written - so `bind` wears them where a new
+    /// parent adopts one and never descends into them. Zero on a cold parse,
+    /// where it excludes nothing.
+    bound: u32,
+    /// The recency clock the slate records' eviction reads: bumped on every
+    /// record touch, never reset, and a wrap after 2^32 touches costs one
+    /// stale eviction, not an answer.
+    ticks: u32,
 
     /// A previous parse of nearly these bytes, when a caller has one. Null is
     /// the cold parse, and is the only shape this loop had before.
@@ -903,6 +971,12 @@ pub const Gather = struct {
         for (0..gr.terminal_count) |sym| {
             if (gr.shapeOf(@intCast(sym)) == .anonymous) try literals.append(gpa, @intCast(sym));
         }
+        const menus = try gpa.alloc(Slate, c.states.len);
+        errdefer gpa.free(menus);
+        @memset(menus, .{});
+        const lands = try gpa.alloc(Land, landings);
+        errdefer gpa.free(lands);
+        @memset(lands, .{});
         return .{
             .gpa = gpa,
             .gr = gr,
@@ -918,8 +992,8 @@ pub const Gather = struct {
             .work = .empty,
             .next = .empty,
             .spine = .empty,
-            .nest = .empty,
             .crop = .{},
+            .keel = 1,
             .roots = .{},
             .nodes = .empty,
             .kids = .empty,
@@ -927,11 +1001,20 @@ pub const Gather = struct {
             .born = .{},
             .descent = .empty,
             .expected = try scanner.expecting(gpa),
+            .menus = menus,
+            .lands = lands,
             .keep = .empty,
             .sprigs = sprigs,
             .grown = .empty,
             .tokens = .empty,
             .enter = .empty,
+            .veil = .empty,
+            .veils = .empty,
+            .veiled = .empty,
+            .looks = .empty,
+            .wearing = null,
+            .bound = 0,
+            .ticks = 0,
             .graft = null,
             .bough = null,
             .stood = null,
@@ -971,6 +1054,9 @@ pub const Gather = struct {
     }
 
     pub fn deinit(x: *Gather) void {
+        for (x.menus) |m| if (m.built) x.gpa.free(m.cards);
+        x.gpa.free(x.menus);
+        x.gpa.free(x.lands);
         x.forks.deinit(x.gpa);
         for (x.strands.items) |*st| st.deinit(x.gpa);
         x.strands.deinit(x.gpa);
@@ -983,7 +1069,6 @@ pub const Gather = struct {
         x.work.deinit(x.gpa);
         x.next.deinit(x.gpa);
         x.spine.deinit(x.gpa);
-        x.nest.deinit(x.gpa);
         x.crop.deinit(x.gpa);
         x.roots.deinit(x.gpa);
         x.born.deinit(x.gpa);
@@ -998,6 +1083,14 @@ pub const Gather = struct {
         x.grown.deinit(x.gpa);
         x.tokens.deinit(x.gpa);
         x.enter.deinit(x.gpa);
+        x.veil.deinit(x.gpa);
+        for (x.veils.items) |v| x.gpa.free(v);
+        x.veils.deinit(x.gpa);
+        var veiled = x.veiled.keyIterator();
+        while (veiled.next()) |k| x.gpa.free(k.*);
+        x.veiled.deinit(x.gpa);
+        for (x.looks.items) |*l| if (l.*) |*look| look.deinit(x.gpa);
+        x.looks.deinit(x.gpa);
         x.scars.deinit(x.gpa);
         x.* = undefined;
     }
@@ -1037,10 +1130,14 @@ pub const Gather = struct {
         if (x.stood == null) try x.ground();
 
         while (true) {
-            x.offer();
+            // The slate this token is about to be lexed under, interned by
+            // `offer` itself because `sprout` and `blame` rewrite `expected`
+            // in place - by the append below it can already be some other
+            // question's.
+            var worn = try x.offer();
             var here = x.perches.items[x.first().top].state;
             x.stowed = false;
-            const step = try x.scanner.nextKeeping(x.gpa, bytes, x.at, &x.expected, &x.keep);
+            const step = try x.scanner.nextKeeping(x.gpa, bytes, x.at, x.wearing.?, &x.keep);
             const tok: Token = switch (step) {
                 .end => {
                     const won = try x.close();
@@ -1058,7 +1155,14 @@ pub const Gather = struct {
                 // the wide slate names goes on to be refused through the same
                 // path as any other, so a truncated parse salvages what it
                 // always salvaged.
-                .stray => |off| x.blame(bytes, off) orelse {
+                .stray => |off| named: {
+                    if (x.blame(bytes, off)) |t| {
+                        // `blame` stood the narrowing down, so the slate that
+                        // lexed this token is the wide one it built, not the
+                        // one `offer` interned above.
+                        worn = try x.veiling();
+                        break :named t;
+                    }
                     // No terminal begins here under any state, so there is no
                     // token to delete. A word is stepped over whole even so:
                     // resuming inside `return` reads `eturn` as an identifier,
@@ -1086,7 +1190,7 @@ pub const Gather = struct {
             // than guessing, so a supply can be admitted on a walk that never
             // reached the shift; when that happens the cost is one zero-width
             // node and the ordinary repair, not a loop.
-            if (moved == .refused) if (try x.supply(tok)) {
+            if (moved == .refused) if (try x.supply(tok, worn)) {
                 here = x.perches.items[x.first().top].state;
                 moved = try x.absorb(tok);
             };
@@ -1116,6 +1220,7 @@ pub const Gather = struct {
             }
             try x.tokens.append(x.gpa, tok);
             try x.enter.append(x.gpa, here);
+            try x.veil.append(x.gpa, worn);
             x.kept = false;
             const was = x.at;
             x.at = tok.end();
@@ -1304,7 +1409,7 @@ pub const Gather = struct {
     /// one `mended`'s `keep` would re-seat on. Not `x.live`: a fold under
     /// `x.lone` shrinks the perch array, so a reading's recorded top can be an
     /// index that no longer exists by the time the refusal is reported.
-    fn supply(x: *Gather, tok: Token) !bool {
+    fn supply(x: *Gather, tok: Token, worn: u32) !bool {
         if (!x.supplying or x.mend == .none) return false;
         // The same fuse `mended` is held to. A supply walks past no bytes so it
         // cannot move the numerator, but a file this far gone is one recovery
@@ -1392,7 +1497,7 @@ pub const Gather = struct {
         // token. See `plant`: this is where the omission is, and it is the
         // only offset at which a zero-width child is inside its parent.
         const anchor = x.perches.items[x.spent].end;
-        const grown = try x.plant(x.spent, sym, anchor) orelse return false;
+        const grown = try x.plant(x.spent, sym, anchor, worn) orelse return false;
         assay.trace(.quire, "supplied: {s} at {d} so state {d} can read {s}\n", .{
             x.gr.nameOf(sym), anchor, x.refused, x.gr.nameOf(tok.symbol),
         });
@@ -1495,7 +1600,7 @@ pub const Gather = struct {
     /// a later parse re-lexing the recorded stream finds no zero-width literal
     /// there and declines the ring - a cold resume on a file that was
     /// repaired, which is the conservative half of the trade.
-    fn plant(x: *Gather, top: u32, sym: press.Symbol, at: u32) !?u32 {
+    fn plant(x: *Gather, top: u32, sym: press.Symbol, at: u32, worn: u32) !?u32 {
         const ghost: Token = .{ .symbol = sym, .start = at, .len = 0 };
         var t = top;
         for (0..chase) |_| {
@@ -1528,6 +1633,11 @@ pub const Gather = struct {
                     });
                     try x.tokens.append(x.gpa, ghost);
                     try x.enter.append(x.gpa, state);
+                    // No scanner produced the ghost, so no slate can re-lex
+                    // it; the veil of the token whose refusal asked for it
+                    // keeps the array honest, and a ring over a supply
+                    // declines in `holds` exactly as before.
+                    try x.veil.append(x.gpa, worn);
                     return grown;
                 },
                 .reduce => t = try x.fold(t, act.value) orelse return null,
@@ -1552,9 +1662,11 @@ pub const Gather = struct {
         x.marks.clearRetainingCapacity();
         x.tokens.clearRetainingCapacity();
         x.enter.clearRetainingCapacity();
+        x.veil.clearRetainingCapacity();
         if (x.trail) |tr| tr.clearRetainingCapacity();
         if (x.bough) |b| b.clear();
         x.at = 0;
+        x.bound = 0;
         _ = try x.push(0, .{
             .state = 0,
             .own = 0,
@@ -1687,6 +1799,7 @@ pub const Gather = struct {
         return r.nodes <= old.nodes.len and r.kids <= old.kids.len and
             r.roots <= old.roots.len and
             r.token <= x.tokens.items.len and r.token <= x.enter.items.len and
+            r.token <= x.veil.items.len and
             r.trail <= (if (x.trail) |tr| tr.items.len else 0);
     }
 
@@ -1701,7 +1814,7 @@ pub const Gather = struct {
     ///
     /// Exact lookahead per token would answer this outright and it lives in the
     /// scanner, which is not this module's. Re-reading is the answer that needs
-    /// nothing from it: drive the recorded states over the new bytes and demand
+    /// nothing from it: drive the recorded slates over the new bytes and demand
     /// the same tokens back. What that leaves unproved is a token whose scan
     /// reaches beyond a whole ring's worth of text, which no tokenizer in the
     /// corpus does and none of them could do cheaply; the parse pays a stride's
@@ -1727,7 +1840,7 @@ pub const Gather = struct {
             .{ .at = 0, .token = 0 }
         else
             .{ .at = b.rings.items[i - 1].at, .token = b.rings.items[i - 1].token };
-        if (r.token > x.tokens.items.len or r.token > x.enter.items.len) return false;
+        if (r.token > x.tokens.items.len or r.token > x.veil.items.len) return false;
 
         // The stretch is re-lexed from the ring below, so the scanner has to
         // be standing where *that* ring left it - not where the attempt this
@@ -1738,36 +1851,41 @@ pub const Gather = struct {
         }
 
         var at = back.at;
-        for (x.tokens.items[back.token..r.token], x.enter.items[back.token..r.token]) |want, state| {
+        for (x.tokens.items[back.token..r.token], x.veil.items[back.token..r.token]) |want, worn| {
             if (want.symbol >= x.gr.terminal_count) {
                 if (want.start != at) return false;
                 at = want.end();
                 continue;
             }
+            // The exact slate this token was lexed under, replayed. The state
+            // row is wider than what `offer` admitted - it holds every
+            // lookahead, where `offer` walked the stack and kept only what
+            // could shift - and the width was the decliner: a wide probe
+            // reads `=` where the parse read `=>`, and wakes hands the parse
+            // never woke, so unchanged bytes "re-lexed differently" and every
+            // typescript ring fell through to a cold parse. Round 22.
             x.expected.clear(x.scanner);
-            for (0..x.gr.terminal_count) |sym| {
-                if (x.t.at(state, @intCast(sym)).kind != .err) x.expected.admit(x.scanner, @intCast(sym));
-            }
+            for (x.veils.items[worn]) |sym| x.expected.admit(x.scanner, sym);
             x.keep.clearRetainingCapacity();
             switch (try x.scanner.nextKeeping(x.gpa, bytes, at, &x.expected, &x.keep)) {
                 .token => |got| {
                     if (got.symbol != want.symbol or got.start != want.start or got.len != want.len) {
-                        assay.trace(.weave, "holds: ring {d} at {d} wanted {s} {d}..{d} got {s} {d}..{d} from state {d}\n", .{
+                        assay.trace(.weave, "holds: ring {d} at {d} wanted {s} {d}..{d} got {s} {d}..{d} under veil {d}\n", .{
                             i,                        at,
                             x.gr.nameOf(want.symbol), want.start,
                             want.end(),               x.gr.nameOf(got.symbol),
                             got.start,                got.end(),
-                            state,
+                            worn,
                         });
                         return false;
                     }
                     at = got.end();
                 },
                 else => |no| {
-                    assay.trace(.weave, "holds: ring {d} at {d} wanted {s} {d}..{d} got {s} from state {d}\n", .{
+                    assay.trace(.weave, "holds: ring {d} at {d} wanted {s} {d}..{d} got {s} under veil {d}\n", .{
                         i,          at,         x.gr.nameOf(want.symbol),
                         want.start, want.end(), @tagName(no),
-                        state,
+                        worn,
                     });
                     return false;
                 },
@@ -1801,6 +1919,7 @@ pub const Gather = struct {
         // places under the restored kids are blank rather than lost.
         x.marks.clearRetainingCapacity();
         if (x.forking) try x.marks.appendNTimes(x.gpa, .{}, r.kids);
+        x.bound = r.nodes;
         // What the break already closed over. These are roots of the tree this
         // resume is continuing, not of the prefix it is standing on, so they
         // are adopted rather than re-derived - the same move as the nodes above
@@ -1823,6 +1942,7 @@ pub const Gather = struct {
 
         x.tokens.shrinkRetainingCapacity(r.token);
         x.enter.shrinkRetainingCapacity(r.token);
+        x.veil.shrinkRetainingCapacity(r.token);
         if (x.trail) |tr| tr.shrinkRetainingCapacity(r.trail);
 
         try x.perches.appendSlice(x.gpa, b.chain(i));
@@ -1965,8 +2085,17 @@ pub const Gather = struct {
         errdefer x.gpa.free(roots);
         const scars = try x.gpa.dupe(quire.Scar, x.scars.items);
         errdefer x.gpa.free(scars);
-        const nodes = try x.nodes.toOwnedSlice(x.gpa);
-        errdefer x.gpa.free(nodes);
+        // Donated capacity and all, never shrunk onto a fresh allocation:
+        // `toOwnedSlice` was a whole-tree memcpy per parse, and on the
+        // incremental path the tree is five hundred times the edit. The
+        // Quire records the true widths and frees those.
+        const nodes = x.nodes.items;
+        const nodes_cap = x.nodes.capacity;
+        x.nodes = .empty;
+        errdefer x.gpa.free(nodes.ptr[0..nodes_cap]);
+        const kids = x.kids.items;
+        const kids_cap = x.kids.capacity;
+        x.kids = .empty;
         // The chain is borrowed until here and owned after: `seal` parked it on
         // the gather, which does not outlive the answer. Duped from wherever the
         // reported stop points rather than from `x.wall`, because a resumed
@@ -1980,7 +2109,7 @@ pub const Gather = struct {
             .gpa = x.gpa,
             .gr = x.gr,
             .nodes = nodes,
-            .kids = try x.kids.toOwnedSlice(x.gpa),
+            .kids = kids,
             .roots = roots,
             .stop = stop,
             .mends = x.mends,
@@ -1988,6 +2117,8 @@ pub const Gather = struct {
             .supplied = x.supplies,
             .spurned = x.spurned,
             .scars = scars,
+            .nodes_cap = nodes_cap,
+            .kids_cap = kids_cap,
         };
     }
 
@@ -2007,9 +2138,15 @@ pub const Gather = struct {
     /// as it goes, and this second pass over the whole tree never happens.
     fn bind(x: *Gather) !void {
         x.descent.clearRetainingCapacity();
+        // Nodes below `bound` came off a resumed prefix: worn by the parse
+        // that made them, parent pointers included, and `remount` blanked
+        // their marks. Wearing one where a new parent adopts it still
+        // matters - that mark is the new parse's - but descending *into* one
+        // spends blanks on a subtree that did not move, and it was a whole
+        // tree's walk per keystroke.
         for (x.roots.ref.items, x.roots.mark.items) |r, m| {
             x.wear(r, m);
-            try x.descent.append(x.gpa, r);
+            if (r >= x.bound) try x.descent.append(x.gpa, r);
         }
         while (x.descent.pop()) |ref| {
             const n = x.nodes.items[ref];
@@ -2017,8 +2154,8 @@ pub const Gather = struct {
             for (kids, x.marks.items[n.kids_at..][0..n.kids_len]) |c, m| {
                 x.nodes.items[c].parent = ref;
                 x.wear(c, m);
+                if (c >= x.bound) try x.descent.append(x.gpa, c);
             }
-            try x.descent.appendSlice(x.gpa, kids);
         }
     }
 
@@ -2066,16 +2203,432 @@ pub const Gather = struct {
     /// question asked here is the one the caller means: run the folds this
     /// terminal would cause, over the stack that is actually standing, and see
     /// whether a shift is on the other side of them.
-    fn offer(x: *Gather) void {
+    ///
+    /// The question is asked of the state's `menuOf` slate rather than of
+    /// every terminal the grammar has, and asked at most once per (state,
+    /// stack suffix) rather than once per token. Same admissions in the same
+    /// order: a card is exactly a terminal the old loop's first probe would
+    /// not have refused, `sure` is exactly the set of first probes that
+    /// answered without walking, and a recorded `yes` is the walk's own
+    /// answer, replayed only while `recall` proves the stack still reads the
+    /// way it read when the walk ran. On a 172-terminal grammar whose rows
+    /// are five-sixths errs that is the difference between 172 scattered
+    /// probes plus ~20 table walks per token and one contiguous read of ~30
+    /// entries - and the probing was 74% of a typescript parse.
+    fn offer(x: *Gather) !u32 {
+        // The lone reading is nearly every token, and its admissions are a
+        // pure function of (slate, record): the record already proves the
+        // walks' answers hold, so the Expected they build is the one built
+        // last time. Don the snapshot instead of re-admitting it.
+        if (x.live.items.len == 1) {
+            const v = x.live.items[0];
+            const slate = try x.menuOf(x.perches.items[v.top].state);
+            const r = x.recall(slate, v.top) orelse x.record(slate, v.top);
+            if (r.veil != unveiled) {
+                // The interned Look IS an Expected, so the scan reads it
+                // where it lies - the fast path moves a pointer, not words.
+                x.wearing = &x.looks.items[r.veil].?;
+                return r.veil;
+            }
+            x.expected.clear(x.scanner);
+            x.spread(slate, r);
+            for (x.sprigs) |s| x.expected.admit(x.scanner, s.first);
+            const id = try x.veiling();
+            while (x.looks.items.len < x.veils.items.len)
+                try x.looks.append(x.gpa, null);
+            if (x.looks.items[id] == null) x.looks.items[id] = try x.snap();
+            r.veil = id;
+            x.wearing = &x.expected;
+            return id;
+        }
         x.expected.clear(x.scanner);
         for (x.live.items) |v| {
-            for (0..x.gr.terminal_count) |sym| {
-                if (x.shiftable(v.top, @intCast(sym))) x.expected.admit(x.scanner, @intCast(sym));
-            }
+            const slate = try x.menuOf(x.perches.items[v.top].state);
+            const r = x.recall(slate, v.top) orelse x.record(slate, v.top);
+            x.spread(slate, r);
         }
         // An extra may begin anywhere, and no state will ever say so, because
         // the rule that spells it is unreachable from the start symbol.
         for (x.sprigs) |s| x.expected.admit(x.scanner, s.first);
+        x.wearing = &x.expected;
+        return try x.veiling();
+    }
+
+    /// One reading's admissions: every sure card, and every unsure one whose
+    /// recorded walk said yes. Past the mask is the capacity give-up, which
+    /// admits.
+    fn spread(x: *Gather, slate: *const Slate, r: *const Record) void {
+        var u: usize = 0;
+        for (slate.cards) |card| {
+            var admit = card.sure;
+            if (!admit) {
+                admit = u >= yes_width or r.yes.isSet(u);
+                u += 1;
+            }
+            if (admit) x.expected.admit(x.scanner, card.sym);
+        }
+    }
+
+    /// Clone the Expected now standing into an owned Look. Everything `clear`
+    /// and `admit` write is copied; nothing else in the struct is mutable.
+    fn snap(x: *Gather) !Look {
+        const e = &x.expected;
+        var l = try x.scanner.expecting(x.gpa);
+        errdefer l.deinit(x.gpa);
+        for (l.tiers, e.tiers) |*to, *from| {
+            @memcpy(to.here.words, from.here.words);
+            @memcpy(to.later.words, from.later.words);
+            to.live_here = from.live_here;
+            to.live_later = from.live_later;
+        }
+        const Mask = std.DynamicBitSetUnmanaged.MaskInt;
+        const mw = (e.named.bit_length + @bitSizeOf(Mask) - 1) / @bitSizeOf(Mask);
+        @memcpy(l.wanted.masks[0..mw], e.wanted.masks[0..mw]);
+        @memcpy(l.named.masks[0..mw], e.named.masks[0..mw]);
+        return l;
+    }
+
+    /// The veil a stream entry no scanner produced wears - a lifted
+    /// nonterminal - which `holds` steps over before it would read one.
+    const unveiled = std.math.maxInt(u32);
+
+    /// The slate now standing in `expected`, interned: its `veils` index,
+    /// minting one on first sight. The identity is the `named` mask - what
+    /// `admit` was called with - because `clear` plus those same admissions
+    /// rebuilds the whole `Expected` deterministically, extras and tiers
+    /// included, which is exactly the replay `holds` performs.
+    fn veiling(x: *Gather) !u32 {
+        const named = &x.expected.named;
+        const Mask = std.DynamicBitSetUnmanaged.MaskInt;
+        const words = (named.bit_length + @bitSizeOf(Mask) - 1) / @bitSizeOf(Mask);
+        const bytes = std.mem.sliceAsBytes(named.masks[0..words]);
+        if (x.veiled.get(bytes)) |id| return id;
+        var syms: std.ArrayList(press.Symbol) = .empty;
+        errdefer syms.deinit(x.gpa);
+        var it = named.iterator(.{});
+        while (it.next()) |sym| try syms.append(x.gpa, @intCast(sym));
+        const id: u32 = @intCast(x.veils.items.len);
+        try x.veils.append(x.gpa, try syms.toOwnedSlice(x.gpa));
+        try x.veiled.put(x.gpa, try x.gpa.dupe(u8, bytes), id);
+        return id;
+    }
+
+    /// One row of a state's slate: a terminal the state has anything at all
+    /// for, preclassified so the hot loops branch on bits instead of
+    /// re-deriving the classification per token.
+    ///
+    /// `sure` is an admission that needs no lookahead walk - a shift, an
+    /// accept, or a cell the author declared a fork, which `Ahead.take`
+    /// answers `unsure` without stepping and `shiftable` therefore admits.
+    /// The walk answers live in each `Record`'s `yes` mask rather than here,
+    /// because one state is asked from several stack contexts and a bit on
+    /// the shared card can only remember one of them. (`holds` used to
+    /// re-lex against a third bit here, the raw non-err cells; it replays
+    /// the recorded veil now, which is `offer`'s own answer rather than the
+    /// row's.)
+    const Card = struct { sym: press.Symbol, sure: bool };
+
+    /// How much stack a slate's record may cover before the memo stands down.
+    /// A walk that fell further than this re-runs on every visit, which is
+    /// the old cost, not a wrong answer; sixteen is several times the deepest
+    /// fall the corpus produces.
+    const dips = 16;
+
+    /// A state's terminals-worth-asking-about, plus the memo of what the
+    /// lookahead walks answered last time they ran here and the evidence that
+    /// entitles a later token to reuse it.
+    ///
+    /// A walk from a perch is a deterministic function of three things it
+    /// reads as it goes: the pressed table (const for the life of the
+    /// Gather), the states of the real perches it descends through, and -
+    /// only when it runs out of stack - the depth itself. So the record keeps
+    /// the below-top states every walk read (`dip`, deepest `fell` of them)
+    /// and whether any walk was refused by depth (`bottomed`, with `floor`
+    /// the depth it saw). `recall` re-admits the whole slate when those
+    /// still hold, which on real files is nearly every token, and the walks -
+    /// two thirds of a typescript parse - run only when the context actually
+    /// changed.
+    /// How many stack contexts a slate remembers at once. One was the shape
+    /// that thrashed: a state visited alternately from two suffixes - every
+    /// loop body does this - re-ran its walks on every visit, and the walks
+    /// were a quarter of a cold cpp parse. Four ways covers the alternations
+    /// real files produce; a fifth context evicts the stalest.
+    const ways = 16;
+
+    /// How many *unsure* cards a record's `yes` mask can answer for - the
+    /// mask is indexed by unsure ordinal, not card index, so a state's sure
+    /// shifts cost it nothing. An unsure card past the mask is admitted
+    /// without a walk - the same "cannot say, so admit" as a walk past
+    /// `climb` - and no pressed grammar in the corpus comes near the width.
+    const yes_width = 512;
+
+    /// One memoized stack context: valid while the stack below the asking
+    /// perch still reads `dip[0..fell]` top-down (and, if `bottomed`, is
+    /// still exactly `floor` deep). `yes` holds the walk answers by unsure
+    /// ordinal; `stamp` is the recency the eviction reads.
+    const Record = struct {
+        have: bool = false,
+        fell: u8 = 0,
+        bottomed: bool = false,
+        floor: u32 = 0,
+        stamp: u32 = 0,
+        /// The `veils`/`looks` index this record's admissions intern to, once
+        /// an offer has built them - `unveiled` until then. A hit hands the
+        /// scanner the interned `Expected` itself, by pointer.
+        veil: u32 = unveiled,
+        yes: std.StaticBitSet(yes_width) = .initEmpty(),
+        dip: [dips]u32 = undefined,
+    };
+
+    /// One interned `Expected`, whole: everything `clear` plus a veil's
+    /// admissions writes, and nothing else, so wearing it is equivalent to
+    /// the replay by construction. A real `Expected` rather than a flattened
+    /// copy of one, so the fast path hands the scanner the snapshot itself
+    /// and never copies a word.
+    const Look = lex.Scanner.Expected;
+
+    const Slate = struct {
+        cards: []Card = &.{},
+        built: bool = false,
+        records: [ways]Record = @splat(.{}),
+    };
+
+    /// The slate for `state`, its cards built on first visit and kept for the
+    /// life of the Gather - a pure fact about the pressed table, which `offer`
+    /// was re-deriving every token by probing all `terminal_count` cells of a
+    /// row that is mostly errs, and `holds` paid again per resumed token.
+    fn menuOf(x: *Gather, state: u32) !*Slate {
+        const slate = &x.menus[state];
+        if (slate.built) return slate;
+        var cards: std.ArrayList(Card) = .empty;
+        defer cards.deinit(x.gpa);
+        for (0..x.gr.terminal_count) |sym| {
+            const forked = x.forking and x.forks.at(state, @intCast(sym)).len != 0;
+            const kind = x.t.at(state, @intCast(sym)).kind;
+            if (kind == .err and !forked) continue;
+            try cards.append(x.gpa, .{
+                .sym = @intCast(sym),
+                .sure = forked or kind != .reduce,
+            });
+        }
+        slate.cards = try cards.toOwnedSlice(x.gpa);
+        slate.built = true;
+        return slate;
+    }
+
+    /// The record among this slate's ways that still describes the stack
+    /// under `top`: same states where the walks descended, same depth if any
+    /// walk hit the ground. A hit means every `yes` bit is the answer the
+    /// walk would compute now, by the determinism argument on `Slate`.
+    fn recall(x: *Gather, s: *Slate, top: u32) ?*Record {
+        for (&s.records) |*r| {
+            if (!r.have) continue;
+            if (r.bottomed and x.deep(top) != r.floor) continue;
+            if (x.deep(top) < r.fell) continue;
+            var at = top;
+            const held = for (r.dip[0..r.fell]) |want| {
+                at = x.below(at);
+                if (x.perches.items[at].state != want) break false;
+            } else true;
+            if (held) {
+                x.ticks += 1;
+                r.stamp = x.ticks;
+                return r;
+            }
+        }
+        return null;
+    }
+
+    /// One cached goto answer. `state` of maxInt is the empty slot - no real
+    /// state reaches it, since a collection is orders of magnitude smaller.
+    const Land = struct {
+        state: u32 = std.math.maxInt(u32),
+        lhs: press.Symbol = 0,
+        to: u32 = 0,
+        has: bool = false,
+    };
+
+    /// Entries in `lands`. A power of two so the residue is a mask; 1<<14
+    /// (256 KB) holds every (state, lhs) pair a file's hot region cycles
+    /// through with collisions too rare to see in a profile.
+    const landings = 1 << 14;
+
+    /// `Collection.goto`, fronted by the direct-mapped `lands` cache. Exactly
+    /// keyed, so a collision re-searches and never mis-answers. Takes a const
+    /// Gather because the walks hold one; the cache lives behind the slice,
+    /// so filling a slot is not a mutation of the struct.
+    fn landing(x: *const Gather, state: u32, lhs: press.Symbol) ?u32 {
+        const slot = &x.lands[(state *% 0x9E3779B1 ^ lhs) & (landings - 1)];
+        if (slot.state == state and slot.lhs == lhs)
+            return if (slot.has) slot.to else null;
+        const to = x.c.goto(state, lhs);
+        slot.* = .{ .state = state, .lhs = lhs, .to = to orelse 0, .has = to != null };
+        return to;
+    }
+
+    /// Run the walks this slate needs and write the record `recall` will
+    /// judge. The cost is exactly what `offer` used to pay on every token,
+    /// paid here only when the stack the walks read has actually changed -
+    /// and paid once per distinct fold path rather than once per card, since
+    /// every card whose walk begins with the same reduce replays the same
+    /// pops and the same goto. `flock` shares those prefixes; the per-card
+    /// answers are the ones `Ahead.take` computes alone, by the determinism
+    /// of the table (same reads, same order, per card).
+    fn record(x: *Gather, s: *Slate, top: u32) *Record {
+        // The context to overwrite: an empty way first, else the stalest.
+        var r = &s.records[0];
+        for (&s.records) |*way| {
+            if (!way.have) {
+                r = way;
+                break;
+            }
+            if (way.stamp < r.stamp) r = way;
+        }
+        r.veil = unveiled;
+        r.yes = .initEmpty();
+        // Each entry is a card index in the low half and the unsure ordinal
+        // - its `yes` bit - in the high, because `flock` partitions the
+        // slice in place and the ordinal has to travel with its card.
+        var flying: [yes_width]u32 = undefined;
+        var n: u32 = 0;
+        for (s.cards, 0..) |card, i| {
+            if (card.sure) continue;
+            // More unsure cards than the mask answers for: fall back to the
+            // lone walks, correct at the old price. No pressed grammar in
+            // the corpus comes near the width.
+            if (n == flying.len) return x.lone_record(s, r, top);
+            flying[n] = (n << 16) | @as(u32, @intCast(i));
+            n += 1;
+        }
+        var fell: u32 = 0;
+        var bottomed = false;
+        const a: Ahead = .on(x, top);
+        x.flock(s, &a, 0, flying[0..n], &fell, &bottomed, &r.yes);
+        x.remember(r, top, fell, bottomed);
+        return r;
+    }
+
+    /// `record`'s escape hatch: one `Ahead.take` per unsure card, no sharing,
+    /// every unsure card past the mask admitted - the same "cannot say, so
+    /// admit" as a walk past `climb`.
+    fn lone_record(x: *Gather, s: *Slate, r: *Record, top: u32) *Record {
+        var fell: u32 = 0;
+        var bottomed = false;
+        var u: usize = 0;
+        for (s.cards) |card| {
+            if (card.sure) continue;
+            defer u += 1;
+            var a: Ahead = .on(x, top);
+            const yes = switch (a.take(card.sym)) {
+                .stops => false,
+                .reads, .done, .unsure => true,
+            };
+            if (yes and u < yes_width) r.yes.set(u);
+            fell = @max(fell, a.fell);
+            bottomed = bottomed or a.bottom;
+        }
+        x.remember(r, top, fell, bottomed);
+        return r;
+    }
+
+    /// Write (or decline to write) the memo `recall` judges, given what the
+    /// walks read: the deepest fall and whether any walk hit the ground.
+    fn remember(x: *Gather, r: *Record, top: u32, fell: u32, bottomed: bool) void {
+        if (fell > dips) {
+            r.have = false;
+            return;
+        }
+        var at = top;
+        for (0..fell) |k| {
+            at = x.below(at);
+            r.dip[k] = x.perches.items[at].state;
+        }
+        r.fell = @intCast(fell);
+        r.bottomed = bottomed;
+        r.floor = x.deep(top);
+        r.have = true;
+        x.ticks += 1;
+        r.stamp = x.ticks;
+    }
+
+    /// Walk every card in `pending` from the context `a`, together. At each
+    /// level the cards that resolve (err, shift, accept, fork) take their
+    /// answer, and the rest are grouped by the reduce they all force - one
+    /// group performs its pops and its goto once, then descends as one flock.
+    /// Each card sees exactly the table cells its lone walk would have seen,
+    /// in the same order, so the answers are `Ahead.take`'s answers; only the
+    /// duplicated stack descents are gone. `steps` is the same budget as
+    /// `take`'s loop: a card still unresolved after `chase` classifications
+    /// is `chased`, which admits.
+    fn flock(
+        x: *const Gather,
+        s: *const Slate,
+        a: *const Ahead,
+        steps: u32,
+        pending: []u32,
+        fell: *u32,
+        bottomed: *bool,
+        yes: *std.StaticBitSet(yes_width),
+    ) void {
+        if (steps >= chase) {
+            for (pending) |pc| yes.set(pc >> 16);
+            return;
+        }
+        const here = a.state();
+        var keep: usize = 0;
+        for (pending) |pc| {
+            const sym = s.cards[pc & 0xFFFF].sym;
+            if (x.forking and x.forks.at(here, sym).len != 0) {
+                yes.set(pc >> 16);
+                continue;
+            }
+            switch (x.t.at(here, sym).kind) {
+                // A no is the mask's zero, already there.
+                .err => {},
+                .shift, .accept => yes.set(pc >> 16),
+                .reduce => {
+                    pending[keep] = pc;
+                    keep += 1;
+                },
+            }
+        }
+        var rest = pending[0..keep];
+        while (rest.len > 0) {
+            const lead = x.t.at(here, s.cards[rest[0] & 0xFFFF].sym).value;
+            var k: usize = 1;
+            for (rest[1..], 1..) |pc, j| {
+                if (x.t.at(here, s.cards[pc & 0xFFFF].sym).value == lead) {
+                    rest[j] = rest[k];
+                    rest[k] = pc;
+                    k += 1;
+                }
+            }
+            const mates = rest[0..k];
+            rest = rest[k..];
+            var b = a.*;
+            const p = x.gr.productions[lead];
+            var n = p.rhs.len;
+            const virtual = @min(b.ups, n);
+            b.ups -= virtual;
+            n -= virtual;
+            if (n > 0) {
+                if (x.deep(b.base) < n) {
+                    // A no per mate is the mask's zero, already there.
+                    bottomed.* = true;
+                    continue;
+                }
+                for (0..n) |_| b.base = x.below(b.base);
+                b.fell += @intCast(n);
+                fell.* = @max(fell.*, b.fell);
+            }
+            const to = x.landing(b.state(), p.lhs) orelse continue;
+            if (!b.push(to)) {
+                // `climbed`: the walk cannot say, which admits.
+                for (mates) |pc| yes.set(pc >> 16);
+                continue;
+            }
+            x.flock(s, &b, steps + 1, mates, fell, bottomed, yes);
+        }
     }
 
     /// Read a rule-shaped extra whole, if one begins here.
@@ -2437,7 +2990,11 @@ pub const Gather = struct {
                             });
                             // The perch just handed to the new reading has to
                             // still be there when its turn comes, so nothing
-                            // may be taken back from here on.
+                            // may be taken back from here on. A rift opening
+                            // over a lone stack pins `keel` at the top of it:
+                            // the whole array is the chain both readings
+                            // share, and only forked folds may lower it.
+                            if (x.lone) x.keel = @intCast(x.perches.items.len);
                             x.lone = false;
                             x.grafted = true;
                             x.rifts += 1;
@@ -2791,6 +3348,7 @@ pub const Gather = struct {
             // acquired in one move, over exactly those bytes.
             try x.tokens.append(x.gpa, .{ .symbol = sym, .start = tok.start, .len = wide });
             try x.enter.append(x.gpa, here);
+            try x.veil.append(x.gpa, unveiled);
             x.at = end;
             gr.lifts += 1;
             gr.skipped += wide;
@@ -2865,38 +3423,55 @@ pub const Gather = struct {
     /// it is live for. While a fork stands, the winner is not on the top of
     /// either array - the loser's perches and runs are interleaved with its
     /// own - so reductions have to walk and copy, and nothing can be reclaimed.
-    /// One walk up the survivor's chain rewrites both arrays to hold only what
-    /// it holds, and the flat-array behaviour of a deterministic parse resumes.
-    /// Paid once per refutation rather than once per token, and a file that
-    /// declares conflicts but reaches none never pays it at all.
+    /// One walk down the survivor's divergent tail rewrites both arrays above
+    /// `keel` to hold only what it holds, and the flat-array behaviour of a
+    /// deterministic parse resumes. Paid once per refutation and priced by the
+    /// rift's own reach rather than the stack's depth; a file that declares
+    /// conflicts but reaches none never pays it at all.
     fn roost(x: *Gather) !void {
         x.grafted = false;
         x.roosts += 1;
         try x.weld(x.live.items[0].seg);
+
+        // Only the divergence is rebuilt. Below `keel` every reading's chain
+        // is the same flat prefix — the array indices ARE the chain, and its
+        // runs already tile `borne` bottom-up, because the prefix was laid
+        // down under the lone discipline and forked folds never take runs
+        // back. So the survivor's walk stops where it re-enters the prefix,
+        // and a conflict refuted three tokens after it opened repays three
+        // tokens of copying rather than the file's whole stack — which was
+        // 5,015 whole-stack rebuilds over one 129 KB C++ file.
         x.spine.clearRetainingCapacity();
         var at = x.live.items[0].top;
-        while (at != 0) : (at = x.below(at)) try x.spine.append(x.gpa, x.perches.items[at]);
+        while (at >= x.keel) : (at = x.below(at)) try x.spine.append(x.gpa, x.perches.items[at]);
+        // A fold that popped past `keel` lowered it, so the chain cannot skip
+        // the prefix's top perch.
+        std.debug.assert(at == x.keel - 1);
         std.mem.reverse(Perch, x.spine.items);
 
-        x.nest.clearRetainingCapacity();
+        // The tail's runs land where the prefix's tiling ends, exactly as a
+        // lone fold would have left them.
+        const shore = x.perches.items[x.keel - 1];
+        const floor = shore.own + shore.owns;
         x.crop.clear();
-        try x.nest.append(x.gpa, x.perches.items[0]);
+        x.perches.shrinkRetainingCapacity(x.keel);
         for (x.spine.items) |p| {
             var moved = p;
-            moved.lead = x.crop.len();
+            moved.lead = floor + x.crop.len();
             try x.carry(&x.crop, x.borne.at(p.lead, p.leads));
-            moved.leads = p.leads;
-            moved.own = x.crop.len();
+            moved.own = floor + x.crop.len();
             try x.carry(&x.crop, x.borne.at(p.own, p.owns));
-            try x.nest.append(x.gpa, moved);
+            try x.perches.append(x.gpa, moved);
         }
-        std.mem.swap(std.ArrayList(Perch), &x.perches, &x.nest);
-        std.mem.swap(Run, &x.borne, &x.crop);
-        // The chain is the array again, so the links are the indices.
-        x.stand.clearRetainingCapacity();
-        for (0..x.perches.items.len) |i| {
-            try x.stand.append(x.gpa, .{ .down = @intCast(i -| 1), .depth = @intCast(i) });
+        x.borne.shrink(floor);
+        try x.carry(&x.borne, x.crop.all());
+        // The chain is the array again, so the links are the indices; the
+        // prefix's entries already say so.
+        x.stand.shrinkRetainingCapacity(x.keel);
+        for (x.keel..x.perches.items.len) |i| {
+            try x.stand.append(x.gpa, .{ .down = @intCast(i - 1), .depth = @intCast(i) });
         }
+        x.keel = @intCast(x.perches.items.len);
         // Sole again, so it speaks for the table: a refusal from here is worth
         // reporting, which `absorb` only does for rank zero.
         x.live.items[0] = .{ .top = @intCast(x.perches.items.len - 1), .rank = 0 };
@@ -3092,9 +3667,13 @@ pub const Gather = struct {
             }
             std.mem.reverse(Perch, x.spine.items);
             mine = x.spine.items;
+            // A forked fold that pops into the shared prefix makes this
+            // reading's chain bypass the perches above `at`, so the prefix
+            // every reading provably shares ends there now. See `keel`.
+            x.keel = @min(x.keel, at + 1);
         }
         const under = x.perches.items[at].state;
-        const to = x.c.goto(under, p.lhs) orelse return null;
+        const to = x.landing(under, p.lhs) orelse return null;
         try x.scribe(.{ .fold = .{ .under = under, .prod = prod } });
         return try x.reduce(p, mine, at, to);
     }
@@ -3138,6 +3717,76 @@ pub const Gather = struct {
             seen = true;
         }
         if (!seen) end = start;
+
+        // The splice, without the splice. In a lone parse `borne` is a strict
+        // stack: every popped perch's lead and own runs already tile its top
+        // in exactly the order the loop below would copy them out, so a fold
+        // with no alias to apply spends the round trip through `born` writing
+        // every byte onto itself. Left-recursive lists are the payoff - the
+        // accumulated run is re-carried on every fold, which priced a list at
+        // O(n²) in its own length; leaving it where it lies prices it at the
+        // one mint that finally claims it. An alias is the one recipe that
+        // edits the run, and any tiling gap - a grafted stack, a fork's
+        // interleavings before `roost` - fails the cursor check and takes the
+        // copying path unchanged.
+        fast: {
+            if (!x.lone) break :fast;
+            var cur = if (mine.len == 0) x.borne.len() else mine[0].own;
+            for (p.steps, mine, 0..) |step, f, i| {
+                if (step.alias != null) break :fast;
+                if (f.owns != 0 and f.own != cur) break :fast;
+                cur += f.owns;
+                if (i + 1 < mine.len) {
+                    const nx = mine[i + 1];
+                    if (nx.leads != 0 and nx.lead != cur) break :fast;
+                    cur += nx.leads;
+                }
+            }
+            if (cur != x.borne.len()) break :fast;
+
+            const floor = if (mine.len == 0) x.borne.len() else mine[0].own;
+            for (p.rhs, p.steps, mine) |sym, step, f| {
+                const fld = step.field orelse continue;
+                const spliced = !x.gr.shapeOf(sym).visible();
+                for (x.borne.ref.items[f.own..][0..f.owns], f.own..) |c, j| {
+                    if (spliced and x.nodes.items[c].kind.extra) continue;
+                    if (x.forking) x.borne.mark.items[j].field = @intCast(fld) else x.nodes.items[c].field = @intCast(fld);
+                }
+            }
+
+            const lead = if (mine.len == 0) 0 else mine[0].lead;
+            const leads = if (mine.len == 0) 0 else mine[0].leads;
+            x.perches.shrinkRetainingCapacity(under + 1);
+            if (x.forking) x.stand.shrinkRetainingCapacity(under + 1);
+
+            // Same widening as below, over the same children - they just
+            // never left `borne`.
+            for (x.borne.ref.items[floor..]) |c| {
+                const kid = x.nodes.items[c];
+                const from, const upto = .{ kid.start, kid.start + kid.len };
+                if (seen) {
+                    start = @min(start, from);
+                    end = @max(end, upto);
+                } else {
+                    start, end, seen = .{ from, upto, true };
+                }
+            }
+
+            if (x.gr.shapeOf(p.lhs).visible()) {
+                const up = try x.mint(.of(p.lhs), start, end - start, x.borne.at(floor, x.borne.len() - floor));
+                x.borne.shrink(floor);
+                try x.bear(&x.borne, up, .{});
+            }
+            return x.push(under, .{
+                .state = to,
+                .own = floor,
+                .owns = x.borne.len() - floor,
+                .lead = lead,
+                .leads = leads,
+                .start = start,
+                .end = end,
+            });
+        }
 
         x.born.clear();
         for (p.rhs, p.steps, 0..) |sym, step, i| {

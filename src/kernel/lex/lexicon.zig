@@ -104,6 +104,19 @@ pub fn freeze(gpa: std.mem.Allocator, m: *const Munch, stamp: u64) Frozen!?[]u8 
         // repeat what the dead state already says. Every other voice carries
         // one per state, or this format will not describe it.
         if (d.reach.len != if (v.ordinals.len == 1) 0 else d.nstates) return null;
+        // The dense attribution row travels as runs — `freeze` grouped equal
+        // pattern sets contiguous, so the wire form is a handful of
+        // (bound, mask) pairs where the row is a mask per match state. The
+        // bounds are premultiplied like every other state value in the block.
+        var pat_runs: std.ArrayList(Dfa.PatRun) = .empty;
+        defer pat_runs.deinit(gpa);
+        var pi: usize = 0;
+        while (pi < d.pats.len) {
+            var pj = pi + 1;
+            while (pj < d.pats.len and d.pats[pj] == d.pats[pi]) pj += 1;
+            try pat_runs.append(gpa, .{ .hi = @as(u32, @intCast(pj)) * d.ncls, .mask = d.pats[pi] });
+            pi = pj;
+        }
         try seat(&raw);
         try w.writeAll(&flat(Head, .{
             .ncls = d.ncls,
@@ -116,7 +129,7 @@ pub fn freeze(gpa: std.mem.Allocator, m: *const Munch, stamp: u64) Frozen!?[]u8 
             .trans_in = @intCast(d.trans_in.len),
             .trans_fin = @intCast(d.trans_fin.len),
             .trans_in_w = @intCast(d.trans_in_w.len),
-            .pat_runs = @intCast(d.pat_runs.len),
+            .pat_runs = @intCast(pat_runs.items.len),
             .reach = @intCast(d.reach.len),
             .ordinals = @intCast(v.ordinals.len),
             .flags = (if (d.empty_match) Flag.empty_match else 0) |
@@ -136,10 +149,10 @@ pub fn freeze(gpa: std.mem.Allocator, m: *const Munch, stamp: u64) Frozen!?[]u8 
         // One at a time rather than `sliceAsBytes`, for the reason `flat`
         // exists: `PatRun` is `{ hi: u32, mask: u64 }`, so Zig seats the word
         // first and rounds the pair to sixteen, and the four bytes past `hi`
-        // belong to whatever the determinizer's array list was allocated over.
+        // belong to whatever the run builder's array list was allocated over.
         // The elements keep the layout `thaw` views them at; only the bytes
         // between them stop being somebody else's.
-        for (d.pat_runs) |run| try w.writeAll(&flat(Dfa.PatRun, run));
+        for (pat_runs.items) |run| try w.writeAll(&flat(Dfa.PatRun, run));
         try seat(&raw);
         try w.writeAll(std.mem.sliceAsBytes(d.reach));
         try seat(&raw);
@@ -189,6 +202,7 @@ pub fn thaw(gpa: std.mem.Allocator, block: []const u8, npatterns: usize, stamp: 
     defer if (!adopted) {
         for (voices[0..built]) |v| {
             gpa.free(v.ordinals);
+            if (v.dfa.pats.len != 0) gpa.free(v.dfa.pats);
             gpa.destroy(v.dfa);
         }
         gpa.free(voices);
@@ -246,6 +260,27 @@ pub fn thaw(gpa: std.mem.Allocator, block: []const u8, npatterns: usize, stamp: 
         // would be correct and quadratic - so it determinizes again instead.
         if (reach.len != if (ordinals.len == 1) 0 else @as(usize, h.nstates)) return null;
 
+        // The wire carries runs; the walk wants the dense row back — one mask
+        // per match state, so `patternsAt` at every accepting byte is a load
+        // rather than a search. Owned by the automaton even though its tables
+        // are borrowed, which `Dfa.deinit` knows. Runs that do not tile the
+        // match prefix exactly were written by nobody — determinize instead.
+        const nmatch = h.match_hi / h.ncls;
+        const pats: []u64 = if (pat_runs.len == 0) &.{} else dense: {
+            const row = try gpa.alloc(u64, nmatch);
+            var id: u32 = 0;
+            for (pat_runs) |run| {
+                const hi = run.hi / h.ncls;
+                if (hi > nmatch or hi < id) break;
+                while (id < hi) : (id += 1) row[id] = run.mask;
+            }
+            if (id != nmatch) {
+                gpa.free(row);
+                return null;
+            }
+            break :dense row;
+        };
+        errdefer if (pats.len != 0) gpa.free(pats);
         const own = try gpa.dupe(u32, ordinals);
         errdefer gpa.free(own);
         const d = try gpa.create(Dfa);
@@ -256,7 +291,7 @@ pub fn thaw(gpa: std.mem.Allocator, block: []const u8, npatterns: usize, stamp: 
             .trans_in = trans_in,
             .trans_fin = trans_fin,
             .trans_in_w = trans_in_w,
-            .pat_runs = pat_runs,
+            .pats = pats,
             .reach = reach,
             .match_hi = h.match_hi,
             .start = h.start,
