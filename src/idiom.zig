@@ -196,6 +196,14 @@ test "idiom: every type that frees itself takes the shape its ownership calls fo
             // below notices that a type moved, and cannot notice an area nobody
             // listed.
                  @import("kernel/grain/ruling.zig"),
+            // And the gloss lane's four files, carrying six between them. This is
+            // the fifth wave in a row that ended with somebody adding a line here
+            // by hand, and every one of those areas passed this gate before the
+            // line existed - not because the code was right but because nothing
+            // read it. The count below cannot be the guard against that: it sees a
+            // type that MOVED and is structurally blind to an area that ARRIVED.
+            @import("kernel/gloss/rubric.zig"),     @import("kernel/gloss/lemma.zig"),
+            @import("kernel/gloss/stencil.zig"),    @import("kernel/gloss/gloss.zig"),
         }) |m| judged += area(m);
         // The count is the second half of the gate. Every violation is a compile
         // error on its own, but a type the walk never *reached* is silent, and an
@@ -223,4 +231,9 @@ test "idiom: every type that frees itself takes the shape its ownership calls fo
 /// judged against a stale pin - they were not judged at all, which is the reading
 /// this number cannot give you and the reason the roster wants deriving. The other
 /// three landed in files already listed, which is the only case it can see.
-const lifecycles = 73;
+///
+/// 73 to 79 is `gloss`, and all six are that same silence: the lane ran this gate,
+/// got 0, and none of its types had been read. `cursor` landed in the same wave and
+/// needed no line, because `reach.zig` is free functions over a `Quire` and owns
+/// nothing - which is the distinction a derived roster would make on its own.
+const lifecycles = 79;
