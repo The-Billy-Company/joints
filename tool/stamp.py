@@ -105,11 +105,22 @@ def builds(rel: str) -> bool:
     think about this line should be a stamp that is too cautious, not one that is
     wrong.
 
+    `src/proof.zig` and `src/idiom.zig` are the same case as a test and a worse
+    one. `charter.zone` names three faces and only `root.zig` is the CLI's module:
+    the other two are the roots of `zig build test` and `zig build idiom`, so no
+    byte of either reaches the product. The reason they are worse than a
+    `*_test.zig` is that the warning they raise cannot be cleared. A test edit at
+    least goes away at the next real build; an edit here changes nothing the binary
+    is addressed by, so `zig build install` writes no new binary, its mtime stays
+    behind, and the tree reads `STALE` permanently until something unrelated moves.
+    A gate that cannot be satisfied by doing what it asks is not cautious.
+
     Only the mtime side takes this exclusion. The digest still covers every file,
     because "is this the same tree as over there" is a different question from "can
     this binary be believed" and drift wants the whole answer.
     """
-    return not rel.endswith(("_test.zig", ".md", ".DS_Store"))
+    return rel not in ("src/proof.zig", "src/idiom.zig") \
+        and not rel.endswith(("_test.zig", ".md", ".DS_Store"))
 
 
 def survey(root: Path) -> Source:
