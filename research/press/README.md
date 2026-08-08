@@ -1,23 +1,39 @@
-# press — is the same grammar pressed twice the same press?
+# press — what the table press does that nobody had checked
+
+Two questions, each written down before it was measured.
+
+| file | question | verdict |
+| --- | --- | --- |
+| `PREDICTION-1-scope.md` · `RESULT-1-scope.md` | is the same grammar pressed twice the same press? | **no**, and the cause is uninitialized memory in a persisted artifact. Fixed. |
+| `PREDICTION-2-splice.md` · `RESULT-2-splice.md` | may a rank on a one-step body keep its scope through a fold? | **no**. 517 residual conflicts to 53, and a verilog statement changes category. Reverted. |
+| `wobble.py` | the instrument for question 1, and now the corpus gate | — |
+
+## Question 1 — reproducibility
 
 A folio is only worth caching, diffing or content-addressing if pressing the
 same grammar with the same binary gives the same bytes. It did not. Eleven of
 thirty grammars minted twice, seconds apart, to different files.
-
-This dossier asks the one question that decides how much that matters - whether
-those are **different tables** or **the same tables written down differently** -
-and then fixes the cause.
 
 The answer is representational, and the cause is **uninitialized memory
 reaching a persisted artifact**: two record types were handed to
 `std.mem.asBytes`, and both have bytes no field owns. Four bytes of stack per
 automaton and four of heap per pattern run went into every folio on disk.
 
-| file | what |
-| --- | --- |
-| `PREDICTION-1-scope.md` | written first, each claim with its falsifier |
-| `RESULT-1-scope.md` | the verdict, the attribution ruling, the fix |
-| `wobble.py` | the instrument, and now the corpus gate |
+## Question 2 — the splice mark
+
+Rust presses to 176 residual conflicts against `TESTING.md`'s claim of zero for
+all eleven pinned grammars, because a rank the author wrote is marked `spliced`
+when a fold carries it through an inline and the ladder then refuses to use it.
+Declining the mark for a body of exactly one step takes rust and scala to zero
+and leaves the corpus damage board byte-identical - but it also turns verilog's
+`c[i] <= 0;` from a `nonblocking_assignment` into a `clocking_drive`, which is
+the exact failure `Step.spliced`'s own comment predicts.
+
+Expansion runs to fixpoint, so a body that is one step *now* may be the residue
+of a region the author wrote around three. The width test reads a derived fact as
+an authored one. The repair is to record the rank's authored width at import and
+carry it through folding; that is a front-end provenance change, and rust's 176
+stand until it lands.
 
 ## The instrument
 

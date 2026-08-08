@@ -48,9 +48,9 @@ A lane pinned its baseline, worked for eight minutes, pinned its arm, and read
 `latex -1,185`. The lex lane had landed a latex fix inside those eight minutes.
 Each arm had its own binary, its own `JOINTS_WORK` and its own seat; the folio
 shas were checked and matched. **The third house rule is fully satisfied by that
-run and does not cover this**, because nothing wrote to anything being compared -
-the tree simply moved between the two pins, and a work directory per arm cannot
-see a tree it does not contain.
+run and does not cover this**, because nothing wrote to anything being
+compared - the tree simply moved between the two pins, and a work directory per
+arm cannot see a tree it does not contain.
 
 ```sh
 # ... make your change ...
@@ -72,9 +72,9 @@ number.
 And the falsifier that found this one is worth stealing: **pin the reverted tree
 last and diff it against your own baseline.** The subject is byte-identical on
 both sides, so the board must come back inert; if it does not, the apparatus is
-indicting itself and no arm you have taken means anything yet. `still against A B
---null` is that comparison - it inverts the binary rule, so two arms running one
-binary is the requirement rather than the defect.
+indicting itself and no arm you have taken means anything yet. `still against A
+B --null` is that comparison - it inverts the binary rule, so two arms running
+one binary is the requirement rather than the defect.
 
 Fifth house rule, and it is about **which artifact you are looking at** rather
 than which world it came from: **folio identity clears a press change and nothing
@@ -145,7 +145,7 @@ the numbers. The three controls above are judged by the gate today:
 python3 tool/standing.py --against=before.json --mine=src/press/,src/kernel/lex/x.zig
 ```
 
-```
+```text
 before.json vs this tree: REFUSE - subject: the two arms were built from trees
     differing in 1 file(s), 1 of which you have not claimed and could move the binary
     src/kernel/quire/gather.zig  NOT YOURS
@@ -315,8 +315,8 @@ Measured, it is bounded and *not* a function of how finely the file is cut -
 
 **The one trade left.** Fusing two limbs by depth widens their interior claims;
 fusing them only on identical claims does not. Exact fusion drives the residue
-to **1** - composition alone singles out the branch at every step, no fan at all
-- for segments up to 16 tokens, and past 32 the limb count runs away. Depth
+to **1** - composition alone singles out the branch at every step, no fan at
+all - for segments up to 16 tokens, and past 32 the limb count runs away. Depth
 fusion never runs away and never disagrees, at a residue in the low thirties.
 Since a balanced tree over the stream chooses its own leaf size and only ever
 runs the cursor over a *leaf*, both poles are live and the choice is a leaf-size
@@ -400,6 +400,27 @@ conflicts** - every contested cell either declared by its author or a repetition
 the shape fix explains. What replaced it is a subtler kind of merge damage,
 which the residual count could not see and a parse notices immediately.
 
+> **Amended 2026-08-07, and the paragraph above is now false about rust.** Ten of
+> the eleven still press to zero. Rust presses to **176**, all shift/reduce.
+> Every column of the table below has also moved since it was written - state
+> counts roughly halved - so read the table as the measurement it was on its
+> date and `joints grammar <g>` as the measurement of now.
+>
+> The cause is understood and the cheapest repair for it was measured and
+> rejected: one of `_non_special_token`'s alternatives is exactly
+> `prec.right(0, repeat1(punct))`, the fold that inlines it marks the rank
+> `spliced`, and the ladder then refuses a rank the author did write. Declining
+> the mark for a one-step body takes rust and scala to zero and leaves the corpus
+> damage board byte-identical, but it also turns verilog's `c[i] <= 0;` into a
+> `clocking_drive` - so it is out. Expansion runs to fixpoint, so a one-step body
+> can be the residue of a region the author wrote around three. The repair is to
+> record the rank's authored width at import. See
+> [press Result 2](../press/RESULT-2-splice.md).
+>
+> `tool/rung1.py` is deliberately left hard against this. Nobody has found a
+> commit where rust pressed to zero, so there is no delta to judge deliberate and
+> no basis for relaxing the gate - the tree stays red until the repair lands.
+
 Everything below is over one corpus, `research/joinery/corpus/`: the same little
 ledger program written eleven times, once per language, so a rank number differs
 because the *grammar* differs and not because the file did. Reproduce any row
@@ -449,9 +470,9 @@ defaults everywhere.
 
 I widened the corpus first. Until now the eleven files had zero tokens that
 crossed a newline between them, which for a package whose weakness is lexical
-meant the corpus could not see the thing that is broken. Every file now carries a
-block comment and a multi-line string in whatever form its language really has;
-the corpus README's fourth column says which. **That moved most of the rows
+meant the corpus could not see the thing that is broken. Every file now carries
+a block comment and a multi-line string in whatever form its language really
+has; the corpus README's fourth column says which. **That moved most of the rows
 below**, so both readings are here rather than only the flattering one. The
 state counts and the residue did not move, and could not have: those are the
 press talking, not the files. b is the old corpus,
@@ -575,7 +596,7 @@ its fourteen `(?:\s+)` states were uncuttable and routed the wall to `offer()`
 admitting on shift-reachability. Both are right, and the order settles it. Take
 `ledger.sh`, replace the heredoc with a plain string and change nothing else:
 
-```
+```text
 ledger.sh          stray byte at 408          <<'RECEIPT', heredoc_start, an external
 same file, no heredoc  unexpected (?:\s+) at 416 in state 1641    the offer() wall
 ```
@@ -595,7 +616,7 @@ is what "the first wall, not the only one" was warning about.
 **That warning has since been turned into a number**, and it is far smaller than
 this section feared: twenty grammars wall, and between all of them the tail
 holds **24 distinct walls**, eighteen of them exactly one deep. See
-[How deep is the tail](#how-deep-is-the-tail-twenty-four-walls-and-eighteen-grammars-are-one-wall-deep).
+[How deep is the tail](#how-deep-is-the-tail-315-walls-and-the-first-answer-i-gave-was-wrong).
 
 **And a `stray byte` does not always mean a lexer.** It means no terminal was
 produced at that offset, which happens both when nothing *could* lex those bytes
@@ -792,7 +813,7 @@ alone.
 one.** 63 walls across fourteen grammars are an opener or closer the state
 refused. Narrowing to the exact terminal zig was routed on:
 
-```
+```text
 go     { in state 188
 ocaml  { in state 239
 zig    { in state 715
@@ -914,7 +935,7 @@ a lower bound - which is what the survey does - undersells what it actually
 needs. The reason is categorical rather than positional, and
 `joints grammar upstream/grammars/yaml.json` says it outright:
 
-```
+```text
 symbols      328  (113 terminal, 215 nonterminal)
 terminals    0 literal, 0 regex, 113 external
 lr(0) states 910  ...  0 RESIDUAL (0 s/r, 0 r/r)
@@ -1009,7 +1030,7 @@ finding downstream is that same collapse seen again at the next tag.
 
 **elixir: 317 findings, one terminal, and the pair separates it cleanly.**
 
-```
+```text
 def f, do: 1        parses
 def f do 1 end      collapses
 ```
@@ -1179,14 +1200,15 @@ of the other six stops is one of three known-and-owned things:
   `rows.addAll(` needs java's `['_unannotated_type', 'primary_expression',
   'scoped_type_identifier']`; `(s = [])` needs javascript's `['array',
   'array_pattern']`; `std::size_t i` needs cpp's `['qualified_type_identifier',
-  'qualified_identifier']`. The press honors the declaration by picking a side, and
-  the reference walk - which owns one stack by construction, and which the scanner
-  asks for the live terminal set - then arrives in the side it wasn't. So the walk
-  ends, and the token stream every segmentation is measured over ends with it: the
-  cursor is never asked about the bytes past the stop. **Carrying both readings is
-  the joint machinery's job**, and rung 6's differential against tree-sitter is
-  where that gets settled; the oracle is single-stack on purpose and stays that
-  way, since a reference that forked would no longer be a reference.
+  'qualified_identifier']`. The press honors the declaration by picking a side,
+  and the reference walk - which owns one stack by construction, and which the
+  scanner asks for the live terminal set - then arrives in the side it wasn't. So
+  the walk ends, and the token stream every segmentation is measured over ends
+  with it: the cursor is never asked about the bytes past the stop. **Carrying
+  both readings is the joint machinery's job**, and rung 6's differential against
+  tree-sitter is where that gets settled; the oracle is single-stack on purpose
+  and stays that way, since a reference that forked would no longer be a
+  reference.
 - **A state-directed scanning gap that costs a keyword** - c, typescript. `long
   f(int a) { return a; }` stops at `a`, because `int` scanned as an identifier:
   the scanner asks the state which terminals are live, the state after `long f (`
@@ -1295,7 +1317,7 @@ The defect is that **scanning a byte costs in proportion to how much has already
 been read**, which makes every parse quadratic. The witness holds bytes and nodes
 exactly constant and moves only the order of two halves:
 
-```
+```text
 4000 statements, then a 100 KB string literal    152,010 B   28,011 nodes   16,175 ms
 a 100 KB string literal, then 4000 statements    152,010 B   28,011 nodes    4,232 ms
 ```
