@@ -186,6 +186,10 @@ jobs:
       # point - a clone tests with what it cloned.
       - run: zig build check
       - run: zig build test
+      # The vocabulary proof, which is not in `test` because reaching every
+      # module's decls costs 3.4 s of analysis that `-Dtest-filter` cannot defer -
+      # a price the local inner loop should not pay and CI should.
+      - run: zig build idiom
       # ReleaseFast, because the sweep below runs the installed binary and rung
       # 1 is 13 seconds of real work in release and minutes in debug.
       - run: zig build

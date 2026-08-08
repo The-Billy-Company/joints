@@ -39,6 +39,52 @@ That is all of it. The test suite carries the one grammar it needs, committed at
 and a build graph that reads a gitignored path cannot be resolved from a clean
 checkout at all.
 
+### Narrowing a run, and the one thing to know about it
+
+`zig build test -Dtest-filter='<substring of a test name>'` is the inner loop;
+`-Dtest-shards=1` puts it in one process for a debugger, and `BRIGADE_TIMES=1`
+prints per-test milliseconds so you can find a long pole.
+
+The thing to know: there are **three test binaries**, one per root, and a filter
+only searches the one you asked for. `test` is the library; `zig build face` is
+the CLI and `zig build abi` is the C ABI. An unfiltered `zig build test` runs all
+three, so CI and a bare local run cover everything - but a filtered hunt has to
+name the binary it is hunting in, because a filter that matches nothing is
+treated as the typo it usually is and fails.
+
+```sh
+zig build test -Dtest-filter=folio          # a library test
+zig build face -Dtest-filter='the verdict'  # a CLI test
+zig build idiom                             # the package-wide vocabulary proof
+```
+
+### A passing test writes to stdout, not stderr
+
+Several tests here narrate - they print a board of edit costs, a seam locator, the
+census rows. Print those with brigade's **`note`**, reached as
+`@import("root").note`, and not with `std.debug.print`.
+
+The reason is not style. brigade renders any shard that writes to stderr through
+its failure printer, because a runner that stays quiet about a crashed child is
+worse than one that cries wolf. So a `std.debug.print` from a *passing* test
+captions its green shard `failed command:`, and a suite that prints ten of those
+per run is a suite whose output you stop reading. `note` is stdout, which the
+build step captures and drops on a pass, and discards with everything else on a
+failure.
+
+Failure diagnostics stay on `std.debug.print`. The test is about to return an
+error, so the caption is true.
+
+The two places this gets subtle, both of which cost a while to find:
+
+- **A negative control asserts a mismatch.** `t.expectEqual` prints the mismatch
+  it found, and in a negative control the mismatch is the point. Compare silently
+  on the arm you expect to fail. `amend_test.zig`'s `Run.eq` is the pattern.
+- **Library code should not print at all.** A walk that finds a fault does not
+  know whether the fault is news - its caller might be a fuzz that provoked it on
+  purpose. Hand the fault back with a `format` on it and let the caller decide.
+  `quire.Blame` and `bough.Fault` are the shape.
+
 ## Reproduce a rung-1 number
 
 This is the step that needs the grammars, and the only one. Eleven tree-sitter
@@ -204,8 +250,12 @@ Billy-Company OSS package follows - see
 ## What CI will run
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml), on Linux and macOS, in
-that order for a reason: `zig build check`, `zig build test`, `zig build`, *then*
-the grammar fetch and its hash check, then the rung-1 sweep as a gate. The
+that order for a reason: `zig build check`, `zig build test`, `zig build idiom`,
+`zig build`, *then* the grammar fetch and its hash check, then the rung-1 sweep
+as a gate. `idiom` is its own step rather than part of `test` because it reaches
+every module's declarations by name, and reaching a declaration is what makes Zig
+analyse it - 3.4 s of analysis `-Dtest-filter` cannot defer, which is a price the
+inner loop should not pay and CI should. The
 network comes last because only the sweep needs it, so a press regression is
 never downstream of somebody else's repository being reachable. A second job
 checks the pins on a bare checkout with no toolchain at all. A third checks the

@@ -181,8 +181,29 @@ pub fn build(b: *std.Build) void {
     // A test build only collects the tests in its own root module's files, so
     // the library needs its own compilation. Naming it from the face's test
     // block silently collects nothing, which reads exactly like a green run.
-    for ([_]*std.Build.Module{ proof, test_face, test_abi }) |m| {
-        bg.shard(test_step, b.addTest(.{ .root_module = m, .test_runner = bg.runner() }), .{});
+    bg.shard(test_step, b.addTest(.{ .root_module = proof, .test_runner = bg.runner() }), .{});
+
+    // One step per root, and `test` folds the other two only when nothing
+    // narrowed the run. Several roots under one step break `-Dtest-filter`:
+    // brigade fails a shard whose filter matched none of *its* tests, which is
+    // right for one binary (you typo'd it) and wrong across three, where a
+    // library test's name simply does not live in the face's 8 or the ABI's 5.
+    // So every filtered run exited 1 while passing - `zig build test
+    // -Dtest-filter=folio` printed two fatals and a red summary over a green
+    // suite - and a gate that cries wolf on the documented inner loop teaches
+    // you to stop reading it, which is worse than not having it. The guard still
+    // bites where it should: a real typo misses all 404 and fails.
+    //
+    // `Brigade.narrowed` exists for exactly this fold. Unfiltered `zig build
+    // test` still runs all three; a filtered hunt names the binary it is hunting
+    // in - `zig build face -Dtest-filter=…`, `zig build abi -Dtest-filter=…`.
+    const face_step = b.step("face", "Run the CLI's tests (folded into `test` unfiltered)");
+    bg.shard(face_step, b.addTest(.{ .root_module = test_face, .test_runner = bg.runner() }), .{});
+    const abi_step = b.step("abi", "Run the C ABI's tests (folded into `test` unfiltered)");
+    bg.shard(abi_step, b.addTest(.{ .root_module = test_abi, .test_runner = bg.runner() }), .{});
+    if (!bg.narrowed()) {
+        test_step.dependOn(face_step);
+        test_step.dependOn(abi_step);
     }
 
     const check = b.step("check", "Compile the joints binary + libjnt without installing");
@@ -214,4 +235,32 @@ pub fn build(b: *std.Build) void {
         "census",
         "Who owns each wall: classify a verdict list through press/inquest",
     ).dependOn(&census.step);
+
+    // The idiom proof, and its own root for one measured reason: it reaches every
+    // module's decls by name, and reaching a decl is what makes Zig analyse it.
+    // That is 3.4 s of analysis `-Dtest-filter` cannot defer, so sharing
+    // `proof.zig` would have charged it to `zig build test -Dtest-filter=<what you
+    // touched>`. Debug, not ReleaseFast: every claim in it is settled at comptime
+    // and there is nothing for the optimizer to do.
+    const idiom = b.addRunArtifact(b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/idiom.zig"),
+            .target = target,
+            .optimize = .Debug,
+            .imports = &.{.{ .name = "irregex", .module = irregex_mod }},
+        }),
+        // Reaching twenty-eight modules also collects their inline tests, and the
+        // suite already runs those. `idiom:` narrows the run to the one test this
+        // step exists for, exactly as `census:` does above - and the run still
+        // reports 8, because a filter matches on a name and seven of the modules it
+        // reaches are facades whose `test { _ = @import(…); }` block has none. They
+        // reference decls and return, at 0 ms apiece, so the arithmetic is the only
+        // thing about them worth knowing.
+        .filters = &.{"idiom:"},
+        .test_runner = bg.runner(),
+    }));
+    b.step(
+        "idiom",
+        "Does the package speak its own idiom: one lifecycle shape per kind of owner",
+    ).dependOn(&idiom.step);
 }
