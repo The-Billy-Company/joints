@@ -19,6 +19,7 @@ a stream produced here.
 | File | What it is |
 |---|---|
 | `drive.zig` | LR state stack, `Expected` refilled per token from the current state's action row, textbook reduce-then-shift loop. Returns the tokens it consumed and an `Ending` that names the exact byte or token that stopped it. |
+| `drive_test.zig` | The four tests, and the hand-built JSON-shaped grammar they need. Its `text` terminal is `[^"]+`, so a walk that gets these right is one that really lexes from the state. |
 
 ## What the valid-symbol set is read from
 

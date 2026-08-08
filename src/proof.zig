@@ -39,7 +39,6 @@ test {
     _ = @import("kernel/joint/ledger.zig");
     _ = @import("kernel/joint/reverse.zig");
     _ = @import("kernel/joint/cursor.zig");
-    _ = @import("kernel/walk/drive.zig");
     _ = @import("kernel/spine/spine.zig");
     _ = @import("kernel/quire/quire.zig");
     _ = @import("kernel/weave/weave.zig");
@@ -62,6 +61,7 @@ test {
 test {
     _ = @import("kernel/lex/lexicon_test.zig");
     _ = @import("kernel/lex/scanner_test.zig");
+    _ = @import("kernel/walk/drive_test.zig");
     _ = @import("kernel/spine/tree_test.zig");
     _ = @import("kernel/spine/stream_test.zig");
     _ = @import("kernel/quire/gather_test.zig");
