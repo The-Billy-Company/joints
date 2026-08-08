@@ -484,7 +484,7 @@ test "a reserved section is carried and empty, not skipped" {
         try testing.expectEqual(@as(u32, 0), f.dir[@intFromEnum(k)].count);
         try testing.expectEqual(k, f.dir[@intFromEnum(k)].kind);
     }
-    try testing.expectEqual(@as(usize, 2), reserved);
+    try testing.expectEqual(@as(usize, 1), reserved);
 }
 
 test "a populated reserved section is refused, and nothing else would have caught it" {
@@ -494,12 +494,16 @@ test "a populated reserved section is refused, and nothing else would have caugh
     defer testing.allocator.free(bytes);
 
     // Not a corrupted directory - a *legitimate* folio from a future binary that
-    // implements the query engine. The distinction is the test: bumping `gloss`'s
-    // count where it lies overruns into the section after it, and that is caught
-    // by the bounds check whether or not a reserved check exists, which would make
-    // this test pass while proving nothing. So the section really is given room,
-    // and everything downstream of it really is moved along.
-    const grown = try grow(testing.allocator, bytes, .gloss, leaf.section_align);
+    // implements the mend area's price list. The distinction is the test: bumping
+    // `tariff`'s count where it lies overruns into the section after it, and that
+    // is caught by the bounds check whether or not a reserved check exists, which
+    // would make this test pass while proving nothing. So the section really is
+    // given room, and everything downstream of it really is moved along.
+    //
+    // It was `gloss` until the query engine landed and gave that section a
+    // reader. The check is not weaker for having one fewer section to stand
+    // over: it is the same check, and `tariff` is the section it now guards.
+    const grown = try grow(testing.allocator, bytes, .tariff, leaf.section_align);
     defer testing.allocator.free(grown);
     try testing.expectError(leaf.Error.FolioReservedSection, folio.open(grown));
 

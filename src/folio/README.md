@@ -32,14 +32,23 @@ directory rows; every accessor is a view into the mapped bytes. A big-endian
 host is refused rather than byte-swapped, because swapping means copying the
 tables and not copying them is the point.
 
-Three of the 31 are **reserved**: named and carried, always empty, with no reader
-here. They are byte-opaque, which is the whole trick - the schema digest spells
-each record's fields, so a section reserved as a *shape* would break the schema
-the day somebody filled it, and reserving one as bytes does not. So three areas
-that each need a section cost one version bump between them instead of three, and
-whichever lands first fills its section without another. A reader that meets one
-with records in it refuses (`FolioReservedSection`) rather than answering as
-though they were not there; see `leaf.reserved`.
+Three of the 31 were **reserved**: named and carried, always empty, with no
+reader here. They are byte-opaque, which is the whole trick - the schema digest
+spells each record's fields, so a section reserved as a *shape* would break the
+schema the day somebody filled it, and reserving one as bytes does not. So three
+areas that each need a section cost one version bump between them instead of
+three, and each one lands without another. Two have: `quotient` carries the class
+map, and `gloss` carries compiled query programs. `tariff` is the one still
+reserved, and a reader that meets it with records in it refuses
+(`FolioReservedSection`) rather than answering as though they were not there; see
+`leaf.reserved`.
+
+`gloss` is the section whose interior `open` does **not** check, and the reason
+is the topology rather than an oversight. `press/quotient.zig` sits below this
+directory, so `open` can hand it a class map and ask whether it fits; the query
+program's codec is `kernel/gloss/stencil.zig`, which stands above `folio` and
+reads it. `Folio.gloss()` therefore hands back bytes, and `stencil.read` is the
+fail-closed reader that bounds-checks every table in them.
 
 ## Fail-closed, and what that costs
 

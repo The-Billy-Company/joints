@@ -157,7 +157,11 @@ test "the class map round-trips through the folio and comes back the same partit
 
 test "quotient is no longer reserved, and the section it fills is not empty" {
     try testing.expect(!leaf.reserved(.quotient));
-    try testing.expect(leaf.reserved(.gloss));
+    // `gloss` was reserved when this was written and is not any more - the query
+    // engine gave it a reader, which is what un-reserving one means. `tariff` is
+    // the one still standing, and what this line is really claiming is that the
+    // predicate discriminates rather than saying no to everything.
+    try testing.expect(!leaf.reserved(.gloss));
     try testing.expect(leaf.reserved(.tariff));
 
     var p = try Pressed.of(testing.allocator);

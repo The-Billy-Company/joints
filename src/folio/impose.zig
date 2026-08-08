@@ -122,6 +122,17 @@ pub const Error = error{
     StepsNotParallel,
 } || std.mem.Allocator.Error || lex.CompileError || lex.FreezeError;
 
+/// Sections that are neither the grammar nor the pressing, and so cannot be
+/// derived from either: bytes an area above the press compiled *against* this
+/// folio and wants carried inside it. Defaulted empty, which is what `pack`
+/// passes, so a caller with nothing to add never learns this type exists.
+pub const Extra = struct {
+    /// One or more compiled query programs, run together. Byte-opaque here; the
+    /// layout is `kernel/gloss/stencil.zig`'s and `open` delegates the doubt to
+    /// its reader rather than restating it.
+    gloss: []const u8 = &.{},
+};
+
 /// The bytes of a folio for this grammar and this pressing.
 ///
 /// Eight-aligned, because the reader views records where they lie and a
@@ -132,8 +143,24 @@ pub fn pack(
     gr: *const press.Grammar,
     result: *const press.Result,
 ) Error![]align(leaf.section_align) u8 {
+    return packWith(gpa, gr, result, .{});
+}
+
+/// `pack`, plus the sections that come from above the press.
+///
+/// A separate entry rather than a fourth parameter on `pack`, because the press
+/// itself mints folios and has nothing to say about a query: the common call
+/// should not have to name a thing it does not have. `extra`'s bytes are
+/// borrowed for the call and copied into the file; the caller still owns them.
+pub fn packWith(
+    gpa: std.mem.Allocator,
+    gr: *const press.Grammar,
+    result: *const press.Result,
+    extra: Extra,
+) Error![]align(leaf.section_align) u8 {
     var plan = try Plan.of(gpa, gr, result);
     defer plan.deinit(gpa);
+    plan.gloss = extra.gloss;
     return plan.emit(gpa, gr, result);
 }
 
@@ -209,6 +236,10 @@ const Plan = struct {
     /// the pressing carried no relation - a `Result` rebound from a folio that
     /// had none. Its interior is `press.quotient`'s; see the layout note there.
     quotient: []const u8 = &.{},
+    /// Compiled query programs, if a caller handed any to `packWith`. Borrowed
+    /// rather than owned - the only member of the plan that is, because it is
+    /// the only one the plan did not build - so `deinit` must not free it.
+    gloss: []const u8 = &.{},
 
     fn of(gpa: std.mem.Allocator, gr: *const press.Grammar, result: *const press.Result) Error!Plan {
         var p: Plan = .{};
@@ -320,11 +351,12 @@ const Plan = struct {
             .lexicon => @intCast(p.lexicon.len),
             .rival => p.rival_len,
             .quotient => @intCast(p.quotient.len),
+            .gloss => @intCast(p.gloss.len),
             // Reserved, so there is nothing to count. Named here rather than
             // swept into an `else` for the same reason every other arm is: the
-            // lane that fills one should have to come to this switch, and an
+            // lane that fills it should have to come to this switch, and an
             // `else` is how it would not.
-            .gloss, .tariff => 0,
+            .tariff => 0,
         };
     }
 
@@ -488,10 +520,11 @@ const Plan = struct {
                 w.put(@intFromEnum(forme.same(leaf.Harm, x.harm)));
             },
             .quotient => @memcpy(out, p.quotient),
+            .gloss => @memcpy(out, p.gloss),
             // `count` said zero, so `out` is empty and there is nothing to put in
             // it. Spelled out for the same reason as there: the lane that fills
-            // one arrives at both switches.
-            .gloss, .tariff => {},
+            // it arrives at both switches.
+            .tariff => {},
         }
     }
 };

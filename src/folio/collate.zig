@@ -244,6 +244,26 @@ pub const Folio = struct {
         return f.view(.lexicon, u8);
     }
 
+    /// The compiled query programs, as bytes nobody here interprets. Empty is
+    /// the normal answer and means the folio was minted without a query.
+    ///
+    /// Raw bytes rather than a parsed view, and unlike `quotient` the interior
+    /// is *not* checked at `open`. That is a fact about the topology and not a
+    /// gap: `press/quotient.zig` sits below this file, so `open` can ask it
+    /// whether a class map fits, whereas the query program's codec is
+    /// `kernel/gloss/stencil.zig`, which stands *above* `folio` and reads it.
+    /// Asking upward is the one thing `charter.zone` forbids outright, and
+    /// restating the layout down here to dodge that would put the same format
+    /// in two files - the exact drift the byte-opaque reservation was for.
+    ///
+    /// So the doubt is delegated the other way, to the reader: `stencil.read`
+    /// is fail-closed and returns null for a program it cannot account for,
+    /// having bounds-checked every table and every span against the section it
+    /// was handed. The posture is `lexicon`'s, for a related reason.
+    pub fn gloss(f: *const Folio) []const u8 {
+        return f.view(.gloss, u8);
+    }
+
     /// Which states no parse can tell apart, as the class map `press` wrote.
     ///
     /// Null means the folio carries none, which is a normal answer for the same

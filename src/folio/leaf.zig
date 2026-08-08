@@ -35,7 +35,9 @@ pub const magic = "OTLFOLIO";
 /// v5 spent one bump on three sections nothing writes yet - see `reserved`. The
 /// arithmetic is the argument: three areas each need a section, and each landing
 /// on its own would refuse every folio written before it. One bump now refuses
-/// them once.
+/// them once. Two of the three are written since - `quotient`, then `gloss` -
+/// and the version has not moved, which is the bump doing exactly what it was
+/// spent on.
 pub const version: u16 = 5;
 
 pub const header_len = 96;
@@ -110,7 +112,7 @@ pub const Error = error{
 /// every one of them exactly once and the reader checks that roster positionally,
 /// so a missing section is caught by the same comparison that catches a
 /// reordered one. Carrying one is not the same as having something to put in it:
-/// the last three are `reserved`, present and empty.
+/// three at the tail were `reserved`, present and empty, and `tariff` still is.
 ///
 /// What is here is what a parse needs, plus what a *tree* needs to be named the
 /// way tree-sitter names it: shapes, aliases, and field names are not table
@@ -237,15 +239,17 @@ pub const Kind = enum(u16) {
     /// binary fork and a ternary one where they are not.
     rival,
 
-    // The three below are reserved: named, carried, and empty. `reserved` is the
-    // predicate and states the whole contract; these say only what each is for.
-    // They are last, and anything added later goes after them, because this list
-    // *is* the file format - a section is addressed by its ordinal, so appending
-    // is safe and inserting renames every folio already written.
+    // The three below were reserved together: named, carried, and empty.
+    // `reserved` is the predicate and states the whole contract. They are last,
+    // and anything added later goes after them, because this list *is* the file
+    // format - a section is addressed by its ordinal, so appending is safe and
+    // inserting renames every folio already written.
 
-    /// A compiled query program. Reserved for the query engine: a `.scm` pattern
-    /// pressed once into something a match can run rather than re-parsed per
-    /// query.
+    /// One or more compiled query programs, run together: a `.scm` pattern
+    /// resolved against this grammar's own symbol ids and pressed once, so a
+    /// `highlights.scm` is parsed at mint rather than at every startup. Written
+    /// by `impose`, checked at `open`, read through `Folio.gloss`. Its interior
+    /// is documented where it is decided, in `kernel/gloss/stencil.zig`.
     gloss,
     /// What each repair costs, so recovery can prefer the cheap one. Reserved for
     /// the mend area, which today picks by rule rather than by price.
@@ -281,10 +285,11 @@ pub const Kind = enum(u16) {
 /// again. These two are not.
 ///
 /// The lane that implements one deletes its name from here, gives it a reader,
-/// and the refusal stops on its own. `quotient` is the first that did.
+/// and the refusal stops on its own. `quotient` was the first that did, `gloss`
+/// the second; `tariff` is what is left.
 pub fn reserved(k: Kind) bool {
     return switch (k) {
-        .gloss, .tariff => true,
+        .tariff => true,
         else => false,
     };
 }
@@ -443,8 +448,9 @@ pub const FrayedRecord = extern struct {
 
 pub fn Record(comptime k: Kind) type {
     return switch (k) {
-        // Byte-opaque, and for the reserved three that is the reservation: see
-        // `reserved`. `text` and `lexicon` are opaque for their own reasons.
+        // Byte-opaque. For the three at the tail that was the reservation (see
+        // `reserved`), and it is why two of them could be filled without a
+        // version bump; `text` and `lexicon` are opaque for their own reasons.
         .text, .lexicon, .gloss, .tariff, .quotient => u8,
         .owner, .supertype, .extra, .rhs, .row, .row_span, .set_span, .complete_span, .complete, .party, .rival => u32,
         .groupref, .setsym, .stepref => u32,
@@ -732,7 +738,7 @@ test "a reserved section spells as opaque bytes, which is what reserves it" {
             try testing.expect(std.mem.indexOf(u8, schema_preimage, @tagName(k) ++ "=u8") != null);
         }
     }
-    try testing.expectEqual(@as(usize, 2), reserved_seen);
+    try testing.expectEqual(@as(usize, 1), reserved_seen);
 
     // Reserved is a claim about *some* of the roster, and a predicate that said
     // yes to everything would pass every check above.
@@ -749,6 +755,12 @@ test "a reserved section spells as opaque bytes, which is what reserves it" {
     // moved inward by one. It cannot move back - a filled section keeps its
     // address forever - which is why the durable claim is contiguity of the
     // reservations rather than their distance from the end.
+    //
+    // `gloss` then went the same way and left the run one long, which is the
+    // interesting case for contiguity: a run of one is contiguous no matter
+    // where it sits, so this loop stops proving much until `tariff` is joined
+    // by the next reservation. It is kept because the claim it makes is about
+    // the format rather than about today's roster.
     const all = std.enums.values(Kind);
     var next: ?usize = null;
     for (all, 0..) |k, i| if (reserved(k)) {

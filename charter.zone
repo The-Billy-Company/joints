@@ -77,6 +77,13 @@ zones {
     // it hangs the parenthesis word on, so a file inside `kernel/quire/` would
     // have been importing up the page.
     vellum       kernel/vellum/**
+    // The second, and it sits ABOVE vellum rather than beside quire. It reads
+    // `folio` today and nothing else of ours, so anywhere above `folio` would
+    // hold - but a matcher may want either tree representation, and `Sheet`
+    // carries `Ink` (kind, start, len, field) beside its parentheses, so the
+    // settled tree is queryable too. Standing above vellum costs nothing now
+    // and keeps that; standing below would foreclose it.
+    gloss        kernel/gloss/**
     abi          surface/abi/**
     face_joints  surface/face/joints/**
 }

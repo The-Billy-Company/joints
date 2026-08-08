@@ -95,6 +95,10 @@ pub const kernel = struct {
     /// for a file at rest and on the spine for one being typed into. M3's
     /// second measure, and the second monoid the spine holds.
     pub const vellum = @import("kernel/vellum/vellum.zig");
+    /// The query front end: a `.scm` file compiled against a grammar and
+    /// pressed into the folio, so a `highlights.scm` is parsed once at mint
+    /// rather than once per process. Running one against a tree is not here.
+    pub const gloss = @import("kernel/gloss/gloss.zig");
 };
 
 /// The artifact: a pressed grammar as bytes, mmap-able, versioned, checked.
