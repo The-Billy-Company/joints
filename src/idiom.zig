@@ -163,6 +163,15 @@ test "idiom: every type that frees itself takes the shape its ownership calls fo
         // `lr0.Closure` are exactly the small unmanaged types the rule is most
         // load-bearing for, and all three are private. This list is the same
         // roster the two blocks above keep, for the same reason.
+        //
+        // Hand-kept, and it can no longer be silently short. Five waves running
+        // ended with a line added here after the fact, and each of those lanes had
+        // run this gate and been told 0 - a pass that was silence, because nothing
+        // had read the new area. Zig cannot walk a directory at comptime, so the
+        // completeness of this list is asked from outside it: `tool/roll.py` fails
+        // when a file declaring a `deinit` is one this roster cannot reach, whether
+        // named here or re-exported by something that is. Which leaves the count
+        // below the job it is actually good at - noticing a departure.
         for (.{
             @import("kernel/lex/scanner.zig"),      @import("kernel/lex/lexicon.zig"),
             @import("kernel/lex/admit.zig"),        @import("kernel/joint/joint.zig"),
@@ -178,30 +187,16 @@ test "idiom: every type that frees itself takes the shape its ownership calls fo
             @import("press/cast/sets.zig"),         @import("press/cast/retrace.zig"),
             @import("press/quarrel/settle.zig"),    @import("press/quarrel/forks.zig"),
             @import("press/quarrel/workbench.zig"), @import("press/quarrel/attribution.zig"),
-            // The quotient lane's three. `quotient.zig` publishes nothing that
-            // frees itself - `Quotient` lives in the table's arena on purpose -
-            // but `minterm.Alphabet` and `dafsa.Set` both own memory, and a
-            // self-freeing type in a file no walk reaches is the exact silence
-            // the count below exists to break rather than something it catches.
+            // `press/quotient.zig` publishes nothing self-freeing - `Quotient`
+            // lives in the table's arena on purpose - but `minterm.Alphabet` and
+            // `dafsa.Set` own memory, so their files are here rather than the door.
             @import("press/quotient.zig"),          @import("press/minterm.zig"),
             @import("press/dafsa.zig"),
-            // The vellum lane's two, for the same reason and not its `vellum.zig`:
-            // a facade re-exporting `Sheet` would have it judged twice, and these
-            // are the files that declare it.
+            // `vellum`'s two declaring files and not its `vellum.zig`: a facade
+            // re-exporting `Sheet` would have it judged twice, and the count below
+            // would then be describing a package with two of them in it.
                         @import("kernel/vellum/sheet.zig"),
-            @import("kernel/vellum/word.zig"),
-            // And the grain lane's one. Three areas arrived in one wave and every
-            // one of them had to be added here by hand, which is the argument for
-            // deriving this roster from the tree rather than keeping it: the count
-            // below notices that a type moved, and cannot notice an area nobody
-            // listed.
-                 @import("kernel/grain/ruling.zig"),
-            // And the gloss lane's four files, carrying six between them. This is
-            // the fifth wave in a row that ended with somebody adding a line here
-            // by hand, and every one of those areas passed this gate before the
-            // line existed - not because the code was right but because nothing
-            // read it. The count below cannot be the guard against that: it sees a
-            // type that MOVED and is structurally blind to an area that ARRIVED.
+            @import("kernel/vellum/word.zig"),      @import("kernel/grain/ruling.zig"),
             @import("kernel/gloss/rubric.zig"),     @import("kernel/gloss/lemma.zig"),
             @import("kernel/gloss/stencil.zig"),    @import("kernel/gloss/gloss.zig"),
         }) |m| judged += area(m);
@@ -226,14 +221,13 @@ test "idiom: every type that frees itself takes the shape its ownership calls fo
 /// file has no import path to them. Their one `deinit` is `parse.zig`'s, which
 /// takes the shape the rule asks for.
 ///
-/// 63 to 73 is one wave: `grain`, `vellum` and a quotient arrived at once. Seven
-/// of the ten came from files the roster above had no line for, so they were not
-/// judged against a stale pin - they were not judged at all, which is the reading
-/// this number cannot give you and the reason the roster wants deriving. The other
-/// three landed in files already listed, which is the only case it can see.
+/// 63 to 73 is one wave (`grain`, `vellum`, a quotient) and 73 to 79 is `gloss`.
+/// Thirteen of those sixteen arrived in files this roster had no line for, so they
+/// were not judged against a stale pin - they were not judged at all. That is the
+/// reading a count cannot give you, and it is `tool/roll.py`'s question now.
 ///
-/// 73 to 79 is `gloss`, and all six are that same silence: the lane ran this gate,
-/// got 0, and none of its types had been read. `cursor` landed in the same wave and
-/// needed no line, because `reach.zig` is free functions over a `Quire` and owns
-/// nothing - which is the distinction a derived roster would make on its own.
+/// What this number is for is the other direction. A type that went missing leaves
+/// no file behind to notice, so nothing walks up to it; the roster still names
+/// every file it should and the answer is quietly smaller. That is the case worth
+/// a pin, and the case a directory walk cannot see.
 const lifecycles = 79;
