@@ -1,0 +1,143 @@
+{
+ "recorded": {
+  "date": "2026-08-04 14:42:47-0700",
+  "commit": "f6018936c",
+  "dirty": 28,
+  "joints": "0.0.0",
+  "tree_sitter": "0.26.11",
+  "build": "-Dcli-optimize=ReleaseFast",
+  "binary": ".local/bench/build/bin/joints",
+  "machine": "macOS-26.5.1-arm64-arm-64bit arm64 x16",
+  "load": 14.5,
+  "python": "3.12.0",
+  "stamp": {
+   "binary": "/Users/griffinstrier/Billy-Company/joints/.local/bench/build/bin/joints",
+   "build": "b507c8f4b8b0",
+   "built": "2026-08-04T21:32:41Z",
+   "source": ".",
+   "tree": "6299a98a653d",
+   "live": "6299a98a653d",
+   "newest": "src/kernel/weave/weave.zig",
+   "commit": "f6018936c04a",
+   "dirty": 28,
+   "stale": false,
+   "drift": false,
+   "told": true,
+   "moved": false,
+   "moved_at": "",
+   "when": "2026-08-04T21:42:47Z"
+  }
+ },
+ "grammar": {
+  "bash": {
+   "productions": 5294,
+   "states": 8000,
+   "merged": 0,
+   "ours": 2080.68,
+   "theirs": 2108.75,
+   "ratio": 0.9867,
+   "quotient": 24.202,
+   "unit": "bits/production"
+  },
+  "c": {
+   "productions": 1135,
+   "states": 2013,
+   "merged": 0,
+   "ours": 2211.86,
+   "theirs": 4552.8,
+   "ratio": 0.4858,
+   "quotient": 28.49,
+   "unit": "bits/production"
+  },
+  "cpp": {
+   "productions": 2444,
+   "states": 4466,
+   "merged": 1,
+   "ours": 2557.12,
+   "theirs": 18449.89,
+   "ratio": 0.1386,
+   "quotient": 29.29,
+   "unit": "bits/production"
+  },
+  "go": {
+   "productions": 631,
+   "states": 1093,
+   "merged": 1,
+   "ours": 1863.4,
+   "theirs": 3158.92,
+   "ratio": 0.5899,
+   "quotient": 27.918,
+   "unit": "bits/production"
+  },
+  "java": {
+   "productions": 1022,
+   "states": 1953,
+   "merged": 0,
+   "ours": 1741.03,
+   "theirs": 3501.28,
+   "ratio": 0.4973,
+   "quotient": 30.701,
+   "unit": "bits/production"
+  },
+  "javascript": {
+   "productions": 1005,
+   "states": 2229,
+   "merged": 0,
+   "ours": 2438.05,
+   "theirs": 3434.99,
+   "ratio": 0.7098,
+   "quotient": 35.614,
+   "unit": "bits/production"
+  },
+  "json": {
+   "productions": 30,
+   "states": 44,
+   "merged": 0,
+   "ours": 2937.6,
+   "theirs": 9064.53,
+   "ratio": 0.3241,
+   "quotient": 16.0,
+   "unit": "bits/production"
+  },
+  "python": {
+   "productions": 907,
+   "states": 1597,
+   "merged": 6,
+   "ours": 2140.72,
+   "theirs": 4240.37,
+   "ratio": 0.5048,
+   "quotient": 28.313,
+   "unit": "bits/production"
+  },
+  "ruby": {
+   "productions": 845,
+   "states": 5048,
+   "merged": 1,
+   "ours": 4522.87,
+   "theirs": 20361.62,
+   "ratio": 0.2221,
+   "quotient": 95.735,
+   "unit": "bits/production"
+  },
+  "rust": {
+   "productions": 4631,
+   "states": 8228,
+   "merged": 19,
+   "ours": 1251.6,
+   "theirs": 1973.19,
+   "ratio": 0.6343,
+   "quotient": 28.455,
+   "unit": "bits/production"
+  },
+  "typescript": {
+   "productions": 4715,
+   "states": 9338,
+   "merged": 0,
+   "ours": 1651.88,
+   "theirs": 2469.3,
+   "ratio": 0.669,
+   "quotient": 31.715,
+   "unit": "bits/production"
+  }
+ }
+}
