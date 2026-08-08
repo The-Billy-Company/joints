@@ -6,11 +6,11 @@ run fails naming the door you should have used.
 The doors were published a change ago, and publishing them turned out not to be
 the same as being the only way in. Four call sites still reached around: two in
 `kernel/joint/reverse.zig` for `lr0` and `lalr`, one in `folio_test.zig` for
-`fold`, one in `kernel/quire/quire.zig` for `inquest`. All four had a real need -
-a test that isolates one stage of the table build has to be able to stop
+`fold`, one in `kernel/quire/quire.zig` for `inquest`. All four had a real
+need - a test that isolates one stage of the table build has to be able to stop
 between the stages - and no door to ask through, so they went around instead,
-which is what every bypass looks like from the inside. Three more doors on `press.zig`
-(`fold`, `lr0`, `lalr`) and those four sites are now spelled `press.fold`,
+which is what every bypass looks like from the inside. Three more doors on
+`press.zig` (`fold`, `lr0`, `lalr`) and those four are now spelled `press.fold`,
 `press.lr0`, `press.lalr`, `press.inquest`. That was the whole cost of the seal:
 three lines of facade and four call sites.
 
