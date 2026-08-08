@@ -140,7 +140,14 @@ test "a pressed grammar survives the round trip field by field" {
         try testing.expectEqual(gr.owner[s], f.ownerOf(s));
         try testing.expectEqual(gr.lexisOf(s).immediate, f.lexisOf(s).flags & leaf.LexisRecord.immediate != 0);
         try testing.expectEqual(gr.lexisOf(s).prec, f.lexisOf(s).prec);
-        try testing.expectEqual(@tagName(gr.shapeOf(s)), @tagName(f.shapeOf(s)));
+        // The spelling, not the address it was stored at. These are two enum
+        // types, so `@tagName` hands back a pointer into each one's own name
+        // table, and whether two identical literals end up sharing an address is
+        // the backend's decision about constant merging rather than anything the
+        // writer did. `expectEqual` on a slice compares that pointer, so this
+        // read as green wherever they merged and red wherever they did not -
+        // passing on macOS and failing on Linux for the whole of its life.
+        try testing.expectEqualStrings(@tagName(gr.shapeOf(s)), @tagName(f.shapeOf(s)));
         switch (gr.patterns[s] orelse {
             try testing.expectEqual(@as(?folio.Pattern, null), f.patternOf(s));
             continue;

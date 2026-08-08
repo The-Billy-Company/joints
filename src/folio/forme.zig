@@ -300,17 +300,26 @@ const Locker = struct {
     }
 };
 
-// Four things the press decides are stored as an ordinal, which makes the
+// Five things the press decides are stored as an ordinal, which makes the
 // ordinal the file format. Each has a `leaf` twin declared separately on
 // purpose - one type is a promise about a file and the other is a verdict - and
 // what keeps the two from drifting apart is `concurs`, below: same names, same
 // ordinals, checked at comptime. Every conversion in this file goes through it,
 // so there is no way to spell one that is not proved.
+//
+// `Shape` was the fifth and arrived last, because its switch was a named
+// function in `impose` rather than an inline prong and so read as a conversion
+// somebody had chosen rather than one restating this. What stood in for the
+// proof was a round-trip test comparing `@tagName` to `@tagName` with
+// `expectEqual` - which on a slice compares the address, so it was really
+// asking whether the backend had merged two identical literals. It had, on
+// macOS.
 comptime {
     concurs(press.Action.Kind, leaf.Action.Verb);
     concurs(press.Conflict.Class, leaf.ConflictClass);
     concurs(press.Conflict.Kind, leaf.ConflictKind);
     concurs(press.Frayed.Harm, leaf.Harm);
+    concurs(press.Shape, leaf.ShapeKind);
 }
 
 /// Two enums with the same names on the same ordinals.

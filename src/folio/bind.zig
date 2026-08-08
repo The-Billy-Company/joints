@@ -99,12 +99,7 @@ fn vocabulary(a: std.mem.Allocator, f: *const collate.Folio) Error!press.Grammar
         } else null;
         const lx = f.lexisOf(s);
         lexis[i] = .{ .immediate = lx.flags & leaf.LexisRecord.immediate != 0, .prec = lx.prec };
-        shapes[i] = switch (f.shapeOf(s)) {
-            .named => .named,
-            .anonymous => .anonymous,
-            .hidden => .hidden,
-            .invented => .invented,
-        };
+        shapes[i] = forme.same(press.Shape, f.shapeOf(s));
     }
 
     const aliases = try a.alloc(press.Alias, f.aliasCount());

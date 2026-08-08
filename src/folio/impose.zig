@@ -398,7 +398,7 @@ const Plan = struct {
                 w.put(if (lx.immediate) leaf.LexisRecord.immediate else 0);
                 w.putSigned(lx.prec);
             },
-            .shape => for (gr.shapes) |s| w.put(@intFromEnum(shapeOf(s))),
+            .shape => for (gr.shapes) |s| w.put(@intFromEnum(forme.same(leaf.ShapeKind, s))),
             .owner => for (gr.owner) |s| w.put(s),
             .supertype => for (gr.supertypes) |s| w.put(s),
             .extra => for (gr.extras) |s| w.put(s),
@@ -476,15 +476,6 @@ const Plan = struct {
         }
     }
 };
-
-fn shapeOf(s: press.Shape) leaf.ShapeKind {
-    return switch (s) {
-        .named => .named,
-        .anonymous => .anonymous,
-        .hidden => .hidden,
-        .invented => .invented,
-    };
-}
 
 fn completeCount(st: press.State) usize {
     return st.complete.len;
