@@ -321,10 +321,11 @@ pub const Weave = struct {
     }
 
     pub fn deinit(w: *Weave) void {
-        // Before the ruling goes, so nothing downstream holds a pointer into
-        // it. `rule` is the only thing that ever set this and it only ever set
-        // it to ours, so taking it back unconditionally is exact.
-        w.loom.sc.carry.ruled = null;
+        // Before the ruling goes, so the scanner holds no pointer into it. The
+        // handle is a cache, not ownership, and `Weave.rule` below is the only
+        // thing that ever offered one - always ours - so taking it back
+        // unconditionally is exact rather than defensive.
+        w.loom.sc.rule(null);
         if (w.ruling) |*r| r.deinit(w.gpa);
         if (w.tree) |*q| q.deinit();
         w.gather.deinit();
@@ -392,12 +393,12 @@ pub const Weave = struct {
         const text = w.text.items;
         if (cut) |c| if (w.ruling) |*r| {
             try r.splice(w.gpa, text, .{ .from = c.from, .to = c.to, .insert = c.insert });
-            w.loom.sc.carry.ruled = r;
+            w.loom.sc.rule(r);
             return;
         };
         if (w.ruling) |*r| r.deinit(w.gpa);
         w.ruling = try grain.Ruling.of(w.gpa, text);
-        w.loom.sc.carry.ruled = &w.ruling.?;
+        w.loom.sc.rule(&w.ruling.?);
     }
 
     /// Apply an edit and hand back both halves, maintained.

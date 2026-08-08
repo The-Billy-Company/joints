@@ -21,6 +21,8 @@ re-offers on the way back in. Nothing is load-bearing for correctness either way
 so an installer that forgets costs a measurement, never a column, which is also
 why a bench is the only instrument that would ever catch it.
 
-`kernel/weave`'s three reach-through sites still spell it the old way. Rewiring
-them is one line each and belongs to whoever owns that file; the method, its
-contract and its test are here.
+`kernel/weave`'s three reach-through sites now call it, which is what makes the
+field private in practice rather than by convention: the only write left anywhere
+in production is the one inside `rule` itself. Its `deinit` also stopped saying
+`rule` about two different functions - taking the handle back is exact because
+`Weave.rule` is the only thing that ever offered one, and always its own.
