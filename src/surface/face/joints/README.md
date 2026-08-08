@@ -10,7 +10,7 @@ the row in its table.
 | File | Role |
 |---|---|
 | `main.zig` | The dispatcher, and only that: the `verbs` table, the arity guard it drives, the usage text built from it, and `--version`. |
-| `intake.zig` | The one door every verb turns a path into a parser through - `slurp`, `grammar`, `tables`, `scanner`, and the diagnostics it never lets a caller skip. |
+| `intake.zig` | The one door every verb turns a path into a parser through - `slurp`, `grammar`, `tables`, `scanner`, and the diagnostics it never lets a caller skip. `choice` / `spellings` / `default` are the same argument aimed at a flag whose values are an enum's members. |
 | `grammar.zig` | `grammar` - import a tree-sitter grammar, report its shape, group its conflicts by whose ambiguity they are. |
 | `lex.zig` | `lex` - run the terminal scanner over a file with no parse state gating it, on purpose. |
 | `state.zig` | `state` - one LR state whole, or a census, a holding search, or a chain. Owns its own four sub-forms. |
@@ -78,6 +78,15 @@ travel through it.** Instead:
    five verbs used to say "cannot read" five different ways, and the same
    argument held for the other three, which were pasted seven, six, and four
    times.
+5. **A flag's vocabulary is its enum.** `--mend` and `--policy` take an enum's
+   members by name, so `intake.choice` resolves one and `intake.spellings`
+   renders the whole set - for the refusal *and* for `main.zig`'s usage line -
+   off `@typeInfo`. Never write the spellings out beside the lookup: both flags
+   did, in opposite directions. `--mend` named four policies in a string next to
+   the lookup that already accepted them, so a fifth would have been taken by a
+   CLI that denied it existed; `--policy` refused without ever saying what it
+   wanted. Their defaults live in `intake.default` for the same reason - the
+   usage line named one as a word while the parser applied it as a value.
 
 ## What "properly handled" means, verb by verb
 

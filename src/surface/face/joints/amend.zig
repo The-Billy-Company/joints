@@ -48,7 +48,7 @@ pub fn run(
     var quiet = false;
     var cold = false;
     var language: ?[]const u8 = null;
-    var policy: weave.Policy = .prove;
+    var policy: weave.Policy = intake.default.remint;
     var path: ?[]const u8 = null;
     var script: std.ArrayList([]const u8) = .empty;
     defer script.deinit(gpa);
@@ -64,10 +64,7 @@ pub fn run(
         else if (std.mem.eql(u8, a, "--cold")) cold = true //
         else if (std.mem.startsWith(u8, a, "--language=")) language = a["--language=".len..] //
         else if (std.mem.startsWith(u8, a, "--policy=")) {
-            policy = std.meta.stringToEnum(weave.Policy, a["--policy=".len..]) orelse {
-                try e.print("joints: no such re-mint policy: {s}\n", .{a["--policy=".len..]});
-                return 2;
-            };
+            policy = intake.choice(weave.Policy, e, "--policy", a["--policy=".len..]) orelse return 2;
         } else if (path == null) path = a //
         else try script.append(gpa, a);
     }

@@ -32,12 +32,19 @@
 //! two failures are not the same kind of failure and whose exit code is not
 //! this file's to decide. It hands back which one happened; the verb says what
 //! that is worth.
+//!
+//! `choice` and `default` at the bottom are not one of the four. They are the
+//! same argument aimed one level lower: at a flag whose values are an enum's
+//! members, where the set of spellings had been written out by hand beside the
+//! lookup that already knew them.
 
 const std = @import("std");
 const joints = @import("joints");
 
 const press = joints.press;
 const lex = joints.kernel.lex.scanner;
+const quire = joints.kernel.quire;
+const weave = joints.kernel.weave;
 
 /// `path`'s whole contents, or `null` after printing why not to `w`.
 ///
@@ -144,4 +151,83 @@ pub fn tokenless(err: Unlexable) u8 {
         error.NothingLexable => 1,
         error.WontCompile => 2,
     };
+}
+
+/// What the face's two enum-valued flags mean when unspoken.
+///
+/// Here rather than in the verb that reads them because the usage block in
+/// `main.zig` has to name the same member the parser applies, and it named it as
+/// a word inside a sentence - so the two were free to disagree, and nothing
+/// would have said which one was the CLI's actual behaviour.
+pub const default = struct {
+    /// `parse --mend=`.
+    pub const mend: quire.Mend = .fell;
+    /// `amend --policy=`.
+    pub const remint: weave.Policy = .prove;
+};
+
+/// `E`'s members as a sentence: `"fell (default), none, keep, relent"` with a
+/// `dflt`, and `"none, keep, fell or relent"` without one.
+///
+/// Comptime, so the usage block can carry the result and a member that does not
+/// exist cannot be named.
+pub fn spellings(comptime E: type, comptime dflt: ?E) []const u8 {
+    const fields = @typeInfo(E).@"enum".fields;
+    comptime var out: []const u8 = if (dflt) |d| @tagName(d) ++ " (default)" else "";
+    inline for (fields, 0..) |f, i| {
+        if (dflt) |d| {
+            if (comptime std.mem.eql(u8, f.name, @tagName(d))) continue;
+            out = out ++ ", " ++ f.name;
+        } else {
+            // No default to lead with, so the last member gets the `or` an
+            // English list ends on. `i` counts fields, not appends, which is
+            // only correct on this arm - the other one skipped one.
+            out = out ++ if (i == 0) "" else if (i == fields.len - 1) " or " else ", ";
+            out = out ++ f.name;
+        }
+    }
+    return out;
+}
+
+/// `text` as one of `E`'s members, or `null` after naming the whole vocabulary
+/// on `w`.
+///
+/// The spellings in the refusal are `E`'s own fields, which is the point rather
+/// than a tidiness: `--mend` carried "none, keep, fell or relent" as a string
+/// beside the lookup that already accepted exactly those, so a policy added to
+/// `quire.Mend` would have been taken by a CLI that denied it existed. And
+/// `--policy` had the mirrored half of the same fault - it refused without ever
+/// saying what it would have taken. Both are the enum now, so widening either
+/// vocabulary touches neither this file nor the usage block.
+pub fn choice(
+    comptime E: type,
+    w: *std.Io.Writer,
+    flag: []const u8,
+    text: []const u8,
+) ?E {
+    return std.meta.stringToEnum(E, text) orelse {
+        w.print("joints: {s} wants {s}, not '{s}'\n", .{
+            flag, comptime spellings(E, null), text,
+        }) catch {};
+        return null;
+    };
+}
+
+test "a vocabulary names every member it accepts" {
+    // A local enum and not `quire.Mend`, deliberately: the property is that no
+    // member goes unnamed, and asserting it against the live enum would pin the
+    // policies that exist today and fail the day one is legitimately added -
+    // which is the exact change this helper exists to make free.
+    const E = enum { alpha, beta, gamma };
+    inline for (@typeInfo(E).@"enum".fields) |f| {
+        try std.testing.expect(std.mem.indexOf(u8, spellings(E, null), f.name) != null);
+        try std.testing.expect(std.mem.indexOf(u8, spellings(E, .beta), f.name) != null);
+    }
+    // Both renderings exactly, on a fixture where pinning them is the point.
+    try std.testing.expectEqualStrings("alpha, beta or gamma", spellings(E, null));
+    try std.testing.expectEqualStrings("beta (default), alpha, gamma", spellings(E, .beta));
+    // A one-member vocabulary has no conjunction to place and no comma to trail.
+    const One = enum { sole };
+    try std.testing.expectEqualStrings("sole", spellings(One, null));
+    try std.testing.expectEqualStrings("sole (default)", spellings(One, .sole));
 }

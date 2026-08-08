@@ -153,7 +153,7 @@ pub fn run(
     var scars = false;
     var json = false;
     var language: ?[]const u8 = null;
-    var mend: quire.Mend = .fell;
+    var mend: quire.Mend = intake.default.mend;
     var supplying = true;
     var paths: std.ArrayList([]const u8) = .empty;
     defer paths.deinit(gpa);
@@ -166,12 +166,7 @@ pub fn run(
         else if (std.mem.eql(u8, a, "--no-supply")) supplying = false //
         else if (std.mem.startsWith(u8, a, "--language=")) language = a["--language=".len..] //
         else if (std.mem.startsWith(u8, a, "--mend=")) {
-            mend = std.meta.stringToEnum(quire.Mend, a["--mend=".len..]) orelse {
-                try w.print("joints: --mend wants none, keep, fell or relent, not '{s}'\n", .{
-                    a["--mend=".len..],
-                });
-                return 2;
-            };
+            mend = intake.choice(quire.Mend, w, "--mend", a["--mend=".len..]) orelse return 2;
         } else try paths.append(gpa, a);
     }
     if (paths.items.len == 0) {

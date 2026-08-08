@@ -119,6 +119,14 @@ const synopsis = blk: {
     break :blk out;
 };
 
+/// The two flag vocabularies, from the enums that define them. The prose around
+/// them below stays hand-written for the reason `synopsis` gives; the lists do
+/// not, because a list is the one part of that prose a reader checks against
+/// behaviour, and it was checked against nothing.
+const intake = @import("intake.zig");
+const mend_policies = intake.spellings(joints.kernel.quire.Mend, intake.default.mend);
+const remint_policies = intake.spellings(joints.kernel.weave.Policy, intake.default.remint);
+
 const usage =
     \\joints - parsing as algebra
     \\
@@ -135,13 +143,17 @@ const usage =
     \\  --scars     the repair sites instead of the tree
     \\  --json      the whole answer as one JSON object per file
     \\  --quiet     the verdict only, no stdout
-    \\  --mend=P    what to do at a refusal: fell (default), none, keep, relent
+    \\  --mend=P    what to do at a refusal: 
+++ mend_policies ++
+    \\
     \\  --no-supply delete-only repair, the control arm
     \\  --language=NAME  which grammar, when the folio holds several
     \\
     \\amend flags:
     \\  --cold      re-read the whole file per edit, for the comparison
-    \\  --policy=P  how far the re-mint window widens: prove, snap, whole
+    \\  --policy=P  how far the re-mint window widens: 
+++ remint_policies ++
+    \\
     \\  --language=NAME  which grammar, when the folio holds several
     \\
     \\survey flags:
@@ -210,4 +222,5 @@ test {
     _ = @import("parse.zig");
     _ = @import("grammar.zig");
     _ = @import("lex.zig");
+    _ = @import("intake.zig");
 }
