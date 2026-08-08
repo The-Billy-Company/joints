@@ -17,7 +17,7 @@
 const std = @import("std");
 const folio = @import("folio.zig");
 const leaf = @import("leaf.zig");
-const fold = @import("../press/fold.zig");
+const fold = @import("../press/press.zig").fold;
 const press = @import("../press/press.zig");
 
 const testing = std.testing;

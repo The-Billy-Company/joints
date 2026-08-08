@@ -26,7 +26,7 @@
 //! answered by `Grammar.barren`.
 
 const std = @import("std");
-const g = @import("grammar.zig");
+const g = @import("../copy/grammar.zig");
 const sets = @import("sets.zig");
 
 pub const First = struct {

@@ -8,7 +8,7 @@ const std = @import("std");
 const t = std.testing;
 const scanner = @import("scanner.zig");
 const outside = @import("outside.zig");
-const marrow = @import("marrow.zig");
+const marrow = @import("hand/marrow.zig");
 const press = @import("../../press/press.zig");
 
 const Fixture = struct {

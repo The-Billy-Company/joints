@@ -6,8 +6,8 @@ files. While `src/root.zig` was that root, the only way to reach a `*_test.zig`
 was for production code to import it, so each area's module root imported its
 own tests - and those tests then read downstream, because a parser generator is
 only worth testing against the thing it generates for. That is what made
-`folio -> press/press.zig -> press/carry_test.zig -> folio` a real cycle across
-five directories, over an arrow that was never in the program.
+`folio -> press/press.zig -> press/docket/carry_test.zig -> folio` a real cycle
+across five directories, over an arrow that was never in the program.
 
 `src/proof.zig` is the repair: a test-only root that names every `*_test.zig` by
 hand, so a test file is a leaf nothing production reaches. Hand-maintained means

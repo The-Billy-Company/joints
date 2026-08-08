@@ -34,8 +34,8 @@
 //! Absent, it returns immediately.
 
 const std = @import("std");
-const g = @import("grammar.zig");
-const import = @import("import.zig");
+const g = @import("copy/grammar.zig");
+const import = @import("copy/import.zig");
 const press = @import("press.zig");
 
 const asked = ".local/orchestrate/wall.txt";

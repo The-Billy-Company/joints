@@ -24,12 +24,12 @@
 //! The layer above cares about none of that. It gets one table.
 
 const std = @import("std");
-const first = @import("first.zig");
-const g = @import("grammar.zig");
-const lr0 = @import("lr0.zig");
-const sets = @import("sets.zig");
-const imports = @import("import.zig");
-const settle = @import("settle.zig");
+const first = @import("cast/first.zig");
+const g = @import("copy/grammar.zig");
+const lr0 = @import("cast/lr0.zig");
+const sets = @import("cast/sets.zig");
+const imports = @import("copy/import.zig");
+const settle = @import("quarrel/settle.zig");
 
 /// What a state does on a terminal. Named here because the table is what hands
 /// them out, and decided in `settle.zig`, which is where the question is.

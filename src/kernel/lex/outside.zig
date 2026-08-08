@@ -67,13 +67,13 @@
 //! of a shape, which is the most that is true.
 
 const std = @import("std");
-const offside = @import("offside.zig");
-const fence = @import("fence.zig");
-const marrow = @import("marrow.zig");
-const caesura = @import("caesura.zig");
-const scry = @import("scry.zig");
-const lineage = @import("lineage.zig");
-const writ = @import("writ.zig");
+const offside = @import("hand/offside.zig");
+const fence = @import("hand/fence.zig");
+const marrow = @import("hand/marrow.zig");
+const caesura = @import("hand/caesura.zig");
+const scry = @import("hand/scry.zig");
+const lineage = @import("hand/lineage.zig");
+const writ = @import("hand/writ.zig");
 const press = @import("../../press/press.zig");
 
 test {

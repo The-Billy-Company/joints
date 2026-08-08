@@ -110,9 +110,9 @@
 //! one of the productions, so it costs less than printing the answer.
 
 const std = @import("std");
-const g = @import("grammar.zig");
+const g = @import("copy/grammar.zig");
 const lalr = @import("lalr.zig");
-const settle = @import("settle.zig");
+const settle = @import("quarrel/settle.zig");
 
 /// One reduction the refused token drove, and the state it was taken in. A
 /// structural mirror of `kernel/walk/drive.zig`'s `Fold`: press is the build

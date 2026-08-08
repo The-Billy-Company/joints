@@ -14,7 +14,7 @@
 //! without touching the automaton.
 
 const std = @import("std");
-const g = @import("grammar.zig");
+const g = @import("../copy/grammar.zig");
 
 /// A production with a position in it. Packed because these are hashed by
 /// their bytes and compared in bulk.

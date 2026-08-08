@@ -51,11 +51,9 @@
 
 const std = @import("std");
 const assay = @import("irregex").assay;
-const g = @import("grammar.zig");
-const lalr = @import("lalr.zig");
-const lr0 = @import("lr0.zig");
-const settle = @import("settle.zig");
-const import = @import("import.zig");
+const g = @import("copy/grammar.zig");
+const settle = @import("quarrel/settle.zig");
+const import = @import("copy/import.zig");
 
 // ---------------------------------------------------------------------------
 // The published IR.
@@ -128,13 +126,25 @@ pub const inquest = @import("inquest.zig");
 /// its destination state cannot answer. A door for the same reason `inquest` is,
 /// plus one of its own: `retrace.Step` is a path step and `Grammar.Step` is a
 /// production step, and flattening both would have to rename one of them.
-pub const retrace = @import("retrace.zig");
+pub const retrace = @import("cast/retrace.zig");
 
 /// Flattening a token rule tree down to the one regex the lexer compiles. A door
 /// because the scanner wants one function out of it - writing a literal so a
 /// regex engine reads it as those exact bytes - and that is a spelling question
 /// whose real home is the regex floor rather than a parser generator.
-pub const lexeme = @import("lexeme.zig");
+pub const lexeme = @import("copy/lexeme.zig");
+
+/// The two halves of the table build, and the fold that precedes them, as doors.
+/// `tables` below is how anything in production asks for an automaton, and these
+/// three exist because a test that wants to isolate one stage has to be able to
+/// stop between them: `lr0.build` without the lookaheads, `lalr.build` over a
+/// collection it already holds, `fold.nonterminals` over a grammar that was never
+/// pressed. Publishing them is what lets the seal on this directory be total -
+/// a facade with a way around it is a suggestion, and the way around it here was
+/// four call sites that had a legitimate need and no door to use.
+pub const fold = @import("copy/fold.zig");
+pub const lr0 = @import("cast/lr0.zig");
+pub const lalr = @import("lalr.zig");
 
 /// A ceiling on unfolding, not a schedule: the loop stops as soon as a round
 /// fails to improve, and no grammar tried has improved twice. It stays above one

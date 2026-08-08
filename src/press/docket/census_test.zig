@@ -54,14 +54,14 @@
 //! product code, and the claim each proves spans the seam it reaches over.
 
 const std = @import("std");
-const g = @import("grammar.zig");
-const import = @import("import.zig");
-const inquest = @import("inquest.zig");
-const lr0 = @import("lr0.zig");
-const press = @import("press.zig");
-const lex = @import("../kernel/lex/scanner.zig");
-const quire = @import("../kernel/quire/quire.zig");
-const walk = @import("../kernel/walk/drive.zig");
+const g = @import("../copy/grammar.zig");
+const import = @import("../copy/import.zig");
+const inquest = @import("../inquest.zig");
+const lr0 = @import("../cast/lr0.zig");
+const press = @import("../press.zig");
+const lex = @import("../../kernel/lex/scanner.zig");
+const quire = @import("../../kernel/quire/quire.zig");
+const walk = @import("../../kernel/walk/drive.zig");
 
 const asked = ".local/orchestrate/census.txt";
 

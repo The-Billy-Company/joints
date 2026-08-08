@@ -15,9 +15,9 @@
 //! and the bench that drives it needs to know none of it.
 
 const std = @import("std");
-const g = @import("grammar.zig");
-const lr0 = @import("lr0.zig");
-const retrace = @import("retrace.zig");
+const g = @import("../copy/grammar.zig");
+const lr0 = @import("../cast/lr0.zig");
+const retrace = @import("../cast/retrace.zig");
 const settle = @import("settle.zig");
 
 const Case = settle.Case;

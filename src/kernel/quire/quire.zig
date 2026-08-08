@@ -126,7 +126,7 @@ pub const Stop = union(enum) {
 /// would need converting at every hand-off - in a diagnostic print path that has
 /// no allocator to convert with.
 const press = @import("../../press/press.zig");
-pub const Fold = @import("../../press/inquest.zig").Fold;
+pub const Fold = press.inquest.Fold;
 
 /// One repair: a stop the parse recovered from instead of ending on.
 ///

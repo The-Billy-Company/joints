@@ -6,7 +6,15 @@
 package joints {
     root     src
     language zig
-    facade   root.zig
+    // Two faces, not one. `root.zig` is the module's public door and imports
+    // everything because that is what a facade does. `proof.zig` is the test
+    // build's root and imports everything for the same structural reason in the
+    // other direction: a test is reachable to `zig build test` only if something
+    // names it, and naming all of them is its entire job. Listing it here is what
+    // lets the seals below mean something — a seal every file may cross is not a
+    // seal, and the alternative was writing `open to proof.zig` on each of them,
+    // which says the same thing twice and once per seal added later.
+    facade   root.zig proof.zig
 }
 
 // Zones, low to high: an import may not point up the page. The order is a
@@ -14,20 +22,30 @@ package joints {
 zones {
     // The generator, and the floor of the package: `press` reads nothing above
     // it. Every zone from here up to `folio` reads it for the grammar, the LALR
-    // tables, and the LR(0) core.
-    press        press/**
+    // tables, and the LR(0) core. Its four layers are one zone because they are
+    // one area — the partition inside `press/` is a DAG the directories enforce
+    // on their own (`copy` reads nothing, `cast` reads `copy`, `quarrel` reads
+    // both, and the root reads all three), so naming them separately here would
+    // buy an ordering the tree already keeps. `docket/` is the exception and is
+    // spelled out below, which is why this line enumerates rather than globbing.
+    press        press/*.zig press/copy/** press/cast/** press/quarrel/**
     lex          kernel/lex/**
     walk         kernel/walk/**
     quire        kernel/quire/**
     // Above `lex` as well as `press`: `impose` reads the scanner to lay a
     // lexer out on the page.
     folio        folio/**
+    // The two integration tests, which check the press by running the whole job
+    // through the shop rather than by reading the press alone. They sit here,
+    // above everything they run, because that is what they are; the four ratified
+    // variances this file used to carry were the cost of their old address.
+    docket       press/docket/**
     joint        kernel/joint/**
     spine        kernel/spine/**
     weave        kernel/weave/**
-    // `root.zig`, the facade, and `proof.zig`, the test build's root. Both sit
-    // at the module root and both read downward only.
-    facade       *.zig
+    // No zone for the two files at the module root: `root.zig` and `proof.zig`
+    // are the package's declared faces, which stands them above every zone here
+    // rather than in one of them.
     abi          surface/abi/**
     face_joints  surface/face/joints/**
 }
@@ -48,42 +66,32 @@ use joints by abi face_joints
 limit  reach to 2 hops
 forbid cycles across directories
 
-// Ratified exceptions. Each carries the fix that would retire it; an exception
-// that stops matching is a hard failure, so paying the debt means deleting the
-// entry rather than leaving it behind as folklore.
+// The two areas whose interiors are now layered are also the two with a door
+// worth defending. Both facades were measured before they were written — 29
+// symbols out of 175 reachable for the press, 28 out of 129 for the scanner — and
+// a measurement is only a description until something makes it hold. Before these
+// two lines, four call sites entered the press around the side; they are through
+// `press.zig` now, and the seal is what stops the fifth.
+seal press through press.zig
+seal kernel/lex through scanner.zig
+
+// No ratified exceptions. There were five, then four, and now none.
 //
-// The five-way `variance cycle` this file used to carry is gone: `folio ->
-// press/press.zig -> press/carry_test.zig -> folio` was never a cycle in the
-// program, only in how Zig finds tests, since a test is reachable to `zig build
-// test` only if something imports it and the only importer on offer was
-// production code. `src/proof.zig` is that importer now and `tool/roll.py` is
-// the gate that it stays complete, so `press/**` production files are held to
-// reading nothing above them — which is what the four edges below are the
-// remainder of.
+// The five-way `variance cycle` went first: `folio -> press/press.zig ->
+// press/carry_test.zig -> folio` was never a cycle in the program, only in how
+// Zig finds tests, since a test is reachable to `zig build test` only if
+// something imports it and the only importer on offer was production code.
+// `src/proof.zig` is that importer now and `tool/roll.py` is the gate that it
+// stays complete, so `press` production files are held to reading nothing above
+// them.
 //
-// All four are one direction out of two test files, and both are integration
-// tests wearing a unit test's address. Retiring them means moving those two
-// files to a zone of their own above `folio`, which today costs the colocation
-// that makes a test findable from the code it checks: zone paths must partition
-// the module, so a test cannot be zoned by what it is while it sits beside what
-// it tests. Worth doing the day a third file joins them.
-
-variance zone press/carry_test.zig -> folio/folio.zig because
-        \\What this test protects is a press invariant: the IR `press.zig`
-        \\computes has to arrive at a parse intact, and the folio is the only
-        \\place it can quietly not. A check for that cannot stop at the zone
-        \\that computes the thing being checked.
-
-variance zone press/census_test.zig -> kernel/lex/scanner.zig because
-        \\The census answers "who owns each stop" over a real corpus, which means
-        \\running the whole pipeline the press feeds rather than the press alone:
-        \\scan, then parse, then walk. A generator's census that stopped at the
-        \\generator would be recording the generator's opinion of itself.
-
-variance zone press/census_test.zig -> kernel/quire/quire.zig because
-        \\The parse half of that same corpus run — see the `scanner.zig` edge.
-
-variance zone press/census_test.zig -> kernel/walk/drive.zig because
-        \\The walk half of that same corpus run — see the `scanner.zig` edge.
+// The four `variance zone` edges that remained were all one direction out of two
+// integration tests wearing a unit test's address, and retiring them was always
+// going to mean giving those two files a zone of their own above `folio`. What
+// stood in the way was that zone paths must partition the module, so a test
+// could not be zoned by what it is while it sat loose in a directory beside what
+// it tests. Splitting `press/` into its four real layers removed that: once the
+// area has interior directories, `docket/` is just one more of them, and the
+// colocation nothing was willing to pay for turns out to cost nothing at all.
 
 // `zoning status` lists the directories that could be sealed next.

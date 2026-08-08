@@ -18,9 +18,9 @@
 //! from the table: nothing about parsing needs it, and building it eagerly for
 //! every grammar would tax the common case to serve the reports.
 const std = @import("std");
-const g = @import("grammar.zig");
+const g = @import("../copy/grammar.zig");
 const lr0 = @import("lr0.zig");
-const import = @import("import.zig");
+const import = @import("../copy/import.zig");
 
 /// An edge, seen from its far end.
 pub const Step = struct { from: u32, symbol: g.Symbol };

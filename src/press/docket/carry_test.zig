@@ -31,12 +31,12 @@
 
 const std = @import("std");
 const testing = std.testing;
-const folio = @import("../folio/folio.zig");
-const g = @import("grammar.zig");
-const lalr = @import("lalr.zig");
-const lr0 = @import("lr0.zig");
-const press = @import("press.zig");
-const settle = @import("settle.zig");
+const folio = @import("../../folio/folio.zig");
+const g = @import("../copy/grammar.zig");
+const lalr = @import("../lalr.zig");
+const lr0 = @import("../cast/lr0.zig");
+const press = @import("../press.zig");
+const settle = @import("../quarrel/settle.zig");
 
 /// A field the round trip drops, and why.
 const Loss = struct { at: []const u8, why: []const u8 };

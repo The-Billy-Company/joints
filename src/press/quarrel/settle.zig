@@ -47,10 +47,10 @@
 //! this is where they belong rather than one import further away.
 
 const std = @import("std");
-const first = @import("first.zig");
-const g = @import("grammar.zig");
-const lr0 = @import("lr0.zig");
-const sets = @import("sets.zig");
+const first = @import("../cast/first.zig");
+const g = @import("../copy/grammar.zig");
+const lr0 = @import("../cast/lr0.zig");
+const sets = @import("../cast/sets.zig");
 
 const attribution = @import("attribution.zig");
 const column = @import("column.zig");

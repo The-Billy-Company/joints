@@ -14,8 +14,8 @@
 //! allocation for a two-symbol set is most of an allocator call spent on nothing.
 
 const std = @import("std");
-const g = @import("grammar.zig");
-const lr0 = @import("lr0.zig");
+const g = @import("../copy/grammar.zig");
+const lr0 = @import("../cast/lr0.zig");
 const attribution = @import("attribution.zig");
 const column = @import("column.zig");
 const rungs = @import("ladder.zig");

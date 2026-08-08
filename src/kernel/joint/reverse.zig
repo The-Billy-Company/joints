@@ -24,8 +24,8 @@
 
 const std = @import("std");
 const press = @import("../../press/press.zig");
-const lr0 = @import("../../press/lr0.zig");
-const lalr = @import("../../press/lalr.zig");
+const lr0 = press.lr0;
+const lalr = press.lalr;
 
 /// A predecessor: state `from` reaches the state this link is filed under by
 /// consuming `symbol`.

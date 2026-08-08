@@ -5,16 +5,21 @@ longest-match question asked once per token.** Every terminal a grammar
 declares is a regex (a literal is the degenerate case), irregex answers exactly
 that question, and so this folder contains no automaton of its own.
 
+One door in. `scanner.zig` is the entry, and `charter.zone` seals this directory
+through it, so nothing outside may name any other file here. The four at the root
+are the compiled path plus the one file standing in for an external scanner; the
+seven in `hand/` are the memories a table cannot hold, and they have their own
+[README](hand/README.md).
+
 | File | Role |
 |---|---|
-| `scanner.zig` | The grammar's terminals as one irregex slate, the tie-break, the guarded pre-pass, the extras skip, and the list of terminals nothing here can recognize. |
+| `scanner.zig` | The door. The grammar's terminals as one irregex slate, the tie-break, the guarded pre-pass, the extras skip, and the list of terminals nothing here can recognize. |
+| `lexicon.zig` | The slate, already determinized: a compiled `Munch` as a block of bytes, because determinizing a slate is the whole of startup and a folio can map one instead. |
 | `admit.zig` | What the walk is allowed to consider: the precedence tiers, the immediacy cut, and the per-state permission set shaped like them. |
-| `outside.zig` | What an external scanner would have produced. Front half: a roll of spellings keyed by the terminal's own name. Back half: the hands, for the externals that need a memory. |
-| `offside.zig` | The offside rule. A stack of columns, and reading one line's indentation, blankness, comment column and continuation. |
-| `fence.zig` | Delimited spans. A stack of open marks, a per-dialect opener, and one shared hunt for the close. |
-| `marrow.zig` | A run whose end is computed from where it starts. Carries nothing: at a content offset the captured close is still in the bytes behind it. |
-| `caesura.zig` | A break the line demands and the file never spells - JavaScript's automatic semicolon. Carries nothing either, and decides on the parser's expected set rather than on state. |
+| `outside.zig` | What an external scanner would have produced. Front half: a roll of spellings keyed by the terminal's own name. Back half: the hub that drives `hand/`, which is why it stays here rather than moving in with them. |
+| `hand/` | Seven shapes of scanner memory - column stacks, span stacks, implied closes, commanded layout. Internal to this directory. |
 | `scanner_test.zig` | Longest-wins, keyword-beats-pattern, extras, strays, blindness, the offside walk, the fence, the guards - and the measured trap that a real grammar sets for an unconditional slate. |
+| `lexicon_test.zig` | The compiled slate round-tripped: what a folio wrote is what binds. |
 
 ## What is here and what is deliberately elsewhere
 
@@ -79,29 +84,13 @@ carries either.
 
 A row is a function of the bytes at one offset. The rest of what an external
 scanner does is a function of the bytes **and a memory every previous token
-built** - a column stack behind `_indent`, a heredoc's tag, which fence opened a
-Python string. That is a different animal, so it gets a different seam rather
-than a cleverer table, and three properties are why:
+built**, which is a different animal and gets a different seam rather than a
+cleverer table. That seam is [`hand/`](hand/README.md) - seven shapes of memory,
+and the three properties that separate a hand from a row.
 
-- **It runs before the slate.** The whitespace in front of a Python line *is*
-  its indentation, so an extra must not eat it before the offside rule sees it.
-- **It may answer zero-width.** The slate must refuse a zero-length match -
-  nothing in a regex promises the next call differs - but a hand need not, and
-  `outside.Spent` is why: zero-width answers are counted per offset under a hard
-  ceiling, so the walk terminates whatever a hand does. Some of them move memory
-  (every `_dedent` pops a column) and some move none (julia's five
-  `_immediate_*` markers), so "the memory moved" was never the whole proof.
-- **It is asked at end of input.** A file ending inside three open blocks still
-  owes three dedents.
-
-What generalises is the memory, not the scanners: a stack of columns
-(`offside.zig`) and a stack of open marks (`fence.zig`), both fixed-capacity so
-a push cannot fail and nothing allocates mid-scan. An opener's spelling never
-generalises, and `outside.zig` does not pretend it does - `troupes` is a map
-from one language's terminal names onto the parts of a shape, which is the most
-that is true. A grammar binds a troupe by declaring its anchor as an external,
-and binding **claims** the other members, so the roll stops seating a flat
-pattern for a name a hand now answers.
+The binding is the part that lives out here: a grammar binds a troupe by
+declaring its anchor as an external, and binding **claims** the other members, so
+the roll stops seating a flat pattern for a name a hand now answers.
 
 ## Lexing is state-directed, and that is not a refinement
 
@@ -109,15 +98,15 @@ The naive reading - offer every terminal at every offset - does not survive
 contact with a real grammar, and the smallest grammar we have is already enough
 to break it. tree-sitter-json declares
 
-```
+```javascript
 string_content: token.immediate(prec(1, /[^\\"\n]+/))
 ```
 
 which is legal only between quotes. Asked unconditionally, it is longest almost
-everywhere. Over `{"a": [1, true, null], "b": "x"}` it takes `: [1, true,
-null], ` in one bite, and thirty-two bytes that should be twenty-one tokens
-become thirteen. `joints lex` prints exactly this, which is the cheapest way
-to watch it happen.
+everywhere. Over `{"a": [1, true, null], "b": "x"}` it takes
+`: [1, true, null],` plus its trailing space in one bite, and thirty-two bytes
+that should be twenty-one tokens become thirteen. `joints lex` prints exactly
+this, which is the cheapest way to watch it happen.
 
 So `Scanner.next` takes an `Expected` - the terminals the parse state will
 accept - and the restriction rides irregex's walk rather than filtering its

@@ -45,16 +45,16 @@ test {
     _ = @import("kernel/weave/weave.zig");
     _ = @import("folio/folio.zig");
     _ = @import("press/press.zig");
-    _ = @import("press/grammar.zig");
-    _ = @import("press/import.zig");
-    _ = @import("press/lexeme.zig");
-    _ = @import("press/fold.zig");
+    _ = @import("press/copy/grammar.zig");
+    _ = @import("press/copy/import.zig");
+    _ = @import("press/copy/lexeme.zig");
+    _ = @import("press/copy/fold.zig");
     _ = @import("press/lalr.zig");
-    _ = @import("press/settle.zig");
-    _ = @import("press/lr0.zig");
-    _ = @import("press/retrace.zig");
-    _ = @import("press/first.zig");
-    _ = @import("press/sets.zig");
+    _ = @import("press/quarrel/settle.zig");
+    _ = @import("press/cast/lr0.zig");
+    _ = @import("press/cast/retrace.zig");
+    _ = @import("press/cast/first.zig");
+    _ = @import("press/cast/sets.zig");
 }
 
 // The `*_test.zig` files, which live beside what they test and are reached only
@@ -68,14 +68,14 @@ test {
     _ = @import("kernel/quire/survey_test.zig");
     _ = @import("kernel/weave/amend_test.zig");
     _ = @import("folio/folio_test.zig");
-    _ = @import("press/import_test.zig");
+    _ = @import("press/copy/import_test.zig");
     // What this one protects is a press invariant: the IR `press.zig` computes
     // has to arrive at a parse intact, and the folio is the only place it can
     // quietly not — which is why it reads downstream of its own directory.
-    _ = @import("press/carry_test.zig");
+    _ = @import("press/docket/carry_test.zig");
     // The census over a verdict list, which `zig build census` narrows to. Also
     // inert without its request file, so being in the suite costs a no-op.
-    _ = @import("press/census_test.zig");
+    _ = @import("press/docket/census_test.zig");
     // An instrument rather than an assertion: it answers "which cell decided
     // this" over a real grammar, and returns immediately unless asked.
     _ = @import("press/wall_test.zig");

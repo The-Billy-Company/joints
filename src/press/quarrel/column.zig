@@ -13,7 +13,7 @@
 //! exactly that summary and never the reductions themselves.
 
 const std = @import("std");
-const g = @import("grammar.zig");
+const g = @import("../copy/grammar.zig");
 const settle = @import("settle.zig");
 
 const Action = settle.Action;

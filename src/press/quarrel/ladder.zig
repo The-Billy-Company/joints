@@ -15,7 +15,7 @@
 //! on this rung was found by a test that could name the survey it needed.
 
 const std = @import("std");
-const g = @import("grammar.zig");
+const g = @import("../copy/grammar.zig");
 const column = @import("column.zig");
 
 const Folds = column.Folds;
