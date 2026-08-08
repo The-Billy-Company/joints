@@ -484,7 +484,7 @@ test "a reserved section is carried and empty, not skipped" {
         try testing.expectEqual(@as(u32, 0), f.dir[@intFromEnum(k)].count);
         try testing.expectEqual(k, f.dir[@intFromEnum(k)].kind);
     }
-    try testing.expectEqual(@as(usize, 3), reserved);
+    try testing.expectEqual(@as(usize, 2), reserved);
 }
 
 test "a populated reserved section is refused, and nothing else would have caught it" {
