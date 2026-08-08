@@ -104,8 +104,6 @@ MORE = re.compile(r"\+(\d+) more")
 # inflate `exercised` with punctuation.
 ROW = re.compile(
     r"^\s*(?:[A-Za-z_][A-Za-z0-9_]*: )?([A-Za-z_][A-Za-z0-9_]*) \[(\d+), (\d+)\)")
-ROOTS = re.compile(r"(\d+) roots?")
-MENDED = re.compile(r"mended (\d+)")
 WINDOW = 8  # how many blind names any reporting path prints before eliding
 
 
@@ -272,12 +270,16 @@ def forest(grammar: Path, src: Path) -> list[Node]:
     `--all` keeps the anonymous tokens so a specimen can assert over
     punctuation, and `--ranges` is what makes `spans` possible at all: a
     first-match reader and a greedy one produce the same node *name*, and only
-    the extent tells them apart."""
-    got = subprocess.run([str(BIN), "parse", str(grammar), str(src),
-                          "--ranges", "--all"],
-                         capture_output=True, text=True, timeout=900)
+    the extent tells them apart.
+
+    `stamp.ask` is the exchange - this file does not shell the binary itself.
+    `tree=True` is exactly those two flags, and the forest comes back on
+    `Outcome.tree`. Reading the rows is still ours: `ROW` is about what a
+    *specimen* may assert over, which is a narrower question than the verdict."""
     return [Node(m[1], int(m[2]), int(m[3]))
-            for line in got.stdout.splitlines() if (m := ROW.match(line))]
+            for line in stamp.ask(BIN, grammar, src, tree=True,
+                                  patience=900).tree.splitlines()
+            if (m := ROW.match(line))]
 
 
 def stop(grammar: Path, src: Path) -> tuple[int, int, str]:
@@ -294,15 +296,18 @@ def stop(grammar: Path, src: Path) -> tuple[int, int, str]:
     author is least likely to re-derive by hand.
 
     A refusal is now its own answer and every claim in the specimen fails
-    against it, named. Silence is not agreement here either."""
-    got = subprocess.run([str(BIN), "parse", str(grammar), str(src), "--quiet"],
-                         capture_output=True, text=True, timeout=900)
-    roots, mends = ROOTS.search(got.stderr), MENDED.search(got.stderr)
-    if roots is not None:  # a mended, truncated, many-rooted parse is a parse
-        return int(roots[1]), int(mends[1]) if mends else 0, ""
-    why = next((l.strip() for l in got.stderr.splitlines()
-                if "blind to" not in l), "") or f"exit {got.returncode}"
-    return 0, 0, why.removeprefix("joints: ")
+    against it, named. Silence is not agreement here either.
+
+    Both halves are the owner's. `stamp.ask` runs the parse and `stamp.ROOTS`
+    decides whether the verdict named any - this file used to carry its own
+    copy of that regex and its own `--quiet` exec, which is two ways to disagree
+    with the instrument everything else reads a verdict through."""
+    end = stamp.ask(BIN, grammar, src, tree=False, patience=900)
+    if stamp.ROOTS.search(end.verdict):  # mended, truncated, many-rooted: still a parse
+        return end.roots, end.mends, ""
+    # `verdict` says `(silent)` where there was no line to read at all; the exit
+    # status is the only thing left that distinguishes those, so keep naming it.
+    return 0, 0, f"exit {end.code}" if end.verdict == "(silent)" else end.verdict
 
 
 # ---------------------------------------------------------------- population

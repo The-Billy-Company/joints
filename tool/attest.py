@@ -148,12 +148,10 @@ def sources(home: Path) -> list[tuple[Path, PurePosixPath]]:
             blob = p.read_bytes()
         except OSError:
             continue
-        for hit in d.INCLUDE.findall(blob):
-            want = hit.decode()
-            if want.startswith("tree_sitter/"):
-                continue  # the runtime's own headers; `generate` wrote them
-            if (target := (p.parent / want).resolve()).is_file():
-                todo.append(target)
+        # Which includes are the grammar's own is `differential`'s to say - it
+        # writes the ones that are not. Following a runtime header would put the
+        # CLI's version into an identity that is meant to be authored bytes only.
+        todo += [target for _, target in d.includes(blob, p.parent) if target.is_file()]
     # The root is where the climbs land, not where the path happens to say
     # `lang/`. Deriving it from the files themselves is what makes a scratch
     # copy of a grammar spell its files the same way the live tree does - php's
@@ -161,7 +159,7 @@ def sources(home: Path) -> list[tuple[Path, PurePosixPath]]:
     # in a tmpdir is comparable to one taken on the shared tree. Keying off
     # `split` alone silently dropped the climbed header in any copy that had no
     # `lang/` above it, which is every copy anyone makes to test with.
-    root = Path(os.path.commonpath([split(home)[0].resolve(), *seen]))
+    root = Path(os.path.commonpath([d.rooted(home)[0].resolve(), *seen]))
     return sorted(((p, PurePosixPath(p.relative_to(root))) for p in seen),
                   key=lambda kv: kv[1])
 
@@ -686,21 +684,6 @@ def told() -> str:
 
 # ------------------------------------------------------------------- the pin
 
-def split(lang: Path) -> tuple[Path, Path]:
-    """A grammar's own root, and how deep inside it the CLI is handed.
-
-    `oracle_home` reproduces a monorepo's depth under `lang/<name>/` because
-    php's and typescript's scanners climb out of their own directory - so a pin
-    that copied only the home would break exactly the three grammars the depth
-    exists for. The root is what gets copied; the offset is what gets restored.
-    """
-    parts = lang.parts
-    if "lang" not in parts:
-        return lang, Path()
-    root = Path(*parts[:parts.index("lang") + 2])
-    return root, lang.relative_to(root)
-
-
 def freeze(tag: str, cases) -> dict:
     """Copy today's oracle somewhere nothing else writes, and say what it is.
 
@@ -718,7 +701,7 @@ def freeze(tag: str, cases) -> dict:
         name = d.named(case.lang)
         if name in rows:
             continue
-        root, at = split(case.lang)
+        root, at = d.rooted(case.lang)
         if not root.is_dir():
             continue
         with d.alone(name, writing=False):
@@ -955,7 +938,7 @@ def scratch(home: Path, tmp: Path) -> Path:
     testing a grammar with no external scanner in it - which is the case the
     reach below exists for.
     """
-    root, at = split(home)
+    root, at = d.rooted(home)
     shutil.copytree(root, tmp / root.name, copy_function=shutil.copy2)
     return tmp / root.name / at
 
@@ -973,7 +956,7 @@ def directions(pick: str = "") -> list[tuple[str, str, bool]]:
     live = sorted((p.parent.parent for p in (d.WORK / "lang").rglob("src/grammar.json")
                    if p.is_file() and (p.parent / "scanner.c").is_file()),
                   key=lambda h: (d.named(h) != pick, d.named(h)))
-    deep = next((h for h in live if split(h)[1] != Path()), None)
+    deep = next((h for h in live if d.rooted(h)[1] != Path()), None)
     if not live:
         return [("a grammar with an external scanner to copy", "none on disk", False)]
     home = live[0]
@@ -1030,7 +1013,7 @@ def directions(pick: str = "") -> list[tuple[str, str, bool]]:
                     f"{old[:9]} → {was(pen)[:9]}", was(pen) != old))
         if not d.oracle_ready():
             out.append(("a real regenerate", "no tree-sitter CLI - skipped", True))
-        elif (got := d.cli([str(d.TS), "generate", "src/grammar.json"], pen)).returncode:
+        elif (got := d.cli(d.builder_argv(), pen)).returncode:
             out.append(("a regenerate to compare against", d.gripe(got.stderr), False))
         else:
             out.append(("HOLDS across a real `tree-sitter generate` - same authored"

@@ -245,10 +245,14 @@ def theirs(case: Case, blob: bytes) -> tuple[Their, d.Node | None]:
     at = d.Lines(blob)
     try:
         with d.alone(d.named(case.lang), writing=False):
-            got = d.cli([str(d.TS), "parse", "-p", str(case.lang), "-x",
-                         str(case.source.resolve())], d.WORK)
-        if not got.stdout.strip():
-            return blank_them(d.gripe(got.stderr)), None
+            # The owner's argv and the owner's refusal rule; the exchange itself
+            # stays here because the two checks below need the exit status, which
+            # is the one thing `oracle_full` cannot hand back.
+            got = d.cli(d.oracle_argv(case.lang, case.source.resolve(), "-x"), d.WORK)
+        # Uncapped: this is `gripe`, and its longest sentence is the one telling
+        # you which commit's external scanner to fetch, which is the whole use.
+        if why := d.refused(got):
+            return blank_them(why), None
         root = d.xml_tree(got.stdout, at)
     except (ValueError, KeyError, ET.ParseError, OSError) as e:
         return blank_them(str(e)[:90]), None
@@ -893,13 +897,13 @@ def cost(case: Case, runs: int, fresh: bool) -> Cost:
         (src / "parser.c").unlink(missing_ok=True)
         for stale in d.LIB.glob(f"{d.named(lang)}.*"):
             stale.unlink()
-    gen_ms, got = timed([str(d.TS), "generate", "src/grammar.json"], lang, env=ts_env())
+    gen_ms, got = timed(d.builder_argv(), lang, env=ts_env())
     if got.returncode != 0:
         return Cost(case.name, size, folio.stat().st_size, mint_ms, 0, gen_ms, 0, 0,
                     scanner, 0, 0, f"generate: {d.gripe(got.stderr)}")
     parser_c = (src / "parser.c").stat().st_size if (src / "parser.c").exists() else 0
-    cc_ms, got = timed([str(d.TS), "parse", "-p", str(lang), "-q",
-                        str(case.source.resolve())], d.WORK, env=ts_env())
+    cc_ms, got = timed(d.oracle_argv(lang, case.source.resolve(), "-q"),
+                       d.WORK, env=ts_env())
     lib = next((p for p in d.LIB.glob(f"{d.named(lang)}.*") if p.suffix != ".c"), None)
     if lib is None:
         return Cost(case.name, size, folio.stat().st_size, mint_ms, 0, gen_ms, cc_ms,

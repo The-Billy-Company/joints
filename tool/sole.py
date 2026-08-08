@@ -109,9 +109,11 @@ class Copy(NamedTuple):
 
 
 # An exception has to be written down where it lives, the way a MONOLITHIC
-# marker is. Two exist and both are real distinctions rather than fatigue:
+# marker is. They are all one of two real distinctions rather than fatigue:
 # `bench` shells the parse because the run *is* the measurement, and `rung1`
-# reads the word `accepted` out of a different verb's report entirely.
+# reads the word `accepted` out of a different verb's report entirely. How many
+# there are is printed on every run and deliberately not counted here - this
+# comment said two for a while after there were five.
 EXCUSE = "# sole:"
 LOOK_BACK = 4  # lines above the finding a reason may sit on
 

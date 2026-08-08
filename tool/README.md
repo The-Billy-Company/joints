@@ -943,8 +943,18 @@ shape to see, and the gate reports that it is blind to it every run.
 
 Exceptions are written where they live, the way a `MONOLITHIC` marker is. A
 `# sole: <reason>` comment on or just above the line excuses it and prints the
-reason on every run; two exist, and both are real distinctions rather than
-fatigue.
+reason on every run, so the count is on the page rather than in this sentence -
+it said two for a while after there were five. Each is a real distinction rather
+than fatigue, and they are all one of two: the run *is* the measurement, or the
+word came out of a different verb's report entirely.
+
+**It has since caught nine, and they were the shape it was built for.** Three
+instruments were reading a verdict or running an oracle for themselves, one of
+them with its own copy of two of `stamp`'s regexes. Fixing them turned up two
+further copies *inside* `differential`, of a rule about which `#include` is the
+grammar's own - which this gate structurally cannot see, since a second copy in
+the owner is not a second copy by its rule. Worth knowing before reading a green
+line here as "no duplication left".
 
 **Its corpus is the other `tool/*.py` files, and that is a hole rather than a
 scope.** It globs one directory and reads it with Python's `ast`, so every

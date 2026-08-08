@@ -747,6 +747,43 @@ def gripe(stderr: str) -> str:
     return lines[-1] if lines else "no reason given"
 
 
+def builder_argv() -> list[str]:
+    """How the oracle's parser is generated, spelled once.
+
+    Run from inside the language directory, which is why the path is relative.
+    See `oracle_argv` for why an argv is a thing this module hands out at all.
+    """
+    return [str(TS), "generate", "src/grammar.json"]
+
+
+def oracle_argv(lang: Path, source: Path, *flags: str) -> list[str]:
+    """How the oracle is asked for a tree, spelled once.
+
+    The exchanges below are the door for a caller that wants the *answer*. This
+    is the door for one that needs the exchange itself: `collate` publishes the
+    generate and parse latencies as a table, so it cannot call `oracle_full` -
+    the owner's exchange folds in a digest and a copy that a cold-build
+    measurement has to exclude, and `oracle_build` is idempotent by design.
+    What that caller needed was never the answer, it was the command line, and
+    handing back the argv keeps its number honest without leaving it to spell
+    the invocation a second time. A flag added here reaches the measurement too.
+    """
+    return [str(TS), "parse", "-p", str(lang), *flags, str(source)]
+
+
+def refused(got: subprocess.CompletedProcess[str]) -> str:
+    """Why the oracle gave us no tree, or `""` if it gave us one.
+
+    **Exit 1 means the file has an `ERROR` in it, which is an answer, not a
+    refusal** - so what separates the two is whether a tree came back at all,
+    never the status. Named rather than left inline because `collate` has to
+    draw the same line and cannot use `oracle_full`: it cross-checks the
+    damage in the tree against the exit status, and an exception carries no
+    status. Same rule, two readers, one place to be wrong.
+    """
+    return "" if got.stdout.strip() else gripe(got.stderr)
+
+
 def oracle_full(lang: Path, source: Path, *flags: str) -> tuple[str, str]:
     """The oracle's tree, and everything it said around it.
 
@@ -755,11 +792,9 @@ def oracle_full(lang: Path, source: Path, *flags: str) -> tuple[str, str]:
     nowhere in it. A caller counting repairs needs the pair, and a caller
     counting nodes wants `oracle_run` below.
     """
-    got = cli([str(TS), "parse", "-p", str(lang), *flags, str(source)], WORK)
-    # Exit 1 means the file has an ERROR in it, which is an answer, not a
-    # refusal - so what separates the two is whether a tree came back at all.
-    if not got.stdout.strip():
-        raise ValueError(gripe(got.stderr))
+    got = cli(oracle_argv(lang, source, *flags), WORK)
+    if why := refused(got):
+        raise ValueError(why)
     return got.stdout, got.stderr
 
 
@@ -784,6 +819,24 @@ def named(home: Path) -> str:
     """
     parts = home.parts
     return parts[parts.index("lang") + 1] if "lang" in parts else home.name
+
+
+def rooted(lang: Path) -> tuple[Path, Path]:
+    """A grammar's own sandbox root, and how deep inside it the CLI is handed.
+
+    `named` above and this are the same inverse asked for different halves, so
+    they live together: where `lang/` ends is one fact about a path, and it was
+    being decided in two files. `oracle_home` reproduces a monorepo's depth
+    under `lang/<name>/` because php's and typescript's scanners climb out of
+    their own directory - so a pin that copied only the home would break exactly
+    the three grammars the depth exists for. The root is what gets copied; the
+    offset is what gets restored.
+    """
+    parts = lang.parts
+    if "lang" not in parts:
+        return lang, Path()
+    root = Path(*parts[:parts.index("lang") + 2])
+    return root, lang.relative_to(root)
 
 
 def oracle_home(name: str, work: Path | None = None) -> Path:
@@ -835,12 +888,34 @@ def oracle_build(lang: Path, want: Path) -> None:
             (lang / "src" / "parser.c").unlink(missing_ok=True)
         if (lang / "src" / "parser.c").exists():
             return
-        got = cli([str(TS), "generate", "src/grammar.json"], lang)
+        got = cli(builder_argv(), lang)
         if got.returncode != 0:
             raise ValueError(f"tree-sitter generate: {gripe(got.stderr)}")
 
 
 INCLUDE = re.compile(rb'#\s*include\s+"([^"]+)"')
+
+
+def includes(blob: bytes, beside: Path) -> list[tuple[str, Path]]:
+    """Every `#include "…"` in `blob` that names a file of the grammar's own -
+    the spelling, and where it resolves to relative to `beside`.
+
+    **The runtime's own headers are not among them.** `generate` writes
+    `src/tree_sitter/*.h` itself, so a closure that followed those would fold
+    the CLI's version into the identity of the grammar's authored bytes - which
+    is the same error as sweeping a compiled library in, from the other side.
+    Three walks decided that separately and two of them were in this file: the
+    upstream fetch in `beside`, the containment check in `sandboxed`, and
+    `attest`'s digest closure. What each does with a hit still differs; which
+    hits there are does not.
+    """
+    out = []
+    for hit in INCLUDE.findall(blob):
+        want = hit.decode()
+        if want.startswith("tree_sitter/"):
+            continue
+        out.append((want, (beside / want).resolve()))
+    return out
 
 
 def refresh(target: Path, blob: bytes, home: Path) -> bool:
@@ -877,11 +952,7 @@ def beside(url: str, home: Path, blob: bytes) -> int:
     the file it gets is the file it asked for.
     """
     bad = 0
-    for hit in INCLUDE.findall(blob):
-        want = hit.decode()
-        if want.startswith("tree_sitter/"):
-            continue  # the runtime's own headers; `generate` already wrote them
-        target = (home / want).resolve()
+    for want, target in includes(blob, home):
         away = "/".join(url.split("/")[:-1]) + "/" + want
         try:
             with urllib.request.urlopen(away, timeout=60) as r:  # noqa: S310 - https literal
@@ -996,11 +1067,7 @@ def sandboxed(work: Path | None = None) -> int:
     for sc in sorted((work / "lang").rglob("src/scanner.c*")):
         name = sc.relative_to(work / "lang").parts[0]
         root = oracle_root(name, work).resolve()
-        for hit in INCLUDE.findall(sc.read_bytes()):
-            want = hit.decode()
-            if want.startswith("tree_sitter/"):
-                continue
-            target = (sc.parent / want).resolve()
+        for want, target in includes(sc.read_bytes(), sc.parent):
             if not target.is_relative_to(root):
                 print(f"  ESCAPES {name:<12} {want:<30} -> {target}")
                 bad += 1
