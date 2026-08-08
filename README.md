@@ -19,8 +19,11 @@ check the algebra against, the balanced tree the joints hang from (M3, the
 spine), the concrete syntax tree a parse yields (the quire, with delete-and-
 supply repair at every refusal), the weave that holds a file open and re-parses
 across edits, the folio artifact - including the codex form that packs N
-languages into one mmap-able file - the CLI that drives all of it (`parse`,
-`amend`, `mint`, and the measurement verbs), and `libjnt`, the C ABI.
+languages into one mmap-able file - the vectorized structural first pass under
+the lexer (grain), the succinct balanced-parentheses encoding of the tree
+(vellum), the Myhill-Nerode quotients over the pressed table (M5), the CLI that
+drives all of it (`parse`, `amend`, `mint`, and the measurement verbs), and
+`libjnt`, the C ABI.
 
 That order is on purpose: the central claim has a falsifier measurable *before* a
 parser exists, so the measurement came first. It says the product of segment
@@ -37,15 +40,59 @@ the eleven-grammar sweep needs the grammars, so fetch them first:
 `python3 tool/grammars.py fetch`, then `zig build && python3 tool/rung1.py`.
 [CONTRIBUTING.md](CONTRIBUTING.md) has the rest.
 
-What is *not* built: the SIMD first pass (grain), the query engine (gloss),
-vellum (the settled succinct encoding), the semiring abstraction repair should
-settle into (M4 as a *parameter* rather than one policy family), and the
-quotient (M5) - which is where the size claim lives, so the size claim is
-still a target. The table below marks each monoid's real state.
+**Where the parse stands, over thirty grammars and 527 KB of real files.**
+`python3 tool/plumb.py board` holds every byte of the corpus against
+tree-sitter's own tree and buckets it: **78.12% of the corpus gets a tree, and
+0.48% of that is read as something else.** Eighteen of the thirty grammars are
+at 100%. What is left is concentrated, not spread: yaml gets 0.0% and markdown
+5.4%, both for the reason the next section is about. `zig build census` names the
+wall each grammar stops at and who owns it - of thirty, **five parse whole with
+no wall at all, nineteen read to whole once repair is allowed**, eleven stop on a
+terminal only an external C scanner can produce, ten on a genuinely empty table
+cell, three on the reference walk rather than the fork loop, and one on a fold.
+
+Every figure in that paragraph, and rung 4's below, was taken on `7eb9bb9`
+(2026-08-08). A corpus total is only true of the tree it was measured on - four
+boards published in one morning here once disagreed by ~1,900 bytes with all four
+correct about different trees - so re-run the two commands rather than trusting
+the numbers if this tree has moved.
+
+**The size claim is met, and not by the monoid that was supposed to carry it.**
+[Rung 4](research/joinery/TESTING.md#rung-4---is-the-quotient-worth-its-build-time)
+measures the folio against tree-sitter's compiled parser in bits per production,
+and joints is smaller on all eleven, from 0.139x to 0.987x, with no grammar
+losing. That win is the folio's encoding. M5 - built, measured, recorded -
+contributed almost none of it: the bisimulation merges 0 to 19 states out of
+thousands, the column alphabet narrows by 1.00x to 1.09x, and the DAFSA *loses*
+to a sorted array by 2.85x to 4.33x, so the folio keeps writing the array. One
+caveat that cuts the other way and belongs here rather than in a footnote: `ours`
+includes a lexicon section per grammar that tree-sitter emits as compiled machine
+code inside the `.so` and so does not pay for in this currency. A prediction that
+came out right for the wrong reason is still a prediction that came out wrong,
+and both halves are above.
+
+What is *not* built, in the order it costs a reader something:
+
+- **The query engine (gloss).** Nobody consumes a parser through its parse API;
+  they consume it through queries - highlighting, folding, structural selection,
+  injections. Until this exists there is no adoption path for an editor however
+  good the trees are, and it is the largest thing left.
+- **An edit door on the C ABI.** `jnt_parse` is the only way in. The weave holds
+  a file open across keystrokes and re-parses the changed branch, which is the
+  whole reason to pick an incremental parser, and it is reachable from the CLI
+  only. The ABI also walks down and no other direction: no parent, no siblings,
+  no cursor.
+- **The semiring abstraction repair should settle into** - M4 as a *parameter*
+  rather than one policy family. The semiring itself is built and proven
+  (`irregex.math.semiring`); mend does not take it yet.
+
+The table below marks each monoid's real state.
 
 Every number quoted about tree-sitter below was read out of its source, its
-issue tracker, or a measurement taken on 2026-08-02. Every number about joints
-is a target with a kill condition attached, and it is labelled as one.
+issue tracker, or a measurement taken on 2026-08-02. A number about joints is
+either measured - in which case the instrument that produced it is named beside
+it and reproducible from a clone - or a target with a kill condition attached, in
+which case it is labelled as one. Rungs 1 and 4 have been run; the rest have not.
 
 ## What an external scanner costs us
 
@@ -141,11 +188,11 @@ joints runs five monoids over one balanced tree:
 
 | | The monoid | What it buys | State |
 |---|---|---|---|
-| **M1** | lexical transition functions | data-parallel lexing; an edit does not invalidate downstream lexing | a scanner that tokenizes real files, still missing the externally-scanned terminals |
+| **M1** | lexical transition functions | data-parallel lexing; an edit does not invalidate downstream lexing | a scanner that tokenizes real files, still missing the externally-scanned terminals. Grain's vectorized first pass sits under it and pays up to 3.6x on the walk - but its line index repays only a forward sweep, and is 0.08x-0.43x on jumbled access |
 | **M2** | LR stack effects, the **joints** | position-independent reparse; parallel parse; GLR paid only where the element is multi-valued | built and measured - rung 1 |
-| **M3** | balanced parentheses | the tree itself, at 2n+o(n) bits, navigated by range min-max | the spine is built - generic over the monoid, verified against random edit streams; the succinct 2n+o(n) settling (vellum) is not |
-| **M4** | a semiring parameter | least-cost repair, ranking, ambiguity counting - one walk, different `⊕` | repair ships as mend: delete-and-supply at the refusal, four author-facing policies; the semiring it should be a parameter of is not built |
-| **M5** | Myhill-Nerode quotients | the size win: coarser alphabets, minimized tables | not built |
+| **M3** | balanced parentheses | the tree itself, at 2n+o(n) bits, navigated by range min-max | built both ways. The spine is generic over the monoid and verified against random edit streams; vellum settles it at **2.82 bits of shape a node** - 1.96x smaller end to end, because kind, span and field are facts about the grammar and do not compress into parentheses. 5x faster on `depth`, **30-100x slower on `parent`**, 105x faster to re-index after a keystroke |
+| **M4** | a semiring parameter | least-cost repair, ranking, ambiguity counting - one walk, different `⊕` | repair ships as mend: delete-and-supply at the refusal, four author-facing policies. The semiring is built and proven in `irregex.math.semiring`; mend does not take it as a parameter yet |
+| **M5** | Myhill-Nerode quotients | the size win: coarser alphabets, minimized tables | built, measured, and it **found almost nothing** - 0 to 19 states merged out of thousands, columns 1.00x-1.09x narrower, and the DAFSA 2.85x-4.33x *worse* than the sorted array it was meant to replace. The relation is worth keeping because it is the only thing that can assert no two states are interchangeable. But the size win at rung 4 is the folio's encoding, not this |
 
 Four features, one splice implementation, one set of tests. That economy is the
 actual argument; the individual monoids are mostly known.
@@ -197,12 +244,14 @@ charter.zone       the zoning import topology, judged against the real `@import`
 include/           `jnt.h`, the normative statement of the C ABI
 src/press/         the compiler: grammar.json in, LR(0) → LALR → resolved tables out
 src/folio/         the artifact: write, map, verify, slice - and the codex of many
+src/kernel/grain/  the vectorized structural pass under the scanner: lines and indents
 src/kernel/lex/    the terminal scanner (M1)
 src/kernel/joint/  the stack-effect monoid (M2) and the cursor that composes it
 src/kernel/walk/   a single-stack reference LR walk, to check the algebra against
 src/kernel/spine/  the monoid-annotated balanced tree everything binds to (M3)
 src/kernel/quire/  the tree a parse yields, with mend at every refusal
 src/kernel/weave/  a file held open: spine and quire maintained across an edit
+src/kernel/vellum/ the tree settled into balanced parentheses - at rest, and across an edit
 src/surface/face/  the CLI: grammar · lex · state · survey · parse · amend · mint
 src/surface/abi/   libjnt's bodies and its `export fn` root
 ```
@@ -210,10 +259,15 @@ src/surface/abi/   libjnt's bodies and its `export fn` root
 Still to come:
 
 ```
-src/kernel/grain/  the SIMD first pass
 src/kernel/gloss/  the query engine
-vellum             the settled succinct encoding (inside quire when it lands)
 ```
+
+Vellum landed above `quire` rather than inside it, which was the plan's one wrong
+guess about its own shape: vellum reads the quire it settles *and* the spine it
+hangs the parenthesis word on, so a file under `kernel/quire/` would have been
+importing up the page. Gloss will land in the same band for the same reason - it
+reads `folio` for the query it was handed and `quire` for the tree it matches
+against.
 
 The importer is not a nice-to-have. Three hundred maintained grammars with
 `highlights.scm` are person-decades and cannot be out-engineered, so they get
