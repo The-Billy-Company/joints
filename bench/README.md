@@ -16,6 +16,7 @@ so a rung can read the committed corpus by its path.
 | `vellum` | What does settling a tree into parentheses cost, and what does it buy? | `zig build bench-vellum` |
 | `quotient` | Which states, columns and spellings does no parse tell apart - and is the payload smaller as one automaton? | `zig build bench-quotient` |
 | `grain` | Does reading bytes a block at a time beat reading them one at a time, and does an index over the lines repay building it? | `zig build bench-grain` |
+| `cursor` | What do the neighbourhood accessors cost against the private walks they were, and which representation should a matcher ask? | `zig build bench-cursor` |
 
 ## House rules
 

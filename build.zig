@@ -323,4 +323,40 @@ pub fn build(b: *std.Build) void {
         "bench-quotient",
         "What the three quotients find: states merged, columns collapsed, payload as one automaton",
     ).dependOn(&bench_quotient.step);
+
+    const bench_cursor = b.addRunArtifact(b.addExecutable(.{
+        .name = "bench-cursor",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("bench/rungs/cursor/bench.zig"),
+            .target = target,
+            .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "joints", .module = lib },
+                .{ .name = "irregex", .module = irregex_mod },
+            },
+        }),
+    }));
+    bench_cursor.setCwd(b.path("."));
+    b.step(
+        "bench-cursor",
+        "What the neighbourhood accessors cost against the walks they were, and against the settled tree",
+    ).dependOn(&bench_cursor.step);
+
+    const bench_gloss = b.addRunArtifact(b.addExecutable(.{
+        .name = "bench-gloss",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("bench/rungs/gloss/bench.zig"),
+            .target = target,
+            .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "joints", .module = lib },
+                .{ .name = "irregex", .module = irregex_mod },
+            },
+        }),
+    }));
+    bench_gloss.setCwd(b.path("."));
+    b.step(
+        "bench-gloss",
+        "Every query the pinned grammars ship, compiled: acceptance, dead patterns, lookup, #match?",
+    ).dependOn(&bench_gloss.step);
 }
