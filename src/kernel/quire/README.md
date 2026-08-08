@@ -17,6 +17,8 @@ press interned.
 | `quire.zig` | The tree itself: `Node`, `Ref`, `Quire`, and the s-expression printer. Read-only once handed over. |
 | `gather.zig` | `Gather`, a second parse loop that keeps what the reduction was for and builds the tree from it. |
 | `gather_test.zig` | Hand-derived expectations for json and for the recipe's hard cases, plus the differential against `walk/drive.zig`. |
+| `reach.zig` | The neighbourhood a query asks about: parent, siblings, named siblings, child-by-field, deepest-cover-of-a-byte-range, depth, subtree size. `Quire` aliases each one. |
+| `reach_test.zig` | Those accessors where `vellum/sheet_test.zig` has no oracle for them: the multi-root forest, comments in a named walk, and byte ranges on a boundary. |
 
 ## Nodes are indices, not pointers
 
@@ -30,6 +32,33 @@ construction lives in `gather.zig` rather than on the type.
 
 `Quire` is read-only on purpose. Edits belong to the spine (M3), which is not
 built yet.
+
+## The neighbourhood, and the two rules a guess gets wrong
+
+`reach.zig` answers what a query matcher asks: who holds this node, what is
+beside it, what is beside it that a pattern could name, what is filed under this
+field, what covers these bytes, how deep, how big. `Quire` aliases every one, so
+a caller writes `q.nextSibling(ref)` and never names the file.
+
+Both rules there are about absence rather than speed.
+
+**The top of the tree is a run, not a node.** `root` is null unless the parse
+left exactly one, so the roots are a sibling run like any other - `nextSibling`
+of a root is the next root, `parent` of a root is absence, `depth` of every root
+is zero, and a byte range inside a stretch a mend walked past is covered by
+nothing at all. A single-root parse never exercises any of that, which is why
+`reach_test.zig` builds a forest by hand.
+
+**An extra is a child that does not count structurally.** A comment is in the
+tree, has a name, and is matched by a `(comment)` pattern, so both sibling walks
+step onto one - that is tree-sitter's answer, whose named walk tests
+visible-and-named and a comment is both. The single place an extra is skipped is
+the field map, and `gather` skips it there rather than here: a spliced extra is
+refused the step's field on the way in, so `childByFieldName` cannot answer with
+one no matter what it does.
+
+`bench/rungs/cursor` prices all of them against the slow walks they were, and
+against `vellum`'s answers to the same questions.
 
 ## Why there is a second parse loop
 

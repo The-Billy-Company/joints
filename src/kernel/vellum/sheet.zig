@@ -184,18 +184,16 @@ pub const Sheet = struct {
     /// What this node is called - the grammar's own spelling, from whichever of
     /// the two places it came from.
     ///
-    /// The second spelling of `Quire.name` in this package, and it should be
-    /// the last: the mapping is a fact about a `Kind` and a grammar, not about
-    /// whichever tree is holding it. See the follow-up in `README.md` for the
-    /// three free functions in `quire` that would collapse both.
+    /// One spelling, in `quire`, because the mapping is a fact about a `Kind`
+    /// and a grammar rather than about whichever tree is holding it. It was two
+    /// while the settled form could not reach into the live one's file, and the
+    /// hazard that bought was a rename learned by only one of them.
     pub fn name(s: *const Sheet, spot: Spot) []const u8 {
-        const k = s.at(spot).kind;
-        return if (k.renamed) s.gr.aliases[k.index].name else s.gr.nameOf(k.index);
+        return quire.nameOf(s.gr, s.at(spot).kind);
     }
 
     pub fn isNamed(s: *const Sheet, spot: Spot) bool {
-        const k = s.at(spot).kind;
-        return if (k.renamed) s.gr.aliases[k.index].named else s.gr.shapeOf(k.index) == .named;
+        return quire.named(s.gr, s.at(spot).kind);
     }
 
     pub fn isExtra(s: *const Sheet, spot: Spot) bool {
@@ -203,8 +201,7 @@ pub const Sheet = struct {
     }
 
     pub fn field(s: *const Sheet, spot: Spot) ?[]const u8 {
-        const f = s.at(spot).field;
-        return if (f == quire.none) null else s.gr.field_names[f];
+        return quire.fieldName(s.gr, s.at(spot).field);
     }
 
     pub fn start(s: *const Sheet, spot: Spot) u32 {

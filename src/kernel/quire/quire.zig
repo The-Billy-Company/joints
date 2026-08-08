@@ -37,6 +37,10 @@ pub const Mend = gather.Mend;
 pub const bough = @import("bough.zig");
 pub const Bough = bough.Bough;
 
+/// The neighbourhood accessors a query asks for. `Quire` aliases every one, so
+/// this name is here for the doc comments rather than for calling through.
+pub const reach = @import("reach.zig");
+
 /// An index into `Quire.nodes`.
 pub const Ref = u32;
 
@@ -259,6 +263,28 @@ pub const Kind = packed struct(u32) {
     }
 };
 
+/// What a kind is called, in the grammar's own spelling.
+///
+/// A fact about a `Kind` and a `Grammar`, not about whichever tree is holding
+/// it - which is why it is a free function and not a method. `Quire` and
+/// `vellum.Sheet` both answer this question about the same packed word, and
+/// while each resolved alias-against-symbol itself there were two spellings of
+/// one rule: settle a tree, rename a node, and only one of them learns.
+pub fn nameOf(gr: *const press.Grammar, kind: Kind) []const u8 {
+    return if (kind.renamed) gr.aliases[kind.index].name else gr.nameOf(kind.index);
+}
+
+/// Whether a query can match this kind by name. False for a node spelled as
+/// itself - `("+")` - which has no rule name to be matched by.
+pub fn named(gr: *const press.Grammar, kind: Kind) bool {
+    return if (kind.renamed) gr.aliases[kind.index].named else gr.shapeOf(kind.index) == .named;
+}
+
+/// The name of a `Grammar.field_names` index, or absence for `none`.
+pub fn fieldName(gr: *const press.Grammar, field: u32) ?[]const u8 {
+    return if (field == none) null else gr.field_names[field];
+}
+
 pub const Node = struct {
     kind: Kind,
     /// Byte offset of the first byte this node covers. A node spans from its
@@ -358,15 +384,13 @@ pub const Quire = struct {
     /// What this node is called. The grammar's own spelling, whichever of the
     /// two places it came from.
     pub fn name(q: *const Quire, ref: Ref) []const u8 {
-        const k = q.nodes[ref].kind;
-        return if (k.renamed) q.gr.aliases[k.index].name else q.gr.nameOf(k.index);
+        return nameOf(q.gr, q.nodes[ref].kind);
     }
 
     /// Whether a query can match this node by name. False for a node spelled
     /// as itself - `("+")` - which has no rule name to be matched by.
     pub fn isNamed(q: *const Quire, ref: Ref) bool {
-        const k = q.nodes[ref].kind;
-        return if (k.renamed) q.gr.aliases[k.index].named else q.gr.shapeOf(k.index) == .named;
+        return named(q.gr, q.nodes[ref].kind);
     }
 
     /// Whether the grammar's `extras` put this node here. A comment is a child
@@ -378,9 +402,26 @@ pub const Quire = struct {
     }
 
     pub fn field(q: *const Quire, ref: Ref) ?[]const u8 {
-        const f = q.nodes[ref].field;
-        return if (f == none) null else q.gr.field_names[f];
+        return fieldName(q.gr, q.nodes[ref].field);
     }
+
+    // ── the neighbourhood ───────────────────────────────────────────────────
+    //
+    // What a query matcher asks a tree, in `reach.zig`. Its header carries the
+    // two rules that run through all of them - the top of the tree is a run
+    // rather than a node, and an extra is a child that does not count
+    // structurally - and each accessor carries what it does about them.
+
+    pub const parent = reach.parent;
+    pub const among = reach.among;
+    pub const nextSibling = reach.nextSibling;
+    pub const prevSibling = reach.prevSibling;
+    pub const nextNamedSibling = reach.nextNamedSibling;
+    pub const prevNamedSibling = reach.prevNamedSibling;
+    pub const childByFieldName = reach.childByFieldName;
+    pub const descendantForByteRange = reach.descendantForByteRange;
+    pub const depth = reach.depth;
+    pub const subtreeSize = reach.subtreeSize;
 
     /// One subtree as an s-expression, in tree-sitter's spelling: a named node
     /// is `(name …)`, an anonymous one is the quoted string it is spelled as,
@@ -401,15 +442,15 @@ pub const Quire = struct {
             try out.appendSlice(gpa, f);
             try out.appendSlice(gpa, ": ");
         }
-        const named = q.isNamed(ref);
+        const is_named = q.isNamed(ref);
         const kids = q.children(ref);
         // The ordinary anonymous node is a token and has nothing under it.
         // One with children exists only through `alias(rule, 'x')` declared
         // unnamed, and a query can still reach inside it, so it keeps a body.
-        if (!named and kids.len == 0) return q.quote(out, gpa, ref);
+        if (!is_named and kids.len == 0) return q.quote(out, gpa, ref);
 
         try out.append(gpa, '(');
-        if (named) try out.appendSlice(gpa, q.name(ref)) else try q.quote(out, gpa, ref);
+        if (is_named) try out.appendSlice(gpa, q.name(ref)) else try q.quote(out, gpa, ref);
         for (kids) |c| {
             if (show == .named and !q.isNamed(c)) continue;
             try out.append(gpa, ' ');
