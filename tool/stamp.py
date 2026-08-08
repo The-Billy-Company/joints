@@ -92,11 +92,24 @@ def builds(rel: str) -> bool:
     ten lanes editing tests continuously it fired most of the time, which is how a
     warning teaches people to ignore it.
 
+    A `README.md` is the same case and a plainer one: markdown is not compiled by
+    anything, so a prose edit could not have moved the binary no matter what it
+    said. It read as `STALE` until now, which is the same false alarm from a file
+    that is even further from the build than a test is. `.DS_Store` likewise, and
+    Finder writes those without being asked.
+
+    The exclusions are a *denylist* of things that provably cannot compile rather
+    than an allowlist of `.zig`, so a data file added under `src/` and pulled in
+    with `@embedFile` counts by default. Today none is — every `@embedFile` here
+    resolves to a module outside `src/` — and the day one appears, the failure to
+    think about this line should be a stamp that is too cautious, not one that is
+    wrong.
+
     Only the mtime side takes this exclusion. The digest still covers every file,
     because "is this the same tree as over there" is a different question from "can
     this binary be believed" and drift wants the whole answer.
     """
-    return not rel.endswith("_test.zig")
+    return not rel.endswith(("_test.zig", ".md", ".DS_Store"))
 
 
 def survey(root: Path) -> Source:
