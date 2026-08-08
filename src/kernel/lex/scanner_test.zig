@@ -1293,7 +1293,14 @@ test "scanner: every troupe seats exactly the grammars its convention names" {
     defer threaded.deinit();
     const io = threaded.io();
 
-    var dir = try std.Io.Dir.cwd().openDir(io, "upstream/grammars", .{ .iterate = true });
+    // The corpus is fetched, not committed, so a clone that has not fetched it yet
+    // skips rather than fails - the same bargain every other corpus test in this
+    // suite makes. This one asked with a bare `try` and was the lone test that
+    // turned a missing corpus into a red suite.
+    var dir = std.Io.Dir.cwd().openDir(io, "upstream/grammars", .{ .iterate = true }) catch |e| {
+        if (e == error.FileNotFound) return error.SkipZigTest;
+        return e;
+    };
     defer dir.close(io);
 
     var seen: std.ArrayList([]const u8) = .empty;
