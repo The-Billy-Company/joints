@@ -63,6 +63,7 @@ test {
     _ = @import("press/cast/sets.zig");
     _ = @import("kernel/vellum/vellum.zig");
     _ = @import("kernel/grain/grain.zig");
+    _ = @import("kernel/gloss/gloss.zig");
 }
 
 // The `*_test.zig` files, which live beside what they test and are reached only
@@ -92,4 +93,7 @@ test {
     _ = @import("kernel/vellum/sheet_test.zig");
     _ = @import("kernel/vellum/word_test.zig");
     _ = @import("kernel/grain/grain_test.zig");
+    _ = @import("kernel/quire/reach_test.zig");
+    _ = @import("kernel/gloss/rubric_test.zig");
+    _ = @import("kernel/gloss/gloss_test.zig");
 }

@@ -271,6 +271,39 @@ fn confront(gpa: std.mem.Allocator, q: *const quire.Quire) !void {
         var it = s.kids(spot);
         for (kids) |c| try t.expectEqual(w.spotFor(c), it.next());
         try t.expectEqual(@as(?vellum.Spot, null), it.next());
+
+        // The live tree's own answers to the same five questions, against the
+        // same oracle. They were private helpers in this file until the cursor
+        // lane made them `Quire`'s public surface, and a matcher will call
+        // those rather than these - so one sweep now holds two implementations
+        // to one obviously-correct answer instead of only ever checking the
+        // clever one.
+        try t.expectEqual(afterOf(q, ref), q.nextSibling(ref));
+        try t.expectEqual(beforeOf(q, ref), q.prevSibling(ref));
+        try t.expectEqual(depthOf(q, ref), q.depth(ref));
+        try t.expectEqual(try sizeOf(gpa, q, ref), try q.subtreeSize(gpa, ref));
+
+        // And three statements of the same structure that are not the walks
+        // above spelled twice. `parent` reads a stored back-pointer, so reading
+        // it back proves nothing; who lists you does. Depth and size are the
+        // only algorithm a pointer tree has, so the oracle above is that
+        // algorithm again - the induction is the independent claim.
+        try t.expect(std.mem.indexOfScalar(quire.Ref, q.among(ref), ref) != null);
+        var under: u32 = 1;
+        for (kids) |c| {
+            try t.expectEqual(@as(?quire.Ref, ref), q.parent(c));
+            try t.expectEqual(q.depth(ref) + 1, q.depth(c));
+            under += try q.subtreeSize(gpa, c);
+        }
+        try t.expectEqual(under, try q.subtreeSize(gpa, ref));
+    }
+
+    // The forest rule, from the top: every root has no parent and zero depth,
+    // however many of them a stopped parse left.
+    for (q.roots) |r| {
+        try t.expectEqual(@as(?quire.Ref, null), q.parent(r));
+        try t.expectEqual(@as(u32, 0), q.depth(r));
+        try t.expectEqualSlices(quire.Ref, q.roots, q.among(r));
     }
 
     // Ancestry over a sample of pairs rather than all of them, and only here:
