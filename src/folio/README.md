@@ -21,16 +21,25 @@ bytes, so one binary plus one folio is every language.
 
 ## The shape
 
-One header, one fixed directory of 20 sections, then the sections, then a
+One header, one fixed directory of 31 sections, then the sections, then a
 32-byte BLAKE3 seal. Every section is `count * stride` bytes at an eight-aligned
 offset, so checking one is a multiply and two comparisons rather than a parse  - 
 which is what lets the reader prove the entire layout before it trusts a single
 byte of payload. Every integer is little-endian on disk regardless of host.
 
-Loading allocates nothing. `Folio` is a pointer, a parsed header, and 20
+Loading allocates nothing. `Folio` is a pointer, a parsed header, and 31
 directory rows; every accessor is a view into the mapped bytes. A big-endian
 host is refused rather than byte-swapped, because swapping means copying the
 tables and not copying them is the point.
+
+Three of the 31 are **reserved**: named and carried, always empty, with no reader
+here. They are byte-opaque, which is the whole trick - the schema digest spells
+each record's fields, so a section reserved as a *shape* would break the schema
+the day somebody filled it, and reserving one as bytes does not. So three areas
+that each need a section cost one version bump between them instead of three, and
+whichever lands first fills its section without another. A reader that meets one
+with records in it refuses (`FolioReservedSection`) rather than answering as
+though they were not there; see `leaf.reserved`.
 
 ## Fail-closed, and what that costs
 
@@ -43,8 +52,8 @@ undefined flag bit is a refusal, not a mask, because an unknown bit is a fact
 somebody meant to carry.
 
 Every refusal is a named error. `open` is the only place that ever doubts the
-file, and it doubts everything: 18 error cases, and a rejection test for each of
-the 17 a little-endian host can produce.
+file, and it doubts everything: 19 error cases, and a rejection test for each of
+the 18 a little-endian host can produce.
 
 ## What is in a folio and what is deliberately not
 

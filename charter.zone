@@ -49,6 +49,22 @@ zones {
     // No zone for the two files at the module root: `root.zig` and `proof.zig`
     // are the package's declared faces, which stands them above every zone here
     // rather than in one of them.
+    // A new area's zone goes here, below `abi` — above every zone it reads and
+    // below the two faces, which read everything. That is where all three areas
+    // with a reserved folio section land: a query engine reads `folio` and
+    // `quire`, recovery reads `quire` and `spine`, a quotient reads `press`. None
+    // of them is read *by* anything below, because nothing below knows they
+    // exist yet, so none of them needs a position among the zones above.
+    //
+    // This is a comment and not three declared-in-advance zones on purpose: a
+    // zone whose glob matches nothing is refused ("the debt was paid; delete
+    // them"), and rightly — the header of this file promises a description of the
+    // tree as it stands. So the ordering is what gets written down, since the
+    // ordering is the part worth not re-deriving. Two facts to save a fourth
+    // reading of the manual: zone paths must partition the module, so a new
+    // directory needs a zone the day it appears rather than the day it has an
+    // import; and `limit reach to 2 hops` means a new area two directories deep
+    // reaching `press` is a violation, not a variance to ratify.
     abi          surface/abi/**
     face_joints  surface/face/joints/**
 }

@@ -31,7 +31,12 @@ pub const magic = "OTLFOLIO";
 /// refuses a new folio rather than reading the prefix it recognizes and
 /// inventing the rest. That refusal is what lets `press` keep growing its IR:
 /// every field it grows is a version here instead of a break.
-pub const version: u16 = 4;
+///
+/// v5 spent one bump on three sections nothing writes yet - see `reserved`. The
+/// arithmetic is the argument: three areas each need a section, and each landing
+/// on its own would refuse every folio written before it. One bump now refuses
+/// them once.
+pub const version: u16 = 5;
 
 pub const header_len = 96;
 pub const entry_len = 16;
@@ -91,6 +96,11 @@ pub const Error = error{
     /// A flag bit or tag this version does not define. An unknown bit is a fact
     /// somebody meant to carry, so it fails closed rather than being masked off.
     FolioBadTag,
+    /// A section this version reserves but does not implement came with records
+    /// in it. Same version, same schema, and more written down than this binary
+    /// can account for - so it refuses rather than answering as though the
+    /// records were not there. See `reserved`.
+    FolioReservedSection,
     /// A big-endian host. The tables would have to be copied to be read, and a
     /// copy is what this format exists to avoid.
     FolioBadEndian,
@@ -99,7 +109,8 @@ pub const Error = error{
 /// The sections, in the order they appear in the directory. A folio carries
 /// every one of them exactly once and the reader checks that roster positionally,
 /// so a missing section is caught by the same comparison that catches a
-/// reordered one.
+/// reordered one. Carrying one is not the same as having something to put in it:
+/// the last three are `reserved`, present and empty.
 ///
 /// What is here is what a parse needs, plus what a *tree* needs to be named the
 /// way tree-sitter names it: shapes, aliases, and field names are not table
@@ -224,12 +235,57 @@ pub const Kind = enum(u16) {
     /// `ConflictRecord` names its own slice. Empty for every grammar whose
     /// declared ambiguities are all two-way, and the whole difference between a
     /// binary fork and a ternary one where they are not.
-    ///
-    /// Last because this list is the file format: a section is addressed by its
-    /// ordinal, so appending is safe and inserting renames every folio already
-    /// written.
     rival,
+
+    // The three below are reserved: named, carried, and empty. `reserved` is the
+    // predicate and states the whole contract; these say only what each is for.
+    // They are last, and anything added later goes after them, because this list
+    // *is* the file format - a section is addressed by its ordinal, so appending
+    // is safe and inserting renames every folio already written.
+
+    /// A compiled query program. Reserved for the query engine: a `.scm` pattern
+    /// pressed once into something a match can run rather than re-parsed per
+    /// query.
+    gloss,
+    /// What each repair costs, so recovery can prefer the cheap one. Reserved for
+    /// the mend area, which today picks by rule rather than by price.
+    tariff,
+    /// Which states a quotient merged, and by what equivalence. Reserved for the
+    /// area that shrinks an automaton by collapsing states no parse can tell
+    /// apart - a fact about the table that the table cannot state.
+    quotient,
 };
+
+/// Sections this binary names but cannot read, carried empty so the roster and
+/// the ordinals are settled before three areas need them at once.
+///
+/// **They are byte-opaque, and that is the load-bearing part.** `Record` gives
+/// each of them `u8`, exactly as it gives `text` and `lexicon` - so the area that
+/// eventually fills one owns its interior layout the way `kernel/lex/lexicon.zig`
+/// owns the lexicon's, and filling it changes neither `schema_preimage` nor
+/// `version`. A reserved section spelled as a *record* would not have bought
+/// anything: the digest spells every record's fields, so replacing `u8` with a
+/// real struct is a schema break, which is the break the reservation exists to
+/// avoid. Reserving the ordinal is worth one bump; reserving a shape would have
+/// cost a second one later, quietly.
+///
+/// **Fail closed, not skip.** A reader that met a populated `gloss` and shrugged
+/// would be reading a folio somebody wrote more into than it can account for,
+/// and answering as though the extra were not there - the one behaviour this
+/// whole format is built to refuse (`Error` has no partial acceptance). So a
+/// non-empty reserved section is `FolioReservedSection`, which says what is in
+/// the file and what this binary lacks. `lexicon` is the deliberate opposite and
+/// documents why: it is an answer *about* the grammar that can be worked out
+/// again. These three are not.
+///
+/// The lane that implements one deletes its name from here, gives it a reader,
+/// and the refusal stops on its own.
+pub fn reserved(k: Kind) bool {
+    return switch (k) {
+        .gloss, .tariff, .quotient => true,
+        else => false,
+    };
+}
 
 pub const kind_count = std.enums.values(Kind).len;
 
@@ -385,7 +441,9 @@ pub const FrayedRecord = extern struct {
 
 pub fn Record(comptime k: Kind) type {
     return switch (k) {
-        .text, .lexicon => u8,
+        // Byte-opaque, and for the reserved three that is the reservation: see
+        // `reserved`. `text` and `lexicon` are opaque for their own reasons.
+        .text, .lexicon, .gloss, .tariff, .quotient => u8,
         .owner, .supertype, .extra, .rhs, .row, .row_span, .set_span, .complete_span, .complete, .party, .rival => u32,
         .groupref, .setsym, .stepref => u32,
         .shape => ShapeKind,
@@ -656,6 +714,35 @@ test "the schema digest is a function of the layout and names every section" {
     try testing.expect(std.mem.indexOf(u8, schema_preimage, "rhs_off:u32") != null);
     // Signedness too, since a rank read as unsigned is a rank read backwards.
     try testing.expect(std.mem.indexOf(u8, schema_preimage, "rank:i32") != null);
+}
+
+test "a reserved section spells as opaque bytes, which is what reserves it" {
+    // The whole reservation rests on this. The digest spells every record's
+    // fields, so a reserved section given a *shape* would break the schema the
+    // day somebody filled it - and breaking the schema is what the one version
+    // bump was spent to avoid. `u8` is the only spelling a lane can fill without
+    // coming back for a second bump, so it is worth a test rather than a comment.
+    comptime var reserved_seen: usize = 0;
+    inline for (std.enums.values(Kind)) |k| {
+        if (comptime reserved(k)) {
+            reserved_seen += 1;
+            try testing.expectEqual(@as(u16, 1), strideOf(k));
+            try testing.expect(std.mem.indexOf(u8, schema_preimage, @tagName(k) ++ "=u8") != null);
+        }
+    }
+    try testing.expectEqual(@as(usize, 3), reserved_seen);
+
+    // Reserved is a claim about *some* of the roster, and a predicate that said
+    // yes to everything would pass every check above.
+    try testing.expect(!reserved(.text));
+    try testing.expect(!reserved(.rival));
+
+    // Last, and contiguously so, because the ordinal is the address: appending is
+    // safe and inserting renames every section after it in every folio ever
+    // written. A reserved section anywhere but the tail would mean the next one
+    // added has to go before it.
+    const all = std.enums.values(Kind);
+    for (all[all.len - reserved_seen ..]) |k| try testing.expect(reserved(k));
 }
 
 test "a directory row round-trips, and a wild kind is refused rather than folded" {

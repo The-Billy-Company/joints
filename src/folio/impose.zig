@@ -313,6 +313,11 @@ const Plan = struct {
             .frayed => @intCast(result.tables.frayed.len),
             .lexicon => @intCast(p.lexicon.len),
             .rival => p.rival_len,
+            // Reserved, so there is nothing to count. Named here rather than
+            // swept into an `else` for the same reason every other arm is: the
+            // lane that fills one should have to come to this switch, and an
+            // `else` is how it would not.
+            .gloss, .tariff, .quotient => 0,
         };
     }
 
@@ -475,6 +480,10 @@ const Plan = struct {
                 w.put(x.terminal);
                 w.put(@intFromEnum(forme.same(leaf.Harm, x.harm)));
             },
+            // `count` said zero, so `out` is empty and there is nothing to put in
+            // it. Spelled out for the same reason as there: the lane that fills
+            // one arrives at both switches.
+            .gloss, .tariff, .quotient => {},
         }
     }
 };

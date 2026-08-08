@@ -467,6 +467,103 @@ test "a layout change under the same version is caught by the schema digest" {
     try testing.expectError(leaf.Error.FolioBadSchema, folio.open(bytes));
 }
 
+test "a reserved section is carried and empty, not skipped" {
+    var p = try Pressed.of(testing.allocator);
+    defer p.deinit();
+    const bytes = try corrupt(testing.allocator, &p);
+    defer testing.allocator.free(bytes);
+
+    // Carried: the roster is positional, so a reserved section that the writer
+    // simply left out would shift every ordinal after it - which is why there is
+    // no such thing as skipping one, and why reserving costs a bump.
+    const f = try folio.open(bytes);
+    var reserved: usize = 0;
+    for (std.enums.values(leaf.Kind)) |k| {
+        if (!leaf.reserved(k)) continue;
+        reserved += 1;
+        try testing.expectEqual(@as(u32, 0), f.dir[@intFromEnum(k)].count);
+        try testing.expectEqual(k, f.dir[@intFromEnum(k)].kind);
+    }
+    try testing.expectEqual(@as(usize, 3), reserved);
+}
+
+test "a populated reserved section is refused, and nothing else would have caught it" {
+    var p = try Pressed.of(testing.allocator);
+    defer p.deinit();
+    const bytes = try corrupt(testing.allocator, &p);
+    defer testing.allocator.free(bytes);
+
+    // Not a corrupted directory - a *legitimate* folio from a future binary that
+    // implements the query engine. The distinction is the test: bumping `gloss`'s
+    // count where it lies overruns into the section after it, and that is caught
+    // by the bounds check whether or not a reserved check exists, which would make
+    // this test pass while proving nothing. So the section really is given room,
+    // and everything downstream of it really is moved along.
+    const grown = try grow(testing.allocator, bytes, .gloss, leaf.section_align);
+    defer testing.allocator.free(grown);
+    try testing.expectError(leaf.Error.FolioReservedSection, folio.open(grown));
+
+    // The half that makes the check worth having: nothing else about this file is
+    // wrong. Same version, same schema digest, a seal made over the new bytes, no
+    // section overlapping or overrunning. A reserved section is byte-opaque
+    // precisely so that filling one is not a schema change - which is what lets a
+    // lane fill it without a second bump, and what leaves this the only check
+    // standing between an old reader and a folio holding more than it can account
+    // for. Removing it does not make the file legal; it makes the file *silently*
+    // legal, which is worse.
+    const head = leaf.Head.parse(grown[0..leaf.header_len]);
+    try testing.expectEqual(leaf.version, head.version);
+    try testing.expect(head.schema.eql(leaf.schema()));
+    try testing.expectEqual(grown.len, head.file_len);
+    leaf.signet.verify(grown) catch return error.SealShouldHaveHeld;
+}
+
+/// The folio a future binary writes when it fills a reserved section: `k` given
+/// `room` bytes of its own, every section after it moved along, the header's
+/// length corrected and the seal re-made. Everything a reader checks holds; the
+/// only thing wrong with it is that this binary cannot read `k`.
+///
+/// `room` must be a multiple of `section_align`, so the sections after `k` stay
+/// on their boundaries by moving rather than by being re-laid-out.
+fn grow(
+    gpa: std.mem.Allocator,
+    bytes: []const u8,
+    comptime k: leaf.Kind,
+    comptime room: usize,
+) ![]align(leaf.section_align) u8 {
+    comptime std.debug.assert(room % leaf.section_align == 0);
+    const dir_end = leaf.header_len + leaf.kind_count * leaf.entry_len;
+    const mine = try leaf.Entry.parse(
+        bytes[leaf.header_len + @intFromEnum(k) * leaf.entry_len ..][0..leaf.entry_len],
+    );
+    const at: usize = @intCast(mine.offset);
+
+    const out = try gpa.alignedAlloc(u8, comptime .fromByteUnits(leaf.section_align), bytes.len + room);
+    @memcpy(out[0..at], bytes[0..at]);
+    @memset(out[at..][0..room], 0);
+    @memcpy(out[at + room ..], bytes[at..]);
+
+    // `k` now holds `room` records of one byte, and every section *after* it in
+    // the roster begins `room` later. By ordinal and not by offset: an empty
+    // section shares the offset of whatever follows it, so "everything at or past
+    // `at`" also moves the empty ones *before* `k` - which leaves `k` starting
+    // before the section it is supposed to follow, and the reader rejects that
+    // layout for overlapping instead of for being reserved. Which is the exact
+    // failure this helper exists to avoid staging.
+    for (0..leaf.kind_count) |i| {
+        const row = out[leaf.header_len + i * leaf.entry_len ..][0..leaf.entry_len];
+        var e = try leaf.Entry.parse(row);
+        if (i == @intFromEnum(k)) e.count = room else if (i > @intFromEnum(k)) e.offset += room;
+        e.write(row);
+    }
+    var head = leaf.Head.parse(out[0..leaf.header_len]);
+    head.file_len = out.len;
+    head.write(out[0..leaf.header_len]);
+    std.debug.assert(dir_end <= at);
+    reseal(out);
+    return out;
+}
+
 test "a flipped bit anywhere in the payload is caught by the seal" {
     var p = try Pressed.of(testing.allocator);
     defer p.deinit();

@@ -330,6 +330,11 @@ pub fn open(bytes: []align(leaf.section_align) const u8) Error!Folio {
         if (leaf.narrow(k)) {
             if (e.stride != 2 and e.stride != 4) return Error.FolioBadDirectory;
         } else if (e.stride != leaf.strideOf(k)) return Error.FolioBadDirectory;
+        // A section this binary reserves but cannot read, with records in it. The
+        // version and the schema both matched, because a reserved section is
+        // byte-opaque and filling one changes neither - which is exactly what
+        // makes this the only check that can catch it. See `leaf.reserved`.
+        if (leaf.reserved(k) and e.count != 0) return Error.FolioReservedSection;
         if (e.offset % leaf.section_align != 0) return Error.FolioSectionMisaligned;
         if (e.offset < at) return Error.FolioSectionOutOfBounds;
         const end = e.offset + @as(u64, e.count) * e.stride;

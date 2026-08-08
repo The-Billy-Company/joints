@@ -35,6 +35,20 @@
 //! `Joint` below binds the real one, and exists partly to keep that honest: if
 //! `effect.compose` ever drifts from the shape a monoid has, this file stops
 //! compiling instead of the first parse stopping working.
+//!
+//! ## The second binding, and where it goes
+//!
+//! A second monoid is a `pub const` beside `Joint` and nothing else - no change
+//! to `tree.zig`, no parameter added anywhere, no dispatch. That is the payoff of
+//! the paragraph above, and it is worth saying where the seam is rather than
+//! leaving it to be rediscovered. There is deliberately no stub here: a
+//! `Tree(...)` over a `compose` nobody wrote would compile, export, and lie, and
+//! the area that needs one arrives with a real `compose` or does not arrive.
+//!
+//! Its other half is already reserved on disk. Recovery weights have a folio
+//! section waiting for them - `folio.leaf.Kind.tariff`, see `leaf.reserved` - so
+//! a weighted spine can be loaded rather than recomputed per open, and neither
+//! half has to wait on the other to be designed.
 
 const std = @import("std");
 const tree = @import("tree.zig");
