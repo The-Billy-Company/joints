@@ -4,9 +4,9 @@
 The question `RESULT-1-identity.md` left open is whether a press that is not
 reproducible produces **different tables** or the same tables written down
 differently. A digest over the whole file cannot tell those apart, so this
-reads the sealed directory, compares each of the twenty sections on its own,
-and — for the one section that turns out to move — inflates the block on both
-sides and reports where the *decompressed* images differ.
+reads the sealed directory, compares every section on its own, and — for the one
+section that turns out to move — inflates the block on both sides and reports
+where the *decompressed* images differ.
 
 That last step is the whole measurement. A deflate stream can differ for
 reasons that are not in its input; its inflation cannot.
@@ -29,6 +29,7 @@ and a gate should not economise here.
 from __future__ import annotations
 
 import argparse
+import re
 import struct
 import subprocess
 import sys
@@ -46,15 +47,31 @@ BIN = Path(os.environ.get("JOINTS_BIN") or ROOT / "zig-out" / "bin" / "joints")
 
 HEADER_LEN = 96
 ENTRY_LEN = 16
-# `leaf.Kind`, in directory order. Positional, exactly as the reader checks it.
-KINDS = (
-    "text", "name", "pattern", "lexis", "shape", "owner", "supertype", "extra",
-    "alias", "field", "production", "rhs", "stepref", "step", "row", "row_span",
-    "groupref", "group", "set_span", "setsym", "odd", "complete_span",
-    "complete", "conflict", "party", "frayed", "lexicon",
-)
+LEAF = ROOT / "src" / "folio" / "leaf.zig"
+
+
+def roster() -> tuple[str, ...]:
+    """`leaf.Kind`, in directory order, read from `leaf.zig`.
+
+    This used to be a tuple written out here, and the tuple went stale the day
+    `rival` was added: twenty-seven names against twenty-eight sections, so every
+    run died on an index error the moment it reached the last row. Nothing could
+    have caught that, because a second copy of a roster is exactly the shape that
+    has nobody to check it — the same argument `impose.ledger` makes on the Zig
+    side, where the compiler can make it. Here it cannot, so read the one copy.
+    """
+    body = LEAF.read_text()
+    at = body.index("pub const Kind = enum(u16) {")
+    block = body[at:body.index("\n};", at)]
+    return tuple(re.findall(r"^ {4}([a-z_]+),$", block, re.M))
+
+
+KINDS = roster()
 # Sections that are the parse table proper. A difference in any of these is
-# semantic on its face and there is nothing further to work out.
+# semantic on its face and there is nothing further to work out. Not every kind
+# is in here and it is not meant to be: `lexicon` is an answer *about* the
+# grammar and gets the inflate treatment below, and the reserved kinds are always
+# empty, so a difference in one is not a thing that can happen.
 TABLE = {
     "production", "rhs", "stepref", "step", "row", "row_span", "groupref",
     "group", "set_span", "setsym", "odd", "complete_span", "complete",
@@ -79,6 +96,11 @@ def sections(path: Path) -> dict[str, bytes]:
     raw = path.read_bytes()
     assert raw[:8] == b"OTLFOLIO", f"{path} is not a folio"
     count = struct.unpack_from("<H", raw, 10)[0]
+    if count != len(KINDS):
+        raise SystemExit(
+            f"{path.name} carries {count} sections and {LEAF.name} names "
+            f"{len(KINDS)}. One of them is not the tree this binary was built "
+            f"from — rebuild, or check what moved in `leaf.Kind`.")
     out = {}
     for i in range(count):
         kind, stride, n, off = struct.unpack_from(
