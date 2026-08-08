@@ -771,3 +771,67 @@ test "a dynamic rank belongs to the production, in every shape one is written" {
     // a dynamic rank ranks, and `m n` is the reading.
     try testing.expectEqual(@as(i16, 2), onlyProduction(&gr, "member").dynamic);
 }
+
+test "a rank drawn around one step survives a fold, and one drawn around a region does not" {
+    // The two shapes that meet on `Step.spliced`, in one grammar so neither can
+    // be got right by a rule that ignores the other.
+    //
+    // `narrow` is rust's `_non_special_token`: one of its alternatives is the
+    // whole of `prec.right(0, repeat1(…))`, so the rank names a single step and
+    // inlining the hidden rule moves the author's statement intact. `wide` is
+    // verilog's `hierarchical_identifier` and scala's `infix_type`: the rank is
+    // drawn around a sequence, and a fold spreads that region across a host
+    // which never made the statement.
+    //
+    // Both are read through an `inline` rule, because a victim folding away is
+    // what makes the question arise at all - a rank on a rule nothing inlines
+    // never reaches `expand`. Rust lists `_non_special_token` in exactly this
+    // array, which is why its rank meets a host in the first place.
+    //
+    // The `optional` inside `wide` is the trap, and it is why this asks about
+    // the grammar rather than about a body. It gives `wide` a reading that is
+    // one step long, so a fold measuring the body in front of it sees the same
+    // number `narrow` shows and laundders the rank verilog's own record says
+    // must stay absorbed. `region` is measured across the group's readings at
+    // import, before any round can collapse one.
+    const src =
+        \\{"name":"t","rules":{"doc":{"type":"CHOICE","members":[
+        \\ {"type":"SYMBOL","name":"_narrow"},
+        \\ {"type":"SYMBOL","name":"_wide"}]},
+        \\ "_narrow":{"type":"PREC_RIGHT","value":0,"content":{
+        \\   "type":"REPEAT1","content":{"type":"STRING","value":"a"}}},
+        \\ "_wide":{"type":"PREC_LEFT","value":0,"content":{"type":"SEQ","members":[
+        \\   {"type":"CHOICE","members":[
+        \\     {"type":"STRING","value":"b"},{"type":"BLANK"}]},
+        \\   {"type":"STRING","value":"c"}]}}},
+        \\ "inline":["_narrow","_wide"]}
+    ;
+    var gr = try treeSitter(testing.allocator, src);
+    defer gr.deinit();
+
+    // `doc`'s productions are what the folds produced: every step that arrived
+    // from `_narrow` keeps its rank as authored, every step from `_wide` carries
+    // the same rank marked absorbed.
+    var narrow: usize = 0;
+    var wide: usize = 0;
+    for (gr.productionsOf(symbolNamed(&gr, "doc"))) |p| {
+        for (gr.productions[p].steps) |s| {
+            if (s.assoc == .none) continue;
+            switch (s.assoc) {
+                .right => {
+                    narrow += 1;
+                    try testing.expectEqual(@as(u32, 1), s.region);
+                    try testing.expect(!s.spliced);
+                },
+                .left => {
+                    wide += 1;
+                    try testing.expect(s.region > 1);
+                    try testing.expect(s.spliced);
+                },
+                .none => unreachable,
+            }
+        }
+    }
+    try testing.expect(narrow > 0);
+    try testing.expect(wide > 0);
+}

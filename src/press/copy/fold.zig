@@ -314,7 +314,17 @@ fn expand(s: std.mem.Allocator, p: g.Production, alts: *const Alts) !?[]Alt {
                         // step carries - which one wins is unchanged, and
                         // preferring the host's was measured worse - but from
                         // here it can be told apart from one written here.
-                        if (inserted.prec != .none or inserted.assoc != .none) inserted.spliced = true;
+                        //
+                        // Unless the author drew it around this step and nothing
+                        // else, which `region` records at import and no reading
+                        // of the body in front of us can recover. A statement
+                        // about one step is the same statement wherever that
+                        // step ends up, so absorbing it refuses a rank that is
+                        // still exactly true - and unmeasured counts as wide, so
+                        // only a region proved to be one declines the mark.
+                        if (inserted.prec != .none or inserted.assoc != .none) {
+                            if (inserted.region != 1) inserted.spliced = true;
+                        }
                     }
                     const last = &steps[steps.len - 1];
                     // Where the victim wrote nothing the host's rank fills in,

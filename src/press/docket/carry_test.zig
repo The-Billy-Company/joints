@@ -46,6 +46,7 @@ const consumed = [_]Loss{
     .{ .at = "Step.prec", .why = "resolved the cell while the table was built" },
     .{ .at = "Step.assoc", .why = "the same, for the side it resolved to" },
     .{ .at = "Step.spliced", .why = "whether those two were absorbed through a fold, which only they need to know" },
+    .{ .at = "Step.region", .why = "how many steps the author drew those two around, which only the fold deciding the line above reads" },
     .{ .at = "Grammar.prec_names", .why = "the names a resolved Prec.name indexed" },
     .{ .at = "Grammar.orderings", .why = "the partial order those names compared in" },
     .{ .at = "Grammar.declared_conflicts", .why = "which cells the press was allowed to leave contested" },
@@ -73,7 +74,7 @@ comptime {
     // these types and come back here.
     assertWidth(g.Grammar, 21);
     assertWidth(g.Production, 4);
-    assertWidth(g.Step, 5);
+    assertWidth(g.Step, 6);
     assertWidth(lr0.State, 3);
     assertWidth(lalr.Tables, 7);
 }
@@ -301,12 +302,15 @@ fn sample(gpa: std.mem.Allocator) !g.Grammar {
     try b.addProduction(start, &.{stmt}, &.{});
     try b.addProduction(stmt, &.{ kw, id, eq, expr, semi }, &.{
         .{},                                                           .{ .field = name_field, .alias = rename }, .{},
-        // A rank marked as absorbed rather than written. `sample` builds its
-        // bodies by hand, so nothing here has actually been through `fold` -
-        // the value is set directly for the same reason every other one is,
-        // which is that a field left at its default agrees with a default on
-        // the far side however badly the writer lost it.
-        .{ .prec = .{ .level = 2 }, .assoc = .left, .spliced = true }, .{},
+        // A rank marked as absorbed rather than written, over a region three
+        // steps wide. `sample` builds its bodies by hand, so nothing here has
+        // actually been through `fold` or `spread` - both values are set
+        // directly for the same reason every other one is, which is that a
+        // field left at its default agrees with a default on the far side
+        // however badly the writer lost it. Three rather than one because one
+        // is the value `fold` reads as "keep this rank", and a distinguishing
+        // value should not double as the interesting case.
+        .{ .prec = .{ .level = 2 }, .assoc = .left, .spliced = true, .region = 3 }, .{},
     });
     try b.addProduction(stmt, &.{helper}, &.{.{ .alias = punct }});
     try b.addProduction(helper, &.{id}, &.{});

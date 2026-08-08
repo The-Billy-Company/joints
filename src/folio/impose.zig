@@ -44,8 +44,8 @@ const ledger = struct {
         "chosen", "other",    "rest", "party",
     };
     const frayed: []const []const u8 = &.{ "state", "terminal", "harm" };
-    /// `alias` and `field` are written; `prec`, `assoc` and `spliced` are not,
-    /// and that is the answer rather than an omission.
+    /// `alias` and `field` are written; `prec`, `assoc`, `spliced` and `region`
+    /// are not, and that is the answer rather than an omission.
     ///
     /// A folio carries the table and not the argument that produced it. Static
     /// precedence is spent while the cells are being decided — the loser is
@@ -54,7 +54,9 @@ const ledger = struct {
     /// fact *about* those two: whether the rank on this step was absorbed from
     /// a rule the press folded away or written where it sits. It reaches
     /// exactly one reader, `Ladder.purely`, which runs during the press, so it
-    /// travels no further than they do.
+    /// travels no further than they do. `region` is a fact about the *author's*
+    /// two, read by exactly one writer - the fold that decides `spliced` - and
+    /// spent in the same round.
     ///
     /// Named here anyway, and this is the whole point of the roster: the
     /// previous lane read `Step` as `leaf.StepRecord` and stopped at a format
@@ -63,7 +65,7 @@ const ledger = struct {
     /// so a fourth press-only field could have been added tomorrow with the
     /// same silence that once reported "30 grammars byte-identical, 0 moved".
     /// Now it cannot: the question gets asked, and the answer is on the record.
-    const step: []const []const u8 = &.{ "prec", "assoc", "spliced", "alias", "field" };
+    const step: []const []const u8 = &.{ "prec", "assoc", "spliced", "region", "alias", "field" };
     /// `arena` is who owns the memory rather than part of the table, and
     /// `seams` is the unfolding search's *input* - a folio carries the cells
     /// the search decided, not the search. Both are deliberate, and a folio is

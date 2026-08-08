@@ -178,13 +178,13 @@ test "a pressed grammar survives the round trip field by field" {
             try testing.expectEqual(step.field orelse leaf.none, back.field);
         }
     }
-    // Two of `Step`'s five fields are on disk and three are not, and *which*
-    // three is a decision rather than an accident. `impose`'s ledger already
-    // refuses a sixth field silently; this refuses one being added to `Step`
-    // without somebody choosing which side of the format it falls on.
+    // Two of `Step`'s six fields are on disk and four are not, and *which* four
+    // is a decision rather than an accident. `impose`'s ledger already refuses a
+    // seventh field silently; this refuses one being added to `Step` without
+    // somebody choosing which side of the format it falls on.
     comptime {
         const carried: []const []const u8 = &.{ "alias", "field" };
-        const spent: []const []const u8 = &.{ "prec", "assoc", "spliced" };
+        const spent: []const []const u8 = &.{ "prec", "assoc", "spliced", "region" };
         for (std.meta.fields(press.Step)) |fld| {
             for (carried) |n| {
                 if (std.mem.eql(u8, n, fld.name)) break;

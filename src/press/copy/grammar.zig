@@ -166,7 +166,11 @@ pub const Step = struct {
     /// folds on a side nobody wrote for this reading and deletes the `[`.
     ///
     /// Set only by `fold.zig::expand`, which is the only place two authors ever
-    /// meet on one step - a body the author wrote is authored by definition.
+    /// meet on one step - a body the author wrote is authored by definition -
+    /// and only when `region` says the fold had a region to break. A rank whose
+    /// author drew it around exactly this one step arrives intact however many
+    /// rules it travels through, so absorbing it would refuse a statement that
+    /// is still true here; `region` is what tells those two apart.
     ///
     /// **Press-only, like the two ranks it describes.** `leaf.StepRecord`
     /// carries `alias` and `field` and nothing else, because a folio holds the
@@ -174,6 +178,39 @@ pub const Step = struct {
     /// ledger names this field anyway, so its absence from the file is a
     /// decision on the record instead of one nobody noticed.
     spliced: bool = false,
+    /// How many steps the author drew `prec`/`assoc` around, counted where they
+    /// wrote it and never recounted after. `0` means nobody measured it.
+    ///
+    /// The number a fold needs and the only one it cannot work out for itself. A
+    /// rank is a statement about a *region* of a body, and what a fold costs is
+    /// the region: the steps that shared it end up spread across a host that
+    /// never made the statement, so the rank arrives ordering pairs its author
+    /// was not talking about. A region of exactly one step has nothing to lose,
+    /// and rust's `_non_special_token` is that case - one of its alternatives is
+    /// the whole of `prec.right(0, repeat1(punct))`, so the step carrying the
+    /// rank *is* the thing ranked and inlining moves the statement intact.
+    ///
+    /// Recorded at import because it cannot be recovered later. Normalization
+    /// runs to a fixpoint, so by the round that folds a rule away, a region of
+    /// three steps may have been collapsed into one by earlier rounds - and a
+    /// fold reading the body in front of it then cannot tell rust's genuinely
+    /// single-step region from the residue of verilog's `prec.left(0, seq(…))`.
+    /// Measured on 2026-08-07: deciding this at fold time from the live body
+    /// takes rust and scala to zero residual and reads verilog's `c[i] <= 0;` as
+    /// a `clocking_drive`, which is the whole defect `spliced` exists to avoid.
+    /// `research/press/RESULT-2-splice.md` has that measurement.
+    ///
+    /// **Press-only**, like the two ranks it measures and the provenance above
+    /// it; see `impose.zig`'s roster. Unmeasured reads as wide rather than
+    /// narrow everywhere it is consulted, so a step this never reached keeps the
+    /// conservative answer instead of inheriting a claim nobody made.
+    ///
+    /// The one field of this type that is **not** part of a production's
+    /// identity, in either `dedup`'s key or `spread.bodyKey`, because it is spent
+    /// inside the round that reads it and describes the author's syntax rather
+    /// than the language the body derives. Both of those say why where they
+    /// decline it.
+    region: u32 = 0,
     /// Which `Grammar.aliases` entry renames this step's child, if any.
     alias: ?u32 = null,
     /// Which `Grammar.field_names` entry this step's child is filed under, if
@@ -954,6 +991,12 @@ fn dedup(b: *Builder) !void {
                 // *after* `fold`, so this is the round where the difference
                 // exists to be collapsed.
                 h.update(std.mem.asBytes(&s.spliced));
+                // `region` is deliberately *not* here, and it is the one field of
+                // `Step` that is not. It is read by exactly one caller, the fold
+                // that sets the flag above, and `dedup` runs after that fold - so
+                // by this point the only thing region decides has been decided and
+                // recorded, and two bodies differing only in it are two bodies
+                // nothing downstream can tell apart. See `spread.drawn`.
                 // Flattened rather than hashed as optionals: an absent `?u32`
                 // leaves its payload bytes undefined, and feeding those to a
                 // hash is how a deduplicator starts giving different answers on

@@ -1,11 +1,12 @@
 # press — what the table press does that nobody had checked
 
-Two questions, each written down before it was measured.
+Three questions, each written down before it was measured.
 
 | file | question | verdict |
 | --- | --- | --- |
 | `PREDICTION-1-scope.md` · `RESULT-1-scope.md` | is the same grammar pressed twice the same press? | **no**, and the cause is uninitialized memory in a persisted artifact. Fixed. |
 | `PREDICTION-2-splice.md` · `RESULT-2-splice.md` | may a rank on a one-step body keep its scope through a fold? | **no**. 517 residual conflicts to 53, and a verilog statement changes category. Reverted. |
+| `RESULT-3-authored-width.md` | then record the width where it is authored — does that hold? | **yes**. rust and scala to zero residual, verilog unmoved, and scala stops parsing infix types backwards. Landed. |
 | `wobble.py` | the instrument for question 1, and now the corpus gate | — |
 
 ## Question 1 — reproducibility
@@ -21,7 +22,7 @@ automaton and four of heap per pattern run went into every folio on disk.
 
 ## Question 2 — the splice mark
 
-Rust presses to 176 residual conflicts against `TESTING.md`'s claim of zero for
+Rust pressed to 176 residual conflicts against `TESTING.md`'s claim of zero for
 all eleven pinned grammars, because a rank the author wrote is marked `spliced`
 when a fold carries it through an inline and the ladder then refuses to use it.
 Declining the mark for a body of exactly one step takes rust and scala to zero
@@ -32,8 +33,24 @@ the exact failure `Step.spliced`'s own comment predicts.
 Expansion runs to fixpoint, so a body that is one step *now* may be the residue
 of a region the author wrote around three. The width test reads a derived fact as
 an authored one. The repair is to record the rank's authored width at import and
-carry it through folding; that is a front-end provenance change, and rust's 176
-stand until it lands.
+carry it through folding; that is a front-end provenance change, so rust's 176
+stood until it landed - which is question 3.
+
+## Question 3 — the repair question 2 named
+
+It lands. `Step.region` records how many steps the author drew a rank around,
+measured at import across the **widest** reading of the group - which is what
+keeps verilog's `optional`-bearing sequence wide even though one of its readings
+is a single step, and is the same derived-for-authored mistake as question 2 in
+a different disguise. Rust and scala press to zero residual, 28 of 30 folios are
+byte-identical, and `rung1.py` passes on its own terms.
+
+Scala's 192 turned out not to be a classification matter at all: it was
+right-associating a `prec.left` operator, so `A Op B Op D` parsed as
+`A Op (B Op D)` where tree-sitter reads `(A Op B) Op D`. Neither the damage board
+nor `abide.py` could see it - the board's specimen never reaches those cells and
+`verdicts.toml` has no scala row - so the mechanism now carries a hermetic test
+instead of a corpus one.
 
 ## The instrument
 

@@ -400,26 +400,31 @@ conflicts** - every contested cell either declared by its author or a repetition
 the shape fix explains. What replaced it is a subtler kind of merge damage,
 which the residual count could not see and a parse notices immediately.
 
-> **Amended 2026-08-07, and the paragraph above is now false about rust.** Ten of
-> the eleven still press to zero. Rust presses to **176**, all shift/reduce.
-> Every column of the table below has also moved since it was written - state
-> counts roughly halved - so read the table as the measurement it was on its
-> date and `joints grammar <g>` as the measurement of now.
+> **Amended 2026-08-07: the paragraph above was false about rust for a while, and
+> is true again.** It read zero for all eleven; rust was pressing to **176**,
+> all shift/reduce, and had been since before this repo was public. It presses to
+> zero now, and so does scala, which was never in the eleven. Every column of
+> the table below has also moved since it was written - state counts roughly
+> halved - so read the table as the measurement it was on its date and
+> `joints grammar <g>` as the measurement of now.
 >
-> The cause is understood and the cheapest repair for it was measured and
-> rejected: one of `_non_special_token`'s alternatives is exactly
-> `prec.right(0, repeat1(punct))`, the fold that inlines it marks the rank
-> `spliced`, and the ladder then refuses a rank the author did write. Declining
-> the mark for a one-step body takes rust and scala to zero and leaves the corpus
-> damage board byte-identical, but it also turns verilog's `c[i] <= 0;` into a
-> `clocking_drive` - so it is out. Expansion runs to fixpoint, so a one-step body
-> can be the residue of a region the author wrote around three. The repair is to
-> record the rank's authored width at import. See
-> [press Result 2](../press/RESULT-2-splice.md).
+> One of `_non_special_token`'s alternatives is exactly
+> `prec.right(0, repeat1(punct))`, the fold that inlines it marked the rank
+> `spliced`, and the ladder then refused a rank the author did write. The first
+> repair tried - declining the mark for a body of one step, read at fold time -
+> took rust and scala to zero and turned verilog's `c[i] <= 0;` into a
+> `clocking_drive`, because expansion runs to fixpoint and a one-step body can be
+> the residue of a region the author wrote around three. It was reverted. The
+> repair that landed records the width at **import**, across the widest reading
+> of the group, and never recounts it. See
+> [press Result 2](../press/RESULT-2-splice.md) for the rejected one and
+> [press Result 3](../press/RESULT-3-authored-width.md) for this one - including
+> the part that matters more than the count, which is that scala had been
+> right-associating a `prec.left` operator the whole time.
 >
-> `tool/rung1.py` is deliberately left hard against this. Nobody has found a
-> commit where rust pressed to zero, so there is no delta to judge deliberate and
-> no basis for relaxing the gate - the tree stays red until the repair lands.
+> `tool/rung1.py` was deliberately left hard against the 176 rather than relaxed,
+> since nobody found a commit where rust pressed to zero and so there was no delta
+> to judge deliberate. It now passes on its own terms.
 
 Everything below is over one corpus, `research/joinery/corpus/`: the same little
 ledger program written eleven times, once per language, so a rank number differs

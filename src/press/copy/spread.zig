@@ -167,7 +167,7 @@ pub fn alts(self: *Import, node: json.Value, ctx: g.Step, at_end: bool, owner: [
         if (std.mem.eql(u8, kind, "PREC_LEFT")) next.assoc = .left;
         if (std.mem.eql(u8, kind, "PREC_RIGHT")) next.assoc = .right;
         const inside = try alts(self, inner, next, at_end, owner);
-        return if (at_end) inside else close(inside, ctx);
+        return if (at_end) drawn(inside) else close(drawn(inside), ctx);
     }
 
     if (std.mem.eql(u8, kind, "CHOICE")) {
@@ -318,7 +318,14 @@ pub fn listSymbol(self: *Import, owner: []const u8, body: []const Alt) Error!u32
         // repeat as a bare `choice(seq(aux, aux), body)` with no metadata
         // on it, and an alias here would emit a node for the whole tail.
         steps[0] = if (alt.steps.len > 0)
-            .{ .prec = alt.steps[0].prec, .assoc = alt.steps[0].assoc }
+            // With the region the element's rank was drawn around, since this
+            // step carries that same rank: the loop is not a second statement
+            // the author made, it is the one they made, read again.
+            .{
+                .prec = alt.steps[0].prec,
+                .assoc = alt.steps[0].assoc,
+                .region = alt.steps[0].region,
+            }
         else
             .{};
         @memcpy(steps[1..], alt.steps);
@@ -382,10 +389,26 @@ pub fn hoist(self: *Import, set: []Alt, at: g.Step, owner: []const u8) Error![]A
 
 /// A content key for an auxiliary, so two rules writing the same body get
 /// one nonterminal. Length-prefixed, so `seq(x,y)` and `choice(x,y)` cannot
-/// spell the same key, and every field of a step is in it, since every
-/// field of a step is part of what the productions will say: a `prec.left`
-/// body and a bare one are different rules, and an aliased body and a bare
-/// one are different trees.
+/// spell the same key, and every field of a step that says what the
+/// production *is* is in it: a `prec.left` body and a bare one are different
+/// rules, and an aliased body and a bare one are different trees.
+///
+/// `region` is the exception, and it is an exception on purpose. It measures the
+/// syntax the author wrote around a rank rather than anything the body derives,
+/// and two bodies alike in every other field derive the same strings, carry the
+/// same ranks and build the same trees. Keying on it would split an auxiliary on
+/// provenance: measured 2026-08-07 across the corpus of thirty, it moved 26
+/// grammars, cost sql its unfolding round and 63 of its declared conflicts -
+/// which stopped matching once the participating rule set changed - and took it
+/// from 0 residual to 280 reduce/reduce.
+///
+/// The hazard it declines to chase: `seq(prec(1,a), prec(1,b))` and
+/// `prec(1, seq(a,b))` reach here with the same rhs and the same ranks, regions
+/// `1,1` against `2,2`, and share one auxiliary - so whichever is interned first
+/// decides for both. No grammar in the corpus contains the pair, and the shared
+/// answer is only ever one fold's provenance flag rather than a cell. If one
+/// turns up, widen the merge to the larger region rather than splitting on it:
+/// wide is the conservative answer everywhere `region` is read.
 pub fn bodyKey(self: *Import, tag: []const u8, body: []const Alt) Error![]const u8 {
     const a = self.scratch.allocator();
     var words: std.ArrayList(u32) = .empty;
@@ -436,6 +459,46 @@ fn close(set: []Alt, outer: g.Step) []Alt {
         const last = &@constCast(alt.steps)[alt.steps.len - 1];
         last.prec = outer.prec;
         last.assoc = outer.assoc;
+        // The rank is being replaced, so the region measured for the one leaving
+        // does not describe the one arriving. Back to unmeasured, which is where
+        // the enclosing group's own `drawn` will find it if there is one, and
+        // which reads as wide rather than narrow if there is not.
+        last.region = 0;
+    }
+    return set;
+}
+
+/// Record how many steps this precedence group was written around, on the steps
+/// it is the group *for*.
+///
+/// Called once per `prec` node, on the way back up, because the width is a fact
+/// about the node's content and the content is what was just built. A step is
+/// this group's own when it carries a rank and nothing has measured it yet:
+/// recursion is depth-first, so a nested group has already claimed everything
+/// inside it, and the tightest enclosing `prec` is the one whose region decides
+/// whether a fold can break it. A step with no rank at all is left alone - there
+/// is no statement on it to have a width.
+///
+/// The **widest** reading of the group, not each reading's own width, and the
+/// difference is the whole measurement. An `optional` or a `repeat` inside the
+/// group gives it a reading with those members absent, so verilog's
+/// `hierarchical_identifier` - `prec.left(0, seq(choice($root ., ε),
+/// repeat(…), _identifier))` - has a reading that is bare `_identifier`, one
+/// step wide. Measured per reading, that one alternative claims the author
+/// ranked a single step and a fold may carry the rank into a host; measured
+/// across the group, the author plainly drew it around a sequence, and the
+/// narrow reading is a reading *of* that sequence rather than a second, narrower
+/// statement. Taking the max is what makes this a question about what was
+/// written instead of about which branch we are looking at.
+fn drawn(set: []Alt) []Alt {
+    var widest: usize = 0;
+    for (set) |alt| widest = @max(widest, alt.steps.len);
+    for (set) |alt| {
+        for (@constCast(alt.steps)) |*step| {
+            if (step.region != 0) continue;
+            if (step.prec == .none and step.assoc == .none) continue;
+            step.region = @intCast(widest);
+        }
     }
     return set;
 }
