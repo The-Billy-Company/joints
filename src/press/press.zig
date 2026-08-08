@@ -122,6 +122,18 @@ pub const treeSitter = import.treeSitter;
 /// and its own report, so it stays a door rather than dissolving into the IR.
 pub const inquest = @import("inquest.zig");
 
+/// Which states no parse can tell apart. A door rather than an internal, because
+/// the folio writes the relation and reads it back, and the section's interior
+/// belongs to the module that decided it.
+pub const quotient = @import("quotient.zig");
+pub const Quotient = quotient.Quotient;
+
+/// The table's own alphabet, cut to the columns anything distinguishes, and the
+/// grammar's string payloads as one automaton. Both are adapters onto the
+/// `irregex.math` floor, both are measurements the bench rung prints.
+pub const alphabet = @import("minterm.zig");
+pub const dafsa = @import("dafsa.zig");
+
 /// The automaton read backwards, for the questions about a fold's origin that
 /// its destination state cannot answer. A door for the same reason `inquest` is,
 /// plus one of its own: `retrace.Step` is a path step and `Grammar.Step` is a
@@ -192,6 +204,15 @@ pub const Result = struct {
     /// How many times the automaton was unfolded. Zero is plain LALR, which is
     /// every grammar that has no reduce/reduce residue to begin with.
     unfolded: u32,
+    /// Which of those states are the same state. Null on a `Result` rebuilt from
+    /// a folio that carried no `quotient` section — the relation is a pure
+    /// function of the table, so a caller that wants it can always press it out
+    /// again rather than be handed a wrong one.
+    ///
+    /// Borrowed from `tables`'s arena and freed with it, so a caller that takes
+    /// this `Result` apart by hand releases the relation without knowing it is
+    /// here. See the note on `Quotient`.
+    quotient: ?Quotient = null,
 
     pub fn deinit(r: *Result) void {
         r.tables.deinit();
@@ -296,6 +317,7 @@ pub fn tables(gpa: std.mem.Allocator, gr: *const g.Grammar) !Result {
 
         if (now.clean()) {
             if (best) |*b| b.deinit();
+            round_result.quotient = try quotient.of(gpa, gr, &round_result.collection, &round_result.tables);
             return round_result;
         }
 
@@ -319,6 +341,10 @@ pub fn tables(gpa: std.mem.Allocator, gr: *const g.Grammar) !Result {
         if (plan.cuts.items.len == was) break;
         dare = plan.cuts.items.len;
     }
+    // Last, on the automaton that won: the relation is about the table that
+    // ships, and pressing it per round would price a search that throws most of
+    // its rounds away.
+    best.?.quotient = try quotient.of(gpa, gr, &best.?.collection, &best.?.tables);
     return best.?;
 }
 

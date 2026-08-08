@@ -205,6 +205,10 @@ const Plan = struct {
     /// no lexable terminal at all, or when the slate holds an automaton the
     /// format refuses - a folio without one costs startup, never correctness.
     lexicon: []const u8 = &.{},
+    /// Which states the action-bisimulation merged, already encoded. Empty when
+    /// the pressing carried no relation - a `Result` rebound from a folio that
+    /// had none. Its interior is `press.quotient`'s; see the layout note there.
+    quotient: []const u8 = &.{},
 
     fn of(gpa: std.mem.Allocator, gr: *const press.Grammar, result: *const press.Result) Error!Plan {
         var p: Plan = .{};
@@ -212,6 +216,7 @@ const Plan = struct {
         p.table = try forme.lock(gpa, gr, result);
         p.locked = true;
         p.lexicon = try slate(gpa, gr);
+        if (result.quotient) |q| p.quotient = try press.quotient.encode(gpa, q);
         p.names = try gpa.alloc(leaf.Span, gr.names.len);
         p.patterns = try gpa.alloc(leaf.PatternRecord, gr.patterns.len);
         p.aliases = try gpa.alloc(leaf.AliasRecord, gr.aliases.len);
@@ -284,6 +289,7 @@ const Plan = struct {
         p.steps.deinit(gpa);
         p.stepref.deinit(gpa);
         gpa.free(p.lexicon);
+        gpa.free(p.quotient);
         if (p.locked) p.table.deinit();
     }
 
@@ -313,11 +319,12 @@ const Plan = struct {
             .frayed => @intCast(result.tables.frayed.len),
             .lexicon => @intCast(p.lexicon.len),
             .rival => p.rival_len,
+            .quotient => @intCast(p.quotient.len),
             // Reserved, so there is nothing to count. Named here rather than
             // swept into an `else` for the same reason every other arm is: the
             // lane that fills one should have to come to this switch, and an
             // `else` is how it would not.
-            .gloss, .tariff, .quotient => 0,
+            .gloss, .tariff => 0,
         };
     }
 
@@ -480,10 +487,11 @@ const Plan = struct {
                 w.put(x.terminal);
                 w.put(@intFromEnum(forme.same(leaf.Harm, x.harm)));
             },
+            .quotient => @memcpy(out, p.quotient),
             // `count` said zero, so `out` is empty and there is nothing to put in
             // it. Spelled out for the same reason as there: the lane that fills
             // one arrives at both switches.
-            .gloss, .tariff, .quotient => {},
+            .gloss, .tariff => {},
         }
     }
 };

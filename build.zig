@@ -263,4 +263,64 @@ pub fn build(b: *std.Build) void {
         "idiom",
         "Does the package speak its own idiom: one lifecycle shape per kind of owner",
     ).dependOn(&idiom.step);
+
+    // The bench rungs. Not part of `test` and not part of `check`: a rung
+    // measures a trade rather than asserting an invariant, and the ones with a
+    // floor in them say so by exiting nonzero. ReleaseFast unconditionally,
+    // because a Debug timing table is a table of Zig's safety checks. Cwd at
+    // the root so a rung can read the corpus by its committed path; a rung
+    // whose fixtures are not underfoot skips the row rather than failing.
+    const bench_vellum = b.addRunArtifact(b.addExecutable(.{
+        .name = "bench-vellum",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("bench/rungs/vellum/bench.zig"),
+            .target = target,
+            .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "joints", .module = lib },
+                .{ .name = "irregex", .module = irregex_mod },
+            },
+        }),
+    }));
+    bench_vellum.setCwd(b.path("."));
+    b.step(
+        "bench-vellum",
+        "What a settled tree costs and buys: size a node and nanoseconds an op, both ways",
+    ).dependOn(&bench_vellum.step);
+
+    const bench_grain = b.addRunArtifact(b.addExecutable(.{
+        .name = "bench-grain",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("bench/rungs/grain/bench.zig"),
+            .target = target,
+            .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "joints", .module = lib },
+                .{ .name = "irregex", .module = irregex_mod },
+            },
+        }),
+    }));
+    bench_grain.setCwd(b.path("."));
+    b.step(
+        "bench-grain",
+        "Is one pass over the material cheaper than the walk it replaces: three arms, four sections",
+    ).dependOn(&bench_grain.step);
+
+    const bench_quotient = b.addRunArtifact(b.addExecutable(.{
+        .name = "bench-quotient",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("bench/rungs/quotient/bench.zig"),
+            .target = target,
+            .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "joints", .module = lib },
+                .{ .name = "irregex", .module = irregex_mod },
+            },
+        }),
+    }));
+    bench_quotient.setCwd(b.path("."));
+    b.step(
+        "bench-quotient",
+        "What the three quotients find: states merged, columns collapsed, payload as one automaton",
+    ).dependOn(&bench_quotient.step);
 }

@@ -122,8 +122,7 @@ fn frees(comptime T: type) usize {
             "shape, or put it on `loaned` in src/idiom.zig with why it is not an owner.",
         .{
             @typeName(T),
-            if (holds(T)) "holds its allocator frees with `deinit(self)`" else
-                "holds no allocator frees with `deinit(self, gpa)`",
+            if (holds(T)) "holds its allocator frees with `deinit(self)`" else "holds no allocator frees with `deinit(self, gpa)`",
             takes,
         },
     ));
@@ -165,21 +164,38 @@ test "idiom: every type that frees itself takes the shape its ownership calls fo
         // load-bearing for, and all three are private. This list is the same
         // roster the two blocks above keep, for the same reason.
         for (.{
-            @import("kernel/lex/scanner.zig"),   @import("kernel/lex/lexicon.zig"),
-            @import("kernel/lex/admit.zig"),     @import("kernel/joint/joint.zig"),
-            @import("kernel/walk/drive.zig"),    @import("kernel/spine/spine.zig"),
-            @import("kernel/spine/tree.zig"),    @import("kernel/spine/arbor.zig"),
-            @import("kernel/quire/quire.zig"),   @import("kernel/quire/gather.zig"),
-            @import("kernel/quire/bough.zig"),   @import("kernel/quire/graft.zig"),
-            @import("kernel/weave/weave.zig"),   @import("folio/folio.zig"),
-            @import("folio/binding.zig"),        @import("folio/forme.zig"),
-            @import("press/press.zig"),          @import("press/lalr.zig"),
-            @import("press/copy/grammar.zig"),   @import("press/copy/galley.zig"),
-            @import("press/cast/lr0.zig"),       @import("press/cast/first.zig"),
-            @import("press/cast/sets.zig"),      @import("press/cast/retrace.zig"),
-            @import("press/quarrel/settle.zig"), @import("press/quarrel/forks.zig"),
-            @import("press/quarrel/workbench.zig"),
-            @import("press/quarrel/attribution.zig"),
+            @import("kernel/lex/scanner.zig"),      @import("kernel/lex/lexicon.zig"),
+            @import("kernel/lex/admit.zig"),        @import("kernel/joint/joint.zig"),
+            @import("kernel/walk/drive.zig"),       @import("kernel/spine/spine.zig"),
+            @import("kernel/spine/tree.zig"),       @import("kernel/spine/arbor.zig"),
+            @import("kernel/quire/quire.zig"),      @import("kernel/quire/gather.zig"),
+            @import("kernel/quire/bough.zig"),      @import("kernel/quire/graft.zig"),
+            @import("kernel/weave/weave.zig"),      @import("folio/folio.zig"),
+            @import("folio/binding.zig"),           @import("folio/forme.zig"),
+            @import("press/press.zig"),             @import("press/lalr.zig"),
+            @import("press/copy/grammar.zig"),      @import("press/copy/galley.zig"),
+            @import("press/cast/lr0.zig"),          @import("press/cast/first.zig"),
+            @import("press/cast/sets.zig"),         @import("press/cast/retrace.zig"),
+            @import("press/quarrel/settle.zig"),    @import("press/quarrel/forks.zig"),
+            @import("press/quarrel/workbench.zig"), @import("press/quarrel/attribution.zig"),
+            // The quotient lane's three. `quotient.zig` publishes nothing that
+            // frees itself - `Quotient` lives in the table's arena on purpose -
+            // but `minterm.Alphabet` and `dafsa.Set` both own memory, and a
+            // self-freeing type in a file no walk reaches is the exact silence
+            // the count below exists to break rather than something it catches.
+            @import("press/quotient.zig"),          @import("press/minterm.zig"),
+            @import("press/dafsa.zig"),
+            // The vellum lane's two, for the same reason and not its `vellum.zig`:
+            // a facade re-exporting `Sheet` would have it judged twice, and these
+            // are the files that declare it.
+                        @import("kernel/vellum/sheet.zig"),
+            @import("kernel/vellum/word.zig"),
+            // And the grain lane's one. Three areas arrived in one wave and every
+            // one of them had to be added here by hand, which is the argument for
+            // deriving this roster from the tree rather than keeping it: the count
+            // below notices that a type moved, and cannot notice an area nobody
+            // listed.
+                 @import("kernel/grain/ruling.zig"),
         }) |m| judged += area(m);
         // The count is the second half of the gate. Every violation is a compile
         // error on its own, but a type the walk never *reached* is silent, and an
@@ -201,4 +217,10 @@ test "idiom: every type that frees itself takes the shape its ownership calls fo
 /// compilations that reach this package through the module name `joints`, so this
 /// file has no import path to them. Their one `deinit` is `parse.zig`'s, which
 /// takes the shape the rule asks for.
-const lifecycles = 63;
+///
+/// 63 to 73 is one wave: `grain`, `vellum` and a quotient arrived at once. Seven
+/// of the ten came from files the roster above had no line for, so they were not
+/// judged against a stale pin - they were not judged at all, which is the reading
+/// this number cannot give you and the reason the roster wants deriving. The other
+/// three landed in files already listed, which is the only case it can see.
+const lifecycles = 73;

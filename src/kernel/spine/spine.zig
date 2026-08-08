@@ -36,19 +36,23 @@
 //! `effect.compose` ever drifts from the shape a monoid has, this file stops
 //! compiling instead of the first parse stopping working.
 //!
-//! ## The second binding, and where it goes
+//! ## The second binding, which arrived
 //!
-//! A second monoid is a `pub const` beside `Joint` and nothing else - no change
-//! to `tree.zig`, no parameter added anywhere, no dispatch. That is the payoff of
-//! the paragraph above, and it is worth saying where the seam is rather than
-//! leaving it to be rediscovered. There is deliberately no stub here: a
-//! `Tree(...)` over a `compose` nobody wrote would compile, export, and lie, and
-//! the area that needs one arrives with a real `compose` or does not arrive.
+//! This section used to say a second monoid would be a `pub const` beside
+//! `Joint` and nothing else - no change to `tree.zig`, no parameter added
+//! anywhere, no dispatch - and that the area needing one would arrive with a
+//! real `compose` or not arrive. `Bp` below is that arrival, and the promise
+//! held to the line: `tree.zig` and `arbor.zig` did not move for it, and the
+//! whole binding is the same five declarations `Joint` is.
 //!
-//! Its other half is already reserved on disk. Recovery weights have a folio
-//! section waiting for them - `folio.leaf.Kind.tariff`, see `leaf.reserved` - so
-//! a weighted spine can be loaded rather than recomputed per open, and neither
-//! half has to wait on the other to be designed.
+//! What it cost to be right was one thing, and it was in the measure rather
+//! than in the tree: `min` and `max` have to range over the *empty* prefix too,
+//! or the identity holds on one side and not the other. See `Excess`.
+//!
+//! A third binding is still just a `pub const` here. Recovery weights already
+//! have a folio section waiting for them - `folio.leaf.Kind.tariff`, see
+//! `leaf.reserved` - so a weighted spine can be loaded rather than recomputed
+//! per open, and neither half has to wait on the other to be designed.
 
 const std = @import("std");
 const tree = @import("tree.zig");
@@ -70,6 +74,80 @@ pub const Joint = Tree(struct {
     pub const identity: Element = .identity;
     pub const compose = joint.compose;
     pub const eql = joint.Effect.eql;
+});
+
+/// M3's element: what one run of a parenthesis word does to the walk reading
+/// it.
+///
+/// Serialize a tree depth-first over `(` and `)` and you have a ±1 walk, whose
+/// excess after k parens is opens minus closes. Three numbers say everything a
+/// later run needs to know about an earlier one - where it ended, how far down
+/// it dipped, how far up it climbed - and that triple is Sadakane & Navarro's
+/// range min-max measure. It is the whole of M3: `parent`, `firstChild`,
+/// `subtreeSize`, `depth` and `lca` are each a search for a target excess over
+/// this, not an operation of their own.
+///
+/// **`min` and `max` include the empty prefix**, which is why both bracket
+/// zero, and it is the one decision here that is easy to get wrong. Measure
+/// only the non-empty prefixes and `identity · w` still equals `w` while
+/// `w · identity` does not - a law that survives every hand-written case and
+/// dies on the first random one. `vellum/word_test.zig` draws its triples out
+/// of real random words for that reason rather than asserting the law here.
+///
+/// Total, where the joint is partial: no two walks refuse to concatenate. The
+/// tree already treats a monoid that never says no as its easy case, so nothing
+/// is adapted for it.
+pub const Excess = struct {
+    /// Where the run ends, relative to where it started.
+    total: i32 = 0,
+    min: i32 = 0,
+    max: i32 = 0,
+
+    /// The empty word. Every field is zero, including the two that bracket the
+    /// walk, because the empty prefix is a prefix.
+    pub const identity: Excess = .{};
+
+    /// `a` and then `b`, with `b`'s dips and climbs read from where `a` left
+    /// off. That shift is the entire homomorphism.
+    pub fn compose(_: void, a: Excess, b: Excess) !?Excess {
+        return .{
+            .total = a.total + b.total,
+            .min = @min(a.min, a.total + b.min),
+            .max = @max(a.max, a.total + b.max),
+        };
+    }
+
+    pub fn eql(a: Excess, b: Excess) bool {
+        return a.total == b.total and a.min == b.min and a.max == b.max;
+    }
+
+    /// One parenthesis, which is the generator every element is a product of.
+    pub fn step(open: bool) Excess {
+        return if (open) .{ .total = 1, .min = 0, .max = 1 } else .{ .total = -1, .min = -1, .max = 0 };
+    }
+
+    /// Whether a word measuring this denotes a forest: it returns to where it
+    /// started and never goes below it. `min == 0` rather than `min >= 0`
+    /// because the empty prefix already pins the maximum at zero.
+    pub fn balanced(e: Excess) bool {
+        return e.total == 0 and e.min == 0;
+    }
+};
+
+/// M3 in the spine: a tree's parenthesis word, maintained under edits.
+///
+/// `Leaf.bytes` counts PARENTHESES here. The tree's addressing is a count of
+/// whatever a leaf is made of and it never asked what that was, so a run of
+/// parens is as good an extent as a run of source bytes - which is the claim
+/// the generic was making all along, now with a second instance to check it
+/// against. `kernel/vellum/word.zig` is what holds one, and its README says
+/// what this buys over rebuilding the static sheet.
+pub const Bp = Tree(struct {
+    pub const Element = Excess;
+    pub const Ctx = void;
+    pub const identity: Element = Excess.identity;
+    pub const compose = Excess.compose;
+    pub const eql = Excess.eql;
 });
 
 test "the joint binds to the spine without an adapter" {

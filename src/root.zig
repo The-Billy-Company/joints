@@ -61,6 +61,10 @@ pub const press = @import("press/press.zig");
 
 /// Run time: pure compute over bytes and tables, no I/O.
 pub const kernel = struct {
+    /// M0 — the material itself: one vectorized pass over raw bytes reporting
+    /// where the lines and the indents are, before anything is a token. Read by
+    /// `lex`, and it reads nothing of this package back.
+    pub const grain = @import("kernel/grain/grain.zig");
     /// M1 — the terminal scanner: a grammar's terminals as one anchored
     /// longest-match slate over irregex, plus the tie-break that is a fact
     /// about the language rather than about automata.
@@ -87,6 +91,10 @@ pub const kernel = struct {
     /// A file held open: the spine and the quire maintained together across an
     /// edit, which is the only place the two halves of the claim meet.
     pub const weave = @import("kernel/weave/weave.zig");
+    /// The quire settled: the same tree as a balanced-parenthesis word, static
+    /// for a file at rest and on the spine for one being typed into. M3's
+    /// second measure, and the second monoid the spine holds.
+    pub const vellum = @import("kernel/vellum/vellum.zig");
 };
 
 /// The artifact: a pressed grammar as bytes, mmap-able, versioned, checked.

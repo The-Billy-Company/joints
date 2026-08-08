@@ -20,6 +20,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const leaf = @import("leaf.zig");
 const audit = @import("audit.zig");
+const press = @import("../press/press.zig");
 
 pub const Error = leaf.Error;
 
@@ -243,6 +244,18 @@ pub const Folio = struct {
         return f.view(.lexicon, u8);
     }
 
+    /// Which states no parse can tell apart, as the class map `press` wrote.
+    ///
+    /// Null means the folio carries none, which is a normal answer for the same
+    /// reason an empty `lexicon` is: the relation is a pure function of the
+    /// table, so a caller that wants one can press it out again. A map that is
+    /// present and does not fit never reaches here - `open` refused the file.
+    pub fn quotient(f: *const Folio) ?press.quotient.Classes {
+        const raw = f.view(.quotient, u8);
+        if (raw.len == 0) return null;
+        return press.quotient.classes(raw, f.head.state_count);
+    }
+
     // ── the views themselves ──
 
     /// Records where they lie. The `@alignCast` is sound because `open` proved
@@ -344,6 +357,13 @@ pub fn open(bytes: []align(leaf.section_align) const u8) Error!Folio {
     }
     try audit.counts(&f);
     try audit.contents(&f);
+    // The class map, against the automaton it claims to partition. Here rather
+    // than in `audit` because the section is byte-opaque and its interior is
+    // `press/quotient.zig`'s, so this is the one doubt `open` delegates. A map
+    // that is present and does not fit is a map for some other automaton, which
+    // is `FolioBadState` in every way that matters: every id in it is a claim
+    // about a state of this one.
+    if (f.view(.quotient, u8).len != 0 and f.quotient() == null) return Error.FolioBadState;
     return f;
 }
 

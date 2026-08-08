@@ -74,6 +74,7 @@ const caesura = @import("hand/caesura.zig");
 const scry = @import("hand/scry.zig");
 const lineage = @import("hand/lineage.zig");
 const writ = @import("hand/writ.zig");
+const grain = @import("../grain/grain.zig");
 const press = @import("../../press/press.zig");
 
 test {
@@ -1756,8 +1757,35 @@ pub const Carry = struct {
     /// answer where the slate may not. See `Spent` for the termination
     /// argument; it is short and it is the point of the field.
     spent: Spent = .{},
+    /// A structural index over the file, when whoever owns the file built one.
+    ///
+    /// Not memory and not state: it is a restatement of bytes the hand can
+    /// already see, so the measurement answers identically with it and without
+    /// it and every field below treats it as absent. It is here because this is
+    /// the only thing that travels from the file's owner to the hand - the
+    /// scanner between them is per grammar, not per file.
+    ///
+    /// Borrowed, and refused rather than trusted: `grain.lead` consults it only
+    /// when it describes the exact bytes being measured, so a ruling left over
+    /// from another file is inert rather than wrong. What that does *not* excuse
+    /// is a dangling one, and the rule that keeps it sound is the owner's: the
+    /// ruling outlives every scan that can see it, and the owner clears this
+    /// before letting go of it. `kernel/weave` is the only installer today and
+    /// does both.
+    ///
+    /// Mutable, and only for the memo `grain.Ruling.at` keeps of where the last
+    /// lookup landed. A carry is copied by value and every copy shares the one
+    /// ruling, which is sound precisely because that field is a memo: a copy
+    /// that writes it can make another copy's next lookup faster or slower and
+    /// can never make it wrong.
+    ruled: ?*grain.Ruling = null,
 
     /// Begin a file.
+    ///
+    /// `ruled` deliberately survives: it is not something a hand remembers, and
+    /// a new parse of the *same* file goes through here (see
+    /// `Scanner.restarting`) - so clearing it would silently cost the second
+    /// parse of every file the index it was built for.
     pub fn rewind(c: *Carry) void {
         c.columns.reset();
         c.spans.reset();
@@ -1770,7 +1798,9 @@ pub const Carry = struct {
     /// Use this and never `std.meta.eql` on a `Carry`: every stack is a
     /// fixed-capacity array with a live prefix, and everything past that
     /// prefix is `undefined`. The stacks answer for their own dead bytes; so
-    /// does the ledger.
+    /// does the ledger. `ruled` is absent for the opposite reason - it is not
+    /// state at all, and two scans that measured the same file to the same
+    /// place are the same scan whether or not one of them had an index.
     pub fn same(a: *const Carry, b: *const Carry) bool {
         return a.columns.same(&b.columns) and
             a.spans.same(&b.spans) and
@@ -2337,7 +2367,7 @@ fn layout(
     at: u32,
     wanted: *const std.DynamicBitSetUnmanaged,
 ) ?Hit {
-    const lead = offside.lead(bytes, at, c.troupe.note);
+    const lead = grain.lead(bytes, at, c.troupe.note, carry.ruled);
     // A backslash that continued into something other than a line ending is
     // malformed, and the spec answers by declining rather than guessing.
     if (lead.broken or !lead.fresh) return null;

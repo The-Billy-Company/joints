@@ -250,9 +250,11 @@ pub const Kind = enum(u16) {
     /// What each repair costs, so recovery can prefer the cheap one. Reserved for
     /// the mend area, which today picks by rule rather than by price.
     tariff,
-    /// Which states a quotient merged, and by what equivalence. Reserved for the
-    /// area that shrinks an automaton by collapsing states no parse can tell
-    /// apart - a fact about the table that the table cannot state.
+    /// Which states a quotient merged, and by what equivalence: a class map, one
+    /// block id per state, from the action-bisimulation `press/quotient.zig`
+    /// computes - a fact about the table that the table cannot state. Written by
+    /// `impose`, checked at `open`, read through `Folio.quotient`. Its interior
+    /// is documented where it is decided, in `press/quotient.zig`.
     quotient,
 };
 
@@ -276,13 +278,13 @@ pub const Kind = enum(u16) {
 /// non-empty reserved section is `FolioReservedSection`, which says what is in
 /// the file and what this binary lacks. `lexicon` is the deliberate opposite and
 /// documents why: it is an answer *about* the grammar that can be worked out
-/// again. These three are not.
+/// again. These two are not.
 ///
 /// The lane that implements one deletes its name from here, gives it a reader,
-/// and the refusal stops on its own.
+/// and the refusal stops on its own. `quotient` is the first that did.
 pub fn reserved(k: Kind) bool {
     return switch (k) {
-        .gloss, .tariff, .quotient => true,
+        .gloss, .tariff => true,
         else => false,
     };
 }
@@ -730,19 +732,30 @@ test "a reserved section spells as opaque bytes, which is what reserves it" {
             try testing.expect(std.mem.indexOf(u8, schema_preimage, @tagName(k) ++ "=u8") != null);
         }
     }
-    try testing.expectEqual(@as(usize, 3), reserved_seen);
+    try testing.expectEqual(@as(usize, 2), reserved_seen);
 
     // Reserved is a claim about *some* of the roster, and a predicate that said
     // yes to everything would pass every check above.
     try testing.expect(!reserved(.text));
     try testing.expect(!reserved(.rival));
 
-    // Last, and contiguously so, because the ordinal is the address: appending is
-    // safe and inserting renames every section after it in every folio ever
-    // written. A reserved section anywhere but the tail would mean the next one
-    // added has to go before it.
+    // Contiguous, because the ordinal is the address: appending is safe and
+    // inserting renames every section after it in every folio ever written, so a
+    // reservation is only ever made at the tail and the run of them has no
+    // non-reserved section threaded through it.
+    //
+    // The run no longer *ends* at the tail, and that is what filling one looks
+    // like: `quotient` was the last ordinal and is now written, so the boundary
+    // moved inward by one. It cannot move back - a filled section keeps its
+    // address forever - which is why the durable claim is contiguity of the
+    // reservations rather than their distance from the end.
     const all = std.enums.values(Kind);
-    for (all[all.len - reserved_seen ..]) |k| try testing.expect(reserved(k));
+    var next: ?usize = null;
+    for (all, 0..) |k, i| if (reserved(k)) {
+        if (next) |n| try testing.expectEqual(n, i);
+        next = i + 1;
+    };
+    try testing.expect(next != null);
 }
 
 test "a directory row round-trips, and a wild kind is refused rather than folded" {

@@ -61,6 +61,7 @@ const std = @import("std");
 const assay = @import("irregex").assay;
 const press = @import("../../press/press.zig");
 const lex = @import("../lex/scanner.zig");
+const grain = @import("../grain/grain.zig");
 const joint = @import("../joint/joint.zig");
 const spine = @import("../spine/spine.zig");
 const quire = @import("../quire/quire.zig");
@@ -233,6 +234,21 @@ pub const Weave = struct {
     held_in: std.ArrayList(u32),
     held_gen: std.ArrayList(u32),
 
+    /// The file's line structure, maintained beside its text.
+    ///
+    /// This is the one thing here that is a fact about the *bytes* rather than
+    /// about the parse, and it is held at this level for the same reason the
+    /// text is: a scanner is per grammar and lives across files, so it has
+    /// nowhere to keep something that belongs to one. The layout hands measure
+    /// a line's leading run once per token and used to walk it a byte at a
+    /// time; with this on offer they step line to line instead, and over a run
+    /// of blank or comment lines they step over the whole run.
+    ///
+    /// Maintained by `rule` on exactly the two events that can invalidate it -
+    /// a new file and an edit - and spliced rather than rebuilt on the second,
+    /// which is the only reason it is affordable per keystroke.
+    ruling: ?grain.Ruling = null,
+
     tree: ?quire.Quire = null,
     /// Which parse this is. Only ever compared, never arithmetic: two leaves
     /// carrying the same one were derived by the same run.
@@ -305,6 +321,11 @@ pub const Weave = struct {
     }
 
     pub fn deinit(w: *Weave) void {
+        // Before the ruling goes, so nothing downstream holds a pointer into
+        // it. `rule` is the only thing that ever set this and it only ever set
+        // it to ours, so taking it back unconditionally is exact.
+        w.loom.sc.carry.ruled = null;
+        if (w.ruling) |*r| r.deinit(w.gpa);
         if (w.tree) |*q| q.deinit();
         w.gather.deinit();
         w.spine.deinit();
@@ -340,6 +361,7 @@ pub const Weave = struct {
     pub fn warp(w: *Weave, text: []const u8) !void {
         w.text.clearRetainingCapacity();
         try w.text.appendSlice(w.gpa, text);
+        try w.rule(null);
         _ = try w.rip(null);
         _ = try w.spine.build(w.arena(), w.leaves.items);
         w.cost = .{
@@ -349,6 +371,33 @@ pub const Weave = struct {
             .nodes = @intCast(w.tree.?.nodes.len),
             .read = @intCast(w.gather.tokens.items.len),
         };
+    }
+
+    /// Bring the ruling up to the text and put it back on offer.
+    ///
+    /// `cut` is the edit that just landed, or null for a file arriving whole.
+    /// With one, only the lines the edit touched are re-derived and the rest
+    /// move by its delta; that is the same discipline the spine keeps over its
+    /// leaves, applied one level below to the material both of them describe.
+    ///
+    /// Re-installing every time is not belt and braces. `w.text` is an
+    /// `ArrayList`, so an edit can move the bytes out from under a slice, and
+    /// the pointer handed to the scanner has to be to the ruling as it stands
+    /// now over the text as it stands now. `grain.lead` checks that for itself
+    /// and declines a ruling that has stopped describing the material, so the
+    /// failure mode of getting this wrong is a slow parse rather than a wrong
+    /// one - but a silently slow parse is exactly the kind of regression a
+    /// tracked bench exists to catch, so it is done here properly instead.
+    fn rule(w: *Weave, cut: ?Cut) !void {
+        const text = w.text.items;
+        if (cut) |c| if (w.ruling) |*r| {
+            try r.splice(w.gpa, text, .{ .from = c.from, .to = c.to, .insert = c.insert });
+            w.loom.sc.carry.ruled = r;
+            return;
+        };
+        if (w.ruling) |*r| r.deinit(w.gpa);
+        w.ruling = try grain.Ruling.of(w.gpa, text);
+        w.loom.sc.carry.ruled = &w.ruling.?;
     }
 
     /// Apply an edit and hand back both halves, maintained.
@@ -363,6 +412,7 @@ pub const Weave = struct {
         w.era += 1;
         try w.stow();
         try w.text.replaceRange(w.gpa, cut.from, cut.to - cut.from, insert);
+        try w.rule(cut);
         const delta = @as(i32, @intCast(cut.insert)) - @as(i32, @intCast(cut.to - cut.from));
 
         var old = w.tree;

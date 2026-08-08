@@ -20,6 +20,22 @@
 //! every `_dedent` pops a column, so a run of them is finite by construction
 //! and the stack is the proof. `outside.step` is where that proof is checked.
 //!
+//! ## Where the measurement went
+//!
+//! The other half of this file used to be the byte walk that reads a line's
+//! leading run, and it is now `kernel/grain/measure.zig`. That is not a move
+//! for tidiness: the walk has no memory at all - it is a function of the bytes
+//! at an offset and nothing else - and it was the one thing here a vectorized
+//! pass over the raw material could answer whole. What is left is the half that
+//! genuinely cannot be: the stack, which every previous line built.
+//!
+//! `Note` and `tab_stop` are re-exported below because the hands next door
+//! spell them that way and the rule they describe is this one's - a tab stop is
+//! a fact about the offside rule that grain happens to be the one measuring.
+//! `lead`, `through` and `Lead` are *not* re-exported: nothing outside grain
+//! calls them any more, and an alias nobody writes is a second name to keep in
+//! step for no reader's benefit.
+//!
 //! Derived from tree-sitter-python's own `scanner.c` read as a specification -
 //! the column arithmetic (a tab is worth eight, a carriage return and a form
 //! feed reset to zero), the rule that a comment line defers a dedent until its
@@ -28,163 +44,10 @@
 //! C file is the spec and this is the implementation.
 
 const std = @import("std");
+const grain = @import("../../grain/grain.zig");
 
-/// A tab advances to the next multiple of this. Python's own tokenizer and
-/// tree-sitter's scanner both use eight, so a file mixing tabs and spaces
-/// blocks the same way here as it does there.
-pub const tab_stop = 8;
-
-/// How a language spells the comment a measurement has to see through.
-///
-/// Not a decoration on the rule — for the corpus this lexer measures itself
-/// against it is the dominant case. 499 of the 628 lines of the scala fixture
-/// begin with a comment, so a measurement that reads `/**` as content puts the
-/// wrong column on four lines in five, and every block boundary derived from
-/// those columns is a guess. Python's own scanner has the same clause for the
-/// same reason; the only thing that differs between the two languages is the
-/// spelling, so that is the only thing this names.
-///
-/// `slashes` nests, because scala's block comment does and C's does not — a
-/// `/* /* */ */` closed at the first `*/` would hand the rest of the comment to
-/// the parser as code.
-pub const Note = enum {
-    hash,
-    slashes,
-
-    /// Whether a comment opens at `bytes[i]`, and how wide its opener is.
-    fn opens(n: Note, bytes: []const u8, i: u32) ?struct { u32, bool } {
-        return switch (n) {
-            .hash => if (bytes[i] == '#') .{ 1, false } else null,
-            .slashes => blk: {
-                if (bytes[i] != '/' or i + 1 >= bytes.len) break :blk null;
-                break :blk switch (bytes[i + 1]) {
-                    '/' => .{ 2, false },
-                    '*' => .{ 2, true },
-                    else => null,
-                };
-            },
-        };
-    }
-};
-
-/// What the leading run of a line came to, and what kind of line it was.
-pub const Lead = struct {
-    /// The offset the line's first significant byte sits at.
-    at: u32,
-    /// Its column, tabs expanded.
-    column: u16,
-    /// Whether a line ending (or the end of input) was crossed getting here.
-    /// Without one there is no new line to measure, which is what keeps
-    /// `foo = bar  # note` from opening a block.
-    fresh: bool,
-    /// The column of the first comment skipped on the way, when there was one.
-    /// A dedent waits for a comment indented with the block it follows, so
-    /// that a comment trailing a block is not read as leaving it.
-    comment: ?u16,
-    /// True when the walk stopped because a backslash continued a line into
-    /// something that was not a newline - a malformed continuation, which the
-    /// spec answers by declining rather than by guessing.
-    broken: bool,
-};
-
-/// Measure the line `bytes[at..]` begins, skipping blank lines and whole-line
-/// comments the way Python's tokenizer does.
-pub fn lead(bytes: []const u8, at: u32, note: Note) Lead {
-    var i = at;
-    var column: u16 = 0;
-    var fresh = false;
-    var comment: ?u16 = null;
-    while (i < bytes.len) switch (bytes[i]) {
-        '\n' => {
-            fresh = true;
-            column = 0;
-            i += 1;
-        },
-        ' ' => {
-            column +|= 1;
-            i += 1;
-        },
-        '\r', 0x0c => {
-            column = 0;
-            i += 1;
-        },
-        '\t' => {
-            column = (column / tab_stop +| 1) *| tab_stop;
-            i += 1;
-        },
-        '#', '/' => {
-            const open = note.opens(bytes, i) orelse
-                return .{ .at = i, .column = column, .fresh = fresh, .comment = comment, .broken = false };
-            // A comment before any line ending is a trailing comment on the
-            // line we are already inside, and says nothing about indentation.
-            if (!fresh) return .{ .at = i, .column = column, .fresh = false, .comment = null, .broken = false };
-            if (comment == null) comment = column;
-            const width, const bounded = open;
-            if (bounded) {
-                // A bounded comment can end mid-line, and then the code after
-                // it is the line's real content at its real column — which is
-                // what tree-sitter-scala calls the effective indentation. So
-                // the column is carried through the comment rather than reset,
-                // opener included: the `/*` is two columns the code sits after.
-                column +|= @intCast(width);
-                i = through(bytes, i + width, &column);
-            } else {
-                while (i < bytes.len and bytes[i] != '\n') i += 1;
-                if (i < bytes.len) i += 1;
-                column = 0;
-            }
-        },
-        '\\' => {
-            // An explicit line join. The newline it swallows is not a line
-            // ending for indentation purposes, so `fresh` deliberately stays
-            // where it was.
-            var j = i + 1;
-            if (j < bytes.len and bytes[j] == '\r') j += 1;
-            if (j >= bytes.len) return .{ .at = j, .column = column, .fresh = fresh, .comment = comment, .broken = false };
-            if (bytes[j] != '\n') return .{ .at = i, .column = column, .fresh = fresh, .comment = comment, .broken = true };
-            i = j + 1;
-            column = 0;
-        },
-        else => return .{ .at = i, .column = column, .fresh = fresh, .comment = comment, .broken = false },
-    };
-    // End of input is a line ending, and it is at column zero - which is what
-    // unwinds every open block before the parse can accept.
-    return .{ .at = i, .column = 0, .fresh = true, .comment = comment, .broken = false };
-}
-
-/// Walk past a bounded comment opened just before `i`, keeping `column` true.
-///
-/// Nesting is counted rather than assumed absent: scala's block comment nests,
-/// so `/* /* */ */` ends at the second close and not the first. An unterminated
-/// one runs to the end of input, which is the same answer the parse will reach
-/// by another route and is better than pretending the file ended a line early.
-fn through(bytes: []const u8, from: u32, column: *u16) u32 {
-    var i = from;
-    var depth: u32 = 1;
-    while (i < bytes.len) {
-        if (bytes[i] == '\n') {
-            column.* = 0;
-            i += 1;
-            continue;
-        }
-        if (i + 1 < bytes.len and bytes[i] == '/' and bytes[i + 1] == '*') {
-            depth += 1;
-            column.* +|= 2;
-            i += 2;
-            continue;
-        }
-        if (i + 1 < bytes.len and bytes[i] == '*' and bytes[i + 1] == '/') {
-            depth -= 1;
-            column.* +|= 2;
-            i += 2;
-            if (depth == 0) return i;
-            continue;
-        }
-        column.* = if (bytes[i] == '\t') (column.* / tab_stop +| 1) *| tab_stop else column.* +| 1;
-        i += 1;
-    }
-    return i;
-}
+pub const tab_stop = grain.tab_stop;
+pub const Note = grain.Note;
 
 /// The column stack.
 ///
@@ -248,82 +111,3 @@ pub const Columns = struct {
         if (c.len > 0) c.len -= 1;
     }
 };
-
-test "offside: a tab reaches the next stop rather than adding one" {
-    // The spec's arithmetic, not ours: tree-sitter-python's scanner adds eight
-    // per tab, and CPython's tokenizer rounds up to the next multiple of eight.
-    // Both agree on a tab at column zero and on a tab after four spaces.
-    try std.testing.expectEqual(@as(u16, 8), lead("\tx", 0, .hash).column);
-    try std.testing.expectEqual(@as(u16, 8), lead("    \tx", 0, .hash).column);
-    try std.testing.expectEqual(@as(u16, 16), lead("\t\tx", 0, .hash).column);
-}
-
-test "offside: a blank line and a comment line do not end the measurement" {
-    const src = "\n\n    # note\n        x";
-    const got = lead(src, 0, .hash);
-    try std.testing.expectEqual(@as(u16, 8), got.column);
-    try std.testing.expectEqual(@as(?u16, 4), got.comment);
-    try std.testing.expect(got.fresh);
-    try std.testing.expectEqual(@as(u32, src.len - 1), got.at);
-}
-
-test "offside: a comment before any line ending is trailing, not leading" {
-    // `foo = bar # note` must not open or close a block, which the spec spells
-    // as returning early when no end of line has been crossed.
-    const got = lead(" # note\nx", 0, .hash);
-    try std.testing.expect(!got.fresh);
-    try std.testing.expectEqual(@as(?u16, null), got.comment);
-}
-
-test "offside: a backslash joins the next line and keeps the column" {
-    // The joined line's own indentation is not a block boundary.
-    const got = lead("\n a \\\n        b", 0, .hash);
-    try std.testing.expectEqual(@as(u16, 1), got.column);
-    try std.testing.expect(!got.broken);
-}
-
-test "offside: a slashes measurement sees past a comment a hash one reads as code" {
-    // The whole difference the `Note` field buys, pinned here because the
-    // corpus cannot pin it: `Option.scala` opens 499 of its 628 lines with a
-    // comment and still measures identically under both rules, because that
-    // fixture has almost no indentation region for a column to be wrong about.
-    // A field no measurement can falsify is a field that will be cited in a doc
-    // comment as working, so it is falsified here instead.
-    const src = "\n  /** doc */\n    body";
-    const blind = lead(src, 0, .hash);
-    try std.testing.expectEqual(@as(u16, 2), blind.column); // the comment's own column
-    try std.testing.expectEqual(@as(?u16, null), blind.comment);
-
-    const seeing = lead(src, 0, .slashes);
-    try std.testing.expectEqual(@as(u16, 4), seeing.column); // the code's
-    try std.testing.expectEqual(@as(?u16, 2), seeing.comment);
-}
-
-test "offside: a bounded comment ending mid-line yields the code's column" {
-    // tree-sitter-scala's COMMENT_SAME_LINE_CODE branch: the line's content
-    // starts after the comment, so its column is the effective indentation.
-    const got = lead("\n  /* c */ body", 0, .slashes);
-    try std.testing.expectEqual(@as(u16, 10), got.column);
-    try std.testing.expect(got.fresh);
-}
-
-test "offside: a bounded comment nests, so the first close does not end it" {
-    // C's does not and scala's does. Closing at the first `*/` would hand
-    // ` still comment */` to the parser as code at a column it never had.
-    const got = lead("\n/* /* x */ */ y", 0, .slashes);
-    try std.testing.expectEqual(@as(u16, 14), got.column);
-}
-
-test "offside: a lone slash is division, not a comment" {
-    // The `/` arm must not swallow an operator. `opens` returning null has to
-    // leave the measurement exactly where the default arm would have.
-    const got = lead("\n  a / b", 0, .slashes);
-    try std.testing.expectEqual(@as(u16, 2), got.column);
-    try std.testing.expectEqual(@as(?u16, null), got.comment);
-}
-
-test "offside: end of input is a line ending at column zero" {
-    const got = lead("\n   ", 0, .hash);
-    try std.testing.expect(got.fresh);
-    try std.testing.expectEqual(@as(u16, 0), got.column);
-}

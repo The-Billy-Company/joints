@@ -23,6 +23,12 @@ package joints {
 // Zones, low to high: an import may not point up the page. The order is a
 // topological sort of what imports what today, so nothing points up yet.
 zones {
+    // What the bytes are shaped like, before any of them is a token. It reads
+    // nothing of this package at all - only `std` and the material - which is
+    // why it stands below the generator rather than beside it: `lex` asks it
+    // where the lines and the indents are, so the one arrow between them points
+    // down the page and there is no arrangement in which it could point up.
+    grain        kernel/grain/**
     // The generator, and the floor of the package: `press` reads nothing above
     // it. Every zone from here up to `folio` reads it for the grammar, the LALR
     // tables, and the LR(0) core. Its four layers are one zone because they are
@@ -65,6 +71,12 @@ zones {
     // directory needs a zone the day it appears rather than the day it has an
     // import; and `limit reach to 2 hops` means a new area two directories deep
     // reaching `press` is a violation, not a variance to ratify.
+    //
+    // The first of them, and it landed here rather than under `quire/` for
+    // exactly the reason above: vellum reads the quire it settles AND the spine
+    // it hangs the parenthesis word on, so a file inside `kernel/quire/` would
+    // have been importing up the page.
+    vellum       kernel/vellum/**
     abi          surface/abi/**
     face_joints  surface/face/joints/**
 }
