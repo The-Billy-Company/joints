@@ -1,0 +1,193 @@
+{
+  "grammar": "haskell",
+  "note": [
+    "Read from tree-sitter-haskell's scanner.c (3471 lines, the largest of the",
+    "eight) and from the Haskell 2010 Report §10.3. This book claims none of the",
+    "layout: `writ` already executes the `_cmd_*` orders and answers the `_cond_*`",
+    "layout questions against the same stack, under the unanimity warrant its own",
+    "header sets out, and it does that correctly. What `writ` cannot reach is the",
+    "OTHER family of blind externals here - the twenty-odd `_cond_*` terminals that",
+    "are zero-width conditions on the BYTES around a symbolic operator - because a",
+    "`Provision` is a pattern and these are questions about a maximal operator run,",
+    "the whitespace in front of it, and which of several conditions the parse would",
+    "take.",
+    "",
+    "The dot family is where that costs the most, and `inquest.zig`'s own header",
+    "names the exhibit: state 7 of `module Text.Pandoc.Shared` admits",
+    "`_cond_qual_dot` and `_cond_tight_dot` by shift, and with neither answerable",
+    "every qualified name in a Haskell file walls at its first `.`. On the pandoc",
+    "corpus that is the whole import section, which is why the `where` further down",
+    "the file came back as `variable`: not a phantom, not layout, just a parse that",
+    "had already fallen into a forest by line three.",
+    "",
+    "Every rule here is zero width. The grammar spells each condition as",
+    "`SEQ(_cond_X, \".\")` - the scanner says which reading of the dot this is and",
+    "the ordinary lexer still eats the byte - so the answer's whole content is its",
+    "name, and `emit … 0` is the literal reading of the C's `mark_end` before the",
+    "operator.",
+    "",
+    "Deliberately not here: `_varsym` / `_consym` and the section family",
+    "(`_cond_left_section_op`, `_cond_no_section_op`, `_cond_qualified_op`,",
+    "`_cond_minus`, `_cond_infix`, `_cond_data_infix`, `_cond_context`,",
+    "`_cond_assoc_tyinst`). Those are not zero width and their guards run a second",
+    "lookahead past the operator (`left_section_op` looks for the `)` that makes",
+    "`(1 - 2 +)` a section), which the algebra can state but which needs its own",
+    "reading to state correctly.",
+    "",
+    "Also not here, and this one is a boundary rather than a deferral: the `where`",
+    "that came back as `variable` is not a scanner question at all. It is the",
+    "Report's `parse-error(t)`, and it needed the layout STACK - which `writ` owns,",
+    "not this book's `frames` organ. `writ` grew the arm (`outside.tailed`), derived",
+    "from the grammar's own literal terminals rather than from a keyword list, and",
+    "it took haskell from 137 misread bytes to 11. `WHERE` appears exactly once in",
+    "scanner.c outside its enum, as `valid(env, WHERE)` in `end_layout_where`, and",
+    "that single line is the whole rule: a keyword the parse refuses ends the block.",
+    "The five `_phantom_*` stay declined for the reason `writ`'s header gives."
+  ],
+  "asks": "token",
+  "cohort": [
+    "_cond_dotdot",
+    "_cond_tight_dot",
+    "_cond_prefix_dot",
+    "_cond_qual_dot"
+  ],
+  "probes": {
+    "dotdot": "\\.\\.(?![-!#$%&*+./<=>?@\\\\^|~:])",
+    "tight_dot_id": "(?<![ \\t\\r\\n])\\.(?=['\\w])",
+    "prefix_dot_id": "(?<=[ \\t\\r\\n])\\.(?=['\\w])",
+    "prefix_dot_open": "(?<=[ \\t\\r\\n])\\.(?=[(\\[\"]|\\{(?!-))",
+    "qual_dot": "(?<![ \\t\\r\\n])\\.(?=['\\w]|[-!#$%&*+./<=>?@\\\\^|~:])"
+  },
+  "rules": [
+    {
+      "name": "dotdot",
+      "note": "scanner.c:2761-2763. `lex_symop` calls the run `LDotDot` when it is exactly two characters and both are dots, so the negative lookahead is what makes the run maximal - `...` is `LDotSymop` and belongs to the qualified rule below. DOTDOT is tried before the tight reading and does not care whether whitespace preceded it, which is the one member of this family that does not.",
+      "phase": "ordered",
+      "when": [
+        [
+          "not_wanted",
+          "error_sentinel"
+        ],
+        [
+          "wanted",
+          "_cond_dotdot"
+        ],
+        [
+          "probe",
+          "dotdot"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_cond_dotdot",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "tight_dot",
+      "note": "scanner.c:2764-2765, the `!whitespace` half. `A.b` is a qualified name or a field selector; the lookbehind IS the C's `whitespace` flag, which is set by the prologue that skipped the blanks before this run. A lookbehind rather than a fact because the fact is about the byte before the offset and nothing on `Facts` says that.",
+      "phase": "ordered",
+      "when": [
+        [
+          "not_wanted",
+          "error_sentinel"
+        ],
+        [
+          "wanted",
+          "_cond_tight_dot"
+        ],
+        [
+          "probe",
+          "tight_dot_id"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_cond_tight_dot",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "prefix_dot",
+      "note": "scanner.c:2764-2765, the `whitespace` half. ` .field` with a space in front is the record dot selector, which is a prefix operator rather than a qualification.",
+      "phase": "ordered",
+      "when": [
+        [
+          "not_wanted",
+          "error_sentinel"
+        ],
+        [
+          "wanted",
+          "_cond_prefix_dot"
+        ],
+        [
+          "probe",
+          "prefix_dot_id"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_cond_prefix_dot",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "prefix_dot_open",
+      "note": "scanner.c:2769-2770 with `opening_token` at 2040. `LDotOpen` is a lone dot in front of something a term can start with; `is_id_char` is already the rule above, so what is left is `(`, `[`, `\"` and a `{` that does not open a comment. Without whitespace the C falls through to VARSYM, which this book does not claim - so the tight half is silence rather than a wrong answer.",
+      "phase": "ordered",
+      "when": [
+        [
+          "not_wanted",
+          "error_sentinel"
+        ],
+        [
+          "wanted",
+          "_cond_prefix_dot"
+        ],
+        [
+          "probe",
+          "prefix_dot_open"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_cond_prefix_dot",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "qual_dot",
+      "note": "scanner.c:2763, 2766, 2768 - all three arms end in `tight_op(env, whitespace, QUAL_DOT)`, so one rule states the union: a dot with no whitespace in front of it whose run is not a lone dot and which is not standing before a bracket. `A.B.c`, `A.B.C` and `A.B.+` are all this, which is why the qualified reading has to admit a symop after the dot where the tight reading admits only an identifier. Ordered behind the three above because the C tries each of them first and only falls through to here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "not_wanted",
+          "error_sentinel"
+        ],
+        [
+          "wanted",
+          "_cond_qual_dot"
+        ],
+        [
+          "probe",
+          "qual_dot"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_cond_qual_dot",
+          0
+        ]
+      ]
+    }
+  ]
+}

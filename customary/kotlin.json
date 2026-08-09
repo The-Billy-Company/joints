@@ -1,0 +1,576 @@
+{
+  "grammar": "kotlin",
+  "note": [
+    "Read from tree-sitter-kotlin's scanner.c, which is itself a copy of",
+    "tree-sitter-julia's. The memory is one stack pushed two bytes at a time -",
+    "`{delimiter, prefix_len}` - and the census read that as a `marks` stack whose",
+    "element is a kind and a count. This book claims the string family and the",
+    "nested block comment; automatic-semicolon insertion, the import dot and the",
+    "primary-constructor keyword are four keyword look-aheads whose every branch",
+    "is gated on `valid_symbols`, so they belong to a caller that has a permission",
+    "set and are out of the cohort here.",
+    "",
+    "`interp`, `brace` and `ident` are marks the C does not keep, and that is not a",
+    "liberty: the C is not asked inside an interpolation because STRING_CONTENT is",
+    "not in `valid_symbols` there, and rung 1 has no parse table to say so. They",
+    "are the parser's own bracket stack, standing in for it, and they carry no",
+    "answer - every rule that touches them emits nothing."
+  ],
+  "asks": "token",
+  "cohort": [
+    "_string_start",
+    "_string_end",
+    "string_content",
+    "_interpolation_expression_start",
+    "_interpolation_identifier_start",
+    "multiline_comment"
+  ],
+  "kinds": {
+    "single": 1,
+    "triple": 2,
+    "interp": 3,
+    "brace": 4,
+    "ident": 5
+  },
+  "probes": {
+    "dollars": "\\$+",
+    "interp_head_ahead": "(?=[A-Za-z_{])",
+    "brace_ahead": "(?=\\{)",
+    "empty_interp": "\\{\\}",
+    "word_ahead": "(?=[A-Za-z_])",
+    "word": "[A-Za-z0-9_]+",
+    "open_brace": "\\{",
+    "close_brace": "\\}",
+    "open_single": "([ \\t\\r\\n\\f\\v]*)(\\$*)\"(?!\"\")",
+    "open_triple": "([ \\t\\r\\n\\f\\v]*)(\\$*)\"\"\"",
+    "single_body": "(?:\\\\\\$(?!\")|\\\\[^$]|[^\"\\\\$])+(?=[\"$])",
+    "triple_body": "(?:\\\\\\$(?!\")|[^\"$])*\"{1,2}(?!\")|(?:\\\\\\$(?!\")|[^\"$])+(?=[\"$])",
+    "escaped_dollar_end": "\\\\\\$\"",
+    "single_end": "\"",
+    "triple_end": "\"{3,}",
+    "open_comment": "([ \\t\\r\\n\\f\\v]*)/\\*",
+    "slash_star": "/\\*",
+    "star_slash": "\\*/"
+  },
+  "rules": [
+    {
+      "name": "interpolated_identifier_ends",
+      "note": "`$foo` hands the identifier to the parser, so content resumes where word characters stop - which is a test on the bytes at the offset, the same shape as a heredoc tag test, and not a length remembered from before.",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "=",
+          "ident"
+        ],
+        [
+          "no_probe",
+          "word"
+        ]
+      ],
+      "then": [
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "interpolation_brace_opens",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "interp",
+            "brace"
+          ]
+        ],
+        [
+          "probe",
+          "open_brace"
+        ]
+      ],
+      "then": [
+        [
+          "push",
+          "marks",
+          "brace",
+          0
+        ],
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "interpolation_brace_closes",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "=",
+          "brace"
+        ],
+        [
+          "probe",
+          "close_brace"
+        ]
+      ],
+      "then": [
+        [
+          "pop",
+          "marks"
+        ],
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "interpolation_closes",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "=",
+          "interp"
+        ],
+        [
+          "probe",
+          "close_brace"
+        ]
+      ],
+      "then": [
+        [
+          "pop",
+          "marks"
+        ],
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "excess_dollars_are_content",
+      "note": "scanner.c:140-147. In a `$$\"\u2026\"` string exactly two dollars interpolate; a third is literal, and the C answers with the *first* one alone and re-reads the rest on the next ask.",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "single",
+            "triple"
+          ]
+        ],
+        [
+          "probe",
+          "dollars"
+        ],
+        [
+          "marks.top.count",
+          "<",
+          [
+            "span",
+            0
+          ]
+        ],
+        [
+          "probe",
+          "interp_head_ahead"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "string_content",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "interpolation_expression_starts",
+      "note": "scanner.c:152-165. `${}` is refused outright rather than answered zero-width, so the guard says the braces may not be empty.",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "single",
+            "triple"
+          ]
+        ],
+        [
+          "probe",
+          "dollars"
+        ],
+        [
+          "marks.top.count",
+          "=",
+          [
+            "span",
+            0
+          ]
+        ],
+        [
+          "probe",
+          "brace_ahead"
+        ],
+        [
+          "no_probe",
+          "empty_interp"
+        ]
+      ],
+      "then": [
+        [
+          "push",
+          "marks",
+          "interp",
+          0
+        ],
+        [
+          "emit",
+          "_interpolation_expression_start",
+          [
+            "+",
+            [
+              "span",
+              0
+            ],
+            1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "interpolation_identifier_starts",
+      "note": "scanner.c:166-170. The answer is the dollars only; the identifier behind them is the parser's.",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "single",
+            "triple"
+          ]
+        ],
+        [
+          "probe",
+          "dollars"
+        ],
+        [
+          "marks.top.count",
+          "=",
+          [
+            "span",
+            0
+          ]
+        ],
+        [
+          "probe",
+          "word_ahead"
+        ]
+      ],
+      "then": [
+        [
+          "push",
+          "marks",
+          "ident",
+          0
+        ],
+        [
+          "emit",
+          "_interpolation_identifier_start",
+          [
+            "span",
+            0
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "lone_dollars_are_content",
+      "note": "scanner.c:173-179. Too few dollars, or a dollar followed by anything that cannot begin a name: all of them are literal.",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "single",
+            "triple"
+          ]
+        ],
+        [
+          "probe",
+          "dollars"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "string_content",
+          [
+            "span",
+            0
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "escaped_dollar_closes_string",
+      "note": "scanner.c:188-199, and the comment there calls it an edge case: `\"aa\\$\"` consumes the backslash, the dollar and the quote as one STRING_END. It is not gated on the delimiter being single, so a triple-quoted string closes on it too - transcribed as the C decides it, not as Kotlin means it.",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "single",
+            "triple"
+          ]
+        ],
+        [
+          "probe",
+          "escaped_dollar_end"
+        ]
+      ],
+      "then": [
+        [
+          "pop",
+          "marks"
+        ],
+        [
+          "emit",
+          "_string_end",
+          3
+        ]
+      ]
+    },
+    {
+      "name": "triple_content",
+      "note": "scanner.c:208-233. One or two quotes inside a triple-quoted string are content and are answered together with whatever came before them; three end it. `\\` is not an escape here, so it is ordinary content.",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "=",
+          "triple"
+        ],
+        [
+          "probe",
+          "triple_body"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "string_content"
+        ]
+      ]
+    },
+    {
+      "name": "triple_closes",
+      "note": "scanner.c:242-249: `if we see a bunch of quotes in a row, then we just go until they stop appearing`.",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "=",
+          "triple"
+        ],
+        [
+          "probe",
+          "triple_end"
+        ]
+      ],
+      "then": [
+        [
+          "pop",
+          "marks"
+        ],
+        [
+          "emit",
+          "_string_end"
+        ]
+      ]
+    },
+    {
+      "name": "single_content",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "=",
+          "single"
+        ],
+        [
+          "probe",
+          "single_body"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "string_content"
+        ]
+      ]
+    },
+    {
+      "name": "single_closes",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "=",
+          "single"
+        ],
+        [
+          "probe",
+          "single_end"
+        ]
+      ],
+      "then": [
+        [
+          "pop",
+          "marks"
+        ],
+        [
+          "emit",
+          "_string_end",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "string_opens_triple",
+      "note": "scanner.c:72-96. The leading dollars are the interpolation prefix and the mark carries how many; a string with none still interpolates on one, which is why the count floors at 1.",
+      "phase": "opening",
+      "when": [
+        [
+          "probe",
+          "open_triple"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "triple",
+          [
+            "max",
+            1,
+            [
+              "span",
+              2
+            ]
+          ]
+        ],
+        [
+          "emit",
+          "_string_start",
+          [
+            "-",
+            "width",
+            [
+              "span",
+              1
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "string_opens_single",
+      "phase": "opening",
+      "when": [
+        [
+          "probe",
+          "open_single"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "single",
+          [
+            "max",
+            1,
+            [
+              "span",
+              2
+            ]
+          ]
+        ],
+        [
+          "emit",
+          "_string_start",
+          [
+            "-",
+            "width",
+            [
+              "span",
+              1
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "multiline_comment",
+      "note": "scanner.c:269-323. Nested, so the extent is a balanced run rather than a pattern, and an unterminated one ends at end of input because the C decided to answer it rather than refuse.",
+      "phase": "bounded",
+      "when": [
+        [
+          "probe",
+          "open_comment"
+        ],
+        [
+          "nest",
+          "slash_star",
+          "star_slash"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "multiline_comment",
+          [
+            "-",
+            "width",
+            [
+              "span",
+              1
+            ]
+          ]
+        ]
+      ]
+    }
+  ]
+}

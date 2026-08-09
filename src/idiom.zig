@@ -199,6 +199,11 @@ test "idiom: every type that frees itself takes the shape its ownership calls fo
             @import("kernel/vellum/word.zig"),      @import("kernel/grain/ruling.zig"),
             @import("kernel/gloss/rubric.zig"),     @import("kernel/gloss/lemma.zig"),
             @import("kernel/gloss/stencil.zig"),    @import("kernel/gloss/gloss.zig"),
+            // The customary's facade and not `engine.zig`: its one owner is the
+            // bound engine, and the book, the organs and the guard are plain
+            // values over borrowed bytes - which is the property that lets a
+            // save be a copy.
+            @import("kernel/lex/customary/customary.zig"),
         }) |m| judged += area(m);
         // The count is the second half of the gate. Every violation is a compile
         // error on its own, but a type the walk never *reached* is silent, and an
@@ -221,7 +226,8 @@ test "idiom: every type that frees itself takes the shape its ownership calls fo
 /// file has no import path to them. Their one `deinit` is `parse.zig`'s, which
 /// takes the shape the rule asks for.
 ///
-/// 63 to 73 is one wave (`grain`, `vellum`, a quotient) and 73 to 79 is `gloss`.
+/// 63 to 73 is one wave (`grain`, `vellum`, a quotient), 73 to 79 is `gloss`, and
+/// 80 is the customary engine.
 /// Thirteen of those sixteen arrived in files this roster had no line for, so they
 /// were not judged against a stale pin - they were not judged at all. That is the
 /// reading a count cannot give you, and it is `tool/roll.py`'s question now.
@@ -230,4 +236,4 @@ test "idiom: every type that frees itself takes the shape its ownership calls fo
 /// no file behind to notice, so nothing walks up to it; the roster still names
 /// every file it should and the answer is quietly smaller. That is the case worth
 /// a pin, and the case a directory walk cannot see.
-const lifecycles = 79;
+const lifecycles = 80;

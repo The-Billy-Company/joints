@@ -1,0 +1,275 @@
+{
+  "grammar": "swift",
+  "note": [
+    "Read from tree-sitter-swift's scanner.c. The memory is one `uint32_t` -",
+    "`ongoing_raw_str_hash_count` - and the census read that as a single mark whose",
+    "count is how many `#` opened the raw string being read. Everything else this",
+    "scanner does is a decision over the bytes at the offset and the permission set,",
+    "which is why swift is the grammar where `Provision` already got furthest.",
+    "",
+    "This book claims the four answers a pattern table structurally cannot reach,",
+    "and leaves the nineteen it can to `outside.roll`:",
+    "",
+    "  _custom_operator   a decision about a WHOLE maximal operator run - is this",
+    "                     run one of the 31 RESERVED_OPS, exactly - which no fixed",
+    "                     pattern states, because the run's length is what is being",
+    "                     tested. This is the `..<` / `!=` pair the board reports:",
+    "                     `..<` is reserved and must stay the seated token, `!=` is",
+    "                     not and must be a custom operator.",
+    "  _bang_custom       the twentieth row of OP_SYMBOLS, which outside.zig names",
+    "                     and declines: OP_SYMBOL_SUPPRESSOR conditions it on",
+    "                     FAKE_TRY_BANG *not* being wanted, and a Provision has no",
+    "                     access to a permission set. `not_wanted` is that test.",
+    "  multiline_comment  nested, so the extent is a balanced run and not a",
+    "                     pattern. swift keeps the depth on the C stack through",
+    "                     recursion, which is the one place in the eight where",
+    "                     `serialize` under-reports the memory. A hand answers it",
+    "                     today and answers it right, so this rule is shadowed and",
+    "                     written down anyway: it is what the hand leaves behind.",
+    "  raw_str_*          the family that reads the register: `#`-counting, and",
+    "                     the mark carries the count so the closer must match it.",
+    "",
+    "Left to the roll on purpose, and this is a limitation rather than a reading:",
+    "`&&`, `||`, `??` and `==` are legal operator runs that are NOT in RESERVED_OPS,",
+    "so the C emits its fixed terminal when that terminal is wanted and",
+    "`custom_operator` when it is not. The roll already answers the wanted half with",
+    "the cohort conditions it carries; the not-wanted half would need those",
+    "conditions restated here, so the custom rule declines all four lexically and",
+    "says so. They move when the roll does."
+  ],
+  "asks": "token",
+  "cohort": [
+    "_custom_operator",
+    "_bang_custom",
+    "multiline_comment",
+    "raw_str_part",
+    "raw_str_end_part"
+  ],
+  "kinds": {
+    "raw": 1
+  },
+  "probes": {
+    "oper_run": "(?!//|/\\*)(\\.[-+*/%=!<>&|^?~.]*|[-+*/%=!<>&|^?~]+)",
+    "oper_run_lt": "(?!//|/\\*)(\\.[-+*/%=!<>&|^?~.]*|[-+*/%=!<>&|^?~]+)(?<=<)(?![-+*/%=!<>&|^?~.\\s])",
+    "reserved_dot": "(?:\\.\\.<|\\.\\.\\.|\\.\\.|\\.)(?![-+*/%=!<>&|^?~.])",
+    "reserved_plain": "(?:===|->|/\\*|\\*/|\\+=|-=|\\*=|/=|%=|>>|<<|\\+\\+|--|/|=|-|\\+|!|\\*|%|<|>|&|\\||\\^|\\?|~)(?![-+*/%=!<>&|^?~])",
+    "roll_owns": "(?:&&|\\|\\||\\?\\?|==)(?![-+*/%=!<>&|^?~])",
+    "bang": "!(?![-+*/%=!<>&|^?~])",
+    "open_comment": "/\\*",
+    "slash_star": "/\\*",
+    "star_slash": "\\*/",
+    "raw_opens": "(#+)\"",
+    "raw_body": "(?:[^#\\\\]|\\\\[^#]|#)*?(?=\\\\#)",
+    "raw_shuts": "(?:[^#\\\\]|\\\\[^#]|#)*?\"(#+)"
+  },
+  "rules": [
+    {
+      "name": "raw_string_opens",
+      "note": "scanner.c:929-948. The hashes and the quote together are the first `raw_str_part`, and the count is what every later ask compares against.",
+      "phase": "opening",
+      "when": [
+        [
+          "probe",
+          "raw_opens"
+        ]
+      ],
+      "then": [
+        [
+          "push",
+          "marks",
+          "raw",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "raw_str_part"
+        ]
+      ]
+    },
+    {
+      "name": "raw_string_interpolates",
+      "note": "scanner.c:993-998. `\\#(` with exactly the opening count of hashes stops the part *before* the backslash, which the C spells as a mark_end it declines to move. The mark stays: the string is still open behind the interpolation.",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "=",
+          "raw"
+        ],
+        [
+          "probe",
+          "raw_body"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "raw_str_part"
+        ]
+      ]
+    },
+    {
+      "name": "raw_string_shuts",
+      "note": "scanner.c:999-1004. `\"` then exactly the opening count of hashes, and the answer ends on the very last hash.",
+      "phase": "inside",
+      "when": [
+        [
+          "marks.top.kind",
+          "=",
+          "raw"
+        ],
+        [
+          "probe",
+          "raw_shuts"
+        ],
+        [
+          "marks.top.count",
+          "=",
+          [
+            "span",
+            1
+          ]
+        ]
+      ],
+      "then": [
+        [
+          "pop",
+          "marks"
+        ],
+        [
+          "emit",
+          "raw_str_end_part"
+        ]
+      ]
+    },
+    {
+      "name": "nested_block_comment",
+      "note": "scanner.c:690-745. `nesting_depth` lives on the C stack, so `serialize` cannot see it and a fork mid-comment restarts at depth one. A balanced run states it without recursion, and an unterminated comment runs to end of input because the C answers it rather than refusing.",
+      "phase": "bounded",
+      "when": [
+        [
+          "probe",
+          "open_comment"
+        ],
+        [
+          "nest",
+          "slash_star",
+          "star_slash"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "multiline_comment"
+        ]
+      ]
+    },
+    {
+      "name": "bang_is_postfix_unless_try",
+      "note": "scanner.c:658-676 with OP_SYMBOL_SUPPRESSOR[BANG]. outside.zig declines this row by name because a Provision cannot ask whether `_fake_try_bang` is wanted. It is the only row of the twenty that needs the permission set to say NO, and this is that row.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "bang"
+        ],
+        [
+          "wanted",
+          "_bang_custom"
+        ],
+        [
+          "not_wanted",
+          "_fake_try_bang"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_bang_custom",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "custom_operator_trims_trailing_angle",
+      "note": "scanner.c:679-682. A run whose last character is `<`, with anything but whitespace after it, answers one byte short - which is how `Array<Int>` keeps its bracket and `a +< b` does not. The lookbehind is on the maximal run, so a `<` in the middle of one is not mistaken for the end of it. The three refusals stand ahead of the run because a guard reads where the rule has read TO: behind it they would test the byte after the operator, and `...]` would pass a reserved check aimed at `]`.",
+      "phase": "ordered",
+      "when": [
+        [
+          "no_probe",
+          "reserved_dot"
+        ],
+        [
+          "no_probe",
+          "reserved_plain"
+        ],
+        [
+          "no_probe",
+          "roll_owns"
+        ],
+        [
+          "wanted",
+          "_custom_operator"
+        ],
+        [
+          "probe",
+          "oper_run_lt"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_custom_operator",
+          [
+            "-",
+            [
+              "span",
+              1
+            ],
+            1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "custom_operator",
+      "note": "scanner.c:679-685. `any_reserved_ops` is true only for a reserved op whose length is the run's length exactly - the C clears a match on the step after it - so the guard is `this run, whole, is not one of the 31`, which is the test no pattern in the roll can state.",
+      "phase": "ordered",
+      "when": [
+        [
+          "no_probe",
+          "reserved_dot"
+        ],
+        [
+          "no_probe",
+          "reserved_plain"
+        ],
+        [
+          "no_probe",
+          "roll_owns"
+        ],
+        [
+          "wanted",
+          "_custom_operator"
+        ],
+        [
+          "probe",
+          "oper_run"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_custom_operator",
+          [
+            "span",
+            1
+          ]
+        ]
+      ]
+    }
+  ]
+}

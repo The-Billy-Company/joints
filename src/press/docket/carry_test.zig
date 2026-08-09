@@ -36,6 +36,7 @@ const g = @import("../copy/grammar.zig");
 const lalr = @import("../lalr.zig");
 const lr0 = @import("../cast/lr0.zig");
 const press = @import("../press.zig");
+const scribe = @import("../../kernel/lex/customary/scribe.zig");
 const settle = @import("../quarrel/settle.zig");
 
 /// A field the round trip drops, and why.
@@ -72,7 +73,7 @@ comptime {
     // that never crossed, because `sample` would leave a new one at its default
     // and a default matches a default. So the counts are pinned: grow one of
     // these types and come back here.
-    assertWidth(g.Grammar, 21);
+    assertWidth(g.Grammar, 22);
     assertWidth(g.Production, 4);
     assertWidth(g.Step, 6);
     assertWidth(lr0.State, 3);
@@ -342,8 +343,36 @@ fn sample(gpa: std.mem.Allocator) !g.Grammar {
     try b.addProduction(stmt, &.{ b_t, av, e_t }, &.{});
     try b.addProduction(av, &.{c_t}, &.{});
     try b.addProduction(bv, &.{c_t}, &.{});
-    return b.finish("sample", start, &.{ws}, &.{&.{ stmt, expr }});
+
+    var out = try b.finish("sample", start, &.{ws}, &.{&.{ stmt, expr }});
+    // A scanner, and a real one. Fake bytes would have been enough for `folio`,
+    // which is required not to have an opinion about this section's interior - but
+    // `pack` presses a slate on the way past, `Scanner.compile` binds the
+    // customary while it does, and a book that is not a book is refused there. So
+    // the honest fixture is a pressed one, and it buys the round trip a second
+    // claim for free: the section a folio carries is one `Engine.bind` accepts.
+    //
+    // `raw_text` because that is the external `sample` declares, and a customary
+    // may only answer a terminal the grammar declared external.
+    out.customary = try scribe.press(out.arena.allocator(), transcribed, null);
+    return out;
 }
+
+const transcribed =
+    \\{
+    \\  "grammar": "sample",
+    \\  "note": "the smallest customary that is one: a body, and the bytes that end it",
+    \\  "probes": { "body": "[^;]+" },
+    \\  "rules": [
+    \\    {
+    \\      "name": "raw_body",
+    \\      "phase": "inside",
+    \\      "when": [["probe", "body"]],
+    \\      "then": [["emit", "raw_text"]]
+    \\    }
+    \\  ]
+    \\}
+;
 
 const Lost = struct {
     /// Which way a field failed to be itself: `loses` is the dangerous one,

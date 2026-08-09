@@ -38,7 +38,15 @@ pub const magic = "OTLFOLIO";
 /// them once. Two of the three are written since - `quotient`, then `gloss` -
 /// and the version has not moved, which is the bump doing exactly what it was
 /// spent on.
-pub const version: u16 = 5;
+///
+/// v6 is `customary`, and it is the case the reservation could not cover. A
+/// reserved ordinal costs nothing to fill; a *new* ordinal lengthens the
+/// directory, and the reader checks that roster positionally, so a v5 folio read
+/// by this binary would stop at `FolioBadDirectory` - a true refusal wearing a
+/// misleading name. The bump makes it `FolioBadVersion`, which is what actually
+/// happened. Nothing was reserved for the scanner because until the customary
+/// there was nothing to reserve it for: the scanner was Zig.
+pub const version: u16 = 6;
 
 pub const header_len = 96;
 pub const entry_len = 16;
@@ -260,6 +268,18 @@ pub const Kind = enum(u16) {
     /// `impose`, checked at `open`, read through `Folio.quotient`. Its interior
     /// is documented where it is decided, in `press/quotient.zig`.
     quotient,
+
+    /// This grammar's scanner, as data: one pressed program over a closed algebra
+    /// of typed memory organs, which the engine at `kernel/lex/outside.zig` runs
+    /// where tree-sitter runs a linked `scanner.c`. Written by `impose`, checked
+    /// at `open`, read through `Folio.customary`. Its interior is documented where
+    /// it is decided, in `kernel/lex/customary/book.zig`.
+    ///
+    /// Past the reservation, because there was nothing to reserve it for: until
+    /// the customary the scanner was Zig in this binary, so no folio had a place
+    /// to keep one. It cost the version bump to v6 that the three reserved
+    /// ordinals were spent to avoid, and it is the last section that has to.
+    customary,
 };
 
 /// Sections this binary names but cannot read, carried empty so the roster and
@@ -451,7 +471,7 @@ pub fn Record(comptime k: Kind) type {
         // Byte-opaque. For the three at the tail that was the reservation (see
         // `reserved`), and it is why two of them could be filled without a
         // version bump; `text` and `lexicon` are opaque for their own reasons.
-        .text, .lexicon, .gloss, .tariff, .quotient => u8,
+        .text, .lexicon, .gloss, .tariff, .quotient, .customary => u8,
         .owner, .supertype, .extra, .rhs, .row, .row_span, .set_span, .complete_span, .complete, .party, .rival => u32,
         .groupref, .setsym, .stepref => u32,
         .shape => ShapeKind,

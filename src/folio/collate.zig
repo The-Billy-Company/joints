@@ -264,6 +264,27 @@ pub const Folio = struct {
         return f.view(.gloss, u8);
     }
 
+    /// This grammar's scanner, as the bytes `customary/book.zig` proves. Empty is
+    /// the normal answer for most grammars and means the externals this grammar
+    /// declares have no answer here - the `awaited_external` wall, honestly.
+    ///
+    /// Aligned, where `gloss` and `lexicon` are not, because the book is read
+    /// where it lies: its rows are `extern struct`s viewed straight out of the
+    /// mapping, so eight is a precondition rather than a preference. `open` has
+    /// already proved every section offset is a multiple of eight and that the
+    /// buffer is, which is what makes the cast sound - the same argument `view`
+    /// makes, spelled out here because this accessor bypasses it to keep the
+    /// alignment in the type.
+    ///
+    /// The interior is unchecked at `open`, for the topology reason `gloss`
+    /// states at length: the codec is `kernel/lex/`'s and stands above `folio`.
+    /// `book.read` is the fail-closed reader that carries the doubt.
+    pub fn customary(f: *const Folio) []align(leaf.section_align) const u8 {
+        const e = f.dir[@intFromEnum(leaf.Kind.customary)];
+        const off: usize = @intCast(e.offset);
+        return @alignCast(f.bytes[off..][0..@as(usize, e.count)]);
+    }
+
     /// Which states no parse can tell apart, as the class map `press` wrote.
     ///
     /// Null means the folio carries none, which is a normal answer for the same

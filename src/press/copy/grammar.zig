@@ -351,6 +351,17 @@ pub const Grammar = struct {
     /// determinizes as it always did - so this is a shortcut a grammar may
     /// carry, never a thing a grammar needs.
     lexicon: []const u8 = &.{},
+    /// This grammar's scanner, as data: the pressed customary the lexer runs
+    /// where tree-sitter runs a linked `scanner.c`. Opaque here and everywhere
+    /// but `kernel/lex/customary/`, which is the only thing that reads it.
+    ///
+    /// It is on the grammar rather than beside it because it *is* grammar - the
+    /// half of the terminal definitions a `grammar.json` states as a name and an
+    /// external roster and nothing else. `externals` says which terminals it owes
+    /// an answer for; this says how they answer. A grammar with an empty one has
+    /// externals nobody can lex, which is the honest wall `awaited_external`
+    /// reports, and exactly what every imported grammar was until now.
+    customary: []const u8 = &.{},
 
     pub fn deinit(g: *Grammar) void {
         g.arena.deinit();

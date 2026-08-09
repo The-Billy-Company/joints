@@ -352,6 +352,10 @@ const Plan = struct {
             .rival => p.rival_len,
             .quotient => @intCast(p.quotient.len),
             .gloss => @intCast(p.gloss.len),
+            // Straight off the grammar, like `lexicon` and unlike `gloss`: a
+            // customary is a fact about this language that arrived with it, not
+            // something an area above compiled against the pressing.
+            .customary => @intCast(gr.customary.len),
             // Reserved, so there is nothing to count. Named here rather than
             // swept into an `else` for the same reason every other arm is: the
             // lane that fills it should have to come to this switch, and an
@@ -521,6 +525,7 @@ const Plan = struct {
             },
             .quotient => @memcpy(out, p.quotient),
             .gloss => @memcpy(out, p.gloss),
+            .customary => @memcpy(out, gr.customary),
             // `count` said zero, so `out` is empty and there is nothing to put in
             // it. Spelled out for the same reason as there: the lane that fills
             // it arrives at both switches.

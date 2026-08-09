@@ -1,0 +1,878 @@
+{
+  "grammar": "yaml",
+  "note": [
+    "Transcribed from tree-sitter-yaml's scanner.c read as a specification.",
+    "Nothing is linked. Line references are to the pinned copy under",
+    ".local/differential/lang/yaml/src/scanner.c.",
+    "",
+    "This is the grammar the layout dossier declined three times, and the price it",
+    "named is paid here in four places rather than in three new organs:",
+    "",
+    "1. The PAIRED TYPED indent stack is `frames`, whose element has always been a",
+    "   kind beside a width. The C keeps `ind_typ_stk` and `ind_len_stk` and pushes",
+    "   to both at once, which is one stack of a two-field element spelled twice.",
+    "",
+    "2. The LAYOUT-INDEXED ALPHABET needs no new instruction. The C computes",
+    "   `has_nwl = cur_row > row` from a remembered row, but a scanner that has",
+    "   soaked to the offset can read the same fact off the bytes: if a newline was",
+    "   crossed, the offset is the line's first non-blank byte, so `column = lead`;",
+    "   if it was not, the previous token lies on this line in front of us, so",
+    "   `column > lead`. Every `is_r` below is `lead < column` and every `is_br` /",
+    "   `is_b` is `lead = column` and a comparison against the frame. Measured:",
+    "   `_r_*` and `_br_*` are co-admitted by shift in 10 states, so the scanner",
+    "   must separate those two; `_b_*` is co-admitted by shift with neither, so",
+    "   the parse state separates that one and `wanted` picks it.",
+    "",
+    "3. The SCHEMA CLASSIFIER is `emit ... classified by`. The C's `rlt_sch` is",
+    "   below the `// temp` line in its own struct - recomputed per scan, never",
+    "   serialized - so a table over the matched text is not an approximation of",
+    "   it, it is the same function.",
+    "",
+    "4. Widths are stored SHIFTED BY ONE, because the C seeds its stack with",
+    "   `IND_ROT` at width -1 (:198) and a frame width is unsigned. Root is 0 and",
+    "   column c is c+1. The shift is what keeps both standing tests pure",
+    "   conjunctions: `leading > cur_ind` is `lead >= frames.top.width` and",
+    "   `leading == cur_ind` is `lead = frames.top.width - 1`, and both come out",
+    "   right at root without an arm of their own.",
+    "",
+    "Three of the five registers the census counted are not memory. `row`,",
+    "`col` and `blk_imp_row` exist only to answer whether the line changed:",
+    "`MAY_UPD_IMP_COL` (:122) fires exactly when `blk_imp_row != bgn_row`, which",
+    "is the first token of a line, which is `lead = column`. So what is left to",
+    "remember is the implicit key's column and whether it was reached over a tab.",
+    "",
+    "Tabs in indentation are not modelled: `has_tab_ind` gates `is_b` and the two",
+    "pushes, and yaml forbids a tab in indentation, so the fixture cannot reach",
+    "the difference. Named here rather than left as a silence."
+  ],
+  "cohort": [
+    "_eof", "_bl", "comment",
+    "_s_drs_end", "_s_doc_end",
+    "_r_blk_seq_bgn", "_br_blk_seq_bgn", "_b_blk_seq_bgn",
+    "_r_blk_key_bgn", "_br_blk_key_bgn", "_b_blk_key_bgn",
+    "_r_blk_val_bgn", "_br_blk_val_bgn", "_b_blk_val_bgn",
+    "_r_blk_imp_bgn",
+    "_r_blk_lit_bgn", "_br_blk_lit_bgn",
+    "_r_blk_fld_bgn", "_br_blk_fld_bgn",
+    "_br_blk_str_ctn",
+    "_r_flw_seq_bgn", "_br_flw_seq_bgn", "_b_flw_seq_bgn",
+    "_r_flw_seq_end", "_br_flw_seq_end", "_b_flw_seq_end",
+    "_r_flw_map_bgn", "_br_flw_map_bgn", "_b_flw_map_bgn",
+    "_r_flw_map_end", "_br_flw_map_end", "_b_flw_map_end",
+    "_r_flw_sep_bgn", "_br_flw_sep_bgn",
+    "_r_flw_key_bgn", "_br_flw_key_bgn",
+    "_r_flw_jsv_bgn", "_br_flw_jsv_bgn",
+    "_r_flw_njv_bgn", "_br_flw_njv_bgn",
+    "_r_dqt_str_bgn", "_br_dqt_str_bgn", "_b_dqt_str_bgn",
+    "_r_dqt_str_ctn", "_br_dqt_str_ctn",
+    "_r_dqt_esc_nwl", "_br_dqt_esc_nwl",
+    "_r_dqt_esc_seq", "_br_dqt_esc_seq",
+    "_r_dqt_str_end", "_br_dqt_str_end",
+    "_r_sqt_str_bgn", "_br_sqt_str_bgn", "_b_sqt_str_bgn",
+    "_r_sqt_str_ctn", "_br_sqt_str_ctn",
+    "_r_sqt_esc_sqt", "_br_sqt_esc_sqt",
+    "_r_sqt_str_end", "_br_sqt_str_end",
+    "_r_sgl_pln_nul_blk", "_br_sgl_pln_nul_blk", "_b_sgl_pln_nul_blk",
+    "_r_sgl_pln_nul_flw", "_br_sgl_pln_nul_flw",
+    "_r_sgl_pln_bol_blk", "_br_sgl_pln_bol_blk", "_b_sgl_pln_bol_blk",
+    "_r_sgl_pln_bol_flw", "_br_sgl_pln_bol_flw",
+    "_r_sgl_pln_int_blk", "_br_sgl_pln_int_blk", "_b_sgl_pln_int_blk",
+    "_r_sgl_pln_int_flw", "_br_sgl_pln_int_flw",
+    "_r_sgl_pln_flt_blk", "_br_sgl_pln_flt_blk", "_b_sgl_pln_flt_blk",
+    "_r_sgl_pln_flt_flw", "_br_sgl_pln_flt_flw",
+    "_r_sgl_pln_tms_blk", "_br_sgl_pln_tms_blk", "_b_sgl_pln_tms_blk",
+    "_r_sgl_pln_tms_flw", "_br_sgl_pln_tms_flw",
+    "_r_sgl_pln_str_blk", "_br_sgl_pln_str_blk", "_b_sgl_pln_str_blk",
+    "_r_sgl_pln_str_flw", "_br_sgl_pln_str_flw",
+    "_r_tag", "_br_tag", "_b_tag",
+    "_r_acr_bgn", "_br_acr_bgn", "_b_acr_bgn", "_r_acr_ctn",
+    "_r_als_bgn", "_br_als_bgn", "_b_als_bgn", "_r_als_ctn"
+  ],
+  "organs": { "frames": 96, "marks": 8, "regs": 8 },
+  "tab": 1,
+  "trivia": "blanks",
+  "kinds": {
+    "root": 1,
+    "map": 2,
+    "seq": 3,
+    "str": 4
+  },
+  "registers": {
+    "0": "imp_col - blk_imp_col, shifted by one so its -1 seed (:195) is 0",
+    "1": "imp_tab - blk_imp_tab (:196), written but never reached without tabs"
+  },
+  "probes": {
+    "blanks": "[ \\t\\r\\n]+",
+    "any": "(?s).",
+    "drs_end": "---(?=[ \\t\\r\\n]|$)",
+    "doc_end": "\\.\\.\\.(?=[ \\t\\r\\n]|$)",
+    "comment": "#[^\\r\\n]*",
+    "seq_bgn": "-(?=[ \\t\\r\\n]|$)",
+    "key_bgn": "\\?(?=[ \\t\\r\\n]|$)",
+    "val_bgn": ":(?=[ \\t\\r\\n]|$)",
+    "jsv_bgn": ":",
+    "njv_bgn": ":(?=[ \\t\\r\\n,\\]}]|$)",
+    "lit_bgn": "\\|[-+]?[0-9]*",
+    "fld_bgn": ">[-+]?[0-9]*",
+    "flw_seq_bgn": "\\[",
+    "flw_seq_end": "\\]",
+    "flw_map_bgn": "\\{",
+    "flw_map_end": "\\}",
+    "flw_sep": ",",
+    "dqt": "\"",
+    "sqt": "'",
+    "sqt_esc": "''",
+    "dqt_ctn": "(?:[^\"\\\\\\r\\n]|\\\\[^\\r\\n])+",
+    "sqt_ctn": "(?:[^'\\r\\n]|'')+",
+    "dqt_esc_nwl": "\\\\(?=\\r|\\n)",
+    "dqt_esc_seq": "\\\\(?:[0abtnvfre \"/\\\\N_LP\\t]|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})",
+    "tag": "!(?:<[^>]+>|(?:[0-9A-Za-z-]*!)?[0-9A-Za-z%#;/?:@&=+$,_.~*'()\\[\\]-]*)",
+    "acr_bgn": "&",
+    "als_bgn": "\\*",
+    "anchor_name": "[^\\s,\\[\\]{}]+",
+    "pln_blk": "(?:[^\\s\\-?:,\\[\\]{}#&*!|>'\"%@`]|[?:-](?=[^\\s]))(?:[^\\s:#]|:(?=[^\\s])|(?<=\\S)#|[ \\t]+(?=[^\\s#]))*",
+    "pln_flw": "(?:[^\\s\\-?:,\\[\\]{}#&*!|>'\"%@`]|[?:-](?=[^\\s,\\[\\]{}]))(?:[^\\s:#,\\[\\]{}]|:(?=[^\\s,\\[\\]{}])|(?<=\\S)#|[ \\t]+(?=[^\\s#,\\[\\]{}]))*",
+    "blk_str_ctn": "[^\\r\\n]+"
+  },
+  "classes": {
+    "schema_blk_r": [
+      ["~|null|Null|NULL", "_r_sgl_pln_nul_blk"],
+      ["true|True|TRUE|false|False|FALSE", "_r_sgl_pln_bol_blk"],
+      ["[-+]?[0-9]+|0o[0-7]+|0x[0-9a-fA-F]+", "_r_sgl_pln_int_blk"],
+      ["[-+]?(?:[0-9]*\\.[0-9]+|[0-9]+\\.[0-9]*)(?:[eE][-+]?[0-9]+)?|[-+]?[0-9]+[eE][-+]?[0-9]+|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN)", "_r_sgl_pln_flt_blk"],
+      ["[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}(?:[Tt]|[ \\t]+)[0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]*)?(?:[ \\t]*(?:Z|[-+][0-9]{1,2}(?::[0-9]{2})?))?", "_r_sgl_pln_tms_blk"],
+      ["(?s).*", "_r_sgl_pln_str_blk"]
+    ],
+    "schema_blk_br": [
+      ["~|null|Null|NULL", "_br_sgl_pln_nul_blk"],
+      ["true|True|TRUE|false|False|FALSE", "_br_sgl_pln_bol_blk"],
+      ["[-+]?[0-9]+|0o[0-7]+|0x[0-9a-fA-F]+", "_br_sgl_pln_int_blk"],
+      ["[-+]?(?:[0-9]*\\.[0-9]+|[0-9]+\\.[0-9]*)(?:[eE][-+]?[0-9]+)?|[-+]?[0-9]+[eE][-+]?[0-9]+|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN)", "_br_sgl_pln_flt_blk"],
+      ["[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}(?:[Tt]|[ \\t]+)[0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]*)?(?:[ \\t]*(?:Z|[-+][0-9]{1,2}(?::[0-9]{2})?))?", "_br_sgl_pln_tms_blk"],
+      ["(?s).*", "_br_sgl_pln_str_blk"]
+    ],
+    "schema_blk_b": [
+      ["~|null|Null|NULL", "_b_sgl_pln_nul_blk"],
+      ["true|True|TRUE|false|False|FALSE", "_b_sgl_pln_bol_blk"],
+      ["[-+]?[0-9]+|0o[0-7]+|0x[0-9a-fA-F]+", "_b_sgl_pln_int_blk"],
+      ["[-+]?(?:[0-9]*\\.[0-9]+|[0-9]+\\.[0-9]*)(?:[eE][-+]?[0-9]+)?|[-+]?[0-9]+[eE][-+]?[0-9]+|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN)", "_b_sgl_pln_flt_blk"],
+      ["[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}(?:[Tt]|[ \\t]+)[0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]*)?(?:[ \\t]*(?:Z|[-+][0-9]{1,2}(?::[0-9]{2})?))?", "_b_sgl_pln_tms_blk"],
+      ["(?s).*", "_b_sgl_pln_str_blk"]
+    ],
+    "schema_flw_r": [
+      ["~|null|Null|NULL", "_r_sgl_pln_nul_flw"],
+      ["true|True|TRUE|false|False|FALSE", "_r_sgl_pln_bol_flw"],
+      ["[-+]?[0-9]+|0o[0-7]+|0x[0-9a-fA-F]+", "_r_sgl_pln_int_flw"],
+      ["[-+]?(?:[0-9]*\\.[0-9]+|[0-9]+\\.[0-9]*)(?:[eE][-+]?[0-9]+)?|[-+]?[0-9]+[eE][-+]?[0-9]+|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN)", "_r_sgl_pln_flt_flw"],
+      ["[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}(?:[Tt]|[ \\t]+)[0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]*)?(?:[ \\t]*(?:Z|[-+][0-9]{1,2}(?::[0-9]{2})?))?", "_r_sgl_pln_tms_flw"],
+      ["(?s).*", "_r_sgl_pln_str_flw"]
+    ],
+    "schema_flw_br": [
+      ["~|null|Null|NULL", "_br_sgl_pln_nul_flw"],
+      ["true|True|TRUE|false|False|FALSE", "_br_sgl_pln_bol_flw"],
+      ["[-+]?[0-9]+|0o[0-7]+|0x[0-9a-fA-F]+", "_br_sgl_pln_int_flw"],
+      ["[-+]?(?:[0-9]*\\.[0-9]+|[0-9]+\\.[0-9]*)(?:[eE][-+]?[0-9]+)?|[-+]?[0-9]+[eE][-+]?[0-9]+|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN)", "_br_sgl_pln_flt_flw"],
+      ["[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}(?:[Tt]|[ \\t]+)[0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]*)?(?:[ \\t]*(?:Z|[-+][0-9]{1,2}(?::[0-9]{2})?))?", "_br_sgl_pln_tms_flw"],
+      ["(?s).*", "_br_sgl_pln_str_flw"]
+    ]
+  },
+  "rules": [
+    {
+      "name": "eof_spends_a_blank_first",
+      "why": ":877 - end of input answers BL while any indent is owed, and only then _eof",
+      "phase": "bounded",
+      "when": [["eof"], ["wanted", "_bl"]],
+      "then": [["pop", "frames"], ["emit", "_bl", 0]]
+    },
+    {
+      "name": "eof_is_the_end",
+      "why": ":883",
+      "phase": "bounded",
+      "when": [["eof"], ["wanted", "_eof"]],
+      "then": [["emit", "_eof", 0]]
+    },
+
+    {
+      "name": "comment_closes_a_block_scalar_first",
+      "why": ":856 - inside a block scalar a comment at or left of the frame is a dedent, not a comment",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_blk_str_ctn"], ["wanted", "_bl"],
+        ["probe", "comment"],
+        ["lead", "=", "column"], ["lead", "<", "frames.top.width"]
+      ],
+      "then": [["pop", "frames"], ["emit", "_bl", 0]]
+    },
+    {
+      "name": "comment_in_a_block_scalar_is_only_its_own_line",
+      "why": ":860 true arm - with BR_BLK_STR_CTN live a comment counts only when no newline was crossed",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_blk_str_ctn"],
+        ["probe", "comment"],
+        ["lead", "<", "column"]
+      ],
+      "then": [["emit", "comment"]]
+    },
+    {
+      "name": "comment",
+      "why": ":860 false arm - at a line start, or after a newline, or past the last token's column",
+      "phase": "bounded",
+      "when": [
+        ["not_wanted", "_br_blk_str_ctn"],
+        ["probe", "comment"]
+      ],
+      "then": [["emit", "comment"]]
+    },
+
+    {
+      "name": "blank_closes_the_frame_it_left",
+      "why": ":894 - a line at or left of the frame owes a dedent. The seq arm keeps a sibling '-' at the same column inside the sequence",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_bl"],
+        ["lead", "=", "column"], ["lead", "<", "frames.top.width"],
+        ["no_probe", "seq_bgn"]
+      ],
+      "then": [["pop", "frames"], ["emit", "_bl", 0]]
+    },
+    {
+      "name": "blank_closes_a_frame_a_dash_cannot_hold",
+      "why": ":895 - the same close where the frame is not a sequence, so a '-' at this column does not continue it",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_bl"],
+        ["lead", "=", "column"], ["lead", "<", "frames.top.width"],
+        ["frames.top.kind", "in", ["map", "str", "root"]]
+      ],
+      "then": [["pop", "frames"], ["emit", "_bl", 0]]
+    },
+
+    {
+      "name": "directives_end",
+      "why": ":1237 - '---' at column 0, and BL first if one is owed",
+      "phase": "bounded",
+      "when": [["probe", "drs_end"], ["bol"], ["wanted", "_bl"]],
+      "then": [["pop", "frames"], ["emit", "_bl", 0]]
+    },
+    {
+      "name": "directives_end_marker",
+      "why": ":1247",
+      "phase": "bounded",
+      "when": [["probe", "drs_end"], ["bol"], ["wanted", "_s_drs_end"]],
+      "then": [["emit", "_s_drs_end"]]
+    },
+    {
+      "name": "document_end_marker",
+      "why": ":1259 - '...' at column 0",
+      "phase": "bounded",
+      "when": [["probe", "doc_end"], ["bol"], ["wanted", "_s_doc_end"]],
+      "then": [["emit", "_s_doc_end"]]
+    },
+
+    {
+      "name": "block_sequence_same_line",
+      "why": ":1222 PUSH_BGN_IND(IND_SEQ) - a '-' opens a sequence frame at its own column",
+      "phase": "bounded",
+      "when": [["wanted", "_r_blk_seq_bgn"], ["probe", "seq_bgn"], ["lead", "<", "column"]],
+      "then": [
+        ["push", "frames", ["+", "column", 1], "seq"],
+        ["emit", "_r_blk_seq_bgn"]
+      ]
+    },
+    {
+      "name": "block_sequence_deeper",
+      "why": ":1227",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_blk_seq_bgn"], ["probe", "seq_bgn"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [
+        ["push", "frames", ["+", "column", 1], "seq"],
+        ["emit", "_br_blk_seq_bgn"]
+      ]
+    },
+    {
+      "name": "block_sequence_level",
+      "why": ":1232 MAY_PUSH_SPC_SEQ_IND - a '-' level with a map frame opens a sequence inside it, and level with a sequence frame is the next item",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_b_blk_seq_bgn"], ["probe", "seq_bgn"],
+        ["lead", "=", "column"], ["frames.top.kind", "in", ["map"]]
+      ],
+      "then": [
+        ["push", "frames", ["+", "column", 1], "seq"],
+        ["emit", "_b_blk_seq_bgn"]
+      ]
+    },
+    {
+      "name": "block_sequence_next_item",
+      "why": ":1232 with cur_ind_typ already a sequence, so no push",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_b_blk_seq_bgn"], ["probe", "seq_bgn"],
+        ["lead", "=", "column"]
+      ],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_b_blk_seq_bgn"]]
+    },
+
+    {
+      "name": "explicit_key_same_line",
+      "why": ":1145 - '? ' opens a map frame",
+      "phase": "bounded",
+      "when": [["wanted", "_r_blk_key_bgn"], ["probe", "key_bgn"], ["lead", "<", "column"]],
+      "then": [["push", "frames", ["+", "column", 1], "map"], ["emit", "_r_blk_key_bgn"]]
+    },
+    {
+      "name": "explicit_key_deeper",
+      "why": ":1149",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_blk_key_bgn"], ["probe", "key_bgn"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [["push", "frames", ["+", "column", 1], "map"], ["emit", "_br_blk_key_bgn"]]
+    },
+    {
+      "name": "explicit_key_level",
+      "why": ":1153 - level with the frame, so the frame is already this map's",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_b_blk_key_bgn"], ["probe", "key_bgn"], ["lead", "=", "column"]
+      ],
+      "then": [["emit", "_b_blk_key_bgn"]]
+    },
+    {
+      "name": "flow_explicit_key_same_line",
+      "why": ":1155",
+      "phase": "bounded",
+      "when": [["wanted", "_r_flw_key_bgn"], ["probe", "key_bgn"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_flw_key_bgn"]]
+    },
+    {
+      "name": "flow_explicit_key_deeper",
+      "why": ":1157",
+      "phase": "bounded",
+      "when": [["wanted", "_br_flw_key_bgn"], ["probe", "key_bgn"], ["lead", "=", "column"]],
+      "then": [["emit", "_br_flw_key_bgn"]]
+    },
+
+    {
+      "name": "flow_json_value_same_line",
+      "why": ":1162 - a ':' after a JSON-like key needs no space after it",
+      "phase": "bounded",
+      "when": [["wanted", "_r_flw_jsv_bgn"], ["probe", "jsv_bgn"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_flw_jsv_bgn"]]
+    },
+    {
+      "name": "flow_json_value_deeper",
+      "why": ":1167",
+      "phase": "bounded",
+      "when": [["wanted", "_br_flw_jsv_bgn"], ["probe", "jsv_bgn"], ["lead", "=", "column"]],
+      "then": [["emit", "_br_flw_jsv_bgn"]]
+    },
+    {
+      "name": "block_value_same_line",
+      "why": ":1183 PUSH_BGN_IND(IND_MAP)",
+      "phase": "bounded",
+      "when": [["wanted", "_r_blk_val_bgn"], ["probe", "val_bgn"], ["lead", "<", "column"]],
+      "then": [["push", "frames", ["+", "column", 1], "map"], ["emit", "_r_blk_val_bgn"]]
+    },
+    {
+      "name": "block_value_deeper",
+      "why": ":1188",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_blk_val_bgn"], ["probe", "val_bgn"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [["push", "frames", ["+", "column", 1], "map"], ["emit", "_br_blk_val_bgn"]]
+    },
+    {
+      "name": "block_value_level",
+      "why": ":1193",
+      "phase": "bounded",
+      "when": [["wanted", "_b_blk_val_bgn"], ["probe", "val_bgn"], ["lead", "=", "column"]],
+      "then": [["emit", "_b_blk_val_bgn"]]
+    },
+    {
+      "name": "implicit_value_opens_the_key_s_own_map",
+      "why": ":1197 MAY_PUSH_IMP_IND - the frame is the KEY's column, remembered when the line's first token was read, not the colon's",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_r_blk_imp_bgn"], ["probe", "val_bgn"], ["lead", "<", "column"],
+        ["frames.top.width", "!=", ["reg", 0]]
+      ],
+      "then": [["push", "frames", ["reg", 0], "map"], ["emit", "_r_blk_imp_bgn"]]
+    },
+    {
+      "name": "implicit_value_in_the_map_it_already_has",
+      "why": ":1197 with cur_ind == blk_imp_col, so no push",
+      "phase": "bounded",
+      "when": [["wanted", "_r_blk_imp_bgn"], ["probe", "val_bgn"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_blk_imp_bgn"]]
+    },
+    {
+      "name": "flow_non_json_value_same_line",
+      "why": ":1204 - a ':' before a blank or a flow closer",
+      "phase": "bounded",
+      "when": [["wanted", "_r_flw_njv_bgn"], ["probe", "njv_bgn"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_flw_njv_bgn"]]
+    },
+    {
+      "name": "flow_non_json_value_deeper",
+      "why": ":1208",
+      "phase": "bounded",
+      "when": [["wanted", "_br_flw_njv_bgn"], ["probe", "njv_bgn"], ["lead", "=", "column"]],
+      "then": [["emit", "_br_flw_njv_bgn"]]
+    },
+
+    {
+      "name": "flow_sequence_begin_same_line",
+      "why": ":985",
+      "phase": "bounded",
+      "when": [["wanted", "_r_flw_seq_bgn"], ["probe", "flw_seq_bgn"], ["lead", "<", "column"]],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_r_flw_seq_bgn"]]
+    },
+    {
+      "name": "flow_sequence_begin_deeper",
+      "why": ":991",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_flw_seq_bgn"], ["probe", "flw_seq_bgn"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_br_flw_seq_bgn"]]
+    },
+    {
+      "name": "flow_sequence_begin_level",
+      "why": ":997",
+      "phase": "bounded",
+      "when": [["wanted", "_b_flw_seq_bgn"], ["probe", "flw_seq_bgn"], ["lead", "=", "column"]],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_b_flw_seq_bgn"]]
+    },
+    {
+      "name": "flow_sequence_end_same_line",
+      "why": ":1004",
+      "phase": "bounded",
+      "when": [["wanted", "_r_flw_seq_end"], ["probe", "flw_seq_end"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_flw_seq_end"]]
+    },
+    {
+      "name": "flow_sequence_end_deeper",
+      "why": ":1004 br arm",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_flw_seq_end"], ["probe", "flw_seq_end"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [["emit", "_br_flw_seq_end"]]
+    },
+    {
+      "name": "flow_sequence_end_level",
+      "why": ":1004 b arm",
+      "phase": "bounded",
+      "when": [["wanted", "_b_flw_seq_end"], ["probe", "flw_seq_end"], ["lead", "=", "column"]],
+      "then": [["emit", "_b_flw_seq_end"]]
+    },
+    {
+      "name": "flow_mapping_begin_same_line",
+      "why": ":1020",
+      "phase": "bounded",
+      "when": [["wanted", "_r_flw_map_bgn"], ["probe", "flw_map_bgn"], ["lead", "<", "column"]],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_r_flw_map_bgn"]]
+    },
+    {
+      "name": "flow_mapping_begin_deeper",
+      "why": ":1020 br arm",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_flw_map_bgn"], ["probe", "flw_map_bgn"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_br_flw_map_bgn"]]
+    },
+    {
+      "name": "flow_mapping_begin_level",
+      "why": ":1020 b arm",
+      "phase": "bounded",
+      "when": [["wanted", "_b_flw_map_bgn"], ["probe", "flw_map_bgn"], ["lead", "=", "column"]],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_b_flw_map_bgn"]]
+    },
+    {
+      "name": "flow_mapping_end_same_line",
+      "why": ":1040",
+      "phase": "bounded",
+      "when": [["wanted", "_r_flw_map_end"], ["probe", "flw_map_end"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_flw_map_end"]]
+    },
+    {
+      "name": "flow_mapping_end_deeper",
+      "why": ":1046",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_flw_map_end"], ["probe", "flw_map_end"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [["emit", "_br_flw_map_end"]]
+    },
+    {
+      "name": "flow_mapping_end_level",
+      "why": ":1046 b arm",
+      "phase": "bounded",
+      "when": [["wanted", "_b_flw_map_end"], ["probe", "flw_map_end"], ["lead", "=", "column"]],
+      "then": [["emit", "_b_flw_map_end"]]
+    },
+    {
+      "name": "flow_separator_same_line",
+      "why": ":1055",
+      "phase": "bounded",
+      "when": [["wanted", "_r_flw_sep_bgn"], ["probe", "flw_sep"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_flw_sep_bgn"]]
+    },
+    {
+      "name": "flow_separator_deeper",
+      "why": ":1060",
+      "phase": "bounded",
+      "when": [["wanted", "_br_flw_sep_bgn"], ["probe", "flw_sep"], ["lead", "=", "column"]],
+      "then": [["emit", "_br_flw_sep_bgn"]]
+    },
+
+    {
+      "name": "double_quote_content_same_line",
+      "why": ":924 - content is asked before the closing quote, so a run of body bytes wins over the '\"' that ends it",
+      "phase": "bounded",
+      "when": [["wanted", "_r_dqt_str_ctn"], ["probe", "dqt_ctn"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_dqt_str_ctn"]]
+    },
+    {
+      "name": "double_quote_content_deeper",
+      "why": ":925 - the br arm also takes plain has_nwl, which is any crossed newline",
+      "phase": "bounded",
+      "when": [["wanted", "_br_dqt_str_ctn"], ["probe", "dqt_ctn"], ["lead", "=", "column"]],
+      "then": [["emit", "_br_dqt_str_ctn"]]
+    },
+    {
+      "name": "double_quote_escaped_newline_same_line",
+      "why": ":578 scn_dqt_esc_seq - a backslash at end of line folds it away",
+      "phase": "bounded",
+      "when": [["wanted", "_r_dqt_esc_nwl"], ["probe", "dqt_esc_nwl"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_dqt_esc_nwl"]]
+    },
+    {
+      "name": "double_quote_escaped_newline_deeper",
+      "why": ":578",
+      "phase": "bounded",
+      "when": [["wanted", "_br_dqt_esc_nwl"], ["probe", "dqt_esc_nwl"], ["lead", "=", "column"]],
+      "then": [["emit", "_br_dqt_esc_nwl"]]
+    },
+    {
+      "name": "double_quote_escape_same_line",
+      "why": ":578",
+      "phase": "bounded",
+      "when": [["wanted", "_r_dqt_esc_seq"], ["probe", "dqt_esc_seq"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_dqt_esc_seq"]]
+    },
+    {
+      "name": "double_quote_escape_deeper",
+      "why": ":578",
+      "phase": "bounded",
+      "when": [["wanted", "_br_dqt_esc_seq"], ["probe", "dqt_esc_seq"], ["lead", "=", "column"]],
+      "then": [["emit", "_br_dqt_esc_seq"]]
+    },
+    {
+      "name": "double_quote_begin_same_line",
+      "why": ":1066 MAY_UPD_IMP_COL",
+      "phase": "bounded",
+      "when": [["wanted", "_r_dqt_str_bgn"], ["probe", "dqt"], ["lead", "<", "column"]],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_r_dqt_str_bgn"]]
+    },
+    {
+      "name": "double_quote_begin_deeper",
+      "why": ":1072",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_dqt_str_bgn"], ["probe", "dqt"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_br_dqt_str_bgn"]]
+    },
+    {
+      "name": "double_quote_begin_level",
+      "why": ":1078",
+      "phase": "bounded",
+      "when": [["wanted", "_b_dqt_str_bgn"], ["probe", "dqt"], ["lead", "=", "column"]],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_b_dqt_str_bgn"]]
+    },
+    {
+      "name": "double_quote_end_same_line",
+      "why": ":1084",
+      "phase": "bounded",
+      "when": [["wanted", "_r_dqt_str_end"], ["probe", "dqt"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_dqt_str_end"]]
+    },
+    {
+      "name": "double_quote_end_deeper",
+      "why": ":1089",
+      "phase": "bounded",
+      "when": [["wanted", "_br_dqt_str_end"], ["probe", "dqt"], ["lead", "=", "column"]],
+      "then": [["emit", "_br_dqt_str_end"]]
+    },
+
+    {
+      "name": "single_quote_content_same_line",
+      "why": ":929",
+      "phase": "bounded",
+      "when": [["wanted", "_r_sqt_str_ctn"], ["probe", "sqt_ctn"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_sqt_str_ctn"]]
+    },
+    {
+      "name": "single_quote_content_deeper",
+      "why": ":930",
+      "phase": "bounded",
+      "when": [["wanted", "_br_sqt_str_ctn"], ["probe", "sqt_ctn"], ["lead", "=", "column"]],
+      "then": [["emit", "_br_sqt_str_ctn"]]
+    },
+    {
+      "name": "single_quote_escape_same_line",
+      "why": ":1115 - a doubled quote inside the body is the escape, and it is asked before the close",
+      "phase": "bounded",
+      "when": [["wanted", "_r_sqt_esc_sqt"], ["probe", "sqt_esc"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_sqt_esc_sqt"]]
+    },
+    {
+      "name": "single_quote_escape_deeper",
+      "why": ":1126",
+      "phase": "bounded",
+      "when": [["wanted", "_br_sqt_esc_sqt"], ["probe", "sqt_esc"], ["lead", "=", "column"]],
+      "then": [["emit", "_br_sqt_esc_sqt"]]
+    },
+    {
+      "name": "single_quote_begin_same_line",
+      "why": ":1095",
+      "phase": "bounded",
+      "when": [["wanted", "_r_sqt_str_bgn"], ["probe", "sqt"], ["lead", "<", "column"]],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_r_sqt_str_bgn"]]
+    },
+    {
+      "name": "single_quote_begin_deeper",
+      "why": ":1101",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_sqt_str_bgn"], ["probe", "sqt"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_br_sqt_str_bgn"]]
+    },
+    {
+      "name": "single_quote_begin_level",
+      "why": ":1107",
+      "phase": "bounded",
+      "when": [["wanted", "_b_sqt_str_bgn"], ["probe", "sqt"], ["lead", "=", "column"]],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_b_sqt_str_bgn"]]
+    },
+    {
+      "name": "single_quote_end_same_line",
+      "why": ":1121",
+      "phase": "bounded",
+      "when": [["wanted", "_r_sqt_str_end"], ["probe", "sqt"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_sqt_str_end"]]
+    },
+    {
+      "name": "single_quote_end_deeper",
+      "why": ":1131",
+      "phase": "bounded",
+      "when": [["wanted", "_br_sqt_str_end"], ["probe", "sqt"], ["lead", "=", "column"]],
+      "then": [["emit", "_br_sqt_str_end"]]
+    },
+
+    {
+      "name": "block_literal_same_line",
+      "why": ":691 scn_blk_str_bgn - '|' opens a string frame one column past the parent",
+      "phase": "bounded",
+      "when": [["wanted", "_r_blk_lit_bgn"], ["probe", "lit_bgn"], ["lead", "<", "column"]],
+      "then": [["push", "frames", ["+", "column", 1], "str"], ["emit", "_r_blk_lit_bgn"]]
+    },
+    {
+      "name": "block_literal_deeper",
+      "why": ":691",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_blk_lit_bgn"], ["probe", "lit_bgn"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [["push", "frames", ["+", "column", 1], "str"], ["emit", "_br_blk_lit_bgn"]]
+    },
+    {
+      "name": "block_folded_same_line",
+      "why": ":691 with '>'",
+      "phase": "bounded",
+      "when": [["wanted", "_r_blk_fld_bgn"], ["probe", "fld_bgn"], ["lead", "<", "column"]],
+      "then": [["push", "frames", ["+", "column", 1], "str"], ["emit", "_r_blk_fld_bgn"]]
+    },
+    {
+      "name": "block_folded_deeper",
+      "why": ":691 with '>'",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_blk_fld_bgn"], ["probe", "fld_bgn"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [["push", "frames", ["+", "column", 1], "str"], ["emit", "_br_blk_fld_bgn"]]
+    },
+    {
+      "name": "block_scalar_content",
+      "why": ":752 scn_blk_str_cnt - a line indented past the string frame is its body, taken whole",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_blk_str_ctn"], ["lead", "=", "column"],
+        ["lead", ">=", "frames.top.width"], ["probe", "blk_str_ctn"]
+      ],
+      "then": [["emit", "_br_blk_str_ctn"]]
+    },
+
+    {
+      "name": "tag_same_line",
+      "why": ":972",
+      "phase": "bounded",
+      "when": [["wanted", "_r_tag"], ["probe", "tag"], ["lead", "<", "column"]],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_r_tag"]]
+    },
+    {
+      "name": "tag_deeper",
+      "why": ":976",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_tag"], ["probe", "tag"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_br_tag"]]
+    },
+    {
+      "name": "tag_level",
+      "why": ":980",
+      "phase": "bounded",
+      "when": [["wanted", "_b_tag"], ["probe", "tag"], ["lead", "=", "column"]],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_b_tag"]]
+    },
+    {
+      "name": "anchor_name",
+      "why": ":550 scn_acr_ctn - the name after '&', same line only",
+      "phase": "bounded",
+      "when": [["wanted", "_r_acr_ctn"], ["probe", "anchor_name"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_acr_ctn"]]
+    },
+    {
+      "name": "alias_name",
+      "why": ":570 scn_als_ctn",
+      "phase": "bounded",
+      "when": [["wanted", "_r_als_ctn"], ["probe", "anchor_name"], ["lead", "<", "column"]],
+      "then": [["emit", "_r_als_ctn"]]
+    },
+    {
+      "name": "anchor_begin_same_line",
+      "why": ":959",
+      "phase": "bounded",
+      "when": [["wanted", "_r_acr_bgn"], ["probe", "acr_bgn"], ["lead", "<", "column"]],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_r_acr_bgn"]]
+    },
+    {
+      "name": "anchor_begin_deeper",
+      "why": ":963",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_acr_bgn"], ["probe", "acr_bgn"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_br_acr_bgn"]]
+    },
+    {
+      "name": "anchor_begin_level",
+      "why": ":967",
+      "phase": "bounded",
+      "when": [["wanted", "_b_acr_bgn"], ["probe", "acr_bgn"], ["lead", "=", "column"]],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_b_acr_bgn"]]
+    },
+    {
+      "name": "alias_begin_same_line",
+      "why": ":946",
+      "phase": "bounded",
+      "when": [["wanted", "_r_als_bgn"], ["probe", "als_bgn"], ["lead", "<", "column"]],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_r_als_bgn"]]
+    },
+    {
+      "name": "alias_begin_deeper",
+      "why": ":950",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_als_bgn"], ["probe", "als_bgn"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_br_als_bgn"]]
+    },
+    {
+      "name": "alias_begin_level",
+      "why": ":954",
+      "phase": "bounded",
+      "when": [["wanted", "_b_als_bgn"], ["probe", "als_bgn"], ["lead", "=", "column"]],
+      "then": [["set", 0, ["+", "column", 1]], ["emit", "_b_als_bgn"]]
+    },
+
+    {
+      "name": "plain_scalar_block_same_line",
+      "why": ":783 scn_pln_cnt with is_plain_safe_in_block, named by SGL_PLN_SYM(R, BLK) at :132",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_r_sgl_pln_str_blk"], ["probe", "pln_blk"], ["lead", "<", "column"]
+      ],
+      "then": [["set", 0, ["+", "column", 1]],
+        ["emit", "_r_sgl_pln_str_blk", "classified", "schema_blk_r"]]
+    },
+    {
+      "name": "plain_scalar_block_deeper",
+      "why": ":783, SGL_PLN_SYM(BR, BLK)",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_sgl_pln_str_blk"], ["probe", "pln_blk"],
+        ["lead", "=", "column"], ["lead", ">=", "frames.top.width"]
+      ],
+      "then": [
+        ["set", 0, ["+", "column", 1]],
+        ["emit", "_br_sgl_pln_str_blk", "classified", "schema_blk_br"]
+      ]
+    },
+    {
+      "name": "plain_scalar_block_level",
+      "why": ":783, SGL_PLN_SYM(B, BLK)",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_b_sgl_pln_str_blk"], ["probe", "pln_blk"], ["lead", "=", "column"]
+      ],
+      "then": [
+        ["set", 0, ["+", "column", 1]],
+        ["emit", "_b_sgl_pln_str_blk", "classified", "schema_blk_b"]
+      ]
+    },
+    {
+      "name": "plain_scalar_flow_same_line",
+      "why": ":783 with is_plain_safe_in_flow, SGL_PLN_SYM(R, FLW)",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_r_sgl_pln_str_flw"], ["probe", "pln_flw"], ["lead", "<", "column"]
+      ],
+      "then": [["emit", "_r_sgl_pln_str_flw", "classified", "schema_flw_r"]]
+    },
+    {
+      "name": "plain_scalar_flow_deeper",
+      "why": ":783, SGL_PLN_SYM(BR, FLW)",
+      "phase": "bounded",
+      "when": [
+        ["wanted", "_br_sgl_pln_str_flw"], ["probe", "pln_flw"], ["lead", "=", "column"]
+      ],
+      "then": [
+        ["emit", "_br_sgl_pln_str_flw", "classified", "schema_flw_br"]
+      ]
+    }
+  ]
+}

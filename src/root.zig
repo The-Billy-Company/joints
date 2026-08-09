@@ -70,6 +70,13 @@ pub const kernel = struct {
     /// about the language rather than about automata.
     pub const lex = struct {
         pub const scanner = @import("kernel/lex/scanner.zig");
+        /// The other half of a terminal scanner, for the grammars whose lexer is
+        /// not a function of the bytes in front of it: a per-grammar program over
+        /// typed memory organs, pressed into the folio and run by one engine. Its
+        /// own door beside `scanner` rather than a name re-exported from it,
+        /// because the press-time half (`press`, `book`) has no scanner in the
+        /// room yet and the mint verb is its caller.
+        pub const customary = @import("kernel/lex/customary/customary.zig");
     };
     /// M2 — the stack-effect monoid, the algebra a parse is folded in. Six
     /// files behind one door: `joint.zig` publishes the fourteen names that

@@ -1,0 +1,66 @@
+{
+  "grammar": "scala",
+  "note": [
+    "Read from tree-sitter-scala's scanner.c, and the reading corrects a first",
+    "guess that was wrong in an instructive way.",
+    "",
+    "Every misread byte scala has is the word `else` - twenty of them, eighty",
+    "bytes, and nothing else on the board. The obvious suspect is that six of",
+    "scala's externals are declared as bare STRING literals (`else` `catch`",
+    "`finally` `extends` `derives` `with`) rather than symbols. That is a red",
+    "herring twice over: the C never emits any of them (there is no",
+    "`result_symbol = ELSE` in it - they are in `externals` only so the scanner can",
+    "ASK whether one is expected), and press already interns such an entry as the",
+    "ordinary literal it also is, so `else` is a perfectly lexable terminal here.",
+    "",
+    "The actual wall is one symbol upstream. `_if_body` spells the tail as",
+    "`_control_tail_gate` then `'else'`, so the state that shifts `else` is only",
+    "reachable through a ZERO-WIDTH external - and that external was blind. With no",
+    "gate the parse never reaches the two states where `else` shifts (`joints state",
+    "--census else`: sole shift, no rivals), so at `1 else 2` the only admitted",
+    "reading is scala's infix-operator rule and `else` comes back `identifier`. The",
+    "keyword rule never fired because there was no tie to break.",
+    "",
+    "The gate needs no memory at all - it is the next word and the permission set -",
+    "which is why it is one rule and why it was worth reading past the first guess.",
+    "scala's real memory (the typed indent stack with its CASE_INDENT_FLAG, and the",
+    "registers around it) belongs to INDENT/OUTDENT/COMMA_OUTDENT, which the troupe",
+    "hands answer today with no misread bytes to show for it. Those move when rung 4",
+    "moves them; there is no board movement to buy there first."
+  ],
+  "asks": "token",
+  "cohort": [
+    "_control_tail_gate"
+  ],
+  "probes": {
+    "tail_word": "[ \\t\\r\\n]*(?:catch|else|finally|then|yield)(?![\\w$])"
+  },
+  "rules": [
+    {
+      "name": "control_tail_gate",
+      "note": "scanner.c:1650-1673, the general arm. Three earlier paths emit the same token under narrower cover - the indent probe at 1014 (a block cannot open on a tail keyword), the `catch` remainder at 1643, and the semicolon machinery at 1256-1305 - and all four reduce to: the gate is wanted, the next word is a tail word, emit zero width. The C's own arms differ only in which tail words they list, and the widest list is this one. `then` and `yield` are gated the same as the block-closing three; `do` and `while` are deliberately not, because they can start a statement and gate validity blends in from unrelated GLR forks. The blanks are in the probe because the C reaches every one of those arms through a prologue that has already skipped them, and the tail may sit on its own line under a lesser indentation (`if (isEmpty)\\n  (None, None)\\nelse {`) - which is both remaining misread byte on this corpus. Crossing a newline to answer is the C's own preference too: at 1256 the gate is returned from *inside* the AUTOMATIC_SEMICOLON arm, so a tail keyword beats the semicolon it would otherwise insert. A comment between the two is not skipped, which narrows the rule rather than widening it.",
+      "phase": "ordered",
+      "when": [
+        [
+          "wanted",
+          "_control_tail_gate"
+        ],
+        [
+          "not_wanted",
+          "error_sentinel"
+        ],
+        [
+          "probe",
+          "tail_word"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_control_tail_gate",
+          0
+        ]
+      ]
+    }
+  ]
+}

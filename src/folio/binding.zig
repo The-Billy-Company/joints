@@ -156,6 +156,7 @@ fn vocabulary(a: std.mem.Allocator, f: *const collate.Folio) Error!press.Grammar
         // Read where it lies, like everything else here: the scanner inflates
         // out of the mapping rather than copying it first.
         .lexicon = f.lexicon(),
+        .customary = f.customary(),
         // Press inputs; see the header. Empty, never absent, so every reader
         // that iterates them reads zero of them rather than a null.
         .declared_conflicts = &.{},

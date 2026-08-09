@@ -1,0 +1,531 @@
+{
+  "grammar": "markdown",
+  "note": [
+    "Transcribed from tree-sitter-markdown's scanner.c read as a specification.",
+    "Nothing is linked. Line references are to the pinned copy under",
+    ".local/differential/lang/markdown/tree-sitter-markdown/src/scanner.c.",
+    "",
+    "The C packs three flags into one uint8_t `state` and this splits them into",
+    "three registers, because the algebra has no bit tests and does not want",
+    "any: a packed byte was the C's way of fitting a serialize buffer, not a",
+    "fact about the scanner. Same information, one comparison each.",
+    "",
+    "The sixteen LIST_ITEM_*_INDENTATION enum values are one kind and a width.",
+    "The C unfolds them arithmetically itself (`list_item_indentation`, :99),",
+    "so this stores the width in the frame where it belongs."
+  ],
+  "cohort": [
+    "_line_ending", "_soft_line_ending", "_block_close", "block_continuation",
+    "_block_quote_start", "_indented_chunk_start", "_blank_line_start",
+    "atx_h1_marker", "atx_h2_marker", "atx_h3_marker",
+    "atx_h4_marker", "atx_h5_marker", "atx_h6_marker",
+    "setext_h1_underline", "setext_h2_underline", "_thematic_break",
+    "_list_marker_minus", "_list_marker_plus", "_list_marker_star",
+    "_list_marker_parenthesis", "_list_marker_dot",
+    "_fenced_code_block_start_backtick", "_fenced_code_block_start_tilde",
+    "_fenced_code_block_end_backtick", "_fenced_code_block_end_tilde",
+    "_close_block", "_eof"
+  ],
+  "organs": { "frames": 96, "marks": 8, "regs": 8 },
+  "tab": 4,
+  "budget": 4,
+  "opaque": ["fenced", "anonymous"],
+  "registers": {
+    "0": "matching  - STATE_MATCHING (:177)",
+    "1": "was_soft  - STATE_WAS_SOFT_LINE_BREAK (:179)",
+    "2": "close     - STATE_CLOSE_BLOCK (:181)",
+    "3": "matched   - how many open blocks this line has matched (:209)",
+    "4": "carried   - consumed but unused indentation (:212)",
+    "5": "fence     - the open fence's delimiter length (:216)"
+  },
+  "kinds": {
+    "blockquote": 1,
+    "indented_code": 2,
+    "list_item": 3,
+    "fenced": 4,
+    "anonymous": 5
+  },
+  "probes": {
+    "newline": "\r\n|\n|\r",
+    "at_newline": "(?=\r|\n|$)",
+    "gt": ">",
+    "blockquote_marker": "[ \t]*>[ \t]?",
+    "code_indent": " {4}|\t",
+    "atx": "#{1,6}(?=[ \t]|\r|\n|$)",
+    "setext_h1": "=+[ \t]*(?=\r|\n|$)",
+    "setext_h2": "-+[ \t]*(?=\r|\n|$)",
+    "thematic_star": "\\*[ \t]*\\*[ \t]*\\*[* \t]*(?=\r|\n|$)",
+    "thematic_dash": "-[ \t]*-[ \t]*-[- \t]*(?=\r|\n|$)",
+    "thematic_score": "_[ \t]*_[ \t]*_[_ \t]*(?=\r|\n|$)",
+    "list_minus": "-(?=[ \t]|\r|\n|$)",
+    "list_plus": "\\+(?=[ \t]|\r|\n|$)",
+    "list_star": "\\*(?=[ \t]|\r|\n|$)",
+    "list_dot": "[0-9]{1,9}\\.(?=[ \t]|\r|\n|$)",
+    "list_paren": "[0-9]{1,9}\\)(?=[ \t]|\r|\n|$)",
+    "list_minus_lazy": "-[ \\t]*(?=\\r|\\n|$)",
+    "list_plus_lazy": "\\+[ \\t]*(?=\\r|\\n|$)",
+    "list_star_lazy": "\\*[ \\t]*(?=\\r|\\n|$)",
+    "list_dot_lazy": "[0-9]{2,9}\\.(?=[ \\t]|\\r|\\n|$)|[0-9]{1,9}\\.[ \\t]*(?=\\r|\\n|$)",
+    "list_paren_lazy": "[0-9]{2,9}\\)(?=[ \\t]|\\r|\\n|$)|[0-9]{1,9}\\)[ \\t]*(?=\\r|\\n|$)",
+    "html_1": "(?i:<(?:pre|script|style)(?=[ \\t>]|\\r|\\n|$))",
+    "html_2": "<!--",
+    "html_3": "<\\?",
+    "html_4": "<![A-Z]",
+    "html_5": "<!\\[CDATA\\[",
+    "html_6": "(?i:</?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h1|h2|h3|h4|h5|h6|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|section|source|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[ \\t>]|/>|\\r|\\n|$))",
+    "html_7": "(?:</[A-Za-z][A-Za-z0-9-]*[ \\t]*>|<[A-Za-z][A-Za-z0-9-]*(?:[ \\t]+[A-Za-z_:][A-Za-z0-9_.:-]*(?:[ \\t]*=[ \\t]*(?:\\\"[^\\\"\\r\\n]*\\\"|'[^'\\r\\n]*'|[^ \\t\\\"'=<>`\\r\\n]+))?)*[ \\t]*/?>)[ \\t]*(?=\\r|\\n|$)",
+    "fence_backtick": "`{3,}",
+    "fence_tilde": "~{3,}"
+  },
+  "classes": {
+    "atx_level": [
+      ["#", "atx_h1_marker"],
+      ["##", "atx_h2_marker"],
+      ["###", "atx_h3_marker"],
+      ["####", "atx_h4_marker"],
+      ["#####", "atx_h5_marker"],
+      ["######", "atx_h6_marker"]
+    ]
+  },
+  "rules": [
+    {
+      "name": "eof_closes_every_open_block",
+      "why": ":1331 - a file ending inside open blocks owes one close each",
+      "phase": "inside",
+      "when": [["eof"], ["frames.depth", ">", 0]],
+      "then": [["pop", "frames"], ["emit", "_block_close", 0]]
+    },
+
+    {
+      "name": "match_block_quote",
+      "why": ":382 match(BLOCK_QUOTE) - blanks, a '>', and then one optional blank whose width past the first is kept: `indentation += advance(s, lexer) - 1`, which is 0 for a space and 3 for a tab",
+      "phase": "matched",
+      "kind": "blockquote",
+      "when": [["soak"], ["probe", "gt"], ["soak", "one", "from", 0]],
+      "then": [["set", 4, ["max", 0, ["-", "lead", 1]]]]
+    },
+    {
+      "name": "match_indented_code",
+      "why": ":336 match(INDENTED_CODE_BLOCK) - four columns, and the line must have something on it",
+      "phase": "matched",
+      "kind": "indented_code",
+      "when": [["soak", "to", 4], ["lead", ">=", 4], ["no_probe", "at_newline"]],
+      "then": [["set", 4, ["-", "lead", 4]]]
+    },
+    {
+      "name": "match_list_item_indented",
+      "why": ":366 - the item's own stored indentation, spent out of the budget",
+      "phase": "matched",
+      "kind": "list_item",
+      "when": [
+        ["soak", "to", ["frames.at.width", "cursor"]],
+        ["lead", ">=", ["frames.at.width", "cursor"]]
+      ],
+      "then": [["set", 4, ["-", "lead", ["frames.at.width", "cursor"]]]]
+    },
+    {
+      "name": "match_list_item_empty",
+      "why": ":377 - an item's line that just ends matches at any indentation",
+      "phase": "matched",
+      "kind": "list_item",
+      "when": [["soak", "to", ["frames.at.width", "cursor"]], ["probe", "at_newline"]],
+      "then": [["set", 4, 0]]
+    },
+    {
+      "name": "match_fenced",
+      "why": ":395 match(FENCED_CODE_BLOCK) - unconditional, consuming nothing",
+      "phase": "matched",
+      "kind": "fenced",
+      "when": [],
+      "then": []
+    },
+    {
+      "name": "match_anonymous",
+      "why": ":396 - the same arm for ANONYMOUS; one body each rather than a switch",
+      "phase": "matched",
+      "kind": "anonymous",
+      "when": [],
+      "then": []
+    },
+
+    {
+      "name": "close_block_after_blank_line",
+      "why": "grammar.json `_html_block_6`/`_7` end on a newline then a blank line, and only *then* `_close_block` - so this answers at the start of the line after the blank one, which is what `lull` asks. The scanner itself pushes only ANONYMOUS (:1039 and friends) and never learns which html variety is open - the parse table does, through `valid_symbols` - so the end markers of varieties 1 to 5 (`-->`, `?>`, `>`, `]]>`, `</pre>`) are permission-driven and are not transcribed here. The blank line is not: it is a byte fact, and it is what closes the two varieties nothing else can close.",
+      "phase": "inside",
+      "when": [
+        ["reg", 2, "=", 0],
+        ["frames.top.kind", "=", "anonymous"],
+        ["bol"],
+        ["lull"]
+      ],
+      "then": [["set", 2, 1], ["emit", "_close_block", 0]]
+    },
+    {
+      "name": "block_continuation",
+      "why": ":1434-1456 - one pass over the open blocks, one answer. The cursor survives in reg 3, so a parser that asks again resumes where this stopped, exactly as `s->matched` does.",
+      "phase": "inside",
+      "when": [["reg", 0, "=", 1], ["pass", ["reg", 3], "until", ["-", "frames.depth", ["reg", 2]], ">", 0]],
+      "then": [
+        ["set", 3, "pass.cursor"],
+        ["set", 4, "pass.budget"],
+        ["set", 0, "pass.more"],
+        ["emit", "block_continuation", "pass.eaten"]
+      ]
+    },
+    {
+      "name": "close_unmatched_block",
+      "why": ":1459 - nothing matched and the last break was not soft, so close one. :1462 leaves the matching state when the cursor has caught up with the stack, and it asks *after* the pop - so the depth this reads is the popped one, which is why the set comes second.",
+      "phase": "inside",
+      "when": [
+        ["reg", 0, "=", 1],
+        ["reg", 1, "=", 0],
+        ["pass", ["reg", 3], "until", ["-", "frames.depth", ["reg", 2]], "=", 0],
+        ["reg", 3, "<", "frames.depth"]
+      ],
+      "then": [
+        ["pop", "frames"],
+        ["set", 2, 0],
+        ["set", 0, ["min", 1, ["-", "frames.depth", ["reg", 3]]]],
+        ["emit", "_block_close", 0]
+      ]
+    },
+    {
+      "name": "lazy_continuation",
+      "why": ":1445 - a block failed to match after a soft break, which is a lazy paragraph continuation: leave the matching state and close nothing",
+      "phase": "inside",
+      "when": [["reg", 0, "=", 1], ["reg", 1, "=", 1], ["pass", ["reg", 3], "=", 0]],
+      "then": [["set", 0, 0], ["refuse"]]
+    },
+    {
+      "name": "matching_done",
+      "why": ":1452 - every open block matched, so leave the matching state. The cursor is *not* cleared here: the C zeroes `s->matched` only at the next line ending, and the rules that ask `matched == open_blocks.size` (setext, the lazy markers) read it in between.",
+      "phase": "inside",
+      "when": [["reg", 0, "=", 1], ["reg", 3, ">=", "frames.depth"]],
+      "then": [["set", 0, 0], ["refuse"]]
+    },
+
+    {
+      "name": "blank_line_start",
+      "why": ":1374 - zero width on purpose, the characters are not consumed",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["blank"], ["not_eof"]],
+      "then": [["emit", "_blank_line_start", 0]]
+    },
+    {
+      "name": "indented_chunk_start",
+      "why": ":1358 - four columns of lead and something on the line",
+      "phase": "layout",
+      "when": [["reg", 0, "=", 0], ["lead", ">=", 4], ["not_blank"]],
+      "then": [
+        ["push", "frames", 4, "indented_code"],
+        ["emit", "_indented_chunk_start", 0]
+      ]
+    },
+    {
+      "name": "block_quote_start",
+      "why": ":571 - a '>' with at most three columns of lead",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "blockquote_marker"]],
+      "then": [
+        ["push", "frames", 0, "blockquote"],
+        ["set", 4, 0],
+        ["emit", "_block_quote_start", "width"]
+      ]
+    },
+    {
+      "name": "atx_heading",
+      "why": ":587 - one to six hashes then a space or the line end; the count picks which of six terminals, exactly the classifier yaml also needs",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "atx"]],
+      "then": [["emit", "atx_h1_marker", "classified", "atx_level"]]
+    },
+    {
+      "name": "thematic_break_star",
+      "why": ":463 parse_star - three or more, nothing else on the line",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "thematic_star"]],
+      "then": [["emit", "_thematic_break", "width"]]
+    },
+    {
+      "name": "thematic_break_dash",
+      "why": ":798 parse_minus - the same, and it loses to a setext underline",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "thematic_dash"]],
+      "then": [["emit", "_thematic_break", "width"]]
+    },
+    {
+      "name": "thematic_break_underscore",
+      "why": ":546 parse_thematic_break_underscore - underscores never list-mark",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "thematic_score"]],
+      "then": [["emit", "_thematic_break", "width"]]
+    },
+    {
+      "name": "setext_h1_underline",
+      "why": ":608 - only where every open block matched this line",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [
+        ["reg", 0, "=", 0],
+        ["reg", 3, ">=", "frames.depth"],
+        ["probe", "setext_h1"]
+      ],
+      "then": [["emit", "setext_h1_underline", "width"]]
+    },
+    {
+      "name": "fenced_code_block_end_backtick",
+      "why": ":415 - a close outranks an open where both would fit, and needs at least as many backticks as the open had",
+      "phase": "layout",
+      "closes": "fenced",
+      "when": [
+        ["frames.top.kind", "=", "fenced"],
+        ["lead", "<=", 3],
+        ["probe", "fence_backtick"],
+        ["reg", 5, "<=", "width"]
+      ],
+      "then": [
+        ["pop", "frames"],
+        ["set", 5, 0],
+        ["emit", "_fenced_code_block_end_backtick", "width"]
+      ]
+    },
+    {
+      "name": "fenced_code_block_end_tilde",
+      "why": ":415 - the same over tildes; the two families never close each other",
+      "phase": "layout",
+      "closes": "fenced",
+      "when": [
+        ["frames.top.kind", "=", "fenced"],
+        ["lead", "<=", 3],
+        ["probe", "fence_tilde"],
+        ["reg", 5, "<=", "width"]
+      ],
+      "then": [
+        ["pop", "frames"],
+        ["set", 5, 0],
+        ["emit", "_fenced_code_block_end_tilde", "width"]
+      ]
+    },
+    {
+      "name": "html_block_1_start",
+      "why": ":1036 - a `<pre`/`<script`/`<style` opens a raw-text block",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "html_1"]],
+      "then": [["push", "frames", 0, "anonymous"], ["emit", "_html_block_1_start", "width"]]
+    },
+    {
+      "name": "html_block_2_start",
+      "why": ":962 - `<!--`",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "html_2"]],
+      "then": [["push", "frames", 0, "anonymous"], ["emit", "_html_block_2_start", "width"]]
+    },
+    {
+      "name": "html_block_3_start",
+      "why": ":950 - `<?`",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "html_3"]],
+      "then": [["push", "frames", 0, "anonymous"], ["emit", "_html_block_3_start", "width"]]
+    },
+    {
+      "name": "html_block_4_start",
+      "why": ":969 - `<!` and a capital",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "html_4"]],
+      "then": [["push", "frames", 0, "anonymous"], ["emit", "_html_block_4_start", "width"]]
+    },
+    {
+      "name": "html_block_5_start",
+      "why": ":988 - `<![CDATA[`",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "html_5"]],
+      "then": [["push", "frames", 0, "anonymous"], ["emit", "_html_block_5_start", "width"]]
+    },
+    {
+      "name": "html_block_6_start",
+      "why": ":1054 - a tag from rule 7's roster of 62 block-level names",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "html_6"]],
+      "then": [["push", "frames", 0, "anonymous"], ["emit", "_html_block_6_start", "width"]]
+    },
+    {
+      "name": "html_block_7_start",
+      "why": ":1161 - any complete tag alone on its line. Not a paragraph interrupt (:162), which is the whole difference between it and the six above.",
+      "phase": "layout",
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "html_7"]],
+      "then": [["push", "frames", 0, "anonymous"], ["emit", "_html_block_7_start", "width"]]
+    },
+    {
+      "name": "fenced_code_block_start_backtick",
+      "why": ":402 - three or more backticks open a fence and remember how many",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "fence_backtick"]],
+      "then": [
+        ["push", "frames", 0, "fenced"],
+        ["set", 5, "width"],
+        ["emit", "_fenced_code_block_start_backtick", "width"]
+      ]
+    },
+    {
+      "name": "fenced_code_block_start_tilde",
+      "why": ":402 with delimiter '~'",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "fence_tilde"]],
+      "then": [
+        ["push", "frames", 0, "fenced"],
+        ["set", 5, "width"],
+        ["emit", "_fenced_code_block_start_tilde", "width"]
+      ]
+    },
+    {
+      "name": "list_marker_minus_dont_interrupt",
+      "why": ":831-835 - one marker and nothing but the line end after it, with every open block matched: the empty item that may not interrupt a paragraph.",
+      "phase": "layout",
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["reg", 3, ">=", "frames.depth"], ["probe", "list_minus_lazy"]],
+      "then": [["push", "frames", ["+", "lead", 2], "list_item"], ["emit", "_list_marker_minus_dont_interrupt", "width"]]
+    },
+    {
+      "name": "list_marker_minus",
+      "why": ":798 - a marker, tried after the thematic break it can be confused with",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "list_minus"]],
+      "then": [
+        ["push", "frames", ["+", "lead", 2], "list_item"],
+        ["emit", "_list_marker_minus", "width"]
+      ]
+    },
+    {
+      "name": "list_marker_plus_dont_interrupt",
+      "why": ":831-835 - one marker and nothing but the line end after it, with every open block matched: the empty item that may not interrupt a paragraph.",
+      "phase": "layout",
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["reg", 3, ">=", "frames.depth"], ["probe", "list_plus_lazy"]],
+      "then": [["push", "frames", ["+", "lead", 2], "list_item"], ["emit", "_list_marker_plus_dont_interrupt", "width"]]
+    },
+    {
+      "name": "list_marker_plus",
+      "why": ":628 parse_plus",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "list_plus"]],
+      "then": [
+        ["push", "frames", ["+", "lead", 2], "list_item"],
+        ["emit", "_list_marker_plus", "width"]
+      ]
+    },
+    {
+      "name": "list_marker_star_dont_interrupt",
+      "why": ":831-835 - one marker and nothing but the line end after it, with every open block matched: the empty item that may not interrupt a paragraph.",
+      "phase": "layout",
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["reg", 3, ">=", "frames.depth"], ["probe", "list_star_lazy"]],
+      "then": [["push", "frames", ["+", "lead", 2], "list_item"], ["emit", "_list_marker_star_dont_interrupt", "width"]]
+    },
+    {
+      "name": "list_marker_star",
+      "why": ":463 parse_star, after the thematic break arm",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "list_star"]],
+      "then": [
+        ["push", "frames", ["+", "lead", 2], "list_item"],
+        ["emit", "_list_marker_star", "width"]
+      ]
+    },
+    {
+      "name": "list_marker_dot_dont_interrupt",
+      "why": ":745-767 - `dont_interrupt` is decided by the bytes and the organs alone: a second digit or a bare marker line, and every open block already matched. It is a different terminal, not a different width, so the parse table can forbid a list here while allowing one where a paragraph is not being interrupted.",
+      "phase": "layout",
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["reg", 3, ">=", "frames.depth"], ["probe", "list_dot_lazy"]],
+      "then": [["push", "frames", ["+", "lead", 2], "list_item"], ["emit", "_list_marker_dot_dont_interrupt", "width"]]
+    },
+    {
+      "name": "list_marker_dot",
+      "why": ":730 parse_ordered_list_marker - at most nine digits, per the spec",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "list_dot"]],
+      "then": [
+        ["push", "frames", ["+", "lead", 2], "list_item"],
+        ["emit", "_list_marker_dot", "width"]
+      ]
+    },
+    {
+      "name": "list_marker_parenthesis_dont_interrupt",
+      "why": ":745-767 - `dont_interrupt` is decided by the bytes and the organs alone: a second digit or a bare marker line, and every open block already matched. It is a different terminal, not a different width, so the parse table can forbid a list here while allowing one where a paragraph is not being interrupted.",
+      "phase": "layout",
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["reg", 3, ">=", "frames.depth"], ["probe", "list_paren_lazy"]],
+      "then": [["push", "frames", ["+", "lead", 2], "list_item"], ["emit", "_list_marker_parenthesis_dont_interrupt", "width"]]
+    },
+    {
+      "name": "list_marker_parenthesis",
+      "why": ":730 with a ')' terminator",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [["reg", 0, "=", 0], ["lead", "<=", 3], ["probe", "list_paren"]],
+      "then": [
+        ["push", "frames", ["+", "lead", 2], "list_item"],
+        ["emit", "_list_marker_parenthesis", "width"]
+      ]
+    },
+    {
+      "name": "setext_h2_underline",
+      "why": ":608 with '-'; below the list marker because a lone '-' is a marker",
+      "phase": "layout",
+      "groups": ["interrupt"],
+      "when": [
+        ["reg", 0, "=", 0],
+        ["reg", 3, ">=", "frames.depth"],
+        ["probe", "setext_h2"]
+      ],
+      "then": [["emit", "setext_h2_underline", "width"]]
+    },
+
+    {
+      "name": "soft_line_ending",
+      "why": ":1483 - a break inside a paragraph: the line being ended is not blank (a blank line is not inside a paragraph, so the grammar wants `_blank_line_start` then a hard `_line_ending`) and nothing on the next line would interrupt it. The C asks by calling its own scan with a constant permission set; `fires` is that constant array read as the named set of rules it is. :1520 - the matching state is entered only if the simulated pass says one open block *will* match, so `pass ... after` is that look-ahead and `min 1 pass.ran` is `one_will_be_matched`. :1507 - the interrupt scan runs on **one lexer**, after the matching pass consumed the open blocks' own markers, so it is anchored where that pass stopped and reads the indentation it left: a `>` on the next line of an open block quote is that quote's continuation and the scan never sees it.",
+      "phase": "ordered",
+      "when": [
+        ["reg", 2, "=", 0],
+        ["not_blank"],
+        ["probe", "newline"],
+        ["pass", 0, "after"],
+        ["no_fires", "interrupt", "from", "pass.at", "pass.budget"]
+      ],
+      "then": [
+        ["set", 1, 1],
+        ["set", 3, 0],
+        ["set", 4, 0],
+        ["set", 0, ["min", 1, "pass.ran"]],
+        ["emit", "_soft_line_ending", "width"]
+      ]
+    },
+    {
+      "name": "line_ending",
+      "why": ":1542 - every other break. :1551 - it re-enters the matching state only when there is an open block to match, which is what `min 1 frames.depth` says.",
+      "phase": "ordered",
+      "when": [["probe", "newline"]],
+      "then": [
+        ["set", 1, 0],
+        ["set", 2, 0],
+        ["set", 3, 0],
+        ["set", 4, 0],
+        ["set", 0, ["min", 1, "frames.depth"]],
+        ["emit", "_line_ending", "width"]
+      ]
+    }
+  ]
+}
