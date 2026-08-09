@@ -124,6 +124,9 @@ def main() -> int:
         print("abide: re-read those bytes and re-judge the row - a re-capture "
               "is not a re-judgement. Do not edit verdicts.toml to go green.",
               file=sys.stderr)
+        print("abide: drift a re-judgement cannot express - both sides at `—`, "
+              "say - is recorded as a `[verdict.drifted]` note instead, and the "
+              "row still counts toward nothing.", file=sys.stderr)
         return got.returncode
     return 0
 

@@ -27,6 +27,18 @@
 # where both now say the same thing, and `collate.py prove` refuses it: on every
 # live row, `ours == theirs` must be exactly `side in {agree, neutral}`.
 #
+# Some drift survives being re-read, and then it gets a `[verdict.drifted]` note:
+# what both trees say **now**, the move named, and when it was read. The verdict
+# above it stays exactly as judged, and the row still counts toward nothing - a
+# note is a record, not a rehabilitation. It exists because the two rows below
+# cannot be re-judged into anything true: one lost a node tree-sitter never had,
+# so both sides read `—` and the only `side` that would pass `consistent` is
+# `agree`, which would file a live regression as two parsers concurring. Writing
+# the drift down instead is what keeps the gate readable: `abide` fires on drift
+# nobody has read, on a note whose drift has moved again, on a note that misnames
+# what it read, and on a note whose row no longer drifts at all - and stops
+# firing on the same two rows every run, which is how a gate becomes wallpaper.
+#
 # Adjudicated 2026-08-05 on pin `collate` (tree 735a2c2ee2e8, binary
 # a01fcb3448c4) against tree-sitter 0.26.11 generated from the same pinned
 # `grammar.json` the press reads.
@@ -142,6 +154,17 @@ loose siblings over the same bytes cannot move - and whose supporting fuse censu
 is byte-identical across four corners "without verilog". This row is the verilog
 the census left out. Not this lane's file to fix: `bench.zig` is under another
 lane right now."""
+
+# Read, and not re-judgeable: with both sides at `—`, the only `side` `consistent`
+# would accept here is `agree` or `neutral`, and calling this span an agreement
+# would file a live regression as two parsers concurring. So the verdict above
+# stands as judged, this says what is there now, and the row counts toward
+# nothing. A second move inside this drift re-fires the gate.
+[verdict.drifted]
+ours = "—"
+theirs = "—"
+move = "lost"
+read = "2026-08-06 on pin `driftlane` (tree b08566533455)"
 
 [[verdict]]  # 'task empty_statement; ... endtask'
 grammar = "verilog"
@@ -306,6 +329,15 @@ than `renamed` or `lost`. It flips between pins `swift-raw` (23:51) and
 with no pin in between and no changelog fragment naming it. Three files is not a
 named change, so the row is not re-transcribed: whoever owns that window should
 re-read these bytes and re-sign the chain."""
+
+# Read, and deliberately not re-transcribed. The verdict above is `agree` and
+# still is - same innermost name, same bytes - so what this holds is the chain
+# somebody has yet to sign, and the row counts toward nothing until they do.
+[verdict.drifted]
+ours = "list_of_actual_arguments/expression/primary/function_subroutine_call/subroutine_call/system_tf_call"
+theirs = "system_tf_call"
+move = "deeper"
+read = "2026-08-06 on pin `driftlane` (tree b08566533455)"
 
 [[verdict]]  # '#(\n\tparameter [ 0:0] ENABLE_COUNTERS = 1, ...'
 grammar = "verilog"

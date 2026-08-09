@@ -1107,6 +1107,31 @@ SIDES = {"ours": "joints is right", "theirs": "tree-sitter is right",
 NOTHING = "—"
 
 
+class Held(NamedTuple):
+    """A drift that has been re-read, and what the trees said when it was.
+
+    Some drift cannot be re-judged away. [89368,89412) lost its
+    `parameter_declaration` and tree-sitter never had a node there, so both sides
+    now read `—`; `consistent` requires `ours == theirs` to mean `side in {agree,
+    neutral}`, and calling that span an agreement would file a live regression as
+    two parsers concurring. The honest record is the verdict as judged plus a
+    separate note of what is there now - which is what this is, and why it is not
+    the `ours`/`theirs` fields. Those stay as judged. A held row still counts
+    toward nothing.
+
+    It is also what keeps the gate a gate. A drift nobody wrote down is
+    indistinguishable from one everybody knows about, so a check that fires on
+    both fires every run and stops being read. This one fires on new drift, on
+    drift that has moved again since it was read, and on a note whose row no
+    longer drifts at all.
+    """
+
+    ours: str  # what joints's tree says here now
+    theirs: str  # what tree-sitter's does now
+    move: str  # the direction, named - and checked against the one derived
+    read: str  # when the bytes were re-read, and by which pin
+
+
 class Verdict(NamedTuple):
     grammar: str
     source: str
@@ -1116,6 +1141,7 @@ class Verdict(NamedTuple):
     theirs: str  # what tree-sitter's does
     side: str
     why: str
+    drifted: Held | None = None
 
     @property
     def width(self) -> int:
@@ -1129,7 +1155,18 @@ def read_verdicts() -> list[Verdict]:
     for row in doc.get("verdict", ()):
         if row["side"] not in SIDES:
             raise SystemExit(f"collate: unknown side {row['side']!r} in verdicts.toml")
-        out.append(Verdict(**row))
+        row = dict(row)
+        if (held := row.pop("drifted", None)) is not None:
+            if missing := set(Held._fields) - set(held):
+                raise SystemExit(f"collate: verdicts.toml [{row['grammar']} "
+                                 f"{row['start']}] drift note is missing "
+                                 f"{', '.join(sorted(missing))}")
+            if extra := set(held) - set(Held._fields):
+                raise SystemExit(f"collate: verdicts.toml [{row['grammar']} "
+                                 f"{row['start']}] drift note has unknown "
+                                 f"{', '.join(sorted(extra))}")
+            held = Held(**held)
+        out.append(Verdict(**row, drifted=held))
     return out
 
 
@@ -1195,6 +1232,12 @@ def adjudicated(cases: list[Case], rows: list[Verdict]) -> list[tuple[Verdict, s
     what stops a re-capture standing in for that. The report says which side
     moved and which way, because "DRIFTED" alone made the last reader re-derive
     three grammars from elsewhere.
+
+    Some drift survives being re-read: see `Held`. A row carrying a drift note
+    reads `HELD`, stays excluded from every total, and does not fail - but the
+    note is re-checked here against the live trees on every run, so a second move
+    inside an accepted drift, a note that misnames what it read, and a note whose
+    row no longer drifts are each `DRIFTED` again.
     """
     by_name = {c.name: c for c in cases}
     out: list[tuple[Verdict, str]] = []
@@ -1225,7 +1268,12 @@ def adjudicated(cases: list[Case], rows: list[Verdict]) -> list[tuple[Verdict, s
                  (("ours", (row.ours, got_ours)), ("theirs", (row.theirs, got_theirs)))
                  if was != now]
         if not drift:
-            out.append((row, ""))
+            # A note about a drift that is gone is a note nobody re-read, and
+            # leaving it would let the next real drift land inside its silence.
+            out.append((row, "" if row.drifted is None else
+                        "DRIFTED the drift this row's note describes is gone - "
+                        "both trees read as judged again, so the note has to go "
+                        f"with it (read {row.drifted.read})"))
             continue
         # Direction and both readings, not just the fact of a move: a reader who
         # has to re-derive which grammar and which way is a reader who will
@@ -1239,7 +1287,21 @@ def adjudicated(cases: list[Case], rows: list[Verdict]) -> list[tuple[Verdict, s
                       "defect is one somebody fixed - re-judge to `agree` and "
                       "keep this row as its regression guard"
                       if row.side == "theirs" else "; both trees now agree here")
-        out.append((row, f"DRIFTED {moves}"))
+        went = "+".join(direction(was, now) for _, was, now in drift)
+        held = row.drifted
+        if held is None:
+            out.append((row, f"DRIFTED {moves}"))
+        elif (got_ours, got_theirs) != (held.ours, held.theirs):
+            # The whole point of recording the two readings: a second move
+            # inside a drift somebody accepted is exactly what a press change
+            # can do while every byte column holds still.
+            out.append((row, f"DRIFTED {moves}; read {held.read} as {held.ours} "
+                             f"· {held.theirs}, and it has moved again since"))
+        elif went != held.move:
+            out.append((row, f"DRIFTED {moves}; the note calls this {held.move!r} "
+                             f"and it is {went!r}"))
+        else:
+            out.append((row, f"HELD {moves}; read {held.read}"))
     return out
 
 
@@ -1248,11 +1310,11 @@ def show_verdicts(judged: list[tuple[Verdict, str]]) -> int:
     print(f"\n  {len(live)} of {len(judged)} hand verdicts still describe both trees\n")
     print(f"  {'grammar':<10}{'span':>18}{'bytes':>7}  {'verdict':<9} ours · theirs")
     for v, why in judged:
-        mark = "DRIFT" if why else v.side
+        mark = ("HELD" if why.startswith("HELD") else "DRIFT") if why else v.side
         print(f"  {v.grammar:<10}{f'[{v.start},{v.end})':>18}{v.width:>7,}  {mark:<9} "
               f"{v.ours} · {v.theirs}")
         if why:
-            print(f"       ! {why}")
+            print(f"       {'-' if why.startswith('HELD') else '!'} {why}")
     print()
     for side, gloss in SIDES.items():
         rows = [v for v, w in live if v.side == side]
@@ -1262,10 +1324,15 @@ def show_verdicts(judged: list[tuple[Verdict, str]]) -> int:
     them = sum(v.width for v, _ in live if v.side == "theirs")
     print(f"\n  adjudicated bytes where one side is right: joints {ours:,}, "
           f"tree-sitter {them:,}")
-    if drifted := [v.grammar for v, w in judged if w]:
-        print(f"  EXCLUDED from every total above: {', '.join(sorted(set(drifted)))}")
-        return 1
-    return 0
+    if excluded := [v.grammar for v, w in judged if w]:
+        print(f"  EXCLUDED from every total above: {', '.join(sorted(set(excluded)))}")
+    # Held rows are excluded and named, and they do not fail: their drift was
+    # read, written down, and is being watched for a second move. Unheld drift
+    # is what this verb exits 1 on.
+    if held := [v for v, w in judged if w.startswith("HELD")]:
+        print(f"  {len(held)} of those carry a read drift note - accepted, "
+              "and re-checked here every run")
+    return 1 if any(w.startswith("DRIFTED") for _, w in judged) else 0
 
 
 def prove(cases: list[Case]) -> int:
@@ -1289,8 +1356,9 @@ def prove(cases: list[Case]) -> int:
     # about a *clean tree* - it asserts that the names stored in `verdicts.toml`
     # still describe the two live trees - and the old label sent the last reader
     # looking for a nondeterminism that was never in the question.
-    drifted = [(v, w) for v, w in live if w]
-    check("every stored verdict still describes both live trees", not drifted)
+    drifted = [(v, w) for v, w in live if w.startswith("DRIFTED")]
+    check("every stored verdict describes both live trees, or says why not",
+          not drifted)
     for v, why in drifted:
         print(f"        {v.grammar} [{v.start},{v.end}) {v.width:,}B  "
               f"judged `{v.side}` ({SIDES[v.side]})")
@@ -1314,12 +1382,41 @@ def prove(cases: list[Case]) -> int:
           f"calling {live[seat][0].grammar} [{live[seat][0].start},"
           f"{live[seat][0].end}) an agreement is refused"),
           seat is not None and bool(consistent(poisoned)))
-    bent = [r._replace(ours=r.ours + "_NOPE") for r in rows[:1]] + list(rows[1:])
+    # Bent on a row carrying no drift note, because a note records what the trees
+    # read *now* - so on a held row a corrupted stored name is drift the note
+    # already covers, and the corruption would be caught by nothing here.
+    plain = next(i for i, r in enumerate(rows) if r.drifted is None)
+
+    def bend(**how: str) -> list[tuple[Verdict, str]]:
+        bent = [*rows[:plain], rows[plain]._replace(**how), *rows[plain + 1:]]
+        return adjudicated(cases, bent)
+
+    def fatal(judged: list[tuple[Verdict, str]]) -> bool:
+        return any(w.startswith("DRIFTED") for _, w in judged)
+
     check("a corrupted `ours` is caught as drift",
-          bool([w for _, w in adjudicated(cases, bent) if w]))
-    bent = [r._replace(theirs="—" if r.theirs != "—" else "x") for r in rows[:1]] + list(rows[1:])
+          fatal(bend(ours=rows[plain].ours + "_NOPE")))
     check("a corrupted `theirs` is caught as drift",
-          bool([w for _, w in adjudicated(cases, bent) if w]))
+          fatal(bend(theirs="—" if rows[plain].theirs != "—" else "x")))
+    # The two halves of a drift note, each driven negative on a row that has one.
+    # A note is allowed to hold a row only while it still describes the drift, so
+    # both of these have to fail before the `HELD` above can be believed.
+    noted = next((i for i, r in enumerate(rows) if r.drifted is not None), None)
+    if noted is None:
+        check("...and a drift note can say no: NO ROW CARRIES ONE", False)
+    else:
+        row, held = rows[noted], rows[noted].drifted
+        def renote(**how: str) -> list[tuple[Verdict, str]]:
+            return adjudicated(cases, [*rows[:noted],
+                                       row._replace(drifted=held._replace(**how)),
+                                       *rows[noted + 1:]])
+        check(f"a drift note that has moved again is refused ({row.grammar} "
+              f"[{row.start},{row.end}))", fatal(renote(ours=held.ours + "_NOPE")))
+        check("...and one that misnames the move it read",
+              fatal(renote(move=held.move + "_NOPE")))
+        check("...and dropping the note re-fires the row",
+              fatal(adjudicated(cases, [*rows[:noted], row._replace(drifted=None),
+                                        *rows[noted + 1:]])))
     # The identity behind P4. If `damage` ever intersects `built`, the board's
     # buckets overlap and every number in this lane is built on sand.
     hon = honesty([c for c in cases if c.name in {"php", "verilog", "go"}])
@@ -1436,7 +1533,11 @@ def main(argv: list[str]) -> int:
     if args.verb == "adjudicated":
         judged = adjudicated(slate(), read_verdicts())
         (OUT / "adjudicated.json").write_text(json.dumps(
-            [{**v._asdict(), "drift": w} for v, w in judged], indent=2))
+            # A note is keyed by field name rather than left as the tuple it is,
+            # because a reader of this file wants `drifted.move`, not `[2]`.
+            [{**v._asdict(),
+              "drifted": v.drifted and v.drifted._asdict(),
+              "drift": w} for v, w in judged], indent=2))
         if args.json:
             print((OUT / "adjudicated.json").read_text())
             return 0

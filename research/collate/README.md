@@ -101,6 +101,23 @@ whose defect a sibling genuinely fixed is re-judged to `agree` and **kept as the
 regression guard for the fix that dissolved it** — go's `fmt.Print("x")`, php's
 two, swift's comment.
 
+**Some drift cannot be re-judged into anything true, and that drift gets written
+down rather than left red.** verilog `[89368,89412)` lost a `parameter_declaration`
+tree-sitter never had, so both sides read `—`; the only `side` the anchor would
+accept there is `agree`, which would file a live regression as two parsers
+concurring. Such a row keeps its verdict as judged and gains a
+`[verdict.drifted]` note — what both trees say **now**, the move named, when it
+was read — reads `HELD`, and still **counts toward nothing**. The note is a
+record, not a rehabilitation.
+
+That is also what keeps the gate legible. A check that fires on drift everybody
+already knows about fires every run and stops being read, which is how the
+`parameter` regression stayed unattributed for thirteen pins. `adjudicated` now
+exits 1 on drift nobody has read, on a note whose drift has **moved again**, on
+a note that **misnames** what it read, and on a note whose row **no longer
+drifts** — and `prove` drives all three negative, including dropping a note to
+confirm the note is what is holding the row.
+
 `collate.py prove` corrupts a verdict in memory and requires the drift check to
 catch it, requires the anchor above to refuse a claimed disagreement the trees do
 not have, requires the honesty identity to hold, requires the honesty verb to
