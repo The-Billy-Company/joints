@@ -2010,12 +2010,19 @@ pub const Gather = struct {
         }, x.perches.items, x.borne.all(), x.nodes.items, x.remembers());
     }
 
-    /// The scanner's own memory here, for a scanner that has one. A scanner
-    /// with no casts is a pure function of the offset it is asked at, so there
-    /// is nothing to keep and keeping nothing is cheaper than keeping a
-    /// kilobyte of zeroes per ring.
+    /// The scanner's own memory here, for a scanner that has one. A scanner with
+    /// nothing outside its slate is a pure function of the offset it is asked at,
+    /// so there is nothing to keep - and a `Save` is a few kilobytes of
+    /// fixed-capacity stacks, so declining to keep one per ring is the difference
+    /// between json paying nothing for a resume and json paying megabytes of
+    /// zeroes for a field it does not use.
+    ///
+    /// `outward` and not `casts.len > 0`, because a customary is the other half
+    /// of "outside" and it is the half whose state is worth the most: markdown's
+    /// open-block stack is what makes a keystroke inside a blockquote a resume
+    /// from the ring below it rather than a re-lex from the top of the file.
     inline fn remembers(x: *const Gather) ?lex.Scanner.Save {
-        return if (x.scanner.casts.len > 0) x.scanner.save() else null;
+        return if (x.scanner.outward()) x.scanner.save() else null;
     }
 
     /// The least speculative reading alive. Every tie in this file goes to it,

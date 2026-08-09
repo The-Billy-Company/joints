@@ -64,6 +64,12 @@ const grain = @import("../grain/grain.zig");
 const admit = @import("admit.zig");
 const outside = @import("outside.zig");
 pub const lexicon = @import("lexicon.zig");
+// Private, unlike `lexicon`: `root.zig` publishes the customary beside this file
+// rather than through it, so the one place that judges a type's ownership judges
+// `Engine` once. A re-export here would have it reached twice - through this
+// module's decls and through the door - and a count that double-reads a type is
+// a count that cannot notice one leaving.
+const customary = @import("customary/customary.zig");
 
 const Munch = irregex.Munch;
 
@@ -116,7 +122,7 @@ pub const CompileError = error{
     /// `blind`, leaving the rest of the slate intact. This one is the whole
     /// compile refusing, so there is no partial scanner to fall back to.
     BadPattern,
-} || std.mem.Allocator.Error;
+} || customary.Error || std.mem.Allocator.Error;
 
 /// What writing a slate down can fail on. `WriteFailed` is the allocating
 /// writer's name for running out of memory - it has no other failure mode, and
@@ -245,10 +251,27 @@ pub const Scanner = struct {
     /// already resolved to symbols. Empty for a grammar whose externals are all
     /// spellings, which is most of them.
     casts: []const outside.Cast,
+    /// Every keyword this grammar spells, derived from its literal terminals.
+    /// Held here because `casts` borrow it and one slice serves all of them; see
+    /// `outside.Keyword`.
+    words: []const outside.Keyword,
+    /// This grammar's scanner as data, bound: probes compiled, names resolved.
+    /// Null for a grammar whose folio carried no customary, which is most of them
+    /// and is the difference between "answered by customary" and `blind`.
+    ///
+    /// It stands beside `casts` rather than replacing them because the two are
+    /// different provenance tiers of the same answer - a hand is derived from a
+    /// cohort convention, a customary is transcribed from the scanner the grammar
+    /// actually ships - and a grammar may be part way between. Where both could
+    /// answer, `outside.step` prefers the transcription.
+    book: ?customary.Engine,
     /// What those hands remember between tokens. It is per *file*, not per
     /// grammar, which is why `rewind` exists and why the two entry points below
     /// notice a restart on their own: a column stack left over from the last
     /// file would open every block in the next one.
+    ///
+    /// The customary's organs are in here too, which is the whole of the exact-
+    /// fork claim: see `outside.Carry.organs`.
     carry: outside.Carry,
     /// The furthest offset a hand has been asked at since the last rewind. Only
     /// ever read to tell a fresh file from a zero-width token that left the
@@ -317,6 +340,11 @@ pub const Scanner = struct {
         // of a Ruby `%w[]`.
         var casts: std.ArrayList(outside.Cast) = .empty;
         errdefer casts.deinit(gpa);
+        // Filled by the terminal walk below and handed to the casts after it,
+        // because a cast resolves spellings and does not allocate. One slice for
+        // every cast: the keywords are the grammar's, not any one hand's.
+        var keys: std.ArrayList(outside.Keyword) = .empty;
+        errdefer keys.deinit(gpa);
         const names: struct {
             gr: *const press.Grammar,
             pub fn external(n: @This(), name: []const u8) ?press.Symbol {
@@ -330,6 +358,19 @@ pub const Scanner = struct {
             const cast = outside.provision(t, names) orelse continue;
             try casts.append(gpa, cast);
         }
+
+        // The customary, bound before the slate is cut for exactly the reason the
+        // hands are: a terminal it answers must not also be seated as a pattern,
+        // or the slate answers markdown's `_block_close` in the middle of a
+        // paragraph. Everything that can go wrong about a customary - a section
+        // that is not a book, a probe irregex refuses, a terminal the book names
+        // and the grammar does not declare - goes wrong here, once, which is what
+        // lets a step have no error set at all.
+        var bound: ?customary.Engine = if (gr.customary.len == 0)
+            null
+        else
+            try customary.Engine.bind(gpa, gr.customary, names);
+        errdefer if (bound) |*b| b.deinit();
 
         // The lexical standing of every terminal, resolved once. A provisioned
         // external's standing comes from its declaration rather than from the
@@ -349,6 +390,9 @@ pub const Scanner = struct {
             var handed = false;
             if (pattern == .external) {
                 const name = gr.nameOf(sym);
+                if (bound) |*b| {
+                    if (b.claims(sym)) handed = true;
+                }
                 for (casts.items) |*c| {
                     if (outside.claimed(c.troupe, name)) handed = true;
                 }
@@ -365,6 +409,11 @@ pub const Scanner = struct {
                 .external => if (!handed) try blind.append(gpa, sym),
                 .literal => |lit| {
                     literal.set(i);
+                    // The keyword set, derived rather than declared. A hand that
+                    // ends a block on a keyword the parser refuses needs to know
+                    // which words are keywords, and the grammar already says: a
+                    // literal whose spelling is a word. Nobody maintains a list.
+                    if (outside.keyworded(lit)) try keys.append(gpa, .{ .word = lit, .sym = sym });
                     var rx: std.ArrayList(u8) = .empty;
                     try press.lexeme.escape(&rx, arena, lit);
                     try slate.append(arena, rx.items);
@@ -378,6 +427,9 @@ pub const Scanner = struct {
         }
         errdefer owners.deinit(gpa);
         errdefer blind.deinit(gpa);
+        const words = try keys.toOwnedSlice(gpa);
+        errdefer gpa.free(words);
+        for (casts.items) |*c| c.words = words;
 
         const stamp = lexicon.digest(slate.items, how);
         var image: []align(@alignOf(u64)) u8 = &.{};
@@ -387,16 +439,33 @@ pub const Scanner = struct {
                 image = carried.image;
                 break :blk carried.munch;
             }
-            break :blk (try Munch.compile(gpa, slate.items, how)) orelse {
+            if (try Munch.compile(gpa, slate.items, how)) |cut| break :blk cut;
+            // An empty slate is not the same fact as "nothing here can read
+            // bytes". A grammar can be wholly external - yaml declares 113
+            // terminals and not one of them lexes - and irregex declines to
+            // hand back an automaton over no patterns, which is its right: it
+            // was asked to build a matcher and there is nothing to match. But
+            // a customary or a hand answers terminals the slate never sees, so
+            // the honest object here is the automaton over no patterns, which
+            // refuses every offset and lets the ask fall through to whoever
+            // can answer. Only an empty slate takes this door: a slate that
+            // had patterns and lost all of them is a refusal to report, not a
+            // grammar to carry on with.
+            if (slate.items.len == 0 and (bound != null or casts.items.len > 0)) {
+                break :blk try Munch.adopt(gpa, 0, &.{}, &.{});
+            }
+            {
                 owners.deinit(gpa);
                 blind.deinit(gpa);
                 casts.deinit(gpa);
+                gpa.free(words);
+                if (bound) |*b| b.deinit();
                 literal.deinit(gpa);
                 immediate.deinit(gpa);
                 provided.deinit(gpa);
                 gpa.free(guard);
                 return null;
-            };
+            }
         };
         errdefer munch.deinit();
 
@@ -629,6 +698,8 @@ pub const Scanner = struct {
             .declined = try declined.toOwnedSlice(gpa),
             .unskippable = try unskippable.toOwnedSlice(gpa),
             .casts = try casts.toOwnedSlice(gpa),
+            .words = words,
+            .book = bound,
             .carry = .{},
             .reached = 0,
             .seat = seat,
@@ -678,6 +749,8 @@ pub const Scanner = struct {
         if (s.image.len != 0) s.gpa.free(s.image);
         s.gpa.free(s.owners);
         s.gpa.free(s.casts);
+        s.gpa.free(s.words);
+        if (s.book) |*b| b.deinit();
         s.skipped.deinit(s.gpa);
         s.meant.deinit(s.gpa);
         s.kept.deinit(s.gpa);
@@ -875,10 +948,22 @@ pub const Scanner = struct {
     /// answer no, and answers differently in a release build than in a debug
     /// one. `same` flattens the dead bytes first.
     ///
-    /// It is a plain value: no pointers, no allocation, ~1 KB, and copying it
-    /// is copying the state. That is a property of the two stacks being
-    /// fixed-capacity, which they are for the same reason a hand cannot fail -
-    /// see `offside.Columns` and `fence.Spans`.
+    /// It is a plain value: no pointers, no allocation, and copying it is copying
+    /// the state. That is a property of the stacks inside being fixed-capacity,
+    /// which they are for the same reason a hand cannot fail - see
+    /// `offside.Columns` and `fence.Spans`. It costs a few kilobytes, most of it
+    /// `fence`'s delimiter tags; the census's organs are the smaller half, and
+    /// the test below pins both, because this header said "~1 KB" for as long as
+    /// `tags` had been twice that on its own.
+    ///
+    /// **The customary's organs are in here, and that is the exact-fork claim.**
+    /// tree-sitter asks a scanner to `serialize` itself into at most 1024 bytes
+    /// and every one of the eight loses something doing it - markdown truncates
+    /// its open-block stack, html its tag stack - so a resumed parse there is a
+    /// scanner told an approximation of where it was. Here the organs are declared
+    /// with a census-sized capacity and travel whole, by value, through the same
+    /// copy that already carried the hands. Nothing had to be added: they are a
+    /// field of `outside.Carry`, which was already the thing this struct holds.
     pub const Save = struct {
         carry: outside.Carry,
         /// The furthest offset asked for. It travels, and it has to: it is not
@@ -890,6 +975,25 @@ pub const Scanner = struct {
             return a.reached == b.reached and a.carry.same(&b.carry);
         }
     };
+
+    test "a save stays small enough to hang one on every spine ring" {
+        // `Gather` keeps one of these per ring, so this size is the per-ring cost
+        // of resuming a stateful scan and it is worth an assertion rather than a
+        // doc comment - this header claimed "~1 KB" while `fence`'s tags were
+        // 2 KB on their own, which is how a number nobody checks ages. A ceiling
+        // and not an equality: the defect would be a census widening an organ
+        // until every ring is a page fault.
+        try std.testing.expect(@sizeOf(Save) <= 4096);
+        // The organs are the newest and the most likely to be widened by a
+        // census, so their share is pinned separately: this is the number the
+        // exact-fork claim costs, and it should stay the smaller half.
+        try std.testing.expect(@sizeOf(customary.Organs) < @sizeOf(Save) / 2);
+        // And no pointer anywhere in it, which is the property that makes a save
+        // a copy and a restore an assignment.
+        comptime for (std.meta.fields(outside.Carry)) |f| {
+            if (@typeInfo(f.type) == .pointer) @compileError("a carry field is a pointer: " ++ f.name);
+        };
+    }
 
     /// Everything a resumed scan has to be told. Every hand's memory is in
     /// `Carry` - the offside column stack, the fence mark stack, the
@@ -935,8 +1039,9 @@ pub const Scanner = struct {
     /// context-dependent grammar to expect - a grammar with hands is exactly
     /// one of those.
     fn read(s: *Scanner, bytes: []const u8, i: u32, fresh: bool, expected: ?*const Expected) Step {
-        if (s.casts.len > 0) if (expected) |e| {
-            if (outside.step(s.casts, &s.carry, bytes, i, fresh, &e.wanted, &e.named)) |h| {
+        if (s.outward()) if (expected) |e| {
+            const book = if (s.book) |*b| b else null;
+            if (outside.step(s.casts, book, &s.carry, bytes, i, fresh, &e.wanted, &e.named)) |h| {
                 return .{ .token = .{ .symbol = h.symbol, .start = i + h.skip, .len = h.len } };
             }
         };
@@ -962,6 +1067,19 @@ pub const Scanner = struct {
             .start = i,
             .len = @intCast(hit.len),
         } };
+    }
+
+    /// Whether anything outside the slate has an answer to offer at all. One
+    /// predicate rather than two conditions at each of the three asks, because
+    /// "this grammar has a scanner beyond its patterns" is one fact and it grew a
+    /// second half.
+    ///
+    /// Public because it is also the question `Gather` asks before it hangs a
+    /// `Save` on the spine, and it had asked the half of it that existed:
+    /// `casts.len > 0` kept nothing for a grammar whose whole scanner is a
+    /// customary, which is a resume that restores no organs.
+    pub fn outward(s: *const Scanner) bool {
+        return s.casts.len > 0 or s.book != null;
     }
 
     /// A stand-in that states the refusal its scanner makes, asked before the

@@ -76,6 +76,7 @@ const lineage = @import("hand/lineage.zig");
 const writ = @import("hand/writ.zig");
 const grain = @import("../grain/grain.zig");
 const press = @import("../../press/press.zig");
+const customary = @import("customary/customary.zig");
 
 test {
     _ = offside;
@@ -1583,6 +1584,36 @@ pub fn claimed(t: *const Troupe, name: []const u8) bool {
     return false;
 }
 
+/// A word the grammar spells as a literal terminal, and that terminal.
+///
+/// Derived, never declared. `Scanner.compile` already walks every terminal and
+/// already has each one's pattern in hand, so the set of keywords a language has
+/// is a fact about the grammar and not a table anyone maintains - which is the
+/// whole reason `tailed` needs no per-language row.
+pub const Keyword = struct { word: []const u8, sym: press.Symbol };
+
+/// Whether a literal terminal's spelling is a word, and so a keyword.
+///
+/// The filter that keeps `->` and `{` out of the derived set: every byte an
+/// identifier byte, and the first not a digit. A language's keywords are exactly
+/// its word-shaped literals, and no grammar has to say which those are.
+pub fn keyworded(lit: []const u8) bool {
+    if (lit.len == 0) return false;
+    for (lit, 0..) |b, i| switch (b) {
+        'a'...'z', 'A'...'Z', '_' => {},
+        '0'...'9', '\'' => if (i == 0) return false,
+        else => return false,
+    };
+    return true;
+}
+
+test "outside: a keyword is a word-shaped literal and nothing else" {
+    for ([_][]const u8{ "where", "in", "do", "_hole", "r2" }) |it|
+        try std.testing.expect(keyworded(it));
+    for ([_][]const u8{ "", "->", "{", "2nd", "'a", "a b", "<-" }) |it|
+        try std.testing.expect(!keyworded(it));
+}
+
 /// A troupe with its terminal names resolved to this grammar's symbols. Built
 /// once at compile so the scan never compares a string.
 pub const Cast = struct {
@@ -1599,6 +1630,14 @@ pub const Cast = struct {
     /// resolves spellings and nothing else, and duplicating the frame here gave
     /// one fact two homes that could disagree.
     brackets: [4]struct { open: ?press.Symbol = null, shut: ?press.Symbol = null } = @splat(.{}),
+    /// Every keyword this grammar spells, derived from its own terminals rather
+    /// than declared: the literal-pattern terminals whose spelling is a word.
+    ///
+    /// Borrowed, not owned - one slice built once in `Scanner.compile` and shared
+    /// by every cast, exactly as `troupe` is a borrowed pointer. Read only by
+    /// `tailed`, which needs to know whether the word standing at the next
+    /// lexeme is a terminal the parser has refused.
+    words: []const Keyword = &.{},
     brace: ?press.Symbol = null,
     sever: ?press.Symbol = null,
     seal: ?press.Symbol = null,
@@ -1715,6 +1754,18 @@ pub const Spent = struct {
         return false;
     }
 
+    /// Every zero-extent answer standing at this offset under this shape.
+    ///
+    /// `held` asked one symbol at a time, which is the question a hand has: it
+    /// already knows what it wants to offer. A customary is a program with dozens
+    /// of rules and no such intent, so it reads the whole set once and passes over
+    /// the rules whose every answer is in it. Same ledger, same key, read the
+    /// other way round.
+    pub fn standing(s: *const Spent, at: u32, shape: u64) []const press.Symbol {
+        if (s.at != at or s.shape != shape) return &.{};
+        return s.syms[0..s.len];
+    }
+
     /// Record one zero-width answer, or refuse it. False means the loop has
     /// already been here and `step` must return null.
     fn admit(s: *Spent, at: u32, shape: u64, sym: press.Symbol) bool {
@@ -1749,6 +1800,19 @@ pub const Carry = struct {
     columns: offside.Columns = .{},
     spans: fence.Spans = .{},
     tags: lineage.Tags = .{},
+    /// The memory a *customary* has, when this grammar carries one.
+    ///
+    /// In here rather than beside the engine because everything the seam already
+    /// promises about lexical state is promised by this struct and not by its
+    /// members: `rewind` begins a file, `same` decides whether two scans stand in
+    /// the same place, `shape` decides whether a zero-width answer made progress,
+    /// and `Scanner.Save` is a copy of this. Hanging the organs off the engine
+    /// instead would have left every one of those four to be re-derived, and the
+    /// exact-fork claim is precisely that none of them is.
+    ///
+    /// It costs 64 bytes of stack per carry for a grammar with no customary,
+    /// which buys `Save` staying pointer-free and one code path for both scanners.
+    organs: customary.Organs = .{},
     /// The zero-width answers already given at one offset.
     ///
     /// A hand that consumes nothing has not moved the cursor, so the next ask
@@ -1790,6 +1854,7 @@ pub const Carry = struct {
         c.columns.reset();
         c.spans.reset();
         c.tags.reset();
+        c.organs.reset();
         c.spent = .{};
     }
 
@@ -1805,6 +1870,7 @@ pub const Carry = struct {
         return a.columns.same(&b.columns) and
             a.spans.same(&b.spans) and
             a.tags.same(&b.tags) and
+            a.organs.same(&b.organs) and
             a.spent.same(&b.spent);
     }
 
@@ -1826,10 +1892,15 @@ pub const Carry = struct {
     /// whether a zero-width answer made progress. A stack absent from this is a
     /// stack whose pops cannot be told apart, so html's implied closes - all
     /// zero-width, one pop each - would be refused after the first.
+    ///
+    /// The organs fold in by `xor` and weigh exactly nothing while they are
+    /// untouched (`Organs.shape` states that as its contract), so a grammar with
+    /// no customary gets the identical word it got before they existed - the
+    /// zero-cost claim, as an equality rather than as a hope.
     fn shape(c: *const Carry) u64 {
-        return (@as(u64, c.columns.depth()) << 32) |
+        return ((@as(u64, c.columns.depth()) << 32) |
             (@as(u64, c.spans.depth()) << 16) |
-            c.tags.depth();
+            c.tags.depth()) ^ c.organs.shape();
     }
 };
 
@@ -1857,8 +1928,17 @@ pub const Hit = struct { symbol: press.Symbol, len: u32, skip: u32 = 0 };
 /// has none left to read. Ruby's and Rust's openers instead begin by skipping
 /// whitespace, so they have to be reachable at an offset the extras moved to; a
 /// hand asked only at fresh offsets would never see `let s = r#"..."#`.
+///
+/// `book` is this grammar's customary, when it has one. It is asked before every
+/// hand, and the ordering is not a preference: a customary is a *transcription*
+/// of the scanner this grammar actually ships, where a hand is this file's
+/// derivation from a cohort convention. Where both can answer the same offset,
+/// the reading of the real scanner is the better one, and a grammar whose
+/// customary covers it should stop seating hands at all - which is `Scanner`'s
+/// job and not this one's.
 pub fn step(
     casts: []const Cast,
+    book: ?*customary.Engine,
     carry: *Carry,
     bytes: []const u8,
     at: u32,
@@ -1866,7 +1946,8 @@ pub fn step(
     wanted: *const std.DynamicBitSetUnmanaged,
     named: *const std.DynamicBitSetUnmanaged,
 ) ?Hit {
-    const hit = offer(casts, carry, bytes, at, fresh, wanted, named) orelse return null;
+    const hit = written(book, carry, bytes, at, fresh, wanted, named) orelse
+        offer(casts, carry, bytes, at, fresh, wanted, named) orelse return null;
     // Skipped bytes count as progress for the same reason consumed ones do:
     // the cursor ends past where it started, so the next ask is a different
     // question and the ledger below is not needed to say so.
@@ -1876,6 +1957,29 @@ pub fn step(
     // free of the bookkeeping.
     if (!carry.spent.admit(at, carry.shape(), hit.symbol)) return null;
     return hit;
+}
+
+/// Ask the customary, if there is one.
+///
+/// Three lines of glue and every one of them is the seam's existing contract
+/// rather than the engine's: the organs travel inside the `Carry` like every other
+/// stack here, the ledger is read *before* the ask so a rule whose answers are
+/// already spent is passed over rather than refused after the fact, and the answer
+/// is reshaped into the seam's own `Hit`. A grammar with no customary pays one
+/// null check.
+fn written(
+    book: ?*customary.Engine,
+    carry: *Carry,
+    bytes: []const u8,
+    at: u32,
+    fresh: bool,
+    wanted: *const std.DynamicBitSetUnmanaged,
+    named: *const std.DynamicBitSetUnmanaged,
+) ?Hit {
+    const e = book orelse return null;
+    const already = carry.spent.standing(at, carry.shape());
+    const hit = e.step(&carry.organs, bytes, at, fresh, wanted, named, already) orelse return null;
+    return .{ .symbol = hit.symbol, .len = hit.len, .skip = hit.skip };
 }
 
 fn offer(
@@ -2459,23 +2563,76 @@ fn tested(
     // own close then finds its frame on top.
     const shed = writ.bracketed(&carry.columns);
     const how = if (over or shed) writ.Standing.left else writ.standing(&carry.columns, lead.column, lead.fresh);
-    switch (how) {
-        .left => if (c.seal) |sym| {
-            if (wanted.isSet(sym)) {
-                carry.columns.close();
-                return .{ .symbol = sym, .len = 0 };
-            }
-        },
-        .level => if (c.sever) |sym| {
-            if (wanted.isSet(sym)) return .{ .symbol = sym, .len = 0 };
-        },
-        .inside => {},
-    }
+    if (how == .left) if (c.seal) |sym| {
+        if (wanted.isSet(sym)) {
+            carry.columns.close();
+            return .{ .symbol = sym, .len = 0 };
+        }
+    };
+    // Between the column's close and the separator, in that order, because that
+    // is where the C runs it: the indent is asked first, so a line that already
+    // ended the block ends it as a column and not as a keyword, and the
+    // separator is asked last, so a `where` level with its block closes the
+    // block rather than beginning an item in it.
+    if (tailed(c, carry, bytes, lead, wanted)) |hit| return hit;
+    if (how == .level) if (c.sever) |sym| {
+        if (wanted.isSet(sym)) return .{ .symbol = sym, .len = 0 };
+    };
     if (c.brace) |sym| {
         if (wanted.isSet(sym) and lead.at < bytes.len and bytes[lead.at] == '{') {
             if (!carry.columns.open(writ.sealed)) return null;
             return .{ .symbol = sym, .skip = lead.at - at, .len = 1 };
         }
+    }
+    return null;
+}
+
+/// Close a block the next keyword ends on its own authority, if one stands here.
+///
+/// The Report's `parse-error(t)`, read off the permission set instead of the
+/// parser's future - and the reason this needs no per-language table at all. The
+/// rule is two facts and no names:
+///
+///  1. the block's close is something the parse would take here, and
+///  2. the word standing at the next lexeme is a keyword this grammar spells,
+///     and the parse would **not** take it.
+///
+/// A keyword the parser refuses is a parse error one token away, which is exactly
+/// the condition the Report ends a layout on. If any live reading would take the
+/// keyword, the block it belongs to is still open as far as that reading is
+/// concerned, and closing it would be this hand overruling a parse rather than
+/// serving one - so unanimity here is unanimity by *absence*, and it is the same
+/// warrant `writ`'s header sets out for the pushes.
+///
+/// `where` is what this was written for. A `where` indented deeper than the block
+/// it means to close - which is how every Haskell file in the world writes one -
+/// is `.inside` to the column rule, so the block never closes, `where` is never
+/// admitted as a keyword, and the parser takes the one reading left to it: a
+/// variable. No amount of measuring columns reaches that, because no column
+/// licenses the close.
+///
+/// A marker is never closed here. Only the order that pushed a bracket or a brace
+/// may pop it, and popping one on a keyword would strand its close - which
+/// silences the offside rule for the rest of the file, the one failure
+/// `bracketed` exists to avoid.
+fn tailed(
+    c: *const Cast,
+    carry: *Carry,
+    bytes: []const u8,
+    lead: writ.Lead,
+    wanted: *const std.DynamicBitSetUnmanaged,
+) ?Hit {
+    const sym = c.seal orelse return null;
+    if (!wanted.isSet(sym)) return null;
+    if (carry.columns.len == 0 or carry.columns.top() >= writ.marker) return null;
+    if (lead.at >= bytes.len) return null;
+    for (c.words) |key| {
+        // Whole-word, so at most one entry can match: `in` does not match inside
+        // `infix`, because the byte after it is an identifier byte.
+        if (!writ.word(bytes, lead.at, key.word)) continue;
+        if (wanted.isSet(key.sym)) return null;
+        carry.columns.close();
+        return .{ .symbol = sym, .len = 0 };
     }
     return null;
 }

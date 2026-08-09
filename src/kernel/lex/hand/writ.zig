@@ -53,14 +53,35 @@
 //! declines are a headerless module, `let … in`, an empty quotation, and
 //! multi-way `if`.
 //!
+//! ## The third arm: a keyword ends a block
+//!
+//! Neither half above reaches a `where`. It is indented *deeper* than the block
+//! it closes - which is how every Haskell file in the world writes one - so the
+//! column rule reads `.inside`, the block stays open, `where` is never admitted
+//! as a keyword, and the parser takes the only reading left to it: a variable.
+//! That was 18 of the 26 remaining misread runs on the pandoc fixture, and no
+//! measurement of any column reaches it, because no column licenses the close.
+//!
+//! The Report licenses it, as `parse-error(t)`: a layout ends when the next token
+//! would be a parse error. A scanner cannot ask whether a parse would fail, but it
+//! is handed the next best thing every time it is asked - the permission set. So
+//! the arm is: the block's close is admissible, and the word at the next lexeme is
+//! a keyword this grammar spells that the parse would **not** take. See
+//! `outside.tailed`.
+//!
+//! This clears the same warrant the pushes do, from the other side. A close
+//! happens only on a keyword *absent* from the union of live readings, so if any
+//! reading would take it, none of them wants the block closed and the hand stands
+//! down. Unanimity by absence. And it needs no per-language table: a keyword is a
+//! literal terminal whose spelling is a word, which the grammar already says.
+//!
 //! ## What is deliberately not here
 //!
-//! The Report's `parse-error(t)` rule, which the grammar enumerates as five
-//! `_phantom_*` terminals. Every state admitting one also admits the keyword it
-//! stands before - `_phantom_where` beside `where`, `_phantom_in` beside `in` -
-//! so no function of the bytes can separate them; deciding needs to know whether
-//! the parse would fail, which is the parser's knowledge. They are optional in
-//! every rule they appear in (`CHOICE(_phantom_X | BLANK)`), so declining them
+//! The five `_phantom_*` terminals the grammar spells for the *other* half of
+//! `parse-error(t)` - the phantom that stands beside the keyword rather than the
+//! close that precedes it. Every state admitting one also admits the keyword it
+//! stands before, so no function of the bytes can separate them. They are optional
+//! in every rule they appear in (`CHOICE(_phantom_X | BLANK)`), so declining them
 //! costs constructs and not the protocol.
 //!
 //! Derived from the Haskell 2010 Report §10.3 (the `L` function) and from
@@ -193,6 +214,28 @@ pub fn ahead(bytes: []const u8, at: u32) Lead {
     };
     if (i >= bytes.len) return .{ .at = @intCast(bytes.len), .column = 0, .fresh = true };
     return .{ .at = i, .column = column, .fresh = fresh };
+}
+
+/// Whether `word` stands whole at `at` - the bytes match and no identifier
+/// character follows.
+///
+/// The Report's `varid` continues over letters, digits, `_` and `'`, so `wheres`
+/// and `where'` are one name and only `where` is the keyword. Reading the prefix
+/// alone would close a block on every identifier that happens to start with one
+/// of these four words, which on the pandoc corpus is `elsewhere` and `intern`.
+///
+/// A byte test rather than a lexeme one on purpose: this is asked at a position
+/// `ahead` has already walked to, so the left boundary is established and only
+/// the right one is in question.
+pub fn word(bytes: []const u8, at: u32, it: []const u8) bool {
+    if (at + it.len > bytes.len) return false;
+    if (!std.mem.eql(u8, bytes[at .. at + it.len], it)) return false;
+    const after = at + @as(u32, @intCast(it.len));
+    if (after == bytes.len) return true;
+    return switch (bytes[after]) {
+        'a'...'z', 'A'...'Z', '0'...'9', '_', '\'' => false,
+        else => true,
+    };
 }
 
 /// Where a measured column stands against the innermost open block.
@@ -366,6 +409,21 @@ test "writ: end of input is column zero on a fresh line" {
     const past = ahead("   ", 0);
     try std.testing.expect(past.fresh);
     try std.testing.expectEqual(@as(u16, 0), past.column);
+}
+
+test "writ: a keyword is only a keyword whole" {
+    try std.testing.expect(word("where x", 0, "where"));
+    try std.testing.expect(word("where", 0, "where"));
+    try std.testing.expect(word("where}", 0, "where"));
+    // A longer identifier that begins with it is not it, in either direction.
+    try std.testing.expect(!word("wheres", 0, "where"));
+    try std.testing.expect(!word("where'", 0, "where"));
+    try std.testing.expect(!word("where2", 0, "where"));
+    try std.testing.expect(!word("where_", 0, "where"));
+    try std.testing.expect(!word("wher", 0, "where"));
+    // And a run of one of the shorter ones inside a longer name: `intern`.
+    try std.testing.expect(!word("intern", 0, "in"));
+    try std.testing.expect(word("in x", 0, "in"));
 }
 
 test "writ: a tab reaches the next stop, as the offside rule counts it" {
