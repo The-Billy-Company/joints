@@ -30,6 +30,7 @@ const intake = @import("intake.zig");
 const folio = joints.folio;
 const leaf = folio.leaf;
 const press = joints.press;
+const book = joints.kernel.lex.customary.book;
 
 pub fn run(
     gpa: std.mem.Allocator,
@@ -38,6 +39,7 @@ pub fn run(
     args: []const []const u8,
 ) !u8 {
     var out: ?[]const u8 = null;
+    var told: ?[]const u8 = null;
     var paths: std.ArrayList([]const u8) = .empty;
     defer paths.deinit(gpa);
     var rest = args;
@@ -50,6 +52,13 @@ pub fn run(
             }
             rest = rest[1..];
             out = rest[0];
+        } else if (std.mem.eql(u8, a, "--customary")) {
+            if (rest.len < 2) {
+                try w.writeAll("joints: --customary needs a path\n");
+                return 2;
+            }
+            rest = rest[1..];
+            told = rest[0];
         } else try paths.append(gpa, a);
     }
     if (paths.items.len == 0) {
@@ -61,7 +70,17 @@ pub fn run(
     // `mint python.json rust.json -o both.folio` reported success and wrote a
     // rust-only folio. A silent drop in the verb whose one job is publishing
     // the artifact is the worst bug this CLI has had.
-    if (paths.items.len > 1) return gathering(gpa, io, w, paths.items, out);
+    if (paths.items.len > 1) {
+        // One `--customary` cannot mean several grammars' scanners, and picking
+        // the first would be a silent drop of the same shape as the one below.
+        // Each member's own `<stem>.customary.json` still applies.
+        if (told != null) {
+            try w.writeAll("joints: --customary names one grammar's scanner;" ++
+                " mint each member's folio first, or name the book beside it\n");
+            return 2;
+        }
+        return gathering(gpa, io, w, paths.items, out);
+    }
     const path = paths.items[0];
 
     // Which of the two jobs this is gets answered by trying the cheap one. A
@@ -103,7 +122,7 @@ pub fn run(
             return 1;
         },
     }
-    return write(gpa, io, w, path, out);
+    return write(gpa, io, w, path, out, told);
 }
 
 /// Read a codex back: every member opened - which proves its seal - and bound,
@@ -227,6 +246,10 @@ fn gathering(
         const source = intake.slurp(gpa, io, w, path) orelse return 2;
         defer gpa.free(source);
         var gr = intake.grammar(gpa, w, path, source) orelse return 2;
+        if (!intake.customary(io, w, &gr, path, null)) {
+            gr.deinit();
+            return 2;
+        }
         const pressed_at = std.Io.Clock.awake.now(io);
         var built = intake.tables(gpa, w, &gr) orelse {
             gr.deinit();
@@ -327,12 +350,14 @@ fn write(
     w: *std.Io.Writer,
     path: []const u8,
     out: ?[]const u8,
+    told: ?[]const u8,
 ) !u8 {
     const source = intake.slurp(gpa, io, w, path) orelse return 2;
     defer gpa.free(source);
 
     var gr = intake.grammar(gpa, w, path, source) orelse return 2;
     defer gr.deinit();
+    if (!intake.customary(io, w, &gr, path, told)) return 2;
 
     const pressed_at = std.Io.Clock.awake.now(io);
     var built = intake.tables(gpa, w, &gr) orelse return 2;
@@ -440,6 +465,14 @@ fn report(w: *std.Io.Writer, f: *const folio.Folio, b: *const folio.Bound, s: Si
         try w.print("  unfolded       {d} round(s) to separate merged lookaheads\n", .{h.unfolded});
     }
     if (f.word()) |sym| try w.print("  word           {s}\n", .{f.nameOf(sym)});
+    // Read back out of the mapped section rather than remembered from the press,
+    // for the same reason the whole verb re-reads: a customary that does not
+    // prove from the file is a scanner no editor will get, whatever was pressed.
+    if (book.read(b.grammar.customary) catch null) |bk| {
+        try w.print("  customary      {d} rules, {d} probes, {d} classes\n", .{
+            bk.head.rules, bk.head.probes, bk.head.classes,
+        });
+    }
 
     try w.print("\n  {s: <14} {s: >9} {s: >12}  {s}\n", .{ "section", "count", "bytes", "share" });
     for (std.enums.values(leaf.Kind)) |k| {
@@ -557,6 +590,10 @@ fn disagrees(
         }
         if (!std.mem.eql(press.Symbol, want.party, back.party)) return "a conflict's party";
     }
+    // Byte for byte, because the section is byte-opaque to the folio and the
+    // engine binds it in place: a customary that came back one row short is a
+    // scanner that answers differently, and nothing else here would say so.
+    if (!std.mem.eql(u8, gr.customary, b.grammar.customary)) return "the customary";
     return null;
 }
 

@@ -135,6 +135,7 @@ pub fn run(
 
     var gr = intake.grammar(gpa, w, grammar_path, source) orelse return 2;
     defer gr.deinit();
+    if (!intake.customary(io, w, &gr, grammar_path, null)) return 2;
 
     var built = intake.tables(gpa, w, &gr) orelse return 2;
     defer built.deinit();

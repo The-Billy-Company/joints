@@ -29,6 +29,7 @@ pub fn run(
     defer gpa.free(source);
     var gr = intake.grammar(gpa, w, grammar_path, source) orelse return 2;
     defer gr.deinit();
+    if (!intake.customary(io, w, &gr, grammar_path, null)) return 2;
 
     const text = intake.slurp(gpa, io, w, path) orelse return 2;
     defer gpa.free(text);

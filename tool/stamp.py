@@ -52,6 +52,12 @@ from typing import NamedTuple
 
 ROOT = Path(__file__).resolve().parents[1]
 
+#: Where the transcribed scanners live, and the same directory `tool/customary.py`
+#: reads. Handed to every parse as `JOINTS_CUSTOMARY` by `ask`, because a
+#: customary is part of the grammar and an instrument that measured the grammar
+#: without it would be measuring a scanner nobody ships.
+BOOK = ROOT / "customary"
+
 # What a build reads. Digesting these is ~3 ms over this tree, cheap enough to
 # do on every run, which is the only way a stamp nobody remembers to ask for
 # still ends up in the report.
@@ -853,10 +859,20 @@ def ask(binary: Path | str, grammar: Path | str, src: Path | str, *,
     row = Path(grammar).stem
     fed(grammar, row)
     fed(binary, row)
+    # And the customary, for the rows that have one. It is a third input to the
+    # same parse - editing `customary/markdown.json` changes markdown's token
+    # stream exactly as editing its `grammar.json` would - so a board that did
+    # not digest it could report a cached row against a scanner that has since
+    # been rewritten, which is the class of bug `fed` exists for.
+    book = BOOK / f"{row}.json"
+    if book.is_file():
+        fed(book, row)
+    env = os.environ | {"JOINTS_CUSTOMARY": str(BOOK)}
 
     def run(*flags: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run([str(binary), "parse", str(grammar), str(src), *flags],
-                              capture_output=True, text=True, timeout=patience, cwd=ROOT)
+                              capture_output=True, text=True, timeout=patience,
+                              cwd=ROOT, env=env)
     try:
         got = run(*(forest if tree else ("--quiet",)), *extra)
         end = outcome(got.stderr, src, size, got.stdout if tree else "")

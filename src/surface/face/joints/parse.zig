@@ -341,6 +341,7 @@ pub fn load(
             return null;
         }
     }
+    if (!intake.customary(io, e, &gr, path, null)) return null;
     const built = intake.tables(gpa, e, &gr) orelse return null;
     return .{ .pressed = .{ .grammar = gr, .built = built } };
 }

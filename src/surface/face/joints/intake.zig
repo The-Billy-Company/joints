@@ -1,9 +1,15 @@
 //! The one door every verb turns a path into a parser through.
 //!
-//! Four steps, in this order, and every verb here walks a prefix of them:
-//! bytes (`slurp`), a grammar (`grammar`), its LALR tables (`tables`), its
-//! terminal scanner (`scanner`). Nothing in this folder does any of the four
-//! any other way.
+//! Five steps, in this order, and every verb here walks a prefix of them:
+//! bytes (`slurp`), a grammar (`grammar`), its customary (`customary`), its
+//! LALR tables (`tables`), its terminal scanner (`scanner`). Nothing in this
+//! folder does any of the five any other way.
+//!
+//! `customary` joined late and is the only optional one: almost no grammar has
+//! a scanner written down beside it, so its absence is an answer and not a
+//! fault. It sits before `tables` because it belongs to the grammar - the
+//! bytes it presses are what a folio carries and what `scanner` binds - and
+//! after `grammar` because it needs the arena the grammar already owns.
 //!
 //! Five verbs used to read a file five ways: two copies of the same block
 //! inside `main.zig`, a third pasted into `parse.zig` and re-exported for
@@ -43,6 +49,7 @@ const joints = @import("joints");
 
 const press = joints.press;
 const lex = joints.kernel.lex.scanner;
+const scribe = joints.kernel.lex.customary;
 const quire = joints.kernel.quire;
 const weave = joints.kernel.weave;
 
@@ -86,6 +93,70 @@ pub fn grammar(
         w.print("joints: cannot import {s}: {s}\n", .{ path, @errorName(err) }) catch {};
         return null;
     };
+}
+
+/// The customary `gr` should carry, pressed into `gr`'s own arena. `false`
+/// after printing why not to `w`; a grammar with no customary is `true` and
+/// leaves `gr.customary` empty.
+///
+/// Three ways to say where the book is, most deliberate first, and they differ
+/// in what a missing file means:
+///
+///  1. `told` - a `--customary` somebody typed. Not being there is a typo and
+///     refuses, because the alternative is minting the folio they asked for
+///     without the scanner they asked for and saying nothing.
+///  2. `$JOINTS_CUSTOMARY` - a directory, searched as `<dir>/<grammar>.json`.
+///     This is `tool/customary.py`'s own rule (`BOOK = ROOT / "customary"`),
+///     spelled as an environment knob so the gates that already know the repo
+///     root can hand it over once instead of every verb growing a flag, and so
+///     nothing has to guess a repo root from a binary's cwd. Read through
+///     `assay.knob`, so the prefix is the package's brand rather than a literal.
+///  3. `<stem>.customary.json` beside the grammar.json - the same derivation
+///     `mint` makes when it writes a folio beside one.
+///
+/// Silence on 2 and 3 is the ordinary case for three hundred imported grammars,
+/// so neither says anything when it finds nothing.
+///
+/// The press runs here rather than at load for the reason `scribe.zig` opens
+/// with: names become indices once, at mint, and a scanner starting up over a
+/// folio compares no strings. Which also makes this the only place a misspelled
+/// probe can be caught, hence the sentence out of `Note` rather than a bare
+/// error name - `CustomaryUnknownName` alone does not say which name.
+pub fn customary(
+    io: std.Io,
+    w: *std.Io.Writer,
+    gr: *press.Grammar,
+    from: []const u8,
+    told: ?[]const u8,
+) bool {
+    const gpa = gr.arena.allocator();
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+
+    const source, const path = read: {
+        if (told) |path| break :read .{ slurp(gpa, io, w, path) orelse return false, path };
+        if (joints.assay.knob("CUSTOMARY")) |dir| {
+            const path = std.fmt.bufPrint(&buf, "{s}/{s}.json", .{ dir, gr.name }) catch null;
+            if (path) |p| if (quietly(gpa, io, p)) |bytes| break :read .{ bytes, p };
+        }
+        const stem = from[0 .. from.len - std.fs.path.extension(from).len];
+        const path = std.fmt.bufPrint(&buf, "{s}.customary.json", .{stem}) catch return true;
+        break :read .{ quietly(gpa, io, path) orelse return true, path };
+    };
+
+    var say: scribe.Note = .{};
+    gr.customary = scribe.press(gpa, source, &say) catch |err| {
+        w.print("joints: cannot press {s}: {s} ({s})\n", .{
+            path, say.text(), @errorName(err),
+        }) catch {};
+        return false;
+    };
+    return true;
+}
+
+/// `path`'s contents, or `null` for any reason at all. Only correct where the
+/// path was derived rather than typed - see `customary`.
+fn quietly(gpa: std.mem.Allocator, io: std.Io, path: []const u8) ?[]u8 {
+    return std.Io.Dir.cwd().readFileAlloc(io, path, gpa, .limited(8 << 20)) catch null;
 }
 
 /// `gr`'s LALR tables, or `null` after printing why not to `w`.

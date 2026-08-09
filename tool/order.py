@@ -48,7 +48,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from stamp import ask, digest, fed, swapped, take  # noqa: E402
+from stamp import BOOK, ask, digest, fed, swapped, take  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT / "research" / "joinery" / "order"
@@ -301,8 +301,17 @@ def ticket(folio: Path) -> Path:
 _who: dict[tuple[str, int, int], str] = {}
 
 
+def book(name: str) -> Path:
+    """Where this grammar's customary would be, whether or not one is written."""
+    return BOOK / f"{name}.json"
+
+
 def maker(path: Path) -> str:
-    """This binary's identity, or "" if there is nothing to identify."""
+    """This artifact's identity, or "" if there is nothing to identify.
+
+    Asked of the binary and of a customary alike: both are inputs a press reads,
+    and a folio is only this tree's folio if both were.
+    """
     try:
         it = path.stat()
     except OSError:
@@ -313,12 +322,31 @@ def maker(path: Path) -> str:
     return _who[key]
 
 
+def stub(folio: Path) -> list[str]:
+    """The ticket's lines, or empty when there is no ticket to read."""
+    try:
+        return ticket(folio).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+
+
 def signed(folio: Path) -> str:
     """The digest of the binary that pressed this folio, or "" if unrecorded."""
-    try:
-        return ticket(folio).read_text(encoding="utf-8").split()[0]
-    except (OSError, IndexError):
-        return ""
+    lines = stub(folio)
+    return lines[0].split()[0] if lines and lines[0].split() else ""
+
+
+def sealed(folio: Path) -> str:
+    """The digest of the customary that press read, `-` for none, "" if the
+    ticket predates the question.
+
+    A second line rather than a wider first one, so a ticket written before
+    customaries existed still answers `signed` and reads as *unasked* here -
+    which `miss` treats as a miss, because the alternative is believing a folio
+    minted without a scanner that now exists.
+    """
+    lines = stub(folio)
+    return lines[1].split()[0] if len(lines) > 1 and lines[1].split() else ""
 
 
 def miss(folio: Path) -> str:
@@ -370,6 +398,14 @@ def miss(folio: Path) -> str:
         return "no record of which binary pressed it"
     if was != (now := maker(BIN)):
         return f"another binary pressed it ({was[:12]}, not {now[:12]})"
+    # A customary is a scanner, so a folio pressed without the one now on disk
+    # is a folio whose externals answer differently - the exact shape of the
+    # `foreign` mistake, one input over. `-` records "there was none", which is
+    # a fact worth keeping: it distinguishes a grammar with no customary from a
+    # ticket written before the question was asked.
+    if (held := sealed(folio)) != (want := maker(book(folio.stem)) or "-"):
+        return ("no record of which customary pressed it" if not held else
+                f"another customary pressed it ({held[:12]}, not {want[:12]})")
     return f"refused - {said}" if (said := accepts(folio)) else ""
 
 
@@ -397,9 +433,18 @@ def press(grammar: Path, folio: Path) -> bool:
     # mints off each other's temp file, so the cleanup below can never delete a
     # publish still in flight.
     part = folio.with_suffix(f".folio.{os.getpid()}.{next(_serial)}.part")
+    # The customary is named rather than left to be discovered, because a cache
+    # this binary shares with ten agents must not depend on anyone's environment
+    # for *what the scanner is*: `mint` would find the same file through
+    # `JOINTS_CUSTOMARY`, and a board run without it would then quietly measure
+    # a folio with no externals against one that has them.
+    told = book(folio.stem)
+    order = [str(BIN), "mint", str(grammar), "-o", str(part)]
+    if told.exists():
+        order += ["--customary", str(told)]
+        fed(told, folio.stem)
     try:
-        got = subprocess.run([str(BIN), "mint", str(grammar), "-o", str(part)],
-                             capture_output=True, text=True)
+        got = subprocess.run(order, capture_output=True, text=True)
         if got.returncode != 0 or not part.exists():
             return False
         # The ticket lands **before** the folio it describes, and by the same
@@ -408,9 +453,11 @@ def press(grammar: Path, folio: Path) -> bool:
         # - harmless, but it would make `cache: kept 30` depend on scheduling.
         # This ordering makes the worst case a stale ticket over a folio that
         # is not there yet, which `miss` reads as `missing` and recomputes.
-        stub = ticket(part)
-        stub.write_text(f"{maker(BIN)}  {BIN}\n", encoding="utf-8")
-        os.replace(stub, ticket(folio))
+        card = ticket(part)
+        card.write_text(f"{maker(BIN)}  {BIN}\n"
+                        f"{maker(told) or '-'}  {told if told.exists() else 'no customary'}\n",
+                        encoding="utf-8")
+        os.replace(card, ticket(folio))
         os.replace(part, folio)
     finally:
         part.unlink(missing_ok=True)
@@ -544,6 +591,11 @@ def one(work: Path, name: str, how: str | None) -> tuple[str, str, bool]:
         ticket(folio).write_text(f"{'0' * 64}  /some/other/pin/bin/joints\n", encoding="utf-8")
     elif how == "no record of which binary pressed it":
         ticket(folio).unlink(missing_ok=True)
+    elif how == "no record of which customary pressed it":
+        # A ticket from before a scanner was data: it names the binary and stops.
+        # Staged by truncation rather than by hiding the customary, so the trial
+        # reads the same for a grammar that has one and a grammar that does not.
+        ticket(folio).write_text(f"{maker(BIN)}  {BIN}\n", encoding="utf-8")
     elif how is not None:
         folio.write_bytes(bend(folio.read_bytes(), how))
         os.utime(folio, None)  # and fresher than the binary, as today's were
@@ -636,6 +688,10 @@ def cache(name: str = "json") -> int:
             ("an older folio this same binary minted", "the binary is newer than it", "kept"),
             ("a fresher folio another pin minted", "another binary pressed it", "re-minted"),
             ("a folio with no record of its minter", "no record of which binary pressed it", "re-minted"),
+            # A customary *is* the scanner, so a folio pressed without the one on
+            # disk answers externals differently - the `foreign` mistake one
+            # input over, and the one a board would report as a speed win.
+            ("a folio pressed before its customary", "no record of which customary pressed it", "re-minted"),
             ("a folio from another binary's format", "a folio from another binary's format", "re-minted"),
             ("a press-side struct that grew a field", "a press-side struct that grew a field", "re-minted"),
             ("a torn write, caught short", "a torn write, caught short", "re-minted"),

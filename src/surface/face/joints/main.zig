@@ -93,7 +93,7 @@ const verbs = [_]Verb{
     .{
         .name = "mint",  .min = 1,  .run = &@import("mint.zig").run,
         .needs = "a grammar.json or a folio",
-        .spell = "mint <grammar.json|folio>... [-o P]",
+        .spell = "mint <grammar.json|folio>... [-o P] [--customary P]",
         .does = "press grammars into a folio",
         .also = &.{"                (several press into one codex), or read one back"},
     },
@@ -165,9 +165,14 @@ const usage =
     \\  --fan N     admit at most N floors when a fold outruns the segment
     \\  --churn N   sprout at most N limbs while reading one token
     \\
+    \\mint flags:
+    \\  -o P        where the folio goes, and the only way to mint a codex
+    \\  --customary P  the scanner written as data; <stem>.customary.json when unsaid
+    \\
     \\environment:
     \\  JOINTS_TRACE=press,lex,joint,weave,folio,quire  light one or more phase traces
     \\                 (or `all`, which adds the search engine's own beneath them)
+    \\  JOINTS_CUSTOMARY=DIR  where to look for <grammar>.json scanners-as-data
     \\
 ;
 
