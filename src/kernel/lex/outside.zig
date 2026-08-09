@@ -1946,7 +1946,19 @@ pub fn step(
     wanted: *const std.DynamicBitSetUnmanaged,
     named: *const std.DynamicBitSetUnmanaged,
 ) ?Hit {
-    const hit = written(book, carry, bytes, at, fresh, wanted, named) orelse
+    // The shape the question was asked under, taken before anyone answers.
+    //
+    // This is the ledger's key, and it has to be one word for the whole ask: an
+    // answer that moves a stack is read under the shape it found and would be
+    // written under the shape it left, and those differ by exactly the move that
+    // made it a legitimate answer. Keyed that way, a run of dedents at one
+    // offset records each close under the shape of the *next* question, so the
+    // second close reads its own entry back as already spent and the run stops
+    // one short - a nested mapping three deep closing at the end of input closes
+    // once. `Carry.answered`, which a hand reads mid-ask, already keys on the
+    // shape at the ask, so this is the write catching up to the read.
+    const asked = carry.shape();
+    const hit = written(book, carry, asked, bytes, at, fresh, wanted, named) orelse
         offer(casts, carry, bytes, at, fresh, wanted, named) orelse return null;
     // Skipped bytes count as progress for the same reason consumed ones do:
     // the cursor ends past where it started, so the next ask is a different
@@ -1955,7 +1967,7 @@ pub fn step(
     // No cursor movement, so the ledger is the only thing standing between
     // this answer and a spin. It is written only here, which keeps every hand
     // free of the bookkeeping.
-    if (!carry.spent.admit(at, carry.shape(), hit.symbol)) return null;
+    if (!carry.spent.admit(at, asked, hit.symbol)) return null;
     return hit;
 }
 
@@ -1970,6 +1982,7 @@ pub fn step(
 fn written(
     book: ?*customary.Engine,
     carry: *Carry,
+    asked: u64,
     bytes: []const u8,
     at: u32,
     fresh: bool,
@@ -1977,7 +1990,7 @@ fn written(
     named: *const std.DynamicBitSetUnmanaged,
 ) ?Hit {
     const e = book orelse return null;
-    const already = carry.spent.standing(at, carry.shape());
+    const already = carry.spent.standing(at, asked);
     const hit = e.step(&carry.organs, bytes, at, fresh, wanted, named, already) orelse return null;
     return .{ .symbol = hit.symbol, .len = hit.len, .skip = hit.skip };
 }
