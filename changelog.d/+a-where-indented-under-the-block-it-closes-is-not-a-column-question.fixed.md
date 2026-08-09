@@ -13,7 +13,7 @@ parse would not take.
 
 The keyword set is **derived, not declared**: a keyword is a literal terminal whose
 spelling is a word, which the grammar already says, so this is one arm of algebra
-and not four rows of haskell in the binary. It clears `writ`'s own warrant from the
-other side - a close happens only on a keyword *absent* from the union of live
-readings, so if any reading would take it, none of them wants the block closed and
-the hand stands down. Unanimity by absence.
+and not four rows of haskell in the binary. It clears `writ`'s own warrant from
+the other side - a close happens only on a keyword *absent* from the union of
+live readings, so if any reading would take it, none of them wants the block
+closed and the hand stands down. Unanimity by absence.

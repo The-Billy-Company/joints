@@ -22,7 +22,7 @@ schedules.
 
 Re-run rather than trust it:
 
-```
+```bash
 python3 tool/customary.py check markdown        # 531 files
 python3 tool/customary.py check kotlin          #  20 files
 python3 tool/customary.py compose markdown
@@ -157,10 +157,11 @@ never *what a rule may read*.
 Worth writing down, because the tier system exists for exactly this and the
 failure mode is a confidently wrong tree.
 
-1. **An interpolation's closing brace became string content.** `interpolation.kt`
-   answered `} b` where tree-sitter answered ` b`. The rule that noticed the brace
-   and reopened the string did its remembering and then let the rule behind it
-   answer at the same offset. `abstain` is the C's own shape restored.
+1. **An interpolation's closing brace became string content.**
+   `interpolation.kt` answered `} b` where tree-sitter answered `b`, space
+   included. The rule that noticed the brace and reopened the string did its
+   remembering and then let the rule behind it answer at the same offset.
+   `abstain` is the C's own shape restored.
 2. **An unterminated string answered content the C refuses.** `scan_string_content`
    only returns when it *reaches* a stopper; at end of input it breaks and returns
    false, so `"abc<eof>` has no content token at all and the parser re-lexes

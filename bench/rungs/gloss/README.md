@@ -21,8 +21,8 @@ Four sections, and only one of them is a benchmark in the usual sense.
 **74 of 82.** Every refusal is listed with the file, the error, and *the word
 that did it* — `QueryUnknownLiteral fallthrough at byte 969`, not a count. That
 list is the section's real output; the totals row is context for it. A compiler
-that accepted all 82 by treating an unresolvable name as a wildcard would print a
-nicer number and be worth less.
+that accepted all 82 by treating an unresolvable name as a wildcard would print
+a nicer number and be worth less.
 
 Every accepted file is **read back through the folio codec inside the rung**, per
 file. "Compiles" here means a reader holding only bytes can read it, because a

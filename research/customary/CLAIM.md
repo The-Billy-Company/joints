@@ -86,7 +86,7 @@ None of them adds an unbounded computation: `pass` is bounded by a stack depth,
 
 ### Organs - the memory
 
-```
+```text
 frames : stack of { width: i32, kind: u16 }        // indentation regions
 marks  : stack of { kind: u16, count: u16, tag: [32]u8 }  // delimited spans
 regs   : [8] i32                                   // counters, flags, saved widths
@@ -183,7 +183,7 @@ line's layout; then a commanded open; then a span opening; then an element
 close; then a bounded run; and last, after the slate has already found nothing,
 the orders the parse licensed by having no other move.
 
-```
+```text
 inside · layout · commanded · opening · enclosing · bounded · ordered
 ```
 

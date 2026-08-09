@@ -294,14 +294,14 @@ reason.
 Baseline measured on the tree this document was written against; re-run rather
 than trust it, per the README's own warning about corpus totals.
 
-```
+```text
 python3 tool/census.py --set=breadth     -> .local/customary/census-before.txt
 python3 tool/plumb.py board --json       -> .local/customary/board-before.json
 ```
 
 Scanners read at:
 
-```
+```text
 .local/differential/lang/{yaml,haskell,swift,elixir,scala,kotlin,html}/src/scanner.c
 .local/differential/lang/markdown/tree-sitter-markdown/src/scanner.c
 .local/differential/lang/html/src/tag.h

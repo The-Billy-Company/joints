@@ -1,7 +1,7 @@
-Three areas landed in one wave - `grain`, `vellum`, and a quotient in the press -
-and integrating them turned up the same fault twice in two different gates. Each
-one was **passing about code it could not see**, and in both cases the thing
-hiding the code was that the file was new.
+Three areas landed in one wave - `grain`, `vellum`, and a quotient in the
+press - and integrating them turned up the same fault twice in two different
+gates. Each one was **passing about code it could not see**, and in both cases
+the thing hiding the code was that the file was new.
 
 **A zone violation that read as zero violations.** `press/quotient_test.zig`
 imports `folio/folio.zig` and `folio/leaf.zig`, which points up the page, and
@@ -10,11 +10,11 @@ was untracked. `--untracked` shows both. That would have gone red the moment the
 file was committed and not one second earlier. The remedy is not a variance: the
 zone for this already exists. `press/docket/**` sits above `folio` and its README
 says why in as many words - the two tests in it "wore a unit test's address" and
-"the charter carried four ratified variances to excuse it". A test that presses a
-grammar and then reads the folio section back is that shape exactly, so it moved
-in beside them, and `zoning verify --untracked` now reports **0 violations over
-342 imports** with the charter's `no ratified exceptions` intact. There were five,
-then four, then none, and this did not make it one.
+"the charter carried four ratified variances to excuse it". A test that presses
+a grammar and then reads the folio section back is that shape exactly, so it
+moved in beside them, and `zoning verify --untracked` now reports **0 violations
+over 342 imports** with the charter's `no ratified exceptions` intact. There
+were five, then four, then none, and this did not make it one.
 
 **The lifecycle proof was walking a smaller package than it thought.** `idiom.zig`
 keeps its roster as a hand-written list of `@import` lines, so all three new areas

@@ -14,7 +14,7 @@ kept for study, not sources this package vendors. So the grammars are pinned in
 the sha256 of the exact bytes. This script is the only thing that turns a pin
 back into a file.
 
-```
+```bash
 python3 tool/grammars.py fetch     # populate upstream/grammars/ (the only verb that uses the network)
 python3 tool/grammars.py verify    # hash what is on disk against the manifest, offline
 python3 tool/grammars.py status    # every pin and its state in one glance
@@ -54,7 +54,7 @@ things, and this fails if any of them stops being true:
   the whole file, at every segmentation;
 - the **residue never gets past two**.
 
-```
+```bash
 python3 tool/rung1.py              # all eleven
 python3 tool/rung1.py c rust       # narrow to a few
 python3 tool/rung1.py --json
@@ -87,7 +87,7 @@ same misreading. Only tree-sitter can settle that, so this runs both parsers on
 the same bytes from the same pinned grammar and reports where the two trees
 disagree. Rung 6 of [`research/joinery/TESTING.md`](../research/joinery/TESTING.md).
 
-```
+```bash
 python3 tool/differential.py install          # put a dev-only tree-sitter CLI under .local/ (the network verb)
 python3 tool/differential.py run              # compare every case
 python3 tool/differential.py run --case=corpus/json
@@ -213,7 +213,7 @@ A mended row's `reach` is how far the forest extends, which is not a claim that
 what it holds is right - the summary line says so, and keeping *covered* and
 *correct* apart is the whole reason the differential exists beside this.
 
-```
+```bash
 python3 tool/census.py                # the table
 python3 tool/census.py --set=corpus   # or --set=breadth
 python3 tool/census.py --json
@@ -248,12 +248,12 @@ A top-level root with at least one child is a **construct**; one with none is a
 **leaf**. `built` is bytes under a construct, `strewn` is bytes under a leaf,
 and the split is the two questions kept apart:
 
-```
+```text
 covered  = built + strewn      did the parse READ these bytes
 standing = built               did it UNDERSTAND them
 ```
 
-```
+```bash
 python3 tool/standing.py              # the table, worst standing first
 python3 tool/standing.py --damage     # worst damage first, which is the work order
 python3 tool/standing.py --gap        # worst gap first
@@ -280,7 +280,7 @@ measuring. It is only a lie when it is read as correctness.
 So the board carries three columns that answer three different questions, and
 never adds them up:
 
-```
+```text
 stand   coverage    did one root reach this byte              built / size
 shape   structure   is what it built a TREE                   Quire.survey
 trued   agreement   does the oracle defend the derivation     square / size
@@ -295,7 +295,7 @@ back no survey at all. That last one is the point; see `sound.py` below.
 The headline is four tallies rather than one, and the fourth is the one to
 quote:
 
-```
+```text
 30 grammars · 17 reached whole (one root over every byte, no gap by construction)
               29 surveyed sound (every node reached once, inside its parent, in source order)
               17 agreed whole (`trued` 100% — the oracle defends every byte), over the 29 row(s) it judged
@@ -337,7 +337,7 @@ four correct boards became four disagreeing headlines in one morning. So the
 attribution is a command of its own, priced so it never gets skipped: no survey,
 no press, just the world.
 
-```
+```text
 python3 tool/standing.py --cite                             # ~130 ms, one markdown line
 joints `a525dc9b8` · tree `3d0d2e481` (live) · **no oracle** — joints's own words
 
@@ -362,7 +362,7 @@ with no cheap remedy beside it is a gate that gets disabled.
 
 **Exit 3 means the table is not one measurement.** Every folio and the binary
 are digested at read time and read again at the end (`stamp.reconcile`); if a
-row's artifact moved in between, that row is marked ` · SPLIT`, the footer names
+row's artifact moved in between, that row is marked `· SPLIT`, the footer names
 it with `read <digest>, now <digest>`, and the run exits 3 rather than 0. Not 1,
 which is a lane's bad day, and not 2, which is a parser fault. `--settle[=N]`
 re-measures only the named rows, up to N rounds, and exits 0 if the table closes
@@ -391,7 +391,7 @@ it as "a token lying where a tree should be" charges a construct's weight to a
 comment, so the gap tracks the file's comment density rather than the grammar's
 health. Two more columns split it:
 
-```
+```text
 strewn = orphan + rubble       orphan = under a leaf the grammar calls an extra
                                rubble = under a leaf that is code
 ```
@@ -429,7 +429,7 @@ as a statement about a comment. Read as a **work order** it is catastrophic,
 because an orphan byte is still a byte the tree failed to place, and orphans are
 produced *by* walls rather than instead of them.
 
-```
+```text
 damage = size - built = orphan + rubble + spoil
 ```
 
@@ -474,7 +474,7 @@ source order. A forest can fail all four and still stand at 100% with zero
 damage, because a misplaced child's bytes count exactly like a well-placed
 one's.
 
-```
+```bash
 python3 tool/sound.py                 # every grammar in the roster
 python3 tool/sound.py --set=corpus    # or --set=breadth
 ```
@@ -493,7 +493,7 @@ both of which read zero for "none there were" and for "nobody asked". So
 optional `UNSOUND:` clause, and `stamp.Outcome` carries `surveyed`/`arena` off
 it:
 
-```
+```text
 joints: /t/a.toml: accepted, 1 root, surveyed 731 of 731 nodes
 joints: /t/b.zig: stray byte at 41, 4 roots, surveyed 31 of 31 nodes, UNSOUND: 1 loose, 0 disorder, 0 torn
 ```
@@ -531,7 +531,7 @@ same grammar each prefix until one stops being accepted. That locates the *first
 refusal - which the verdict never names, because the verdict names the last one.
 The prefix below it is the claim.
 
-```
+```bash
 python3 tool/shear.py                 # every grammar that hands back a forest
 python3 tool/shear.py --set=corpus    # or --set=breadth
 python3 tool/shear.py --json
@@ -565,7 +565,7 @@ dangling keyword, a stray token, an edit caught mid-word - in the four grammars
 that are byte-exact on valid input, each with valid code after the break so
 "does it recover, or just stop?" has an answer.
 
-```
+```bash
 python3 tool/recover.py                 # the table
 python3 tool/recover.py --valid         # the inverse: valid input we refuse
 python3 tool/recover.py --spans         # gate its reader on the span shapes
@@ -606,7 +606,7 @@ feature. This prices the second so the two can be compared, and **recovery does
 not have to exist to be measured**: parse; when it stops, skip the offending
 token and parse the rest as a fresh file; add up what each pass reached.
 
-```
+```bash
 python3 tool/resync.py                  # the table
 python3 tool/resync.py --set=corpus     # or --set=breadth
 python3 tool/resync.py --cap=26000      # hops one file may take before we call it
@@ -629,7 +629,7 @@ The differential asks whether the tree is right. This asks whether the rest of
 the pitch is true, and it runs against the same oracle, from the same install,
 under the same contract: no tree-sitter, every axis skips, exit **0**.
 
-```
+```bash
 python3 tool/bench.py run                  # every axis, every pinned grammar
 python3 tool/bench.py run --grammar=json --axis=artifact
 python3 tool/bench.py verify               # hold this machine to bench.baseline.json
@@ -730,7 +730,7 @@ transiently broken and once **silently rebuilt with that lane's own fix in it**,
 which turned a pre-fix arm into a post-fix one and made a before/after read
 thirty-of-thirty for the wrong reason.
 
-```
+```text
 python3 tool/pin.py build                 build this tree into a pin of its own
 python3 tool/pin.py build --name before   ... under a name you'll recognise
 python3 tool/pin.py arm before            the three exports a measurement needs
@@ -894,10 +894,10 @@ Three of them, each of which used to exist in two or three copies that drifted
 apart. They live here because this module depends on nothing, so every
 instrument can import it and none has an excuse to restate it.
 
-- **`behind(line, source)`** - strips the `joints: <path>: ` prefix using the
-  path the caller passed in. Nothing infers a prefix; two readers used to, with
-  a non-greedy `.*?: ` that takes too little the moment a payload contains the
-  delimiter.
+- **`behind(line, source)`** - strips the `joints: <path>:` prefix, space
+  included, using the path the caller passed in. Nothing infers a prefix; two
+  readers used to, with a non-greedy `.*?:` and space that takes too little the
+  moment a payload contains the delimiter.
 - **`verdict(stderr, source)`** - what the parse said. `--verdicts` drives it
   across eight shapes with the rule it replaced beside it, which gets 2 wrong.
 - **`outcome(stderr, source, size, tree="")`** - what the parse *did* and how
@@ -921,17 +921,18 @@ of them were live defects: the reach rule had three copies, only `recover`'s
 knew what `mended` meant, and the other two under-reported byte coverage by 28
 points for rounds. An audit finds that once. Nobody remembers to run it again.
 
-```
+```text
 python3 tool/sole.py            the audit; exit 1 if a second copy exists
 python3 tool/sole.py --list     what each owner owns, and how firmly it is held
 python3 tool/sole.py --probe    build the four copies it claims to catch, and catch them
 ```
 
 **It holds no copy of what it polices**, which is the whole design: a checker
-that restates the rules is itself the next copy to drift. It is handed one fact
-- `CLAIMS`, a map of who owns what and which of their functions to read it out
-of - and derives every witness from the owner's own AST. Change `stamp.outcome`'s
-vocabulary and the gate changes with it, with nothing to update.
+that restates the rules is itself the next copy to drift. It is handed one
+fact - `CLAIMS`, a map of who owns what and which of their functions to read it
+out of - and derives every witness from the owner's own AST. Change
+`stamp.outcome`'s vocabulary and the gate changes with it, with nothing to
+update.
 
 Ten rules, and **five are held by shape rather than by text**: a file that
 shells `parse` on `BIN`, or writes out six of the eleven corpus names, is caught
@@ -960,15 +961,16 @@ line here as "no duplication left".
 scope.** It globs one directory and reads it with Python's `ast`, so every
 `.zig` file under `src/` - the product itself - is somewhere this gate has never
 looked. It counts both populations on every run rather than quoting them here,
-because the second one grows most days. Nobody chose that boundary; it is where an `ast`-shaped
-reader happened to stop. It has already been paid for once: a containment rule
-spelled twice in Zig, live in one copy and dead in a test, went past this gate
-because there was no pass over `src/` for it to be caught by. The audit above
-found six second copies by hand and five were defects, and there is no reason
-that rate is a property of Python. So the gate prints its corpus on every run,
-for the same reason it prints the one rule it is blind to - a gate that reports
-only what it looked at reads as a gate that looked everywhere. Extending it
-needs a Zig reader, which is its own piece of work and not yet done.
+because the second one grows most days. Nobody chose that boundary; it is where
+an `ast`-shaped reader happened to stop. It has already been paid for once: a
+containment rule spelled twice in Zig, live in one copy and dead in a test, went
+past this gate because there was no pass over `src/` for it to be caught by. The
+audit above found six second copies by hand and five were defects, and there is
+no reason that rate is a property of Python. So the gate prints its corpus on
+every run, for the same reason it prints the one rule it is blind to - a gate
+that reports only what it looked at reads as a gate that looked everywhere.
+Extending it needs a Zig reader, which is its own piece of work and not yet
+done.
 
 ## `order.py` - the same work in a different order costs the same
 
@@ -977,7 +979,7 @@ quotes is laptop-specific and the report says so - only a **ratio between two
 parses on the same machine in the same process**, over the same bytes and the
 same nodes, differing solely in which end the bulk token sits at.
 
-```
+```text
 python3 tool/order.py            all five grammars, held to a 1.6x ceiling
 python3 tool/order.py status     the same table, gating nothing
 python3 tool/order.py verify     the committed pair is what the construction makes
@@ -1027,10 +1029,10 @@ The same "everything permitted" is a false-*positive* surface for parse quality,
 and that half was only written here. Read as a token stream, `lex` shows
 javascript's ledger as **one** token and kotlin's as one per line - because with
 no state naming its terminals, an `immediate` body pattern (a string's interior,
-a JSX fragment, a shebang tail) is live at offsets no parse would offer it, and a
-negated class wins longest-match. `parse` on the same bytes builds the full tree.
-Measured 2026-08-05; `lex` now prints `admitted context-free` under its count, so
-the reading is refused at the surface instead of only here.
+a JSX fragment, a shebang tail) is live at offsets no parse would offer it, and
+a negated class wins longest-match. `parse` on the same bytes builds the full
+tree. Measured 2026-08-05; `lex` now prints `admitted context-free` under its
+count, so the reading is refused at the surface instead of only here.
 
 ## `walls.py` - how deep is the tail, really
 
@@ -1040,7 +1042,7 @@ mend in the thousands doing it. The mend count is the one statistic that cannot
 tell four thousand defects from one defect shouting four thousand times, and
 that is the difference between a bounded tail and a second project.
 
-```
+```text
 python3 tool/walls.py                   all thirty, sorted by depth
 python3 tool/walls.py --names 5         print the widest distinct walls per row
 python3 tool/walls.py --grammar julia   just this one (repeatable)
@@ -1048,7 +1050,7 @@ python3 tool/walls.py --json            machine-readable, distinct walls include
 python3 tool/walls.py list              the roster and its sizes
 ```
 
-```
+```text
 python3 tool/walls.py warm --grammar haskell        peel without ever restarting
 python3 tool/walls.py board --from-json <survey>    the work list, by family and lane
 python3 tool/walls.py gate                         CI: does every wall still have a family?
@@ -1056,12 +1058,12 @@ python3 tool/walls.py gate                         CI: does every wall still hav
 
 It **peels**: parse, take the wall the verdict names, resume from just past it,
 repeat, and count how many of the walls were *different*. Two kinds come back
-and keeping them apart is most of the value, because they have different owners
-- `state` (`unexpected T in state S`, the table refused a token it was handed)
-and `lexical` (`stray byte`, nothing could tokenize there at all, which on a
-grammar with unrunnable externals is usually theirs). A lexical wall is named by
-the **byte itself**, so fifty stray bytes that are all one UTF-8 lead byte read
-as one wall and not fifty.
+and keeping them apart is most of the value, because they have different
+owners - `state` (`unexpected T in state S`, the table refused a token it was
+handed) and `lexical` (`stray byte`, nothing could tokenize there at all, which
+on a grammar with unrunnable externals is usually theirs). A lexical wall is
+named by the **byte itself**, so fifty stray bytes that are all one UTF-8 lead
+byte read as one wall and not fifty.
 
 `reach` is `furthest(tree)` over the forest, never the byte in the verdict: a
 mended verdict names where trouble *began*, so reading it as reach reports the
@@ -1161,7 +1163,7 @@ cross the boundary. This prices every corpus grammar twice on one axis: real
 corpus code inflated to the throughput target, and the generated half of its
 order pair.
 
-```
+```text
 python3 tool/likeness.py                 every grammar, real beside generated
 python3 tool/likeness.py --grammar java  just this one (repeatable)
 python3 tool/likeness.py list            the roster and the generated sizes
@@ -1180,9 +1182,10 @@ caveat and no grammar's gap is evidence about another's.
 
 It does **not** measure the admitted set. Per-position cost is governed by how
 far the union walk runs, which voice composition sets - one permissive member
-surviving to end-of-file makes every pattern sharing its voice pay a to-EOF walk
-- and not by how many terminals are permitted. That was settled in the scanner
-lane by mechanism; a correlation here would at best have found a confound.
+surviving to end-of-file makes every pattern sharing its voice pay a to-EOF
+walk - and not by how many terminals are permitted. That was settled in the
+scanner lane by mechanism; a correlation here would at best have found a
+confound.
 
 ## `specimen.py` - which externals does anything here actually exercise
 
@@ -1194,14 +1197,14 @@ string interpolates - measures byte-perfect on every number this repository
 takes. A 20,728-byte Kotlin fix sat undone because nothing could tell it from a
 wrong one.
 
-```
+```text
 python3 tool/specimen.py coverage                    the gate, thirty grammars, ~25 s
 python3 tool/specimen.py coverage -v --grammar swift and name the difference
 python3 tool/specimen.py coverage --corpus-only      what the real corpus reaches alone
 python3 tool/specimen.py coverage --json             machine-readable, all four populations
 ```
 
-```
+```text
 python3 tool/specimen.py run [--grammar G]  judge every specimen against its claims
 python3 tool/specimen.py show <path>        one specimen, its forest, its claims
 python3 tool/specimen.py verify             prove this instrument can still say no
@@ -1291,7 +1294,7 @@ The inverse of the gate above, and the reason this tier exists. The Swift
 because `Chunked.swift` contains no `/*`. Every number here is bounded above by
 what thirty found files happen to contain, and nothing measured that bound.
 
-```
+```text
 python3 tool/absent.py run             thirty grammars, the lexical reading
 python3 tool/absent.py show <grammar>  its absent spellings and impossible rules
 python3 tool/absent.py aim             unwitnessed constructs ranked by pull
@@ -1338,7 +1341,7 @@ column of a single record, over every value that column has held in every JSON
 this tree has written - which is the instrument the `0 oracle(s)` field
 (`research/joinery/still/RESULT-5-oracle.md`) lived its whole life without.
 
-```
+```text
 python3 tool/budge.py                       the sweep
 python3 tool/budge.py show still.Witness    one record: writers, values, documents
 python3 tool/budge.py --budget 0            the whole population, not the default slice

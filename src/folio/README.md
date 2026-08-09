@@ -23,7 +23,7 @@ bytes, so one binary plus one folio is every language.
 
 One header, one fixed directory of 31 sections, then the sections, then a
 32-byte BLAKE3 seal. Every section is `count * stride` bytes at an eight-aligned
-offset, so checking one is a multiply and two comparisons rather than a parse  - 
+offset, so checking one is a multiply and two comparisons rather than a parse -
 which is what lets the reader prove the entire layout before it trusts a single
 byte of payload. Every integer is little-endian on disk regardless of host.
 
@@ -102,8 +102,8 @@ writer does not write it; `bind` fills it with the type's default; and every
 check anybody owns still passes. Worse than passing: a corpus board that presses
 most of its rows from folios then reports *every grammar byte-identical, nothing
 moved*, which is a lie in the direction of "your change did nothing" and whose
-correct response is to abandon a change that works. A `switch` does not catch it
-- a switch fires on a **rename**, and the new field is silent on both sides.
+correct response is to abandon a change that works. A `switch` does not catch
+it - a switch fires on a **rename**, and the new field is silent on both sides.
 
 So it is caught twice, deliberately at two different levels.
 

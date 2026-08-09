@@ -36,9 +36,9 @@ not assert, because a wall-clock floor on a shared machine cries wolf.
 
 **`descendant_for_byte_range` is the real win, and it needed a threshold to be
 one.** The accessor bisects each sibling run; the naive walk scans it. Bisecting
-unconditionally was **1.4x slower than the scan on every corpus file**, because a
-real file's widest parent is a few dozen children and an unpredictable branch per
-halving costs more than walking the whole run. With the scan kept below 48
+unconditionally was **1.4x slower than the scan on every corpus file**, because
+a real file's widest parent is a few dozen children and an unpredictable branch
+per halving costs more than walking the whole run. With the scan kept below 48
 children and the bisection above it, every row wins:
 
 | file | oracle ns | accessor ns | ratio |
@@ -70,11 +70,11 @@ per call made it **1.8x slower than the same walk with a caller-held buffer**.
 files) without putting a scratch buffer in the signature, because most nodes are
 leaves and most subtrees are tiny.
 
-**The published vellum trade reproduces.** `Sheet.parent` is 25-33x slower than a
-stored back-pointer and `Sheet.depth` is 5-7x faster than a climb, which is the
-~29x / ~9x the vellum rung already reported. Neither direction is a defect: they
-are the two halves of the same choice, and a matcher on a static file should read
-depth off the sheet and parentage off the quire.
+**The published vellum trade reproduces.** `Sheet.parent` is 25-33x slower than
+a stored back-pointer and `Sheet.depth` is 5-7x faster than a climb, which is
+the ~29x / ~9x the vellum rung already reported. Neither direction is a defect:
+they are the two halves of the same choice, and a matcher on a static file
+should read depth off the sheet and parentage off the quire.
 
 `next_sibling` is the one row where the sheet wins big and the quire cannot
 follow: 971 ns against 11 ns on a twenty-thousand-child parent, because finding

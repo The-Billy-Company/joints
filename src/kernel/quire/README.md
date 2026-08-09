@@ -66,8 +66,8 @@ against `vellum`'s answers to the same questions.
 symbols are not kept, because nothing it serves needs them. A tree needs them.
 Extending the oracle would have cost the thing the oracle is for: two independent
 implementations of the same walk can be checked against each other, and when they
-disagree about a token or a state one of them is wrong. With one implementation a
-disagreement is unfindable. `gather_test.zig` runs that check on every case,
+disagree about a token or a state one of them is wrong. With one implementation
+a disagreement is unfindable. `gather_test.zig` runs that check on every case,
 including a whole real file.
 
 Lexing here is state-directed for the same reason it is there, and it is not
@@ -93,8 +93,8 @@ reduction already spliced whatever it was hiding, so its frame holds a finished
 list.
 
 `Step.field` is orthogonal to all four rows. It files the node the step produced
-or, when the step spliced, **every** child spliced in from it. That last clause is
-load-bearing rather than an edge case: `repeat(seq(',', field('init',
+or, when the step spliced, **every** child spliced in from it. That last clause
+is load-bearing rather than an edge case: `repeat(seq(',', field('init',
 $.expression)))` lowers to an invented list symbol, and the children it splices
 in are the ones that have to carry `init`.
 
@@ -108,9 +108,10 @@ last.
 A node runs from the first byte of its first token to the last byte of its last,
 taken from the parse stack's frames rather than from the child nodes. The
 difference shows up exactly where it matters: a token that produced no node - an
-inline `/regex/` is `.invented` - still consumed bytes, and the rule containing it
-covers them. A rule that consumed nothing sits at zero width where the last token
-ended, rather than dragging its parent back over the whitespace in front of it.
+inline `/regex/` is `.invented` - still consumed bytes, and the rule containing
+it covers them. A rule that consumed nothing sits at zero width where the last
+token ended, rather than dragging its parent back over the whitespace in front
+of it.
 
 ## A stop is reported, never papered over
 

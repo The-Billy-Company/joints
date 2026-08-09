@@ -11,9 +11,9 @@ had drifted in opposite directions:
 
 The lists are the enums now. `intake.spellings(E, dflt)` renders a vocabulary two
 ways from `@typeInfo` — `fell (default), none, keep, relent` for a usage line,
-`none, keep, fell or relent` for a refusal — and `intake.choice` is the one door a
-`--flag=member` goes through, in the file that exists because five verbs once read
-a file five ways.
+`none, keep, fell or relent` for a refusal — and `intake.choice` is the one door
+a `--flag=member` goes through, in the file that exists because five verbs once
+read a file five ways.
 
 **Byte-identical where it was already right.** `--mend`'s usage line and its
 refusal both render exactly the strings they hardcoded. `--policy` gains the

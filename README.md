@@ -25,15 +25,15 @@ the lexer (grain), the succinct balanced-parentheses encoding of the tree
 drives all of it (`parse`, `amend`, `mint`, and the measurement verbs), and
 `libjnt`, the C ABI.
 
-That order is on purpose: the central claim has a falsifier measurable *before* a
-parser exists, so the measurement came first. It says the product of segment
+That order is on purpose: the central claim has a falsifier measurable *before*
+a parser exists, so the measurement came first. It says the product of segment
 effects reproduces the whole-file effect no matter how finely the file is cut,
 across eleven grammars, with nothing disagreeing. Read
 [`research/LANDSCAPE.md`](research/LANDSCAPE.md) for the argument,
 [`research/joinery/`](research/joinery) for the part that had to be earned, and
-[rung 1's verdict](research/joinery/TESTING.md) for what the numbers were - including
-the part where the kill condition as originally written was not met, and why that
-number turned out to be the wrong one to have chosen.
+[rung 1's verdict](research/joinery/TESTING.md) for what the numbers were -
+including the part where the kill condition as originally written was not met,
+and why that number turned out to be the wrong one to have chosen.
 
 Every number there is reproducible from a clone. `zig build test` needs nothing;
 the eleven-grammar sweep needs the grammars, so fetch them first:
@@ -47,9 +47,10 @@ tree-sitter's own tree and buckets it: **78.12% of the corpus gets a tree, and
 at 100%. What is left is concentrated, not spread: yaml gets 0.0% and markdown
 5.4%, both for the reason the next section is about. `zig build census` names the
 wall each grammar stops at and who owns it - of thirty, **five parse whole with
-no wall at all, nineteen read to whole once repair is allowed**, eleven stop on a
-terminal only an external C scanner can produce, ten on a genuinely empty table
-cell, three on the reference walk rather than the fork loop, and one on a fold.
+no wall at all, nineteen read to whole once repair is allowed**, eleven stop on
+a terminal only an external C scanner can produce, ten on a genuinely empty
+table cell, three on the reference walk rather than the fork loop, and one on a
+fold.
 
 Every figure in that paragraph, and rung 4's below, was taken on `7eb9bb9`
 (2026-08-08). A corpus total is only true of the tree it was measured on - four
@@ -232,7 +233,7 @@ that links standing alone. `zig build` installs all three under `zig-out/`.
 
 What exists:
 
-```
+```text
 research/          the argument, and the claim that has to be earned
   LANDSCAPE.md     the map: incumbent measured, five monoids, order of proof
   joinery/         CLAIM · PRIOR_ART · TESTING for the one new thing
@@ -258,7 +259,7 @@ src/surface/abi/   libjnt's bodies and its `export fn` root
 
 Still to come:
 
-```
+```text
 src/kernel/gloss/  the query engine
 ```
 

@@ -23,16 +23,16 @@ instance per sort.
 **The three wrong models of a name, each of which shipped and then didn't.** A
 query name is not a symbol id. One spelling can hold several sorts (Ruby's rule
 `alias` and keyword `"alias"`; `class` in JavaScript, `module` in TypeScript,
-`type` in Python) - the notation already distinguishes them, so the index keeps a
-slot per sort. One spelling can hold several symbols of the *same* sort, because
-a grammar mints a fresh terminal for `token(prec(1, "<"))` beside a plain `"<"` -
-so a step carries a run of ids, and **twenty of the twenty-eight grammars have at
-least one collided spelling**, Ruby thirty-one times. And some names no symbol
-owns at all: this press carries `alias($.identifier, $.type_identifier)` as a
-rename in a side table, and the tree node's kind is the rename, so Rust's
-`highlights.scm` opens on a name that is not in the symbol table. Renames are a
-second id space and a step carries a reading in each, because C++ has a rule and
-a rename that spell the same.
+`type` in Python) - the notation already distinguishes them, so the index keeps
+a slot per sort. One spelling can hold several symbols of the *same* sort,
+because a grammar mints a fresh terminal for `token(prec(1, "<"))` beside a
+plain `"<"` - so a step carries a run of ids, and **twenty of the twenty-eight
+grammars have at least one collided spelling**, Ruby thirty-one times. And some
+names no symbol owns at all: this press carries `alias($.identifier,
+$.type_identifier)` as a rename in a side table, and the tree node's kind is the
+rename, so Rust's `highlights.scm` opens on a name that is not in the symbol
+table. Renames are a second id space and a step carries a reading in each,
+because C++ has a rule and a rename that spell the same.
 
 Two relations the folio does not store fall out of one fixed point over the
 productions. `Folio.supertypes()` says which rules *are* supertypes; the corpus

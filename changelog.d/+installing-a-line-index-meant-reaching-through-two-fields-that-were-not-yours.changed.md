@@ -12,14 +12,14 @@ back before the owner lets go.
 
 The caveat is in the doc comment because it is the kind that bites later.
 `Carry` is copied by value and `Save` is documented pointer-free - about a
-kilobyte, no allocation - which holds exactly as long as a save is a copy in this
-process, and stops holding the moment one is written to a file, where a
+kilobyte, no allocation - which holds exactly as long as a save is a copy in
+this process, and stops holding the moment one is written to a file, where a
 serialized `Save` carries a pointer into a dead address space. So it is a cache
 handle, not state: anything that persists a `Save` drops this on the way out and
-re-offers on the way back in. Nothing is load-bearing for correctness either way
-- `grain.lead` consults a ruling only when it describes the exact bytes in hand -
-so an installer that forgets costs a measurement, never a column, which is also
-why a bench is the only instrument that would ever catch it.
+re-offers on the way back in. Nothing is load-bearing for correctness either
+way - `grain.lead` consults a ruling only when it describes the exact bytes in
+hand - so an installer that forgets costs a measurement, never a column, which
+is also why a bench is the only instrument that would ever catch it.
 
 `kernel/weave`'s three reach-through sites now call it, which is what makes the
 field private in practice rather than by convention: the only write left anywhere

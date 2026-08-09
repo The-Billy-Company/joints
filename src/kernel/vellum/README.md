@@ -34,7 +34,7 @@ and the section below says exactly where it stops short.
 climbed (`max`). Composition shifts the second run's dips and climbs by the
 first run's endpoint, which is the whole homomorphism:
 
-```
+```text
 (a · b).total = a.total + b.total
 (a · b).min   = min(a.min, a.total + b.min)
 (a · b).max   = max(a.max, a.total + b.max)

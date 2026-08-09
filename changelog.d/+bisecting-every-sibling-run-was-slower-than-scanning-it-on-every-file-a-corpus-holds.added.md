@@ -36,6 +36,6 @@ favoured one representation would have meant the rung was wrong.
 
 (`repo f3d3b84bc+21`, M-series laptop with a sibling lane compiling, min-of-7 per
 row, both arms over one shuffled tour interleaved within a round. The rung prints
-and does not assert on time - a wall-clock floor on a shared machine cries wolf -
-but every op is cross-checked against its oracle on every node of every file
-before a single trial is timed, and a disagreement exits nonzero.)
+and does not assert on time - a wall-clock floor on a shared machine cries
+wolf - but every op is cross-checked against its oracle on every node of every
+file before a single trial is timed, and a disagreement exits nonzero.)

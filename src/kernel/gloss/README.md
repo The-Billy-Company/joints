@@ -2,9 +2,9 @@
 
 A `.scm` query is source. tree-sitter ships it as source, and every editor that
 loads a grammar re-parses `highlights.scm` at startup, resolves every node name
-against the symbol table, and compiles every `#match?` regex in the host binding
-- again, per process, forever. None of that depends on the file being edited, so
-none of it needs to happen on the user's machine.
+against the symbol table, and compiles every `#match?` regex in the host
+binding - again, per process, forever. None of that depends on the file being
+edited, so none of it needs to happen on the user's machine.
 
 This directory does it once, at mint, and puts the result in the folio. What
 comes out is a program: names are already symbol ids, fields are already field

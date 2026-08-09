@@ -80,7 +80,7 @@ Not a hedge, a demonstration. Add a sixth field to `g.Step` and build.
 
 Ledger as this lane leaves it:
 
-```
+```text
 src/folio/impose.zig:100:16: error: press.grammar.Step.canary is new to the
 press and unaccounted for in the folio. Give it a slot in its `leaf` record and
 write it below, or name it in `ledger` with a comment saying why the file does
@@ -98,7 +98,7 @@ an alias:
 .alias = leaf.none, // CORRUPTED: writer drops the alias
 ```
 
-```
+```text
 FAIL folio.folio_test.test.a spliced rank is spent by the press and reaches
 no reader through the file: TestExpectedEqual — expected 0, found null
 ```
@@ -111,7 +111,7 @@ Before, on `[`: nothing. The tie was answered by a `left` that `clockvar`
 inherited from `hierarchical_identifier`, `standing` came to 1, and `decide`
 returned before recording.
 
-```
+```text
 prov-before  shift 5, lookahead 20 — 25 terminal(s) accepted of 444
 prov-after   [   read on   [residual shift_reduce, over fold  clockvar -> _identifier   [prec 0 left]]
              shift 7, lookahead 18 — 25 terminal(s) accepted of 444
@@ -120,7 +120,7 @@ prov-after   [   read on   [residual shift_reduce, over fold  clockvar -> _ident
 The same thing happens at **state 1762**, which is where the rest of this
 dossier lives:
 
-```
+```text
 prov-before  =   fold  variable_lvalue -> _identifier   [prec 0 left]
                  [declared reduce_reduce, over fold  nonrange_variable_lvalue -> _identifier]
 prov-after   =   read on   [residual shift_reduce, over fold  variable_lvalue -> _identifier]
@@ -207,7 +207,7 @@ And then the part P4's falsifier could not see.
 `smallest.py` asks whether a snippet parses whole. `c[i] = 0;` now parses whole.
 It parses whole as a **`block_item_declaration`**.
 
-```
+```text
 before   unexpected = at 86 in state 2394
 after    (seq_block (block_item_declaration (data_declaration
            (list_of_variable_decl_assignments (variable_decl_assignment …)))))
@@ -238,9 +238,9 @@ three-line reproducer:
 
 ```verilog
 module m;
-	always @* begin
-		instr_mul = 0;
-	end
+  always @* begin
+    instr_mul = 0;
+  end
 endmodule
 ```
 
@@ -331,7 +331,7 @@ in the shared `.local/standing/` was written at 17:56:48 — newer than *both*
 binaries, so `miss()` returned "use it" for both, and the sweep handed
 `prov-before` the table `prov-after` had minted.
 
-```
+```text
 cached .local/standing/verilog.folio   sha 811e808412d78cbc
 prov-before mints                      sha 3ed97566244be7e3
 prov-after  mints                      sha 811e808412d78cbc

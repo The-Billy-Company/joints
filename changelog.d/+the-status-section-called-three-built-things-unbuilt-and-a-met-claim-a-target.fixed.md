@@ -37,5 +37,5 @@ reader: the query engine, an edit door on the C ABI (`jnt_parse` is the only way
 in, so the weave is reachable from the CLI alone, and the tree walks downward
 only), and M4 as a semiring parameter rather than one policy family. The layout
 block moved grain and vellum into what exists, and corrected the plan's one wrong
-guess about vellum's own shape: it landed above `quire`, not inside it, because it
-reads both the quire it settles and the spine it hangs the word on.
+guess about vellum's own shape: it landed above `quire`, not inside it, because
+it reads both the quire it settles and the spine it hangs the word on.

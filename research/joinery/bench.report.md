@@ -13,7 +13,7 @@ trust least is at the end, and it is the most useful thing in the document.
 Everything in the first four sections was re-measured for this pass rather than
 carried over. One binary, one stamp:
 
-```
+```text
 joints 8e69456aa at .local/lane-report/out/bin/joints
 built 2026-08-05T10:21:47Z from . 8e40d3ebc · repo f7ba40004+55
 ```
@@ -81,7 +81,7 @@ to prove it. `tool/shear.py` walks each file's own top-level construct
 boundaries, finds the first one the same grammar stops accepting, and re-parses
 the prefix below it:
 
-```
+```text
                 whole file                        prefix, identical grammar
   python    1,728 B   54 roots   76.3% standing  ->    438 B   1 root   100%   0 rubble
   scala    20,107 B  1267 roots   66.1% standing  ->     75 B   1 root   100%   0 rubble
@@ -103,13 +103,13 @@ columns.
 > column punishes a grammar for having comments - still stands on its own evidence.
 >
 > What it does not license is the sentence that used to end this paragraph:
-> *"2,206 childless roots sit downstream of a single refusal."* That reads a count
-> of **walls** out of a measurement of **prefixes**, and the prefix column above is
-> its own refutation once you take the ratio. scala keeps **75 bytes of 20,107**
-> (0.4%); ocaml **76 of 16,878** (0.5%). "One root over every byte" is trivially
-> true of a short enough prefix - the limit case is a single construct, one root by
-> definition - so at those fractions the flip is evidence about the cut, not about
-> the file.
+> *"2,206 childless roots sit downstream of a single refusal."* That reads a
+> count of **walls** out of a measurement of **prefixes**, and the prefix column
+> above is its own refutation once you take the ratio. scala keeps **75 bytes of
+> 20,107** (0.4%); ocaml **76 of 16,878** (0.5%). "One root over every byte" is
+> trivially true of a short enough prefix - the limit case is a single
+> construct, one root by definition - so at those fractions the flip is evidence
+> about the cut, not about the file.
 >
 > **The cross-check that settles it comes from the other loop.** `zig build census`
 > reports, per grammar, how many times quire had already put the stack down and
@@ -156,7 +156,7 @@ same mechanism is worth more than either alone.
 
 ### So the board is `rubble`, and verilog owns it
 
-```
+```text
 89,364 strewn = 50,486 orphaned extras + 38,878 rubble
 ```
 
@@ -415,13 +415,14 @@ work moves it.
 Worth saying plainly, because it is the axis I would have drawn if nobody had
 checked: **go has zero residual table refusals and the worst standing ratio in
 the eleven-grammar corpus set; scala carries the largest table debt at 1,221
-refusals and one of the better standings.** The surfaced `lalr.Floor` partition on haskell is 0
-agreed, 55 alone, 0 stuck, 0 open - every refusal sealed under any split - and
-haskell still builds nothing. Those three figures are the press lane's and I
-took them as given rather than re-deriving the partition; what I can say from my
-own table is that the two rows they turn on hold - go is 29.3% standing with 48
-rubble bytes, scala is 66.1% with 2,126. There is no correlation here to report,
-and any figure that implies one is reading two unrelated axes as one.
+refusals and one of the better standings.** The surfaced `lalr.Floor` partition
+on haskell is 0 agreed, 55 alone, 0 stuck, 0 open - every refusal sealed under
+any split - and haskell still builds nothing. Those three figures are the press
+lane's and I took them as given rather than re-deriving the partition; what I
+can say from my own table is that the two rows they turn on hold - go is 29.3%
+standing with 48 rubble bytes, scala is 66.1% with 2,126. There is no
+correlation here to report, and any figure that implies one is reading two
+unrelated axes as one.
 
 **And the 96.4% is `reach` wearing the word `covered`, in the top-line
 scoreboard.** `census.py` sums each grammar's `reach` and prints the total as
@@ -431,7 +432,7 @@ scoreboard.** `census.py` sums each grammar's `reach` and prints the total as
 exhibit: census reads `94656 of 94657, 100.0%`, and fewer than half of those
 bytes are under any root.
 
-```
+```text
 bytes: 295,595 built + 89,364 strewn = 384,959 of 526,798
        56.1% standing against 73.1% covered, 38,878 rubble
        10 of 30 grammars parse whole - one root, no gap by construction
@@ -443,7 +444,7 @@ Re-measured 2026-08-05 on a stamped binary, after the two comment scanners and
 several sibling lanes' work landed - quoted for the trend only, since more than
 this lane's change is in it:
 
-```
+```text
 bytes: 302,174 built + 92,068 strewn = 394,242 of 526,798
        57.4% standing against 74.8% covered, 29,604 rubble
        11 of 30 grammars parse whole
@@ -474,7 +475,7 @@ keystroke costs; the mean is what a session of them costs.
 edits where rust and java break on 30, and that break rate is the whole story of
 its cost. Split by edit kind, so it is not an artifact of deletes:
 
-```
+```text
 rust   13 of 24 deletes broke,  17 of 36 inserts       ~50%
 java   13 of 25 deletes broke,  17 of 35 inserts       ~50%
 json   23 of 27 deletes broke,  27 of 33 inserts       ~83%
@@ -582,7 +583,7 @@ truncates the number that would calibrate it. `python3 tool/fuse.py`.
 I built the count cap back, in a second scratch tree, and swept every grammar on
 its own file:
 
-```
+```text
 haskell, count cap 1<<14    90 roots, 16,385 mends over 17,061B
 haskell, byte share 3/4     94 roots, 16,635 mends over 17,314B
 ```
@@ -598,7 +599,7 @@ It is real and it is small, and it should not be described as anything else.
 grammar on its own file, plus a full wrong-language block across the corpus -
 they overlap almost completely:
 
-```
+```text
 highest right-language row    haskell on its OWN file        50.6%
 lowest wrong-language row     bash reading json               0.0%
 wrong-language rows below the highest right-language row     105 of 110
@@ -618,7 +619,7 @@ right, but verilog is second at 35.7% and julia is fourth at 11.4%.
 **Skip share does not grow with length.** The json grammar reading rust, from
 1.4 KB to 1 MB:
 
-```
+```text
       bytes  skipped   share    secs   us/KB
        1434      658   45.9%   0.006    4213
       11472     5264   45.9%   0.006     544
@@ -633,8 +634,8 @@ does not move a tenth of a point. If it does not climb, a share cap is not what
 stands between this parser and a runaway.
 
 **There is no runaway.** A megabyte of the wrong language costs **0.074 s**, and
-the per-byte rate *falls* across the sweep - 84 to 72 us/KB over the tail, 0.86x
-- because the small rows are dominated by pressing the grammar, which has
+the per-byte rate *falls* across the sweep - 84 to 72 us/KB over the tail,
+0.86x - because the small rows are dominated by pressing the grammar, which has
 nothing to do with length. Cost is linear. The comment's "runs away toward the
 whole file" describes something that is not there.
 
@@ -643,7 +644,7 @@ whole file" describes something that is not there.
 The largest skip share anywhere on the board is **69.6%**, json reading ruby.
 The fuse sits at 75%. I ran all 140 pairs on both builds and compared verdicts:
 
-```
+```text
 rows where the 3/4 fuse changed the answer:  0 of 140
 lengths where it changed the answer:         0 of 6, out to 1 MB
 ```
@@ -820,7 +821,7 @@ direction as all the others: toward the project having claimed too much.
 
 ## Reproducing these four
 
-```
+```bash
 python3 tool/standing.py --rubble         # the board, 30 grammars, honest order
 python3 tool/standing.py --audit          # ...and the `trued` column, which needs an oracle
 python3 research/joinery/consort/askance.py --grammars   # built against square, per grammar
@@ -841,7 +842,7 @@ before, so the instrument now declines to make it.
 
 ---
 
-# Against tree-sitter, on every axis
+## Against tree-sitter, on every axis
 
 Taken twice with `tool/bench.py` at `-Dcli-optimize=ReleaseFast`, against
 tree-sitter 0.26.11, on the same 128 KB files. Every row carries a stamp. The
@@ -850,14 +851,14 @@ than smoothed over.
 
 ## The row we lose worst
 
-```
+```text
 incremental typescript @98%    66,224 us    vs    430.6 us    153.8x
 ```
 
 One space typed and deleted at byte 128,925 of 131,565. Our first keystroke after
 the open costs 66,497 us; our own cold open of the same file is 75,206 us. The
-edit costs **88% of reopening the file** - the incremental path on this grammar is
-not slow, it is barely incremental.
+edit costs **88% of reopening the file** - the incremental path on this grammar
+is not slow, it is barely incremental.
 
 **Re-taken on a current binary, and it now stands alone.** The earlier draft of
 this row read 9,210,623 us and 14,746x, with javascript beside it at 10,066x and
@@ -886,7 +887,7 @@ by profile and by controlled experiment rather than by the name of a terminal.
 
 An earlier draft of this report led with a newline ablation:
 
-```
+```text
 javascript-122.js as-is                 18,237.0 ms
 javascript-122.js, \n replaced by ' '       11.9 ms     "1,533x from one byte class"
 ```
@@ -900,7 +901,7 @@ every `\n` with a space turns everything after byte 251 into **one line
 comment**. The byte count is identical, which is what made the ablation look
 controlled, but the program is not:
 
-```
+```text
 as-is         131,760 B    4,579 ms    tree: 39,407 lines
 \n -> space   131,760 B       20 ms    tree:      17 lines
 ```
@@ -912,7 +913,7 @@ constant, and I checked the wrong one.
 The direct test settles it. Bytes **and** node count held constant, only the
 number of line terminators varied:
 
-```
+```text
 2000 statements, 24,890 B, 28,001 nodes throughout
  newlines 2000      987 ms
  newlines 1000      924 ms
@@ -932,7 +933,7 @@ of my own broken experiment.
 
 `/usr/bin/sample`, 12 seconds of a single 18-second run, 2,354 samples:
 
-```
+```text
 2354  parse.run                                      parse.zig:178
 2312    kernel.quire.gather.Gather.run               gather.zig:544
 2312      kernel.lex.scanner.Scanner.nextKeeping     scanner.zig:704
@@ -951,7 +952,7 @@ are ruled out by measurement rather than by argument.
 
 The same scanner over the same bytes with **no** admitted set, via `joints lex`:
 
-```
+```text
 lex     104,000 B       483 us      one token, no parser context
 parse   104,000 B    14,508 ms      same bytes, same scanner, per-position Expected
 ```
@@ -963,7 +964,7 @@ parse   104,000 B    14,508 ms      same bytes, same scanner, per-position Expec
 
 Both grammars are quadratic, and it is the per-node cost that rises:
 
-```
+```text
 javascript    5,890 B    3,501 nodes       83 ms     23.8 us/node
 javascript   24,890 B   14,001 nodes      987 ms     70.5 us/node
 javascript  102,890 B   56,001 nodes   25,426 ms    454.0 us/node
@@ -980,7 +981,7 @@ construction that makes it, and `python3 tool/order.py` is the gate that holds
 the ratio. Two files of **152,010 bytes** producing **28,011 nodes** each; the
 only difference is which end the 100 KB single token sits at.
 
-```
+```text
 4000 statements, then a 100 KB string literal     16,503 ms
 a 100 KB string literal, then 4000 statements      3,742 ms      4.4x
 100 KB string literal alone                           11.8 ms
@@ -1043,19 +1044,20 @@ off the day all five rows are under the ceiling.
 **`lex` is a false-negative surface for this entire class, and that is the trap
 worth writing down.** The bare lexer over the same 152,010 bytes:
 
-```
+```text
 joints lex  many-then-one.js      46 ms
 joints lex  one-then-many.js      47 ms      1.0x
 joints parse many-then-one.js  16,175 ms
 joints parse one-then-many.js   4,232 ms     3.8x
 ```
 
-Flat, and **350x** cheaper than the slow order of the same bytes. The defect needs the per-position admitted
-set that the parse loop supplies, and the lexer has none to supply, so a gate
-built on `lex` would have looked exactly like health while `parse` stayed
-quadratic - forever. The gate goes through `stamp.ask`, which parses, and it
-re-runs the lexer over the worst pair on every run and prints both, so the trap
-is demonstrated on each invocation rather than recorded once here and forgotten.
+Flat, and **350x** cheaper than the slow order of the same bytes. The defect
+needs the per-position admitted set that the parse loop supplies, and the lexer
+has none to supply, so a gate built on `lex` would have looked exactly like
+health while `parse` stayed quadratic - forever. The gate goes through
+`stamp.ask`, which parses, and it re-runs the lexer over the worst pair on every
+run and prints both, so the trap is demonstrated on each invocation rather than
+recorded once here and forgotten.
 
 One thing the gate cannot do is prove the ratio means what it says, so it checks
 the construction instead of trusting it: bytes and node counts are re-compared
@@ -1133,7 +1135,7 @@ the only part worth quoting.
 715 ns/B against json's 183 - **3.9x**, and `bench.py`'s own independent figures
 (487.6 and 114.7) put it at 4.3x. Nothing like 217x.
 
-#### java has three numbers on three corpora. Quote the second one.
+#### java has three numbers on three corpora. Quote the second one
 
 They are all true and they are answers to different questions, so anyone
 arguing from one of them should have to say which:
@@ -1229,14 +1231,14 @@ Two honest caveats, neither of which changes the verdict:
   collapses survive that; the absolute ns/B should be re-taken on a quiet
   machine before anyone quotes a single number out of this table.
 
-### The fix is live on one path and absent on the other - a folio does not carry it
+### The fix is live on one path, absent on the other - a folio does not carry it
 
 Collecting the prediction took four wrong readings first, and the reason is a
 defect worth more than the prediction was.
 
 **Same binary, same file, two ways of naming the grammar:**
 
-```
+```text
 joints parse upstream/grammars/javascript.json  many-then-one.js   0.14 s
 joints parse <a folio minted by that same binary> many-then-one.js  15.40 s
 ```
@@ -1268,7 +1270,7 @@ two agree, the fix is half-landed.
 The scanner lane landed the round-trip. Same file, same command, binary
 `79741763d` in place of `60f59cb48`:
 
-```
+```text
                                           60f59cb48      79741763d
 parse via upstream/grammars/javascript.json     0.14 s        0.14 s
 parse via a folio minted by that binary        15.40 s        0.04 s
@@ -1335,14 +1337,14 @@ So nobody re-runs them:
 - **Identifier vocabulary.** One distinct identifier against 4,000, at fixed
   bytes and nodes: 3,564 ms against 3,772 ms. 6%.
 - **Sibling count at one level.** 4,000 siblings in one group against 400 groups
-  of ten, at fixed bytes and nodes: 6,942 ms against 3,106 ms. 2.2x - real, and a
-  rounding error against 111x.
+  of ten, at fixed bytes and nodes: 6,942 ms against 3,106 ms. 2.2x - real, and
+  a rounding error against 111x.
 
 ### The whitespace pathology now shares a signature with this
 
 A file of nothing but whitespace is quadratic under the rust folio:
 
-```
+```text
  25,600 B of whitespace       295 ms
 102,400 B                   4,346 ms
 409,600 B                  73,393 ms      16x bytes -> 249x time, n^2.0
@@ -1366,7 +1368,7 @@ both now go 9 of 9 to joints, every measurable grammar, no row excused:
 | throughput | 9 grammars | **0.64x - 0.97x** | cpp 72.8 vs 74.8 ns/B | json 32.8 vs 51.6 ns/B |
 | incremental | 9 grammars | **0.17x - 0.85x** | json 86.5 vs 101.2 us | c 87.0 vs 517.4 us |
 
-```
+```text
 stamp: joints 7a109218d built 2026-08-08T21:26:30Z · tree-sitter 0.26.11
 tool/bench.baseline.json re-recorded from this run: 60 rows over 7 axes, 50 to joints
 ```
@@ -1445,7 +1447,7 @@ own row in handoff 3 below. It is probably a predicate, not an algorithm.
 The one incremental row we win is one of the two grammars in the set with no
 blind externals at all:
 
-```
+```text
 incremental json @98%     83.0 us    vs    104.0 us     0.80x
 ```
 
@@ -1471,7 +1473,7 @@ means a grammar change is a 148 ms edit-compile loop instead of a 12.4 second on
 `startup` was skipped on every grammar but one. It is a fixed cost subtracted
 from a slope, and where the parse is slow the subtraction is noise:
 
-```
+```text
 startup javascript   skipped: the 5,239 ms parse swamps the fixed cost (-207 ms, +-809%)
 startup typescript   skipped: the 6,922 ms parse swamps the fixed cost (-174 ms, +-1499%)
 startup rust         skipped: the   416 ms parse swamps the fixed cost (-183 ms, +-75%)
@@ -1480,8 +1482,8 @@ startup rust         skipped: the   416 ms parse swamps the fixed cost (-183 ms,
 The one that survived, on the second sweep only, is
 `startup json 128 KB = 4.124 ms, ratio 0.65`. One row is not an axis. **The
 startup axis is blocked behind the throughput defect** - it becomes measurable
-the day the quadratic scan is gone and not before. Three honest "skipped" lines with
-the arithmetic on them beat a published negative duration.
+the day the quadratic scan is gone and not before. Three honest "skipped" lines
+with the arithmetic on them beat a published negative duration.
 
 Six grammars are skipped from the timing axes outright because joints stops
 early on the 128 KB file - bash, c, cpp, go, python, ruby - each with its wall
@@ -1506,7 +1508,7 @@ is precisely what this dossier exists to prevent.
 35 of 39 guarded numbers held across a **4.3x change in machine load**. Four
 moved past slack:
 
-```
+```text
 press/cpp                     0.0181 -> 0.02416
 press/typescript              0.1026 -> 0.2041
 throughput/javascript 128 KB   576.2 -> 729
@@ -1598,8 +1600,8 @@ before the fix. The 60-280x spread is gone on both paths.
 
 **Everything above this section, dated before `79741763d`, is a folio-path number
 taken while the folio did not carry the mask.** They are left standing rather than
-restated: they are what the product actually cost, and the retraction habit here is
-to mark rather than delete.
+restated: they are what the product actually cost, and the retraction habit here
+is to mark rather than delete.
 
 ### An incremental number needs two labels, not one
 
@@ -1621,10 +1623,10 @@ the same parser and all three are true.
 
 **Every incremental row in this report is `@98%`, and the `%` is relative to that
 file's length** - never an absolute byte. That is stated in `keystroke()` and it
-was chosen because an edit near the bottom pays for every byte before it, which is
-where an author actually types and the only position where an incremental parser
-can quietly stop being one. On the weave lane's new table that is the *flat*
-regime; its own measurements were in the linear one.
+was chosen because an edit near the bottom pays for every byte before it, which
+is where an author actually types and the only position where an incremental
+parser can quietly stop being one. On the weave lane's new table that is the
+*flat* regime; its own measurements were in the linear one.
 
 **So the rust anomaly is not reconciled here, it is declared incomparable.** Our
 `rust @98%` at 1.0% of a cold open and weave's 64% differ in cut position *and*
@@ -1649,14 +1651,14 @@ A folio path that quietly re-pressed would hand back the grammar path's numbers
 wearing a folio label - the same class of error as everything else found tonight,
 and invisible in the output. The press-skip timing says which:
 
-```
+```text
 mint javascript.json -> a folio                       0.12 s
 parse via grammar.json  (pays the import every time)  0.14 s
 parse via that folio                                  0.04 s
 ```
 
-A silent re-press cannot cost **less** than the press. At 0.04 s against a 0.12 s
-mint the press is genuinely skipped, so these rows are folio rows.
+A silent re-press cannot cost **less** than the press. At 0.04 s against a 0.12
+s mint the press is genuinely skipped, so these rows are folio rows.
 
 ### The 15.40 s is historical, and that settles a non-reproduction
 
@@ -1666,7 +1668,7 @@ two live explanations - those grammars not carrying the import-derived fact, or
 the round-trip fix having landed underneath it - **it is the second.** Same file,
 same command, same machine:
 
-```
+```text
 60f59cb48 (05:17Z)   folio 15.40 s   grammar 0.14 s
 677643927 (05:38Z)   folio  0.04 s   grammar 0.14 s
 ```
@@ -1677,7 +1679,7 @@ rather than deleted.
 
 ## Handoffs
 
-### 1. Scanner lane, `src/kernel/lex/scanner.zig` - the parse is quadratic and the time is in `reach`
+### 1. Scanner lane, `scanner.zig` - the parse is quadratic, time is in `reach`
 
 **The claim.** Scanning a byte costs in proportion to how much has already been
 read, which makes every parse quadratic. It is not ASI, not newlines, not
@@ -1692,7 +1694,7 @@ measured and discarded in the section above.
 **The witness, and the check that says you are done.** It is committed now, so
 nothing here depends on a `/tmp` that a reboot empties:
 
-```
+```bash
 python3 tool/order.py            # all five grammars, held to a 1.6x ceiling
 python3 tool/order.py --grammar javascript --calibrate --reps 3
 ```
@@ -1805,7 +1807,7 @@ claiming it.
 
 ## Reproducing
 
-```
+```bash
 python3 tool/bench.py run       # every axis
 python3 tool/bench.py verify    # and hold them to tool/bench.baseline.json
 python3 tool/bench.py list      # the axes, and which grammars each one can run

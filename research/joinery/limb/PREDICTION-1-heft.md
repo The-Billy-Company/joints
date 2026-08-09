@@ -1,4 +1,4 @@
-# Prediction 1 - the tie-break at a merge is dynamic precedence, not speculation depth
+# Prediction 1 - a merge tie-break is dynamic precedence, not speculation depth
 
 Written before anything was built or measured. Oracle frozen as `limb`
 (`attest.py freeze limb`, 30 grammars, tree-sitter 0.26.11) so neither arm can
