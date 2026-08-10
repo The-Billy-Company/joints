@@ -918,6 +918,63 @@ def includes(blob: bytes, beside: Path) -> list[tuple[str, Path]]:
     return out
 
 
+def unseen(at: Path, url: str) -> int:
+    """The includes only the preprocessor can see, fetched to a fixpoint.
+
+    `includes` reads `#include "…"` with a regex, which is every include in 29
+    of the 30 grammars and not the one in tree-sitter-yaml:
+
+        #define _file(x) _str(schema.x.c)
+        #include _file(YAML_SCHEMA)
+
+    There is no quoted string to match, so the closure ended one file short and
+    `tree-sitter build` failed on a header nobody had fetched - which is why
+    yaml reached no axis of the bench at all. A regex cannot resolve that; a
+    preprocessor resolves it by definition, so this asks one. `-MG` is the whole
+    trick: it makes clang *list* a header it cannot find instead of stopping on
+    it, so one call names what is missing rather than only the first thing.
+
+    It runs after the textual closure rather than instead of it, and takes only
+    what is still absent from disk. That keeps the regex's answer authoritative
+    where it has one - `includes` also decides containment in `sandboxed`, and
+    two walks disagreeing about what a scanner includes is the fault this file
+    already fixed once - and leaves this to name the remainder. The loop repeats
+    because a macro-named file may include more of its own.
+
+    No clang, no opinion: the build that needs the file will say so itself.
+    """
+    if not shutil.which("clang"):
+        return 0
+    bad = 0
+    for _ in range(8):  # a fixpoint in practice; a bound so a cycle cannot hang
+        got = subprocess.run(["clang", "-MM", "-MG", at.name], cwd=at.parent,
+                             capture_output=True, text=True, check=False)
+        if got.returncode != 0:
+            return bad
+        deps = got.stdout.replace("\\\n", " ").split(":", 1)[-1].split()
+        want = [d for d in deps
+                if not os.path.normpath(d).startswith("tree_sitter/")
+                and d != at.name and not (at.parent / d).exists()]
+        if not want:
+            return bad
+        for leaf in want:
+            away = "/".join(url.split("/")[:-1]) + "/" + leaf
+            try:
+                with urllib.request.urlopen(away, timeout=60) as r:  # noqa: S310 - https literal
+                    more = r.read()
+            except (urllib.error.URLError, OSError):
+                print(f"  none {'':<11} {leaf} is not beside the scanner upstream")
+                bad += 1
+                continue
+            target = at.parent / leaf
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(more)
+            print(f" wrote {'':<11} {leaf:<11} "
+                  f"{hashlib.sha256(more).hexdigest()[:16]} {len(more)} bytes "
+                  f"(named by a macro, not by a quoted include)")
+    return bad
+
+
 def refresh(target: Path, blob: bytes, home: Path) -> bool:
     """Lay a scanner down, and relink only if it is actually a different one.
 
@@ -1046,6 +1103,7 @@ def fetch_scanners(which: str = "dossier", work: Path | None = None) -> int:
             print(f"{' wrote' if moved else '  same'} {pin.name:<11} {leaf:<11} "
                   f"{hashlib.sha256(blob).hexdigest()[:16]} {len(blob)} bytes")
             bad += beside(url, home, blob)
+            bad += unseen(home / leaf, url)
             break
         else:
             print(f"  none {pin.name:<11} no scanner.c or scanner.cc at {pin.commit[:12]}")
