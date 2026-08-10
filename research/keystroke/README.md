@@ -16,6 +16,7 @@ re-mint policy.
 | [`RESULT-1-mechanism.md`](RESULT-1-mechanism.md) | the explanation: php debunked, the forest gate, and `holds` re-lexing with a slate the parse never used |
 | [`PREDICTION-2-forest.md`](PREDICTION-2-forest.md) → [`RESULT-2-forest.md`](RESULT-2-forest.md) | the policy change, its very large speed win, and the guard that killed it. Four predictions, three falsified |
 | [`PREDICTION-3-slate.md`](PREDICTION-3-slate.md) → [`RESULT-3-slate.md`](RESULT-3-slate.md) | the prefix half attempted three ways, its speed measured on a single-variable arm, and one keystroke of haskell that refuses all three. Eight predictions, two falsified |
+| [`RESULT-4-book.md`](RESULT-4-book.md) | a third reason `holds` declines, found from the other side of the house: it restored the scanner only for a hand-written one, so a grammar whose scanner is a book replayed with stale memory. yaml 0.97 → 0.49 prefix. No prediction file |
 | [`PREDICTION-1-mechanism.md`](PREDICTION-1-mechanism.md) | written first, before any measurement past the scoreboard's own |
 
 ## The two halves, and which one owns Swift
@@ -33,6 +34,10 @@ tiling was dropped, and then it is `cold`.
   raw table row, where `offer` unions every live reading, narrows with
   `shiftable`, and admits every sprig. Different slate, different maximal munch,
   different token, ring declined. `unheld=4` with `unseamed=0 unfit=0`.
+  It was also off on yaml and html for a **second, unrelated** reason - the
+  replay restored the scanner only when the grammar had a hand-written one, so a
+  grammar whose scanner is a book replayed with another attempt's memory. Fixed;
+  see Result 4.
 
 Swift is the second one. It is the row a user feels and the smaller job - **but
 not the larger prize, and Result 3 measured that.** Where a ring sits relative to
@@ -83,3 +88,8 @@ at k=16**, and neither has anything to do with this lane.
    hole in either tiling, and `stoop` can see neither.
 4. **`turned_fork`.** 65% of swift's offsets are inside a live GLR fork and can
    never be lifted into. This is a ceiling on 3, not a bug.
+5. **A ring whose `at` and `token` describe two different places.** haskell,
+   kotlin and elixir replay from a ring and land *behind* the token that ring
+   indexes - kotlin by 7 bytes, with `public` sitting in the gap. Neither the
+   slate nor the scanner; the ring itself disagrees with itself. Result 4 has the
+   three reproductions and no diagnosis.

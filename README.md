@@ -1,6 +1,7 @@
-# joints: One Binary, One File, Every Language
+# joints: a grammar is data - and so is its scanner
 
 - [Status](#status)
+- [What an external scanner still costs us](#what-an-external-scanner-still-costs-us)
 - [Overview](#overview)
 - [Why this over tree-sitter?](#why-this-over-tree-sitter)
 - [The idea](#the-idea)
@@ -14,7 +15,9 @@
 parser now.** What exists: the press (a tree-sitter `grammar.json` importer, an
 LR(0) collection, LALR lookaheads, and conflict resolution that reaches zero
 residual conflicts on eleven real grammars), the stack-effect monoid M2 with the
-cursor that composes it, a terminal scanner, a single-stack reference walk to
+cursor that composes it, a terminal scanner, the customaries that give that
+scanner the state a C external scanner would have kept (eight grammars, shipped
+in the binary), a single-stack reference walk to
 check the algebra against, the balanced tree the joints hang from (M3, the
 spine), the concrete syntax tree a parse yields (the quire, with delete-and-
 supply repair at every refusal), the weave that holds a file open and re-parses
@@ -42,18 +45,18 @@ the eleven-grammar sweep needs the grammars, so fetch them first:
 
 **Where the parse stands, over thirty grammars and 527 KB of real files.**
 `python3 tool/plumb.py board` holds every byte of the corpus against
-tree-sitter's own tree and buckets it: **78.12% of the corpus gets a tree, and
-0.48% of that is read as something else.** Eighteen of the thirty grammars are
-at 100%. What is left is concentrated, not spread: yaml gets 0.0% and markdown
-5.4%, both for the reason the next section is about. `zig build census` names the
-wall each grammar stops at and who owns it - of thirty, **five parse whole with
-no wall at all, nineteen read to whole once repair is allowed**, eleven stop on
-a terminal only an external C scanner can produce, ten on a genuinely empty
-table cell, three on the reference walk rather than the fork loop, and one on a
-fold.
+tree-sitter's own tree and buckets it: **79.55% of the corpus gets a tree, and
+0.39% of that is read as something else.** Twenty of the thirty grammars are at
+100%, two of them - yaml and markdown - only since the scanners became data, for
+the reason the next section is about. `zig build census` names the wall each
+grammar stops at and who owns it - of thirty, **five parse whole with no wall at
+all, twenty read to whole once repair is allowed**, eleven stop on a terminal no
+scanner here answers, two on a rule their own customary is missing, eight on a
+genuinely empty table cell, three on the reference walk rather than the fork
+loop, and one on a fold.
 
-Every figure in that paragraph, and rung 4's below, was taken on `7eb9bb9`
-(2026-08-08). A corpus total is only true of the tree it was measured on - four
+Every figure in that paragraph, and rung 4's below, was taken on `bf8e0ad`
+(2026-08-09). A corpus total is only true of the tree it was measured on - four
 boards published in one morning here once disagreed by ~1,900 bytes with all four
 correct about different trees - so re-run the two commands rather than trusting
 the numbers if this tree has moved.
@@ -95,24 +98,54 @@ either measured - in which case the instrument that produced it is named beside
 it and reproducible from a clone - or a target with a kill condition attached, in
 which case it is labelled as one. Rungs 1 and 4 have been run; the rest have not.
 
-## What an external scanner costs us
+## What an external scanner still costs us
 
 A tree-sitter grammar can declare an **external scanner** - a hand-written C
 function that lexes what a regex cannot: Python's indentation, Ruby's heredocs,
 OCaml's nested comments. Shipping per-language C is the one thing this package
-exists not to do, so joints reimplements the *mechanisms* instead. A column
-stack covers the offside rule; a mark stack covers delimited spans. A grammar
-gets one of those only when its own declarations prove it follows that
-convention - never because a token happens to be spelled the way some other
-language spells it. If nothing proves it, the grammar gets silence. A token we
-cannot produce beats a token we produce wrongly, and the wrong kind is invisible
-until somebody reads the tree.
+exists not to do, so joints transcribes the *mechanism* instead. A **customary**
+is a grammar's scanner written as data: rules over a fixed algebra of typed
+organs - a frame stack for layout, a mark stack for delimited spans, eight
+registers - read by one interpreter that ships once for every language. A
+grammar gets a rule only when its own declarations earn it, never because a
+token is spelled the way some other language spells it. If nothing earns it, the
+grammar gets silence: a token we cannot produce beats a token we produce
+wrongly, and the wrong kind is invisible until somebody reads the tree.
 
-That line has a price, and here is where it falls. Eight grammars - haskell,
-markdown, yaml, scala, swift, elixir, kotlin, html - keep per-language state in
-C structs across calls, and that is **310 of the 382 externals** declared across
-the held-out set. No reader that refuses to understand C is going to lower those.
-I am not going to pretend otherwise.
+Eight grammars keep per-language state in C structs across calls - haskell,
+markdown, yaml, scala, swift, elixir, kotlin, html - and that is **310 of the
+382 externals** declared across the held-out set. All eight have a book now, and
+those books claim **198 of the 310**. The previous version of this paragraph
+ended "no reader that refuses to understand C is going to lower those, and I am
+not going to pretend otherwise," which was wrong, and wrong in the direction
+that flatters the writer for candour instead of measuring. The 112 unclaimed are
+the honest remainder, and they are not evenly spread. haskell declares 48
+externals and its book claims 8 of them; 18 more are answered by a hand-written
+Zig scanner, `hand/writ.zig`, and the other 22 are answered by nothing at all.
+`joints lex` will say exactly that for any grammar. A book covering part of a
+grammar retires nothing.
+
+Two grammars moved from *nothing* to a tree because of this. **yaml goes 0.0% to
+100% standing and markdown 5.4% to 100%** - and the two are not equally proven.
+markdown's 3,304 bytes are judged against tree-sitter's own tree: 516 agree, 6
+are read as something else, the rest is whitespace no kind comparison can speak
+to. yaml's 18,935 bytes are **unjudged**, every one of them, because
+tree-sitter's yaml scanner does not compile here and there is no oracle to hold
+them against. So yaml is a tree where there was no tree, which is worth having,
+and it is *not* a claim that the tree is right. html is the strong evidence
+instead: 47,047 judged bytes, **zero** read as something else, its 505-line
+hand-written ancestry scanner deleted, and the differential reports no
+differences at all.
+
+The census names which scanner declined, rather than blaming the language.
+Eleven of thirty grammars still stop on a terminal no scanner here answers, but
+that eleven splits: six hand the token to C nobody has transcribed, three have a
+hand that exists and produced nothing at that offset - a defect in the hand, not
+an absence - and two want a declared extra that is in no action row at all. Two
+more stop with owner `customary`: markdown on `_soft_line_ending`, yaml on
+`_bl`. That is the sentence worth having. "Nobody wrote a scanner" is a wall you
+cannot act on; "this grammar's book claims this terminal and produced nothing
+here" points at the rule to fix.
 
 So be concrete about what a grammar with unanswered externals still gets. It
 imports; nineteen unfamiliar grammars went in cold with no refusals at the front
@@ -121,7 +154,7 @@ ships a folio smaller than the shared library - seventeen had a buildable `.so`
 to compare against and the folio won every time, median 29% of its size. And it
 parses every construct that does not need the external. That is a real product;
 "parses whole except inside heredocs" is worth having. "Supports every language"
-would be a lie, and the title of this README is a goal rather than a status line.
+would still be a lie, which is why it is no longer the title.
 
 ## Overview
 
@@ -138,17 +171,25 @@ Here a grammar becomes **data**: a table in a file. One binary plus one
 **folio** is every language you support. No C compiler in the loop, no `.so` per
 language, no ABI window, no Emscripten pin, no `parser.c` in git.
 
+Its scanner does too. The part of a tree-sitter grammar that stays C even after
+the table is generated - the external scanner, with its own `malloc`, its own
+`serialize`/`deserialize`, its own struct of state carried between calls - is a
+**customary** here: rules over typed organs, read by one interpreter. Which means
+the sentence above has no asterisk on it.
+
 The runtime is arena-only and freestanding-capable, which is the part that
 matters for reach. It runs in a browser, in an editor, on a phone, in a sandbox,
 inside another language's FFI, with no per-surface build story.
 
 ## Why this over tree-sitter?
 
-Honestly: today, reach and nothing else - it returns a tree now, from one
-binary and one file, but the grammars that lean hardest on external scanners
-still parse "whole except inside the heredocs" (see above), and gloss does not
-exist, so the query files that make a tree *useful* have nothing to run on yet.
-The pitch when it lands is four things, and speed is not one of them.
+Honestly: today, reach and nothing else - it returns a tree now, from one binary
+and one file. Of the eight grammars that lean hardest on external scanners, five
+are at 100% standing (two of them only since their scanners became data) and
+three are not: kotlin 46.8%, haskell 56.9%, swift 91.7%, all still parsing "whole
+except inside the layout" (see above). And gloss does not exist, so the query
+files that make a tree *useful* have nothing to run on yet. The pitch when it
+lands is four things, and speed is not one of them.
 
 **Size.** Tree-sitter's dense parse table is 64% of `parser.c` at 24.3% density.
 Predicate minterms plus action-bisimulation plus a DAFSA should land materially
@@ -189,7 +230,7 @@ joints runs five monoids over one balanced tree:
 
 | | The monoid | What it buys | State |
 |---|---|---|---|
-| **M1** | lexical transition functions | data-parallel lexing; an edit does not invalidate downstream lexing | a scanner that tokenizes real files, still missing the externally-scanned terminals. Grain's vectorized first pass sits under it and pays up to 3.6x on the walk - but its line index repays only a forward sweep, and is 0.08x-0.43x on jumbled access |
+| **M1** | lexical transition functions | data-parallel lexing; an edit does not invalidate downstream lexing | a scanner that tokenizes real files, and the customaries that answer 198 of the 310 externals whose C keeps state between calls - the remaining 112 are still unanswered. Grain's vectorized first pass sits under it and pays up to 3.6x on the walk - but its line index repays only a forward sweep, and is 0.08x-0.43x on jumbled access |
 | **M2** | LR stack effects, the **joints** | position-independent reparse; parallel parse; GLR paid only where the element is multi-valued | built and measured - rung 1 |
 | **M3** | balanced parentheses | the tree itself, at 2n+o(n) bits, navigated by range min-max | built both ways. The spine is generic over the monoid and verified against random edit streams; vellum settles it at **2.82 bits of shape a node** - 1.96x smaller end to end, because kind, span and field are facts about the grammar and do not compress into parentheses. 5x faster on `depth`, **30-100x slower on `parent`**, 105x faster to re-index after a keystroke |
 | **M4** | a semiring parameter | least-cost repair, ranking, ambiguity counting - one walk, different `⊕` | repair ships as mend: delete-and-supply at the refusal, four author-facing policies. The semiring is built and proven in `irregex.math.semiring`; mend does not take it as a parameter yet |
@@ -240,13 +281,14 @@ research/          the argument, and the claim that has to be earned
   joinery/corpus/  one ledger program in eleven languages - every per-language number
 grammars.toml      the eleven tree-sitter grammars every number is measured over, pinned
 tool/              fetch and check those grammars; run rung 1 as a gate
+customary/         one book per grammar: the scanner-as-data, embedded at build time
 test/grammar/      the one grammar committed, so the test build needs no network
 charter.zone       the zoning import topology, judged against the real `@import` graph
 include/           `jnt.h`, the normative statement of the C ABI
 src/press/         the compiler: grammar.json in, LR(0) → LALR → resolved tables out
 src/folio/         the artifact: write, map, verify, slice - and the codex of many
 src/kernel/grain/  the vectorized structural pass under the scanner: lines and indents
-src/kernel/lex/    the terminal scanner (M1)
+src/kernel/lex/    the terminal scanner (M1), and the customary interpreter under it
 src/kernel/joint/  the stack-effect monoid (M2) and the cursor that composes it
 src/kernel/walk/   a single-stack reference LR walk, to check the algebra against
 src/kernel/spine/  the monoid-annotated balanced tree everything binds to (M3)
