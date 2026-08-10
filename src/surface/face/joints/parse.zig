@@ -204,6 +204,16 @@ pub fn run(
             gr.name, sc.blind.len,
         });
     }
+    // The other side of the same sentence, and the reason it is printed beside
+    // the blindness rather than instead of it: a grammar part way through its
+    // transcription is blind to some externals and answers others, and a reader
+    // shown only the first number reads a customary that covers 105 of yaml's
+    // 113 terminals as a lexer that covers none of them.
+    if (sc.transcribed.len > 0 or sc.handed.len > 0) {
+        try e.print("joints: {s}: {d} answered by customary, {d} by hand\n", .{
+            gr.name, sc.transcribed.len, sc.handed.len,
+        });
+    }
     if (sc.declined.len > 0) {
         // The other half of the same honesty, and until now the half nobody
         // could see: `declined` was computed, used to clear a seat, and printed
@@ -270,7 +280,11 @@ pub fn run(
         // Flushed before the verdict so the two streams read in the order the
         // work happened when both land on one terminal.
         try w.flush();
-        try verdict(e, gr, path, &q, parser.tables(), sc.blind, found);
+        try verdict(e, gr, path, &q, parser.tables(), .{
+            .blind = sc.blind,
+            .handed = sc.handed,
+            .transcribed = sc.transcribed,
+        }, found);
         if (q.stop != .accepted and worst == 0) worst = 1;
         // The exit code is deliberately NOT moved by this. The family is
         // published three values wide - 0 accepted, 1 stopped early, 2 nothing
@@ -569,7 +583,7 @@ pub fn verdict(
     path: []const u8,
     q: *const quire.Quire,
     t: *const press.Tables,
-    blind: []const press.Symbol,
+    cannot: press.inquest.Cannot,
     found: quire.Quire.Survey,
 ) !void {
     try e.print("joints: {s}: ", .{path});
@@ -635,7 +649,7 @@ pub fn verdict(
         }
     }
     try e.writeAll("\n");
-    try owner(e, gr, q, t, blind);
+    try owner(e, gr, q, t, cannot);
 }
 
 /// Who has to change something for this wall to move.
@@ -655,7 +669,7 @@ fn owner(
     gr: *const joints.press.Grammar,
     q: *const quire.Quire,
     t: *const press.Tables,
-    blind: []const press.Symbol,
+    cannot: press.inquest.Cannot,
 ) !void {
     const wall: press.inquest.Wall = switch (q.stop) {
         .accepted => return,
@@ -677,7 +691,7 @@ fn owner(
             },
         },
     };
-    const found = press.inquest.over(t, gr, wall, blind);
+    const found = press.inquest.over(t, gr, wall, cannot);
     try e.print("joints: {s}: ", .{gr.name});
     try press.inquest.write(found, gr, wall, e);
     try e.writeAll("\n");
@@ -698,7 +712,7 @@ fn said(gpa: std.mem.Allocator, gr: *const press.Grammar, q: *const quire.Quire,
     const tables: *const press.Tables = undefined;
     var out: std.Io.Writer.Allocating = .init(gpa);
     errdefer out.deinit();
-    try verdict(&out.writer, gr, "/x/a.json", q, tables, &.{}, found);
+    try verdict(&out.writer, gr, "/x/a.json", q, tables, .{}, found);
     return out.toOwnedSlice();
 }
 

@@ -228,9 +228,10 @@ pub const Result = struct {
     /// Here rather than exported beside `tables` because every caller already has
     /// the `Result` - the question is about a table, and asking it should not need
     /// a second import.
-    /// `blind` is the scanner's list of externals it has no stand-in for, or
-    /// `null` from a caller with no scanner to ask. It is argument 5 and it is
-    /// the only input here press cannot derive: a table cannot know which
+    /// `blind` is what the scanner said about the externals - which it cannot
+    /// make at all, and which a hand or a customary answers but declined here -
+    /// or `null` from a caller with no scanner to ask. It is argument 5 and it
+    /// is the only input here press cannot derive: a table cannot know which
     /// terminals the lexer failed to make, which is exactly why every wall of
     /// that kind used to come back `weave`.
     pub fn whose(

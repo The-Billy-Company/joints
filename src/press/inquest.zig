@@ -227,6 +227,18 @@ pub const Owner = enum {
     /// The scanner: no terminal covers these bytes, usually because the grammar
     /// hands them to an external scanner that is not implemented here.
     lexer,
+    /// This grammar's customary: it claims the terminal the state was waiting
+    /// for and produced nothing at this offset.
+    ///
+    /// Distinct from `lexer` because the work order is different in kind and in
+    /// size. `lexer` is "a scanner for this language does not exist here" - go
+    /// read someone's C and transcribe it. This is "the transcription exists and
+    /// one of its rules is wrong or missing", which is a rule in
+    /// `customary/<grammar>.json`, no rebuild of anything, and a falsifier that
+    /// already knows how to check it. Folding the two would put every rung-3
+    /// grammar's remaining defects back under the same heading as the grammars
+    /// nobody has started, which is the number the census exists to separate.
+    customary,
     /// The press: a cell a merge invented sits on the path the token drove.
     press,
     /// The parse loop: every cell on the path is what the grammar means, and the
@@ -262,6 +274,14 @@ pub const Because = enum {
     /// Argument 5, first half: the wall state's row admits a terminal the
     /// grammar hands to an external scanner this lexer has no stand-in for.
     awaited_external,
+    /// Argument 5, first half, second population: the terminal the row admits is
+    /// one a hand answers, and the hand declined here. Answered in principle and
+    /// not at this offset, which is our Zig rather than a missing scanner.
+    awaited_hand,
+    /// Argument 5, first half, third population: the terminal the row admits is
+    /// one this grammar's customary claims, and the customary produced no token
+    /// here. The narrowest work order the classifier can issue.
+    awaited_customary,
     /// Argument 5, second half: a terminal the scanner cannot produce is a
     /// declared extra, so it is in no action row anywhere and any bytes of it
     /// in this file were mis-lexed. Never proven - the grammar says the
@@ -310,6 +330,12 @@ pub const Because = enum {
                 "scanner we cannot run, so a token no lexer here can make was in its way; " ++
                 "the stand-in says which half of the row admitted it, because a shift is a " ++
                 "token this state would have consumed and a lookahead is one it only tolerates",
+            .awaited_hand => "this state admits a terminal a hand-written scanner here answers, " ++
+                "and the hand produced nothing at this offset; the scanner exists, so this is " ++
+                "a defect in it rather than a language nobody has transcribed",
+            .awaited_customary => "this state admits a terminal this grammar's customary claims, " ++
+                "and the customary produced no token here; the transcription exists, so the " ++
+                "work is one of its rules and not a scanner",
             .blind_extra => "a terminal the scanner cannot produce is a declared extra, so it is " ++
                 "in no action row at all and any of its bytes in this file were read as " ++
                 "something else; nothing here says the file holds one, so this is the best " ++
@@ -393,12 +419,41 @@ pub const Finding = struct {
     admitted: ?lalr.Half = null,
 };
 
-/// The externals a scanner has no stand-in for, or `null` when nobody asked.
+/// What the scanner said about this grammar's externals, or `null` when nobody
+/// asked.
 ///
 /// The same three-state discipline `Lexable` uses, and for the same reason: an
-/// empty list means "asked, and there are none", which is a proof, where `null`
-/// means the caller had no scanner to ask and argument 5 must not run at all.
-pub const Blind = ?[]const g.Symbol;
+/// all-empty answer means "asked, and there are none", which is a proof, where
+/// `null` means the caller had no scanner to ask and argument 5 must not run at
+/// all.
+pub const Blind = ?Cannot;
+
+/// The externals no pattern in the slate covers, in the three populations that
+/// have three different owners. One number could not tell them apart and the
+/// conflation is not cosmetic: a reader who is told "blind to 8 terminals" goes
+/// off to write a scanner, and for two of those three answers the scanner is
+/// already written and declined here.
+///
+/// Every one of these is *unseated*, which is the fact the table arguments
+/// below need: the token the row was handed is not the one the file holds, so a
+/// sentence about splitting the state is true and beside the point. What they
+/// differ in is whose desk the work order lands on.
+pub const Cannot = struct {
+    /// Nothing here answers these at all - the bytes an external stands for are
+    /// not in `grammar.json` and no hand or customary was written for them. The
+    /// work order is "transcribe this scanner", and it is the only one of the
+    /// three that is about absence.
+    blind: []const g.Symbol = &.{},
+    /// A hand-written scanner in `kernel/lex/hand/` answers these, and it
+    /// produced nothing at this offset. Our Zig, so the work order is a
+    /// debugger and not a transcription.
+    handed: []const g.Symbol = &.{},
+    /// This grammar's own customary claims these, and it produced no token
+    /// here. The work order is one rule in `customary/<grammar>.json` - the
+    /// smallest and best-aimed of the three, which is the whole reason the
+    /// population is split out rather than counted with the blind.
+    transcribed: []const g.Symbol = &.{},
+};
 
 /// Argument 5, first half. Whether the wall's own row admits a terminal the
 /// scanner cannot produce.
@@ -549,13 +604,37 @@ fn refused(
     // this wall beats a grammar-wide one, and it names a terminal the reader
     // can go look at. Argument 5's *second* half has neither property, so it
     // waits below the path - see `blindExtra`.
-    if (blind) |cannot| if (awaited(t, gr, state, cannot)) |stand| {
-        out.owner = .lexer;
-        out.because = .awaited_external;
-        out.unlexable = stand.sym;
-        out.admitted = stand.half;
-        return out;
-    };
+    //
+    // The three populations are asked in strict order and absence wins, because
+    // "nobody wrote this" is stronger evidence than "somebody wrote it and it
+    // declined here": a grammar that is blind to a terminal *and* has a
+    // customary claiming another one is a grammar whose missing scanner is the
+    // story. Asking blind first is also what keeps every verdict that predates
+    // customaries byte-identical - the other two lists are empty for a grammar
+    // that has neither, which is most of them.
+    if (blind) |cannot| {
+        if (awaited(t, gr, state, cannot.blind)) |stand| {
+            out.owner = .lexer;
+            out.because = .awaited_external;
+            out.unlexable = stand.sym;
+            out.admitted = stand.half;
+            return out;
+        }
+        if (awaited(t, gr, state, cannot.handed)) |stand| {
+            out.owner = .lexer;
+            out.because = .awaited_hand;
+            out.unlexable = stand.sym;
+            out.admitted = stand.half;
+            return out;
+        }
+        if (awaited(t, gr, state, cannot.transcribed)) |stand| {
+            out.owner = .customary;
+            out.because = .awaited_customary;
+            out.unlexable = stand.sym;
+            out.admitted = stand.half;
+            return out;
+        }
+    }
 
     // The path first, nearest end first: the wall's own cell, then every state
     // the token folded through. A cell on the path is a proof; the same cell
@@ -595,7 +674,10 @@ fn refused(
     //
     // Unproven for exactly the reason `dropped_elsewhere` is: the damage is
     // real somewhere and nothing places this wall downstream of it.
-    if (blind) |cannot| if (blindExtra(gr, cannot)) |sym| {
+    // Only the blind population: an extra a hand or a customary answers is one
+    // the scanner *can* produce, so the argument this makes - "any bytes of it
+    // in this file were read as something else" - is simply false of it.
+    if (blind) |cannot| if (blindExtra(gr, cannot.blind)) |sym| {
         out.owner = .lexer;
         out.because = .blind_extra;
         out.unlexable = sym;
@@ -1083,7 +1165,7 @@ test "a state waiting for a terminal the scanner cannot make is the lexer's" {
     try testing.expectEqual(Owner.weave, unasked.owner);
 
     // Asked, and terminal 2 is one it cannot make.
-    const asked = over(&tab, &gr, wall, &.{2});
+    const asked = over(&tab, &gr, wall, .{ .blind = &.{2} });
     try testing.expectEqual(Owner.lexer, asked.owner);
     try testing.expectEqual(Because.awaited_external, asked.because);
     try testing.expectEqual(@as(?g.Symbol, 2), asked.unlexable);
@@ -1091,7 +1173,7 @@ test "a state waiting for a terminal the scanner cannot make is the lexer's" {
 
     // Asked, and the scanner can make everything: back to the table, and the
     // empty list has to answer differently from `null` or it is not evidence.
-    const clean = over(&tab, &gr, wall, &.{});
+    const clean = over(&tab, &gr, wall, .{ .blind = &.{} });
     try testing.expectEqual(Owner.weave, clean.owner);
 }
 
@@ -1139,7 +1221,7 @@ test "a shift on a blind terminal outranks a fold on one" {
     // And the verdict it feeds is unchanged in owner and in strength; only the
     // terminal named moves.
     const wall: Wall = .{ .refused = .{ .terminal = 1, .state = 3, .folded = &.{} } };
-    const found = over(&tab, &gr, wall, &.{ 2, 3 });
+    const found = over(&tab, &gr, wall, .{ .blind = &.{ 2, 3 } });
     try testing.expectEqual(Owner.lexer, found.owner);
     try testing.expectEqual(Because.awaited_external, found.because);
     try testing.expectEqual(@as(?g.Symbol, 3), found.unlexable);
@@ -1150,7 +1232,7 @@ test "a shift on a blind terminal outranks a fold on one" {
     // ranking above has always known whether it picked a shift or a fold, and
     // the verdict it fed said "the state was waiting for this" either way.
     try testing.expectEqual(@as(?lalr.Half, .shift), found.admitted);
-    const only_fold = over(&tab, &gr, wall, &.{2});
+    const only_fold = over(&tab, &gr, wall, .{ .blind = &.{2} });
     try testing.expectEqual(@as(?g.Symbol, 2), only_fold.unlexable);
     try testing.expectEqual(@as(?lalr.Half, .fold), only_fold.admitted);
 }
@@ -1189,7 +1271,7 @@ test "a finding that names a stand-in always names the half, and both halves occ
     var seen_fold = false;
     var seen_none = false;
     for (lists) |blind| {
-        const f = over(&tab, &gr, wall, blind);
+        const f = over(&tab, &gr, wall, .{ .blind = blind });
         // The invariant, both ways: neither field may stand without the other.
         try testing.expectEqual(f.unlexable == null, f.admitted == null);
         if (f.admitted) |half| switch (half) {
@@ -1200,6 +1282,70 @@ test "a finding that names a stand-in always names the half, and both halves occ
     try testing.expect(seen_shift);
     try testing.expect(seen_fold);
     try testing.expect(seen_none);
+}
+
+test "an unseated terminal names which scanner declined, and absence outranks both" {
+    // The three populations are three work orders, and until they were three
+    // lists the census could only ever issue the first one. A wall on a terminal
+    // a customary claims is a rule in `customary/<grammar>.json`; a wall on a
+    // blind one is a scanner nobody has written. Reporting the second sentence
+    // for the first case is how a grammar 105 terminals into its transcription
+    // read as one that had not started - so this pins each population's own
+    // verdict, and pins the order between them.
+    var b = try Bench.init(4, 5);
+    defer b.deinit();
+    b.put(3, 1, lalr.Action.shift(2)); // the wall's own read
+    b.put(2, 1, lalr.Action.reduce(7)); // a fold elsewhere, so argument 3 stands down
+    b.put(3, 2, lalr.Action.shift(1)); // the state also admits terminal 2
+    b.put(3, 3, lalr.Action.shift(1)); // ... and terminal 3
+    var tab = b.tables();
+    defer tab.arena.deinit();
+    var gr = try Bench.slate(.nobody);
+    defer gr.deinit();
+
+    const wall: Wall = .{ .refused = .{ .terminal = 1, .state = 3, .folded = &.{} } };
+
+    // A customary claims terminal 2 and produced nothing here. The work order is
+    // that book's, and it is named as such rather than as a missing scanner.
+    const book = over(&tab, &gr, wall, .{ .transcribed = &.{2} });
+    try testing.expectEqual(Owner.customary, book.owner);
+    try testing.expectEqual(Because.awaited_customary, book.because);
+    try testing.expectEqual(@as(?g.Symbol, 2), book.unlexable);
+    try testing.expectEqual(@as(?lalr.Half, .shift), book.admitted);
+
+    // A hand answers it instead: still ours to debug, so still `lexer` - but a
+    // different sentence, because "the scanner exists" is the load-bearing half.
+    const hand = over(&tab, &gr, wall, .{ .handed = &.{2} });
+    try testing.expectEqual(Owner.lexer, hand.owner);
+    try testing.expectEqual(Because.awaited_hand, hand.because);
+    try testing.expectEqual(@as(?g.Symbol, 2), hand.unlexable);
+
+    // All three at once, and absence wins: a grammar that is blind to one
+    // terminal and has answers for two others owes its wall to the missing
+    // scanner, which is the stronger evidence and the bigger job.
+    const all = over(&tab, &gr, wall, .{
+        .blind = &.{3},
+        .handed = &.{2},
+        .transcribed = &.{2},
+    });
+    try testing.expectEqual(Owner.lexer, all.owner);
+    try testing.expectEqual(Because.awaited_external, all.because);
+    try testing.expectEqual(@as(?g.Symbol, 3), all.unlexable);
+
+    // And a hand outranks a customary on the same terminal, matching
+    // `outside.step`'s own preference in reverse: where both could answer the
+    // customary is asked first, so a customary that declined is the *later*
+    // finding and the hand's silence is reported instead. Either sentence sends
+    // a reader to a scanner that exists; naming the hand names the one whose
+    // code path actually ran nothing.
+    const both = over(&tab, &gr, wall, .{ .handed = &.{2}, .transcribed = &.{2} });
+    try testing.expectEqual(Because.awaited_hand, both.because);
+
+    // Nobody asked: argument 5 must not run at all, and the table argument that
+    // was always there answers unchanged.
+    const unasked = over(&tab, &gr, wall, null);
+    try testing.expect(unasked.owner != .customary);
+    try testing.expectEqual(@as(?g.Symbol, null), unasked.unlexable);
 }
 
 test "a declared extra is the last resort of the stand-in scan, not its first hit" {
@@ -1259,7 +1405,7 @@ test "a declared extra is the last resort of the stand-in scan, not its first hi
     // And the verdict is unchanged in owner, in strength and in `because`; only
     // the terminal named moves, which is the whole claim of this change.
     const wall: Wall = .{ .refused = .{ .terminal = 0, .state = 3, .folded = &.{} } };
-    const found = over(&tab, &gr, wall, &.{ 1, 2 });
+    const found = over(&tab, &gr, wall, .{ .blind = &.{ 1, 2 } });
     try testing.expectEqual(Owner.lexer, found.owner);
     try testing.expectEqual(Because.awaited_external, found.because);
     try testing.expectEqual(@as(?g.Symbol, 2), found.unlexable);
@@ -1288,7 +1434,7 @@ test "a blind extra is in no row at all, so no per-state test can see it" {
     // The extra's own terminal is blind, and it is admitted nowhere: state 3's
     // row is empty for it, so `awaited` cannot fire and only this argument can.
     try testing.expectEqual(@as(?g.Symbol, null), standIn(&tab, &gr, 3, &.{1}));
-    const found = over(&tab, &gr, wall, &.{1});
+    const found = over(&tab, &gr, wall, .{ .blind = &.{1} });
     try testing.expectEqual(Owner.lexer, found.owner);
     try testing.expectEqual(Because.blind_extra, found.because);
     try testing.expectEqual(@as(?g.Symbol, 1), found.unlexable);
@@ -1303,7 +1449,7 @@ test "a blind extra is in no row at all, so no per-state test can see it" {
     // always says `lexer`.
     var plain = try Bench.slate(.rule);
     defer plain.deinit();
-    try testing.expectEqual(Owner.press, over(&tab, &plain, wall, &.{1}).owner);
+    try testing.expectEqual(Owner.press, over(&tab, &plain, wall, .{ .blind = &.{1} }).owner);
 }
 
 test "a blind extra is grammar-wide, so the path outranks it" {
@@ -1340,7 +1486,7 @@ test "a blind extra is grammar-wide, so the path outranks it" {
     const chain: []const Fold = &.{.{ .state = 4, .prod = 1 }};
     const wall: Wall = .{ .refused = .{ .terminal = 0, .state = 5, .folded = chain } };
 
-    const f = over(&tab, &gr, wall, &.{1});
+    const f = over(&tab, &gr, wall, .{ .blind = &.{1} });
     try testing.expectEqual(Owner.oracle, f.owner);
     try testing.expectEqual(Because.declared_fork, f.because);
     try testing.expectEqual(@as(u32, 4), f.cell.?.state);
@@ -1349,7 +1495,7 @@ test "a blind extra is grammar-wide, so the path outranks it" {
     // With no cell on the path there is nothing to outrank, so the argument
     // still answers - unproven, which is the whole difference.
     const bare: Wall = .{ .refused = .{ .terminal = 0, .state = 5, .folded = &.{} } };
-    const fallback = over(&tab, &gr, bare, &.{1});
+    const fallback = over(&tab, &gr, bare, .{ .blind = &.{1} });
     try testing.expectEqual(Owner.lexer, fallback.owner);
     try testing.expectEqual(Because.blind_extra, fallback.because);
     try testing.expect(!fallback.proven);
@@ -1360,7 +1506,7 @@ test "a blind extra is grammar-wide, so the path outranks it" {
     var admits = b.tables();
     defer admits.arena.deinit();
     admits.conflicts = tab.conflicts;
-    const awaits = over(&admits, &gr, wall, &.{1});
+    const awaits = over(&admits, &gr, wall, .{ .blind = &.{1} });
     try testing.expectEqual(Owner.lexer, awaits.owner);
     try testing.expectEqual(Because.awaited_external, awaits.because);
     try testing.expect(awaits.proven);

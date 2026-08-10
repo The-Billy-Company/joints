@@ -36,7 +36,7 @@ const g = @import("../copy/grammar.zig");
 const lalr = @import("../lalr.zig");
 const lr0 = @import("../cast/lr0.zig");
 const press = @import("../press.zig");
-const scribe = @import("../../kernel/lex/customary/scribe.zig");
+const scanner = @import("../../kernel/lex/scanner.zig");
 const settle = @import("../quarrel/settle.zig");
 
 /// A field the round trip drops, and why.
@@ -354,7 +354,7 @@ fn sample(gpa: std.mem.Allocator) !g.Grammar {
     //
     // `raw_text` because that is the external `sample` declares, and a customary
     // may only answer a terminal the grammar declared external.
-    out.customary = try scribe.press(out.arena.allocator(), transcribed, null);
+    out.customary = try scanner.transcribe(out.arena.allocator(), transcribed, null);
     return out;
 }
 

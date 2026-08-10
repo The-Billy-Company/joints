@@ -171,7 +171,15 @@ fn ask(
     defer if (chain) |c| gpa.free(c);
 
     const wall = seen(trace.ending, chain, &scanner, bytes);
-    const found = built.whose(&gr, wall, scanner.blind);
+    // All three populations, because the census is exactly the reader that used
+    // to conflate them: a grammar whose customary answers 105 terminals and
+    // declines on the 106th owes its wall to that rule, and handing over only
+    // `blind` filed it under whichever table argument had something to say.
+    const found = built.whose(&gr, wall, .{
+        .blind = scanner.blind,
+        .handed = scanner.handed,
+        .transcribed = scanner.transcribed,
+    });
     try w.print("{s:<20} ", .{gr.name});
     try inquest.write(found, &gr, wall, w);
     try anchor(&gr, &built.collection, found, wall, w);

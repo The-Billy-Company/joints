@@ -9,6 +9,7 @@ const joints = @import("joints");
 const intake = @import("intake.zig");
 
 const assay = joints.assay;
+const press = joints.press;
 const scanner = joints.kernel.lex.scanner;
 
 /// Tokenize `path` with the grammar at `grammar_path`, unconditionally.
@@ -67,14 +68,20 @@ pub fn run(
         " `parse` for the real stream\n");
     if (sc.blind.len > 0) {
         try w.print("  blind to {d} terminal(s):", .{sc.blind.len});
-        for (sc.blind, 0..) |s, i| {
-            if (i == 8) {
-                try w.print(" +{d} more", .{sc.blind.len - i});
-                break;
-            }
-            try w.print(" {s}", .{gr.nameOf(s)});
-        }
-        try w.writeAll("\n");
+        try names(w, &gr, sc.blind);
+    }
+    // Named rather than counted, for the reason the blindness is: "2 by hand" is
+    // a number nobody can act on, and *which* two is the difference between
+    // reading a hand and reading a rule. It is also how a hand is retired -
+    // where a grammar's book claims everything a hand would have answered, this
+    // list is empty, and that is the evidence the troupe row is dead code.
+    if (sc.transcribed.len > 0) {
+        try w.print("  {d} terminal(s) answered by customary:", .{sc.transcribed.len});
+        try names(w, &gr, sc.transcribed);
+    }
+    if (sc.handed.len > 0) {
+        try w.print("  {d} terminal(s) answered by hand:", .{sc.handed.len});
+        try names(w, &gr, sc.handed);
     }
     if (sc.declined.len > 0) {
         // Ours rather than someone else's C, which is why it reads differently
@@ -83,20 +90,31 @@ pub fn run(
         // terminal simply never wins, so the row it should have owned is either
         // a wider neighbour's or a stray.
         try w.print("  {d} pattern(s) the engine would not build:", .{sc.declined.len});
-        for (sc.declined, 0..) |s, i| {
-            if (i == 8) {
-                try w.print(" +{d} more", .{sc.declined.len - i});
-                break;
-            }
-            try w.print(" {s}", .{gr.nameOf(s)});
-        }
-        try w.writeAll("\n");
+        try names(w, &gr, sc.declined);
     }
     if (stream.stray) |off| {
         try w.print("  stray byte at {d}: no terminal begins here\n", .{off});
         return 1;
     }
     return 0;
+}
+
+/// The terminals in one of the scanner's four rosters, closing the line.
+///
+/// Capped at eight and then counted, because the populations differ by two
+/// orders of magnitude - swift is blind to seven, yaml's book claims a hundred
+/// and one - and a diagnostic that wraps for one grammar is a diagnostic nobody
+/// reads for the other. The cap lived in four copies before, one per roster,
+/// which is three chances for them to disagree about what "+N more" counts.
+fn names(w: *std.Io.Writer, gr: *const press.Grammar, syms: []const press.Symbol) !void {
+    for (syms, 0..) |s, i| {
+        if (i == 8) {
+            try w.print(" +{d} more", .{syms.len - i});
+            break;
+        }
+        try w.print(" {s}", .{gr.nameOf(s)});
+    }
+    try w.writeAll("\n");
 }
 
 /// One line's worth of a token's text, with the whitespace made visible — a
