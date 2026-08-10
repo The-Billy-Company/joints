@@ -739,6 +739,18 @@ pub const Gather = struct {
     /// admitted is recorded instead, so the probe asks the exact question the
     /// parse asked. Round 22.
     veil: std.ArrayList(u32),
+    /// Where the scan stood in front of each token - parallel to `tokens`, and
+    /// zero throughout for a scanner with no memory to stand in. `weave` hangs
+    /// one of these on every alignment mark, and the next parse's lifts are
+    /// refused by it; see `graft.Graft`'s header for why a state is not enough.
+    stances: std.ArrayList(graft.Stance),
+    /// The stance in front of the token being read right now, taken before the
+    /// lex that is about to move it. Read by the three places that append a
+    /// token, so all three record the same moment.
+    stance: u64 = 0,
+    /// The carried offset at that same moment, kept out of `stance` because a
+    /// later parse has to move it rather than match it; see `graft.Stance`.
+    since: u32 = 0,
     /// The interned slates `veil` indexes: each one the terminals `admit` was
     /// called with, in symbol order. A parse visits thousands of tokens and a
     /// few dozen distinct slates, so they are deduplicated by their `named`
@@ -1009,6 +1021,7 @@ pub const Gather = struct {
             .tokens = .empty,
             .enter = .empty,
             .veil = .empty,
+            .stances = .empty,
             .veils = .empty,
             .veiled = .empty,
             .looks = .empty,
@@ -1084,6 +1097,7 @@ pub const Gather = struct {
         x.tokens.deinit(x.gpa);
         x.enter.deinit(x.gpa);
         x.veil.deinit(x.gpa);
+        x.stances.deinit(x.gpa);
         for (x.veils.items) |v| x.gpa.free(v);
         x.veils.deinit(x.gpa);
         var veiled = x.veiled.keyIterator();
@@ -1137,10 +1151,30 @@ pub const Gather = struct {
             var worn = try x.offer();
             var here = x.perches.items[x.first().top].state;
             x.stowed = false;
+            // Before the lex, because the lex is what moves it: this is where
+            // the scan was standing when it was asked for the token below, and
+            // that is the moment a later parse's lift has to match.
+            x.stance = x.scanner.stance();
+            x.since = x.scanner.since();
             const step = try x.scanner.nextKeeping(x.gpa, bytes, x.at, x.wearing.?, &x.keep);
             const tok: Token = switch (step) {
                 .end => {
+                    // The ask that found the end is still an ask, and a lift
+                    // reaching the last byte resumes exactly here - so the
+                    // scan it has to match is this one. Every other record is
+                    // written beside the token it read; this one has no token
+                    // and would otherwise leave the file's own end the one
+                    // offset condition 3 could not speak about, which reads as
+                    // the last lift being vouched for by the stance in front
+                    // of the zero-width token the lifted node swallowed.
+                    try x.stances.append(x.gpa, .{ .at = x.at, .word = x.stance, .since = x.since, .wide = false });
                     const won = try x.close();
+                    // Here rather than in `finish`, because only here is the
+                    // winner known by name. Nothing below records another move
+                    // - `stow`, `unwind` and `crown` all build tree, not trail
+                    // - so the fork is over at this line, and `finish`'s own
+                    // weld finds `spun` already back to zero.
+                    try x.weld(won.seg);
                     try x.stow(null);
                     try x.unwind(won.top);
                     // A file that needed mending was not accepted, whatever the
@@ -1218,9 +1252,11 @@ pub const Gather = struct {
                     return x.finish(x.why orelse stop);
                 },
             }
+            assay.trace(.quire, "tok {d}..{d} sym {d} from {d} -> {d}\n", .{ tok.start, tok.end(), tok.symbol, here, x.perches.items[x.first().top].state });
             try x.tokens.append(x.gpa, tok);
             try x.enter.append(x.gpa, here);
             try x.veil.append(x.gpa, worn);
+            try x.stances.append(x.gpa, .{ .at = x.at, .word = x.stance, .since = x.since, .wide = tok.len > 0 });
             x.kept = false;
             const was = x.at;
             x.at = tok.end();
@@ -1638,6 +1674,7 @@ pub const Gather = struct {
                     // keeps the array honest, and a ring over a supply
                     // declines in `holds` exactly as before.
                     try x.veil.append(x.gpa, worn);
+                    try x.stances.append(x.gpa, .{ .at = x.at, .word = x.stance, .since = x.since, .wide = false });
                     return grown;
                 },
                 .reduce => t = try x.fold(t, act.value) orelse return null,
@@ -1663,6 +1700,7 @@ pub const Gather = struct {
         x.tokens.clearRetainingCapacity();
         x.enter.clearRetainingCapacity();
         x.veil.clearRetainingCapacity();
+        x.stances.clearRetainingCapacity();
         if (x.trail) |tr| tr.clearRetainingCapacity();
         if (x.bough) |b| b.clear();
         x.at = 0;
@@ -1840,20 +1878,36 @@ pub const Gather = struct {
             .{ .at = 0, .token = 0 }
         else
             .{ .at = b.rings.items[i - 1].at, .token = b.rings.items[i - 1].token };
-        if (r.token > x.tokens.items.len or r.token > x.veil.items.len) return false;
+        if (r.token > x.tokens.items.len or r.token > x.veil.items.len) {
+            assay.trace(.weave, "holds: ring {d} counts {d} tokens over a stream of {d}\n", .{ i, r.token, x.tokens.items.len });
+            return false;
+        }
 
         // The stretch is re-lexed from the ring below, so the scanner has to
         // be standing where *that* ring left it - not where the attempt this
         // one is replacing did. Only for a scanner that remembers anything;
         // the rest are untouched, and so is what they answer.
-        if (x.scanner.casts.len > 0) {
+        //
+        // `outward` and not `casts.len > 0`, for the reason `remembers` gives:
+        // a book is the other half of "outside", and the read side asking the
+        // narrower question than the write side is worse than not keeping the
+        // saves at all. Every customary grammar kept a save per ring and then
+        // re-lexed with whatever memory the *previous* attempt had left, so a
+        // yaml ring wanted a plain scalar and the stale organs answered the
+        // zero-width `_bl` that a blank line owes - four rings deep, every
+        // time, and the resume fell through to a cold parse on a file where
+        // nothing above the edit had changed.
+        if (x.scanner.outward()) {
             if (i == 0) x.scanner.rewind() else if (b.save(i - 1)) |sv| x.scanner.restore(sv);
         }
 
         var at = back.at;
         for (x.tokens.items[back.token..r.token], x.veil.items[back.token..r.token]) |want, worn| {
             if (want.symbol >= x.gr.terminal_count) {
-                if (want.start != at) return false;
+                if (want.start != at) {
+                    assay.trace(.weave, "holds: ring {d} lift {s} begins at {d}, re-read reached {d}\n", .{ i, x.gr.nameOf(want.symbol), want.start, at });
+                    return false;
+                }
                 at = want.end();
                 continue;
             }
@@ -1891,6 +1945,7 @@ pub const Gather = struct {
                 },
             }
         }
+        if (at != r.at) assay.trace(.weave, "holds: ring {d} sits at {d}, re-read of {d} tokens ended at {d}\n", .{ i, r.at, r.token - back.token, at });
         return at == r.at;
     }
 
@@ -1943,6 +1998,7 @@ pub const Gather = struct {
         x.tokens.shrinkRetainingCapacity(r.token);
         x.enter.shrinkRetainingCapacity(r.token);
         x.veil.shrinkRetainingCapacity(r.token);
+        x.stances.shrinkRetainingCapacity(r.token);
         if (x.trail) |tr| tr.shrinkRetainingCapacity(r.trail);
 
         try x.perches.appendSlice(x.gpa, b.chain(i));
@@ -2168,7 +2224,7 @@ pub const Gather = struct {
 
     inline fn wear(x: *Gather, ref: quire.Ref, m: Mark) void {
         const n = &x.nodes.items[ref];
-        if (m.alias != Mark.none) n.kind = .alias(m.alias);
+        if (m.alias != Mark.none) n.kind = .renaming(n.kind.under, m.alias);
         if (m.field != Mark.none) n.field = m.field;
     }
 
@@ -2687,7 +2743,7 @@ pub const Gather = struct {
             const visible = x.gr.shapeOf(sym).visible();
             var mark: Mark = .{};
             const ref: ?quire.Ref = if (step.alias) |a| ref: {
-                if (!visible) break :ref try x.mint(.alias(a), span.start, span.len, .{});
+                if (!visible) break :ref try x.mint(.renaming(sym, a), span.start, span.len, .{});
                 mark.alias = @intCast(a);
                 break :ref try x.mint(.of(sym), span.start, span.len, .{});
             } else if (visible) try x.mint(.of(sym), span.start, span.len, .{}) else null;
@@ -3304,44 +3360,114 @@ pub const Gather = struct {
 
         const chain = try gr.stoop(tok.start);
         gr.offered += chain.len;
-        // Why the walk passed over everything wider than what it takes, counted
-        // before the take so a probe that lifts nothing still reports. The
-        // chain is ordered widest first, so every candidate seen before the one
-        // taken *is* a wider one that something refused.
-        var missed: u64 = 0;
-        var by_shape: u64 = 0;
-        var by_goto: u64 = 0;
-        var by_break: u64 = 0;
+        // Why the walk passed over each candidate, recorded where it happens
+        // rather than tallied and folded in at the take. A probe that lifts
+        // nothing has the most to say about coverage and would otherwise say
+        // nothing at all. The chain is ordered widest first, so every candidate
+        // seen before the one taken is a wider one that something refused.
         if (chain.len > 0) gr.widest += gr.old.nodes[chain[0]].len;
         for (chain) |ref| {
-            const sym = gr.liftable(ref) orelse {
-                missed += 1;
-                by_shape += 1;
-                continue;
+            const sym, const spreading = switch (gr.liftable(ref)) {
+                .lift => |s| .{ s, false },
+                .spread => |s| .{ s, true },
+                .no => |why| {
+                    const nn = gr.old.nodes[ref];
+                    assay.trace(.rank, "bar {s} sym {d} {d}..{d} renamed={} extra={} kids={d}\n", .{ @tagName(why), nn.kind.index, nn.start, nn.start + nn.len, nn.kind.renamed, nn.kind.extra, nn.kids_len });
+                    gr.passed += 1;
+                    gr.passed_shape += 1;
+                    gr.bars[@intFromEnum(why)] += 1;
+                    continue;
+                },
             };
             const wide = gr.old.nodes[ref].len;
             // One token's worth is a copy with extra steps, and the chain is
             // ordered widest first, so nothing further in is worth trying.
             if (wide <= tok.len) {
-                missed += 1;
-                by_break += 1;
+                gr.passed += 1;
+                gr.passed_break += 1;
                 break;
             }
             const to = x.c.goto(here, sym) orelse {
-                missed += 1;
-                by_goto += 1;
+                gr.passed += 1;
+                gr.passed_goto += 1;
                 continue;
             };
+            const end = tok.start + wide;
+            // Condition 3. Where this node ends is where the next scan resumes,
+            // so the old parse's ask standing there is the one whose answer the
+            // resumed parse is about to be handed - and if that answer covered
+            // no bytes, the tree cannot say whose it was. A hidden zero-width
+            // terminal at the tail of a production widens no span, so a node
+            // that swallowed one looks exactly like a node that ends in front of
+            // one the enclosing production is still owed. Reading it twice is
+            // what a yaml block scalar did: `_r_blk_str -> … _bl` folds the
+            // blank line into the scalar, the scalar's span stops nine bytes
+            // short of it, and a lift resuming at the span's end offers the
+            // `_bl` a second time to a state that has already been handed the
+            // whole value. Refuse, and one ordinary re-read gets it right.
+            const there = gr.stance(end) orelse {
+                assay.trace(.weave, "stance {d}..{d}: no scan resumed there\n", .{ tok.start, end });
+                gr.passed += 1;
+                gr.passed_unasked += 1;
+                continue;
+            };
+            if (!there.wide) {
+                assay.trace(.weave, "stance {d}..{d}: the answer resuming there covered nothing\n", .{ tok.start, end });
+                gr.passed += 1;
+                gr.passed_edge += 1;
+                continue;
+            }
+            // Condition 4. The bytes under this node are about to go unread,
+            // and with them every answer the scanner gave over them - so the
+            // scan has to already be standing where those answers would have
+            // left it. Free for a scanner with no memory: every stance is
+            // zero, so this is `0 == 0` and no candidate is ever turned away.
+            //
+            // Declined per candidate rather than per probe, like the shape and
+            // the goto above it: two nodes beginning here end in different
+            // places, and a wide one the scan cannot vouch for says nothing
+            // about a narrower one that ends before the memory moves.
+            //
+            // Two questions, because the memory has two kinds of thing in it.
+            // The states must be *found* unchanged - a hash compares them and
+            // nothing has to move. The one carried offset must be *put* where
+            // the skipped scan would have left it, which is a rebase onto this
+            // file's coordinates, and `Graft.moved` is the only thing that knows
+            // how far the bytes under this node travelled.
+            var lands: u32 = 0;
+            if (x.scanner.outward()) {
+                const was = gr.back(tok.start) orelse unreachable;
+                lands = gr.moved(there, was, was + wide, x.scanner.since()) orelse {
+                    assay.trace(.weave, "stance {d}..{d}: since {d} does not reach {d}\n", .{ tok.start, end, x.scanner.since(), there.since });
+                    gr.passed += 1;
+                    gr.passed_stance += 1;
+                    continue;
+                };
+                if (there.word != x.scanner.stance()) {
+                    assay.trace(.weave, "stance {d}..{d}: live {x} there {x}\n", .{ tok.start, end, x.scanner.stance(), there.word });
+                    gr.passed += 1;
+                    gr.passed_stance += 1;
+                    continue;
+                }
+            }
 
             try x.stow(null);
-            const root = try x.transcribe(gr, ref);
             const own = x.borne.len();
-            try x.bear(&x.borne, root, .{});
-            const end = tok.start + wide;
+            if (spreading) {
+                // A hidden symbol contributes a run, so the perch owns a run:
+                // the wrapper in the old tree is not transcribed at all, and
+                // its children arrive keeping the names and fields the
+                // derivation inside them gave them. See `Graft.Verdict.spread`.
+                const was = gr.old.nodes[ref];
+                for (gr.old.kids[was.kids_at..][0..was.kids_len]) |kid| {
+                    try x.bear(&x.borne, try x.transcribe(gr, kid, null), .{});
+                }
+                gr.spreads += 1;
+            } else try x.bear(&x.borne, try x.transcribe(gr, ref, sym), .{});
             const grown = try x.push(top, .{
                 .state = to,
                 .own = own,
-                .owns = 1,
+                .owns = x.borne.len() - own,
                 .lead = x.lead,
                 .leads = x.leads,
                 .start = tok.start,
@@ -3356,13 +3482,15 @@ pub const Gather = struct {
             try x.tokens.append(x.gpa, .{ .symbol = sym, .start = tok.start, .len = wide });
             try x.enter.append(x.gpa, here);
             try x.veil.append(x.gpa, unveiled);
+            try x.stances.append(x.gpa, .{ .at = x.at, .word = x.stance, .since = x.since });
+            // The scan's half of the take: the states are already right, having
+            // been checked and not touched, and the carried offset moves to the
+            // place `moved` worked out for it.
+            x.scanner.rebase(lands);
             x.at = end;
+            assay.trace(.rank, "lift {s}{s} {d}..{d} kids={d} here={d} to={d}\n", .{ x.gr.nameOf(sym), if (spreading) " spread" else "", tok.start, end, x.borne.len() - own, here, to });
             gr.lifts += 1;
             gr.skipped += wide;
-            gr.passed += missed;
-            gr.passed_shape += by_shape;
-            gr.passed_goto += by_goto;
-            gr.passed_break += by_break;
             gr.taken += wide;
             return grown;
         }
@@ -3378,7 +3506,7 @@ pub const Gather = struct {
     /// one byte is a subtree every node of which has to be rewritten. A
     /// relative offset would make this `O(1)`, and it would change what every
     /// reader of a node has to do to learn where it is.
-    fn transcribe(x: *Gather, gr: *Graft, from: quire.Ref) !quire.Ref {
+    fn transcribe(x: *Gather, gr: *Graft, from: quire.Ref, as: ?press.Symbol) !quire.Ref {
         gr.walk.clearRetainingCapacity();
         gr.made.clearRetainingCapacity();
         try gr.walk.append(x.gpa, .{ .ref = from, .done = 0 });
@@ -3415,11 +3543,24 @@ pub const Gather = struct {
             _ = gr.walk.pop();
             gr.carried += 1;
         }
-        // Whoever adopts this decides what to file it under, so it arrives
-        // wearing nothing. The children keep theirs: their parent is inside
-        // the lift and already decided.
+        // Whoever adopts this decides what to call it and what to file it
+        // under, so it arrives wearing neither: the symbol it reduced to, and
+        // no field. The children keep both, their parent being inside the lift
+        // and already decided.
+        //
+        // The name matters as much as the field. `wear` renames a child only
+        // where the adopting step says to, so a root still carrying the last
+        // parse's alias would keep a name this site never gave it - and the two
+        // sites differ often, a rename being a use-site fact.
+        //
+        // `null` is for a root that is not the thing being adopted: the
+        // children of a spread wrapper are interior nodes whose parent went
+        // with them, so both facts about them are already settled.
         const root = gr.made.items[0];
-        x.nodes.items[root].field = quire.none;
+        if (as) |sym| {
+            x.nodes.items[root].kind = .of(sym);
+            x.nodes.items[root].field = quire.none;
+        }
         return root;
     }
 
@@ -3813,7 +3954,7 @@ pub const Gather = struct {
                     std.debug.assert(kids.ref.len == 1);
                     try x.bear(&x.born, kids.ref[0], .{ .alias = @intCast(a) });
                 } else {
-                    const wrap = try x.mint(.alias(a), mine[i].start, mine[i].end - mine[i].start, kids);
+                    const wrap = try x.mint(.renaming(sym, a), mine[i].start, mine[i].end - mine[i].start, kids);
                     try x.bear(&x.born, wrap, .{});
                 }
             } else if (visible) {
@@ -4021,11 +4162,27 @@ pub const Gather = struct {
     /// productions richer than the perch it started this function on, and
     /// comparing it on the total it *arrived* with would be scoring two
     /// derivations at different points.
-    fn close(x: *Gather) !struct { top: u32, ok: bool } {
+    /// The end column's folds belong to the reading that makes them, which is
+    /// why `pen` moves here the way it moves in `absorb`. Every other place a
+    /// fork's moves are written learned this in Round 15 and this one did not,
+    /// so the last thing a forked parse did was fold *each* surviving reading
+    /// to a root with the pen back on `sole` - two readings' closing folds
+    /// appended to the one flat trail, which is the interleaving `Move` says
+    /// cannot be repaired and `strands` exists to prevent. `distil` then met
+    /// two folds of the same production under two different states, refused
+    /// the composition it is right to refuse, and `TrailRefused` killed the
+    /// process. Six bytes of markdown reach it: `[a]: \n`.
+    ///
+    /// The winner's strand comes back with it because the trail has to be the
+    /// moves of the reading whose tree this is, and `first` cannot answer that
+    /// here: it ranks on the heft a reading arrived with, and the paragraph
+    /// above this one says the end column's own folds change that ranking.
+    fn close(x: *Gather) !struct { top: u32, ok: bool, seg: u32 } {
         x.lone = x.live.items.len == 1 and !x.grafted;
         var won: ?Reading = null;
         var tried: ?Reading = null;
         for (x.live.items) |v| {
+            x.pen = v.seg;
             var top = v.top;
             var heft = v.heft;
             const ok = done: while (true) {
@@ -4039,13 +4196,14 @@ pub const Gather = struct {
                     .err, .shift => break :done false,
                 }
             };
-            const r: Reading = .{ .top = top, .rank = v.rank, .heft = heft };
+            const r: Reading = .{ .top = top, .seg = v.seg, .rank = v.rank, .heft = heft };
             if (ok) {
                 if (won == null or r.beats(won.?)) won = r;
             } else if (tried == null or r.beats(tried.?)) tried = r;
         }
-        if (won) |w| return .{ .top = w.top, .ok = true };
-        return .{ .top = tried.?.top, .ok = false };
+        x.pen = sole;
+        if (won) |w| return .{ .top = w.top, .ok = true, .seg = w.seg };
+        return .{ .top = tried.?.top, .ok = false, .seg = tried.?.seg };
     }
 
     /// Everything one reading is holding, in source order: the walk down, read

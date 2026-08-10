@@ -247,19 +247,38 @@ pub const Kind = packed struct(u32) {
     /// query's structural child index, so a node that is one is not the
     /// second child of anything.
     extra: bool = false,
-    index: u30,
+    /// What this node is CALLED.
+    index: u15,
+    /// What the parse REDUCED to make it, always - equal to `index` unless a
+    /// rename is standing in front of it.
+    ///
+    /// Two facts and not one, in the same word, because they answer two
+    /// questions and a rename is only ever the answer to the first. A reader
+    /// wants the name. An incremental parse handed this subtree back wants the
+    /// symbol, since that is what it pushes and what the goto table is keyed on
+    /// - and a rename is interned by spelling, so the name cannot be inverted:
+    /// yaml renames eight rules to `block_node`. Keeping only the name is what
+    /// left a re-parse of a yaml file offering thousands of subtrees and able to
+    /// take none of them.
+    ///
+    /// Fifteen bits each is 32,767 of either, against 1,289 symbols in the
+    /// widest grammar pressed here and 65,535 in tree-sitter's own `TSSymbol`.
+    /// `Builder.finish` refuses a grammar past the ceiling rather than truncating
+    /// a symbol into a different one.
+    under: u15,
 
     pub fn of(symbol: press.Symbol) Kind {
-        return .{ .renamed = false, .index = @intCast(symbol) };
+        return .{ .renamed = false, .index = @intCast(symbol), .under = @intCast(symbol) };
     }
 
     /// A terminal the parse stepped over on its way to the next token.
     pub fn aside(symbol: press.Symbol) Kind {
-        return .{ .renamed = false, .extra = true, .index = @intCast(symbol) };
+        return .{ .renamed = false, .extra = true, .index = @intCast(symbol), .under = @intCast(symbol) };
     }
 
-    pub fn alias(index: u32) Kind {
-        return .{ .renamed = true, .index = @intCast(index) };
+    /// This symbol wearing the name one use site gave it.
+    pub fn renaming(symbol: press.Symbol, alias: u32) Kind {
+        return .{ .renamed = true, .index = @intCast(alias), .under = @intCast(symbol) };
     }
 };
 

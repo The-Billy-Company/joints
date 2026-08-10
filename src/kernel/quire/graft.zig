@@ -36,7 +36,7 @@
 //!
 //! ## What makes a lift safe
 //!
-//! Two conditions, both cheap, and the second is the one that does the work:
+//! Three conditions, all cheap, and the last two are the ones that do the work:
 //!
 //!   1. The bytes under the node did not move relative to each other - it lies
 //!      wholly after the edit, so the whole span shifts by one delta.
@@ -44,12 +44,46 @@
 //!      the new parse is standing in now**. That is the alignment mark, and it
 //!      is the same predicate `Effect.entry` states: a run's meaning is a
 //!      function of its bytes and of where it began.
+//!   3. The scan the lift lands the parse in front of is the scan the old parse
+//!      was in front of there. See below; for a scanner that remembers nothing
+//!      this is free and always true.
 //!
-//! Given both, the old derivation of those bytes is a derivation the new parse
-//! could have made, so a goto on the node's symbol is a move the table already
-//! allows. A `goto` that does not exist refuses the lift, and the parse reads
-//! the bytes the ordinary way; nothing here can produce a wrong tree, only a
-//! slower one.
+//! Given all three, the old derivation of those bytes is a derivation the new
+//! parse could have made, so a goto on the node's symbol is a move the table
+//! already allows. A `goto` that does not exist refuses the lift, and the parse
+//! reads the bytes the ordinary way; nothing here can produce a wrong tree,
+//! only a slower one.
+//!
+//! ## Why a state is not the whole of where a parse is standing
+//!
+//! Conditions 1 and 2 are the whole argument for a stateless lexer, and for
+//! years they were the whole of this file, because "the meaning of a run is a
+//! function of its bytes and its entry state" is true when the only entry state
+//! is the table's.
+//!
+//! A scanner that remembers - html's stack of open tags, markdown's stack of
+//! open blocks, python's column stack - has a second entry state, and a lift
+//! **skips the bytes**, so it skips that scanner's answers over them and every
+//! push and pop they carried. html is the shortest witness: an edit above
+//! `</button>` lifts the whole `end_tag`, the `_end_tag_name` inside it is
+//! never asked for, the pop it would have made never happens, and the parse
+//! walks on with `button` still open. Nine bytes later a `</html>` finds a stack
+//! that still owes a close and the scanner volunteers a zero-width
+//! `_implicit_end_tag` a cold parse of the same bytes does not - a different
+//! tree, from a lift both other conditions admitted.
+//!
+//! So the third condition is over the scan, and it is stated where the parse
+//! lands rather than where it starts: **the scanner's memory now must be the
+//! memory the old parse had in front of the token the lift lands on.** That is
+//! sufficient on its own - it is exactly the premise the rest of the file
+//! needs, that reading forward from here reads what reading forward from there
+//! read - and it needs no assumption about how the span in between behaved.
+//!
+//! It costs a `u64` per token, which is what `Mark.stance` is. A balanced span
+//! passes it: a whole `<div>…</div>` pushes and pops and leaves the stack where
+//! it found it, so the wide lifts that pay for this machinery are the ones it
+//! admits. A half-open one - a lone end tag, a block that opens and does not
+//! close - is refused, and refusing is one ordinary re-read.
 
 const std = @import("std");
 const quire = @import("quire.zig");
@@ -59,11 +93,39 @@ const press = @import("../../press/press.zig");
 /// `start`, which is what makes the lookup a binary search rather than a map.
 pub const Mark = struct { start: u32, state: u32 };
 
+/// Where the old parse's *scan* stood each time it was asked for a token, and
+/// the offset it was asked at. Sorted by `at`, and one per token.
+///
+/// Keyed by where the scan resumed rather than by where the token turned out to
+/// begin, because those differ by whatever extras stood in front of it and a
+/// lift lands the next scan on the first of them. `word` is
+/// `lex.Scanner.stance`, and it is zero throughout for every grammar whose
+/// scanner remembers nothing between tokens.
+///
+/// Two fields and not one word, because the memory has two kinds of thing in
+/// it. The states go in the hash, where all a reuse needs is to find them
+/// unchanged. The one offset - where the hand's last answer with extent ended -
+/// is kept plainly, because a reuse has to *move* it onto the new file's
+/// coordinates the way it moves the offsets of every node it copies, and there
+/// is no moving a hash. Zero is "no such answer yet", a state and not a place.
+/// `wide` is whether the answer that ask returned covered any bytes. It is the
+/// only thing in the ledger that is about the *parse* rather than the scan, and
+/// it is here because it is the only place the fact survives: a node's span is
+/// its visible extent, so a hidden zero-width terminal at the end of a
+/// production widens nothing and leaves the tree unable to say whether the
+/// answer standing at a node's end was inside that node or the next thing after
+/// it. See `Bar.edge`.
+pub const Stance = struct { at: u32, word: u64, since: u32 = 0, wide: bool = true };
+
 pub const Graft = struct {
     gpa: std.mem.Allocator,
     /// Borrowed, and alive for the whole re-parse.
     old: *const quire.Quire,
     marks: []const Mark,
+    /// Empty declines condition 3 by refusing every lift on a grammar whose
+    /// scanner remembers something, and costs nothing on one that does not -
+    /// which is what a caller with no record to offer wants either way.
+    stances: []const Stance = &.{},
     /// The first old offset the edit did not disturb. Nothing below this is on
     /// offer, whatever the tree says.
     stable: u32,
@@ -125,6 +187,9 @@ pub const Graft = struct {
     skipped: u32 = 0,
     /// Offsets where a lift was considered. `lifts` over this is the hit rate.
     probes: u32 = 0,
+    /// Lifts that handed over a hidden symbol's children rather than one node.
+    /// See `Verdict.spread`.
+    spreads: u32 = 0,
 
     /// Why the walk did not take something wider than it took.
     ///
@@ -142,12 +207,43 @@ pub const Graft = struct {
     turned_fork: u64 = 0,
     turned_align: u64 = 0,
     offered: u64 = 0,
-    /// Candidates strictly wider than the one taken, at probes that lifted.
+    /// Candidates the walk passed over, at every probe and not only the ones
+    /// that went on to lift. Scoping this to the lifting probes is the one
+    /// thing it must not do: `lifts=0 passed=0` is then the reading for both a
+    /// file that offered nothing and a file that offered thousands and refused
+    /// every one, and telling those apart is the whole errand.
     passed: u64 = 0,
-    /// What refused each of those: shape, then the table, then the break.
+    /// What refused each of those: shape, then the table, then the break, then
+    /// the two arms of the scan. Both scan arms are zero for every grammar whose
+    /// scanner remembers nothing.
+    ///
+    /// `passed_stance` is condition 3 proper - the old parse stood somewhere at
+    /// that offset and it was not here. A large number against a small `lifts`
+    /// says the nodes on offer end where the memory moves, which is the tree's
+    /// shape and not this check to look at.
+    ///
+    /// `passed_unasked` is the other arm, and it is not a disagreement: the old
+    /// parse never asked the scanner anything at that offset, so there is no
+    /// stance on record to vouch for one. It reads as a coverage problem in the
+    /// ledger rather than a fact about the file, and a grammar whose every
+    /// candidate lands here is one whose records are keyed on offsets the
+    /// candidates never end at.
+    ///
+    /// `passed_edge` is the extent check that runs before either of those and
+    /// for every grammar: the answer the resumed parse is about to be handed
+    /// covered no bytes, so the tree cannot say whether the node already
+    /// swallowed it. Expect it to be the whole story on grammars whose hidden
+    /// terminals are zero-width - yaml blank lines, python and markdown
+    /// dedents - and zero on grammars with none.
     passed_shape: u64 = 0,
     passed_goto: u64 = 0,
     passed_break: u64 = 0,
+    passed_edge: u64 = 0,
+    passed_stance: u64 = 0,
+    passed_unasked: u64 = 0,
+    /// `passed_shape` split by which shape fact refused it, since each asks for
+    /// a different fix. Indexed by `Bar`.
+    bars: [@typeInfo(Bar).@"enum".fields.len]u64 = @splat(0),
     /// Bytes in the widest candidate offered, over bytes actually taken. The
     /// gap is what a perfect ordering could still recover.
     widest: u64 = 0,
@@ -185,6 +281,57 @@ pub const Graft = struct {
             if (gr.marks[mid].start < old) lo = mid + 1 else hi = mid;
         }
         return lo < gr.marks.len and gr.marks[lo].start == old and gr.marks[lo].state == state;
+    }
+
+    /// Where the old parse's scan stood when it resumed at this new offset -
+    /// the whole of condition 3, and null where the old parse never resumed
+    /// here at all, which refuses, because a lift landing somewhere no scan
+    /// resumed is landing somewhere the old parse cannot vouch for.
+    ///
+    /// The LAST ask at an offset, not the first, and the difference is the
+    /// zero-width token. A hand answers where the cursor cannot move, so one
+    /// offset can be asked several times - and every one of those answers but
+    /// the last was consumed by the very node a lift is about to take whole.
+    /// Python's `block` ends with a `_dedent` that costs no bytes: the node
+    /// reads `[763, 883)` and the dedent it swallowed sits at 883, so the
+    /// first ask there is *inside* the node and the scan that follows it is
+    /// one level shallower than the scan in front of it. Anchoring on the
+    /// first ask compared the lift against a moment the lift skips, admitted
+    /// the take, and left the column stack one block too deep - which surfaced
+    /// as an unexpected `_dedent` a hundred bytes later. The last ask is the
+    /// one whose token the node does not contain, so it is the one the new
+    /// parse is about to stand in.
+    pub fn stance(gr: *const Graft, at: u32) ?Stance {
+        const old = gr.back(at) orelse return null;
+        var lo: usize = 0;
+        var hi: usize = gr.stances.len;
+        while (lo < hi) {
+            const mid = lo + (hi - lo) / 2;
+            if (gr.stances[mid].at <= old) lo = mid + 1 else hi = mid;
+        }
+        if (lo == 0 or gr.stances[lo - 1].at != old) return null;
+        return gr.stances[lo - 1];
+    }
+
+    /// Where the old parse's carried offset lands in this file, for a reuse
+    /// about to jump the bytes between `from` and `to` in *old* coordinates.
+    ///
+    /// Three answers, and the third is the interesting one. Nothing carried is
+    /// nothing to move, and it has to be nothing here too - a scan that has seen
+    /// an answer with extent is not standing where one that has not is. An
+    /// offset **inside** the span being jumped moves with the span, by the same
+    /// delta every node in it moves by, and that is the case a reuse exists to
+    /// serve: markdown's block ends with the line ending that closed it. An
+    /// offset behind the span belongs to bytes this parse read for itself, so it
+    /// asks for nothing and is only checked - `back` maps it, since the region it
+    /// lives in may not be the region being jumped.
+    pub fn moved(gr: *const Graft, rec: Stance, from: u32, to: u32, live: u32) ?u32 {
+        if (rec.since == 0) return if (live == 0) 0 else null;
+        if (rec.since >= from and rec.since <= to) {
+            return @intCast(@as(i64, rec.since) + gr.delta + gr.skew);
+        }
+        const was = gr.back(live) orelse return null;
+        return if (was == rec.since) live else null;
     }
 
     /// The old offset a new one came from, or null when it came from the edit
@@ -258,20 +405,58 @@ pub const Graft = struct {
     }
 
     /// Whether this node is a thing a parse can be handed rather than a thing a
-    /// parse built for itself.
+    /// parse built for itself - and if it is, in which of the two ways, and if
+    /// it is not, which of the three it is.
     ///
+    /// The reason travels with the refusal because "the shape was wrong" is not
+    /// a finding: `worn` is a fact about how the grammar names things and wants
+    /// the grammar looked at, `high` is a fact about where the edit landed and
+    /// wants nothing looked at, and `bare` is a fact about the size of what the
+    /// tree offers here. They are different errands wearing one number.
+    pub const Verdict = union(enum) {
+        /// Hand over the node, under this symbol. The symbol is visible, so a
+        /// parse reaching it makes exactly this one node and the adopting step
+        /// only renames it.
+        lift: press.Symbol,
+        /// Hand over the node's *children*, under this symbol. The symbol is
+        /// hidden, so a parse reaching it makes no node at all: it contributes
+        /// the run its derivation built, and only a rename on the adopting step
+        /// wraps that run in a node. The node in the old tree *is* such a
+        /// wrapper, and whether there should be one here is the new parent's
+        /// call - so give the parent the run and let it decide again. Which is
+        /// also why a wrapper cannot be handed over whole: the parent would
+        /// wrap it a second time.
+        spread: press.Symbol,
+        no: Bar,
+    };
+
     /// A rename and a field are use-site facts written by the parent that
     /// reduced over it, so a node wearing either arrived at its name through a
-    /// derivation this parse has not made yet. The rename is the fatal one - it
-    /// overwrites the symbol, so the node can no longer say what it is - and a
-    /// field is merely re-decided by whoever adopts it, which is why the lift
-    /// clears it rather than refusing.
-    pub fn liftable(gr: *const Graft, ref: quire.Ref) ?press.Symbol {
+    /// derivation this parse has not made yet. Both are re-decided by whoever
+    /// adopts it, and the lift clears both rather than refusing - it can,
+    /// because `Kind.under` carries the symbol the rename stands in front of.
+    pub const Bar = enum {
+        /// An extra: the grammar's `extras` put it there and no production asked
+        /// for it, so there is no symbol to push it as.
+        worn,
+        /// Ends above the ceiling, so it is the end of the file and not a thing
+        /// to be lifted into the middle of another parse.
+        high,
+        /// A leaf, or zero-width: lifting it saves one lex and costs one copy.
+        bare,
+    };
+
+    pub fn liftable(gr: *const Graft, ref: quire.Ref) Verdict {
         const n = gr.old.nodes[ref];
-        if (n.kind.renamed or n.kind.extra) return null;
-        if (n.start + n.len > gr.ceiling) return null;
-        // A leaf is one token; lifting it saves one lex and costs one copy.
-        if (n.kids_len == 0 or n.len == 0) return null;
-        return @intCast(n.kind.index);
+        if (n.kind.extra) return .{ .no = .worn };
+        if (n.start + n.len > gr.ceiling) return .{ .no = .high };
+        if (n.kids_len == 0 or n.len == 0) return .{ .no = .bare };
+        // A rename on a symbol that stands for itself is only a name, and the
+        // new parent re-decides names anyway. On a hidden one the rename is the
+        // node's whole reason to exist, so what carries over is what the hidden
+        // symbol contributes, which is the children. See `Verdict.spread`.
+        const sym = n.kind.under;
+        if (n.kind.renamed and !gr.old.gr.shapeOf(sym).visible()) return .{ .spread = sym };
+        return .{ .lift = sym };
     }
 };

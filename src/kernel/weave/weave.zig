@@ -224,6 +224,12 @@ pub const Weave = struct {
     gens: std.ArrayList(u32),
     /// The alignment marks the next amend offers subtrees against.
     marks: std.ArrayList(graft.Mark),
+    /// Where the last parse's scan stood at each offset it was asked to read
+    /// at, so the next amend's lifts can be refused by the half of "where a
+    /// parse is standing" that is not the table's. Held here rather than read
+    /// off the gather for the same reason `marks` is: the gather's copy is
+    /// cleared by the run that would consult it.
+    stances: std.ArrayList(graft.Stance),
     trail: std.ArrayList(Move),
     /// Stretches of the last parse's stack, so the next one can start in the
     /// middle of the file rather than at the top of it. See `bough.zig`.
@@ -310,6 +316,7 @@ pub const Weave = struct {
             .entries = .empty,
             .starts = .empty,
             .marks = .empty,
+            .stances = .empty,
             .trail = .empty,
             .bough = .{ .gpa = gpa },
             .held = .empty,
@@ -335,6 +342,7 @@ pub const Weave = struct {
         w.entries.deinit(w.gpa);
         w.starts.deinit(w.gpa);
         w.marks.deinit(w.gpa);
+        w.stances.deinit(w.gpa);
         w.trail.deinit(w.gpa);
         w.bough.deinit();
         w.held.deinit(w.gpa);
@@ -439,6 +447,7 @@ pub const Weave = struct {
             .gpa = w.gpa,
             .old = &old.?,
             .marks = w.marks.items,
+            .stances = w.stances.items,
             .stable = cut.to,
             // A parse resuming at the last segment's start has no segment left
             // to resume into: the file's closing folds and its trailing bytes
@@ -475,17 +484,21 @@ pub const Weave = struct {
             .stood = if (w.gather.stood) |r| r.at else 0,
         };
         // What the lift walk was offered against what it took. `passed` is the
-        // whole question: candidates strictly wider than the one taken, since
-        // the chain is ordered widest first. Zero means nothing wider was ever
-        // nominated and the ceiling is nomination; a large number means the
-        // ordering or the break is losing answers that were on the table.
-        if (gr) |it| assay.trace(.weave, "lifts={d} taken={d}B widest={d}B offered={d} passed={d} (shape={d} goto={d} break={d}) asked={d} probes={d} turned(fork={d} align={d})\n", .{
-            it.lifts,       it.taken,
-            it.widest,      it.offered,
-            it.passed,      it.passed_shape,
-            it.passed_goto, it.passed_break,
-            it.asked,       it.probes,
-            it.turned_fork, it.turned_align,
+        // whole question: candidates the walk declined, at every probe and not
+        // only the ones that lifted. Zero against a zero `offered` means nothing
+        // was ever nominated and the ceiling is nomination; a large number
+        // against a small `lifts` names which of the five checks is eating them.
+        if (gr) |it| assay.trace(.weave, "lifts={d}(spread={d}) taken={d}B widest={d}B offered={d} passed={d} (shape={d}[worn={d} high={d} bare={d}] goto={d} break={d} edge={d} stance={d} unasked={d}) asked={d} probes={d} turned(fork={d} align={d})\n", .{
+            it.lifts,                                    it.spreads,
+            it.taken,                                    it.widest,
+            it.offered,                                  it.passed,
+            it.passed_shape,                             it.bars[@intFromEnum(graft.Graft.Bar.worn)],
+            it.bars[@intFromEnum(graft.Graft.Bar.high)], it.bars[@intFromEnum(graft.Graft.Bar.bare)],
+            it.passed_goto,                              it.passed_break,
+            it.passed_edge,                              it.passed_stance,
+            it.passed_unasked,                           it.asked,
+            it.probes,                                   it.turned_fork,
+            it.turned_align,
         });
         if (!w.spun) {
             _ = try w.spine.build(w.arena(), w.leaves.items);
@@ -734,6 +747,11 @@ pub const Weave = struct {
             // recorded one occurred.
             .fold, .mend => {},
         };
+        // Straight from the gather, which already keyed it by the offset each
+        // scan resumed at and already carried the resume's shrink - so unlike
+        // the marks there is nothing here to rebuild, only to keep.
+        w.stances.clearRetainingCapacity();
+        try w.stances.appendSlice(w.gpa, w.gather.stances.items);
         w.leaves.shrinkRetainingCapacity(leaf);
         w.entries.shrinkRetainingCapacity(leaf);
         w.gens.shrinkRetainingCapacity(leaf);

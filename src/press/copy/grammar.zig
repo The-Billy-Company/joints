@@ -407,6 +407,16 @@ pub const Grammar = struct {
         return if (step.field) |i| g.field_names[i] else null;
     }
 
+    /// How many symbols and how many renames a tree can name.
+    ///
+    /// `quire.Kind` is one word on every node of every file and it holds two
+    /// numbers: what a node is called and what the parse reduced to make it.
+    /// Fifteen bits each against 1,289 symbols in the widest grammar pressed
+    /// here and 65,535 in tree-sitter's own `TSSymbol`, so this is headroom and
+    /// not a budget - but it is a real edge, and a truncated symbol is a
+    /// different symbol, so `finish` refuses at it rather than arriving at one.
+    pub const names_max = std.math.maxInt(u15);
+
     /// Whether the author declared this symbol an abstract category over its
     /// own alternatives.
     pub fn isSupertype(g: *const Grammar, s: Symbol) bool {
@@ -812,6 +822,14 @@ pub const Builder = struct {
         const a = b.arena.allocator();
         const tcount: u32 = @intCast(b.terminals.items.len);
         const total = tcount + @as(u32, @intCast(b.nonterminals.items.len));
+        // Wider than a tree can name it, so refuse here rather than truncate a
+        // symbol into a different one at every node. Not reachable by any real
+        // grammar - see `Grammar.names_max` - and spelled in the one error the
+        // importer already carries, because "this grammar cannot be pressed" is
+        // exactly what that error means.
+        if (total > Grammar.names_max or b.aliases.items.len > Grammar.names_max) {
+            return error.MalformedGrammar;
+        }
 
         const names = try a.alloc([]const u8, total);
         const patterns = try a.alloc(?Pattern, total);

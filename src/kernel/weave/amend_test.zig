@@ -1097,6 +1097,66 @@ test "weave: the same, on java, whose forks used to forfeit the file" {
     try t.expect(a.healed > 40);
 }
 
+/// Two readings of the same byte that never reconcile, so the fork is still
+/// standing when the file ends.
+///
+/// Written out here rather than fetched because that last clause is the whole
+/// fixture and no corpus grammar reliably supplies it: rust and java fork
+/// constantly and *collapse*, which is the case the two fuzzes above already
+/// cover. `left` and `right` both derive `x` and the declared conflict makes
+/// the parser carry both; because each one can only continue into a repeat of
+/// its own kind, the two readings never stand on the same states and `roost`
+/// never runs. Three bytes of it reach the defect below.
+const fork_src =
+    \\{
+    \\  "name": "fork",
+    \\  "rules": {
+    \\    "source_file": { "type": "CHOICE", "members": [
+    \\      { "type": "SYMBOL", "name": "lefts" },
+    \\      { "type": "SYMBOL", "name": "rights" }
+    \\    ] },
+    \\    "lefts": { "type": "REPEAT1", "content": { "type": "SYMBOL", "name": "left" } },
+    \\    "rights": { "type": "REPEAT1", "content": { "type": "SYMBOL", "name": "right" } },
+    \\    "left": { "type": "SEQ", "members": [{ "type": "STRING", "value": "x" }] },
+    \\    "right": { "type": "SEQ", "members": [{ "type": "STRING", "value": "x" }] }
+    \\  },
+    \\  "extras": [{ "type": "PATTERN", "value": "\\s" }],
+    \\  "conflicts": [["left", "right"]],
+    \\  "precedences": [], "externals": [], "inline": [], "supertypes": []
+    \\}
+;
+
+// The three bytes that killed the process on every grammar whose forks outlive
+// the file.
+//
+// `close` folds each surviving reading down at the end column, and it did that
+// with the pen back on `sole` - so two readings' closing folds were appended to
+// the one flat trail, which is the interleaving `Move` says cannot be repaired
+// and `strands` was built in Round 15 to prevent. Every other writer into the
+// trail learned that; this one was missed, because the fuzzes above run on
+// json, which declares no conflict, and on rust and java, whose forks collapse
+// before the bytes run out. `distil` then met two folds of one production under
+// two different states, refused a composition it is right to refuse, and
+// `TrailRefused` took the process down. Six bytes of markdown reach it too -
+// `[a]: \n` - and it cost markdown and scala their whole incremental path.
+//
+// The assertions are the two halves of the claim: the fork really did stand to
+// the end (`rifts` without `roosts`), and the amend the fork used to kill now
+// produces the tree a cold parse produces, which is what `check` asks.
+test "weave: a fork still standing at EOF leaves one reading's moves in the trail" {
+    const gpa = t.allocator;
+    const bolt = try Bolt.of(gpa, fork_src);
+    defer bolt.deinit();
+    var r = try Run.init(bolt, "x x", .prove, .none);
+    defer r.deinit();
+
+    try r.apply(.{ .from = 3, .to = 3, .put = " x" });
+    try r.check();
+
+    try t.expect(r.w.gather.rifts > 0);
+    try t.expectEqual(@as(u32, 0), r.w.gather.roosts);
+}
+
 // The ten edits that separated a ring from a probe.
 //
 // A ring probe re-lexes a stretch of the file to ask whether the kept token
@@ -1149,6 +1209,101 @@ test "weave: a ring probe leaves no extras behind for the next parse to mint" {
     // stopped reaching it would pass this test by not exercising it.
     try t.expect(r.tally.mended > 0);
     try t.expect(r.tally.stood > 0);
+}
+
+// The one byte that proved a lift can swallow a token and hand it back.
+//
+// A hand answers where the cursor cannot move, so one offset can be asked more
+// than once, and every answer but the last belongs to the node still being
+// built there. Python's `block` ends on a zero-width `_dedent`: the node reads
+// `[763, 883)` and the dedent it consumed sits at 883, so the old parse's
+// record at 883 is three asks deep - a `_newline` and a `_dedent` inside the
+// block, then the first token after it. Condition 3 read the first of those
+// and so vouched for the lift against a moment the lift skips: the take was
+// admitted, the column stack stayed one block too deep, and the parse tripped
+// on an unexpected `_dedent` a hundred bytes later. Reading the last ask
+// instead is the fix, plus recording the ask that finds the end of the file,
+// which has no token to be written beside and was the last offset the
+// condition could not speak about.
+//
+// One insert at offset 4 is the whole reproducer, and the assertions are the
+// two halves: the amended tree is the tree a cold parse of the same bytes
+// produces (`check`), and lifts still happen (a condition that refused
+// everything would pass the first half by doing no reuse at all).
+test "weave: a lift stops short of the zero-width token the node swallowed" {
+    const gpa = t.allocator;
+    const src = shelf(gpa, "upstream/grammars/python.json") catch |e| {
+        if (e == error.FileNotFound) return error.SkipZigTest;
+        return e;
+    };
+    defer gpa.free(src);
+    const bolt = try Bolt.of(gpa, src);
+    defer bolt.deinit();
+    const seed0 = shelf(gpa, "research/joinery/corpus/ledger.py") catch |e| {
+        if (e == error.FileNotFound) return error.SkipZigTest;
+        return e;
+    };
+    defer gpa.free(seed0);
+
+    var r = try Run.init(bolt, seed0, .prove, .none);
+    defer r.deinit();
+    try r.apply(.{ .from = 4, .to = 4, .put = "x" });
+    try r.check();
+    try t.expect(r.tally.lifts > 0);
+}
+
+// One insert on a grammar whose whole scanner is a book, which is the case the
+// two checks above were never asked about.
+//
+// yaml is the extreme of it - eight organs, and a blank line the grammar owes
+// itself as a zero-width `_bl` - and both halves of reuse were broken there in
+// ways the hand-written scanners hid:
+//
+//   * The *prefix* half asked `casts.len > 0` before restoring the scanner for
+//     its re-lex, so a grammar with a book and no casts kept a save per ring
+//     and read none of them back. The stretch re-lexed with whatever memory the
+//     attempt being replaced had left, four rings deep, every time: the ring
+//     wanted a plain scalar and the stale organs answered the `_bl`. Every
+//     resume declined and every keystroke re-read the file from the top.
+//   * The *suffix* half then lifted a block scalar whose derivation had
+//     swallowed one of those `_bl`s past its own span, and offered it a second
+//     time to a state already holding the whole value.
+//
+// So the assertions are one per half, plus `check` for the tree: `stood` says a
+// stack was stood back up rather than the ground, and `read < cold` says that
+// resume actually declined tokens - a resume that stands up at byte zero counts
+// in `stood` and saves nothing.
+test "weave: a scanner that is only a book resumes, and its lifts stop at a zero-width owed token" {
+    const gpa = t.allocator;
+    const src = shelf(gpa, "upstream/grammars/yaml.json") catch |e| {
+        if (e == error.FileNotFound) return error.SkipZigTest;
+        return e;
+    };
+    defer gpa.free(src);
+    const bolt = try Bolt.of(gpa, src);
+    defer bolt.deinit();
+    // The book is the whole scanner here, which is the premise of the test and
+    // not an incidental fact about the fixture: with a cast in the roll the
+    // prefix half would have restored the memory through the old predicate and
+    // this would pass while broken.
+    try t.expect(bolt.sc.outward());
+    try t.expectEqual(@as(usize, 0), bolt.sc.casts.len);
+    const seed0 = shelf(gpa, "upstream/sources/ci.yml") catch |e| {
+        if (e == error.FileNotFound) return error.SkipZigTest;
+        return e;
+    };
+    defer gpa.free(seed0);
+
+    var r = try Run.init(bolt, seed0, .prove, .none);
+    defer r.deinit();
+    // Mid-file: an edit at the top has nothing above it to resume over, and one
+    // at the bottom has nothing below it to lift.
+    const at: u32 = @intCast(seed0.len / 2);
+    try r.apply(.{ .from = at, .to = at, .put = "x" });
+    try r.check();
+    try t.expect(r.tally.stood > 0);
+    try t.expect(r.tally.read < r.tally.cold);
+    try t.expect(r.tally.lifts > 0);
 }
 
 test "weave: a deliberately broken reuse is caught and shrinks to a few edits" {
