@@ -1,405 +1,615 @@
 {
   "recorded": {
-    "date": "2026-08-08 14:40:56-0700",
-    "commit": "1eebfed23",
-    "dirty": 6,
+    "date": "2026-08-09 12:51:13-0700",
+    "commit": "bf8e0ad31",
+    "dirty": 60,
     "joints": "0.0.0",
     "tree_sitter": "0.26.11",
     "build": "-Dcli-optimize=ReleaseFast",
     "binary": ".local/bench/build/bin/joints",
     "machine": "macOS-26.5.1-arm64-arm-64bit arm64 x16",
-    "load": 7.31,
+    "load": 7.37,
     "python": "3.12.0",
     "stamp": {
       "binary": "/Users/griffinstrier/Billy-Company/outliner/.local/bench/build/bin/joints",
-      "build": "7a109218dd44",
-      "built": "2026-08-08T21:26:30Z",
+      "build": "7b5e60b9823f",
+      "built": "2026-08-09T19:51:13Z",
       "source": ".",
-      "tree": "0c277a437d30",
-      "live": "0c277a437d30",
+      "tree": "c53045605b4a",
+      "live": "c53045605b4a",
       "newest": "src/kernel/quire/gather.zig",
-      "commit": "1eebfed230d1",
-      "dirty": 6,
+      "commit": "bf8e0ad31620",
+      "dirty": 60,
       "stale": false,
       "drift": false,
       "told": true,
       "moved": false,
       "moved_at": "",
-      "when": "2026-08-08T21:40:56Z"
+      "when": "2026-08-09T19:51:13Z"
     }
   },
   "axis": {
     "artifact": {
       "bash": {
-        "ours": 1376888,
+        "ours": 1376904,
         "theirs": 1395464,
         "ratio": 0.9867,
         "unit": "bytes"
       },
       "c": {
-        "ours": 313808,
+        "ours": 313824,
         "theirs": 645928,
         "ratio": 0.4858,
         "unit": "bytes"
       },
       "cpp": {
-        "ours": 781200,
+        "ours": 781216,
         "theirs": 5636440,
         "ratio": 0.1386,
         "unit": "bytes"
       },
+      "elixir": {
+        "ours": 301840,
+        "theirs": 1638432,
+        "ratio": 0.1842,
+        "unit": "bytes"
+      },
       "go": {
-        "ours": 146976,
+        "ours": 146992,
         "theirs": 249160,
-        "ratio": 0.5899,
+        "ratio": 0.59,
+        "unit": "bytes"
+      },
+      "haskell": {
+        "ours": 728768,
+        "theirs": 3885104,
+        "ratio": 0.1876,
+        "unit": "bytes"
+      },
+      "html": {
+        "ours": 11864,
+        "theirs": 51752,
+        "ratio": 0.2292,
         "unit": "bytes"
       },
       "java": {
-        "ours": 222416,
+        "ours": 222432,
         "theirs": 447288,
         "ratio": 0.4973,
         "unit": "bytes"
       },
       "javascript": {
-        "ours": 306280,
+        "ours": 306296,
         "theirs": 431520,
         "ratio": 0.7098,
         "unit": "bytes"
       },
       "json": {
-        "ours": 11016,
+        "ours": 11032,
         "theirs": 33992,
-        "ratio": 0.3241,
+        "ratio": 0.3245,
+        "unit": "bytes"
+      },
+      "kotlin": {
+        "ours": 1048488,
+        "theirs": 5864768,
+        "ratio": 0.1788,
+        "unit": "bytes"
+      },
+      "markdown": {
+        "ours": 321344,
+        "theirs": 418176,
+        "ratio": 0.7684,
         "unit": "bytes"
       },
       "python": {
-        "ours": 242704,
+        "ours": 242720,
         "theirs": 480752,
-        "ratio": 0.5048,
+        "ratio": 0.5049,
         "unit": "bytes"
       },
       "ruby": {
-        "ours": 477728,
+        "ours": 477744,
         "theirs": 2150696,
         "ratio": 0.2221,
         "unit": "bytes"
       },
       "rust": {
-        "ours": 724520,
+        "ours": 724536,
         "theirs": 1142232,
         "ratio": 0.6343,
         "unit": "bytes"
       },
+      "scala": {
+        "ours": 1860744,
+        "theirs": 4083976,
+        "ratio": 0.4556,
+        "unit": "bytes"
+      },
+      "swift": {
+        "ours": 1004928,
+        "theirs": 3804712,
+        "ratio": 0.2641,
+        "unit": "bytes"
+      },
       "typescript": {
-        "ours": 973576,
+        "ours": 973592,
         "theirs": 1455344,
         "ratio": 0.669,
+        "unit": "bytes"
+      },
+      "yaml": {
+        "ours": 99744,
+        "theirs": 217176,
+        "ratio": 0.4593,
         "unit": "bytes"
       }
     },
     "install": {
-      "runtime x11": {
-        "ours": 7610992,
-        "theirs": 14283280,
-        "ratio": 0.5329,
+      "runtime x19": {
+        "ours": 13982952,
+        "theirs": 34247376,
+        "ratio": 0.4083,
         "unit": "bytes"
       },
-      "tooling x11": {
-        "ours": 7610992,
-        "theirs": 34276832,
-        "ratio": 0.222,
+      "tooling x19": {
+        "ours": 13982952,
+        "theirs": 54240928,
+        "ratio": 0.2578,
         "unit": "bytes"
       }
     },
     "press": {
       "bash": {
-        "ours": 1029.6267,
-        "theirs": 1844.6134,
-        "ratio": 0.5582,
+        "ours": 1061.8065,
+        "theirs": 1851.3101,
+        "ratio": 0.5735,
         "unit": "ms"
       },
       "c": {
-        "ours": 126.0557,
-        "theirs": 928.6271,
-        "ratio": 0.1357,
+        "ours": 135.1712,
+        "theirs": 975.5203,
+        "ratio": 0.1386,
         "unit": "ms"
       },
       "cpp": {
-        "ours": 416.0156,
-        "theirs": 17009.388,
-        "ratio": 0.0245,
+        "ours": 435.6994,
+        "theirs": 17842.076,
+        "ratio": 0.0244,
+        "unit": "ms"
+      },
+      "elixir": {
+        "ours": 216.7033,
+        "theirs": 2565.9661,
+        "ratio": 0.0845,
         "unit": "ms"
       },
       "go": {
-        "ours": 52.2425,
-        "theirs": 536.9705,
-        "ratio": 0.0973,
+        "ours": 54.7759,
+        "theirs": 556.8142,
+        "ratio": 0.0984,
+        "unit": "ms"
+      },
+      "haskell": {
+        "ours": 271.1405,
+        "theirs": 3286.7935,
+        "ratio": 0.0825,
+        "unit": "ms"
+      },
+      "html": {
+        "ours": 7.5775,
+        "theirs": 371.2788,
+        "ratio": 0.0204,
         "unit": "ms"
       },
       "java": {
-        "ours": 87.3642,
-        "theirs": 865.5968,
-        "ratio": 0.1009,
+        "ours": 90.7972,
+        "theirs": 908.6849,
+        "ratio": 0.0999,
         "unit": "ms"
       },
       "javascript": {
-        "ours": 120.9816,
-        "theirs": 1059.8329,
-        "ratio": 0.1142,
+        "ours": 128.0209,
+        "theirs": 1147.183,
+        "ratio": 0.1116,
         "unit": "ms"
       },
       "json": {
-        "ours": 6.0388,
-        "theirs": 213.429,
-        "ratio": 0.0283,
+        "ours": 7.108,
+        "theirs": 230.466,
+        "ratio": 0.0308,
+        "unit": "ms"
+      },
+      "kotlin": {
+        "ours": 1352.7571,
+        "theirs": 21967.4911,
+        "ratio": 0.0616,
+        "unit": "ms"
+      },
+      "markdown": {
+        "ours": 449.3982,
+        "theirs": 1434.7409,
+        "ratio": 0.3132,
         "unit": "ms"
       },
       "python": {
-        "ours": 80.7629,
-        "theirs": 697.6625,
-        "ratio": 0.1158,
+        "ours": 84.5604,
+        "theirs": 744.0856,
+        "ratio": 0.1136,
         "unit": "ms"
       },
       "ruby": {
-        "ours": 288.2511,
-        "theirs": 11353.7007,
-        "ratio": 0.0254,
+        "ours": 303.0359,
+        "theirs": 11977.2419,
+        "ratio": 0.0253,
         "unit": "ms"
       },
       "rust": {
-        "ours": 300.181,
-        "theirs": 2125.2826,
-        "ratio": 0.1412,
+        "ours": 304.785,
+        "theirs": 2093.377,
+        "ratio": 0.1456,
+        "unit": "ms"
+      },
+      "scala": {
+        "ours": 5698.73,
+        "theirs": 11501.5699,
+        "ratio": 0.4955,
+        "unit": "ms"
+      },
+      "swift": {
+        "ours": 314.2098,
+        "theirs": 3467.4384,
+        "ratio": 0.0906,
         "unit": "ms"
       },
       "typescript": {
-        "ours": 500.9156,
-        "theirs": 3993.4881,
-        "ratio": 0.1254,
+        "ours": 503.9442,
+        "theirs": 4205.9824,
+        "ratio": 0.1198,
+        "unit": "ms"
+      },
+      "yaml": {
+        "ours": 15.7456,
+        "theirs": 452.6709,
+        "ratio": 0.0348,
         "unit": "ms"
       }
     },
     "throughput": {
       "c 128 KB": {
-        "ours": 41.8299,
-        "theirs": 65.2283,
-        "ratio": 0.6413,
+        "ours": 42.0758,
+        "theirs": 65.409,
+        "ratio": 0.6433,
         "unit": "ns/byte"
       },
       "cpp 129 KB": {
-        "ours": 70.2487,
-        "theirs": 73.1056,
-        "ratio": 0.9609,
+        "ours": 75.4236,
+        "theirs": 76.5236,
+        "ratio": 0.9856,
+        "unit": "ns/byte"
+      },
+      "elixir 135 KB": {
+        "ours": 316.7694,
+        "theirs": 60.4545,
+        "ratio": 5.2398,
         "unit": "ns/byte"
       },
       "go 128 KB": {
-        "ours": 61.078,
-        "theirs": 75.0326,
-        "ratio": 0.814,
+        "ours": 62.868,
+        "theirs": 78.6432,
+        "ratio": 0.7994,
+        "unit": "ns/byte"
+      },
+      "html 141 KB": {
+        "ours": 61.8311,
+        "theirs": 32.9364,
+        "ratio": 1.8773,
         "unit": "ns/byte"
       },
       "java 128 KB": {
-        "ours": 33.2456,
-        "theirs": 49.8805,
-        "ratio": 0.6665,
+        "ours": 34.0227,
+        "theirs": 51.8177,
+        "ratio": 0.6566,
         "unit": "ns/byte"
       },
       "javascript 128 KB": {
-        "ours": 42.3908,
-        "theirs": 55.9426,
-        "ratio": 0.7578,
+        "ours": 45.3392,
+        "theirs": 58.2128,
+        "ratio": 0.7789,
         "unit": "ns/byte"
       },
       "json 128 KB": {
-        "ours": 31.3257,
-        "theirs": 48.827,
-        "ratio": 0.6416,
+        "ours": 34.0439,
+        "theirs": 50.7173,
+        "ratio": 0.6712,
+        "unit": "ns/byte"
+      },
+      "markdown 129 KB": {
+        "ours": 217.3208,
+        "theirs": 149.0973,
+        "ratio": 1.4576,
         "unit": "ns/byte"
       },
       "python 128 KB": {
-        "ours": 55.574,
-        "theirs": 77.4627,
-        "ratio": 0.7174,
+        "ours": 58.5658,
+        "theirs": 82.6528,
+        "ratio": 0.7086,
         "unit": "ns/byte"
       },
       "rust 128 KB": {
-        "ours": 52.3771,
-        "theirs": 58.7438,
-        "ratio": 0.8916,
+        "ours": 53.5852,
+        "theirs": 61.1798,
+        "ratio": 0.8759,
+        "unit": "ns/byte"
+      },
+      "scala 137 KB": {
+        "ours": 94.6534,
+        "theirs": 36.4345,
+        "ratio": 2.5979,
         "unit": "ns/byte"
       },
       "typescript 128 KB": {
-        "ours": 51.0366,
-        "theirs": 67.1127,
-        "ratio": 0.7605,
+        "ours": 55.4067,
+        "theirs": 71.9585,
+        "ratio": 0.77,
+        "unit": "ns/byte"
+      },
+      "yaml 129 KB": {
+        "ours": 95.588,
+        "theirs": 41.7399,
+        "ratio": 2.2901,
         "unit": "ns/byte"
       }
     },
     "startup": {
       "c 128 KB": {
-        "ours": 5.878,
-        "theirs": 6.0402,
-        "ratio": 0.9731,
+        "ours": 7.0519,
+        "theirs": 7.0651,
+        "ratio": 0.9981,
         "unit": "ms"
       },
-      "cpp 129 KB": {
-        "ours": 8.675,
-        "theirs": 6.0431,
-        "ratio": 1.4355,
+      "elixir 135 KB": {
+        "ours": 7.9893,
+        "theirs": 7.1312,
+        "ratio": 1.1203,
         "unit": "ms"
       },
       "go 128 KB": {
-        "ours": 4.8958,
-        "theirs": 5.8892,
-        "ratio": 0.8313,
+        "ours": 6.1934,
+        "theirs": 6.8074,
+        "ratio": 0.9098,
+        "unit": "ms"
+      },
+      "html 141 KB": {
+        "ours": 5.1297,
+        "theirs": 6.6515,
+        "ratio": 0.7712,
         "unit": "ms"
       },
       "java 128 KB": {
-        "ours": 5.0843,
-        "theirs": 5.7831,
-        "ratio": 0.8792,
+        "ours": 5.9339,
+        "theirs": 6.4486,
+        "ratio": 0.9202,
         "unit": "ms"
       },
       "javascript 128 KB": {
-        "ours": 5.5432,
-        "theirs": 5.7896,
-        "ratio": 0.9574,
+        "ours": 6.6044,
+        "theirs": 6.4148,
+        "ratio": 1.0296,
         "unit": "ms"
       },
       "json 128 KB": {
-        "ours": 3.8146,
-        "theirs": 5.2567,
-        "ratio": 0.7257,
+        "ours": 4.6855,
+        "theirs": 6.6282,
+        "ratio": 0.7069,
+        "unit": "ms"
+      },
+      "markdown 129 KB": {
+        "ours": 9.0097,
+        "theirs": 6.4886,
+        "ratio": 1.3885,
         "unit": "ms"
       },
       "python 128 KB": {
-        "ours": 5.634,
-        "theirs": 6.2408,
-        "ratio": 0.9028,
+        "ours": 6.1026,
+        "theirs": 7.191,
+        "ratio": 0.8486,
         "unit": "ms"
       },
       "rust 128 KB": {
-        "ours": 8.217,
-        "theirs": 6.1067,
-        "ratio": 1.3456,
+        "ours": 9.8099,
+        "theirs": 6.9255,
+        "ratio": 1.4165,
+        "unit": "ms"
+      },
+      "scala 137 KB": {
+        "ours": 18.4133,
+        "theirs": 7.0221,
+        "ratio": 2.6222,
         "unit": "ms"
       },
       "typescript 128 KB": {
-        "ours": 9.2925,
-        "theirs": 5.9786,
-        "ratio": 1.5543,
+        "ours": 11.1976,
+        "theirs": 6.8165,
+        "ratio": 1.6427,
+        "unit": "ms"
+      },
+      "yaml 129 KB": {
+        "ours": 5.8804,
+        "theirs": 6.6913,
+        "ratio": 0.8788,
         "unit": "ms"
       }
     },
     "incremental": {
       "c @98%": {
-        "ours": 87.0,
-        "theirs": 517.4,
-        "ratio": 0.1681,
+        "ours": 95.5,
+        "theirs": 540.4,
+        "ratio": 0.1767,
         "unit": "us"
       },
       "cpp @98%": {
-        "ours": 132.5,
-        "theirs": 513.4,
-        "ratio": 0.2581,
+        "ours": 149.5,
+        "theirs": 540.8,
+        "ratio": 0.2764,
+        "unit": "us"
+      },
+      "elixir @98%": {
+        "ours": 269.5,
+        "theirs": 1879.0,
+        "ratio": 0.1434,
+        "unit": "us"
+      },
+      "elixir @quoted_content": {
+        "ours": 1193.0,
+        "theirs": 1788.0,
+        "ratio": 0.6672,
         "unit": "us"
       },
       "go @98%": {
-        "ours": 117.0,
-        "theirs": 325.8,
-        "ratio": 0.3591,
+        "ours": 117.5,
+        "theirs": 337.4,
+        "ratio": 0.3483,
         "unit": "us"
       },
       "java @98%": {
         "ours": 87.0,
-        "theirs": 187.2,
-        "ratio": 0.4647,
+        "theirs": 190.6,
+        "ratio": 0.4565,
         "unit": "us"
       },
       "javascript @98%": {
-        "ours": 98.0,
-        "theirs": 427.6,
-        "ratio": 0.2292,
+        "ours": 103.5,
+        "theirs": 454.6,
+        "ratio": 0.2277,
         "unit": "us"
       },
       "json @98%": {
-        "ours": 86.5,
-        "theirs": 101.2,
-        "ratio": 0.8547,
+        "ours": 90.0,
+        "theirs": 105.2,
+        "ratio": 0.8555,
         "unit": "us"
       },
       "python @98%": {
-        "ours": 115.5,
-        "theirs": 290.4,
-        "ratio": 0.3977,
+        "ours": 121.0,
+        "theirs": 304.8,
+        "ratio": 0.397,
         "unit": "us"
       },
       "rust @98%": {
-        "ours": 95.0,
-        "theirs": 253.2,
-        "ratio": 0.3752,
+        "ours": 105.5,
+        "theirs": 267.2,
+        "ratio": 0.3948,
+        "unit": "us"
+      },
+      "scala @98%": {
+        "ours": 2024.5,
+        "theirs": 217.6,
+        "ratio": 9.3038,
         "unit": "us"
       },
       "typescript @98%": {
-        "ours": 104.0,
-        "theirs": 408.4,
-        "ratio": 0.2547,
+        "ours": 103.5,
+        "theirs": 426.2,
+        "ratio": 0.2428,
+        "unit": "us"
+      },
+      "yaml @98%": {
+        "ours": 493.0,
+        "theirs": 81.6,
+        "ratio": 6.0417,
+        "unit": "us"
+      },
+      "yaml @block_sequence": {
+        "ours": 17116.5,
+        "theirs": 28.8,
+        "ratio": 594.3229,
         "unit": "us"
       }
     },
     "memory": {
       "c 128 KB": {
-        "ours": 15597568,
-        "theirs": 13434880,
-        "ratio": 1.161,
+        "ours": 15712256,
+        "theirs": 13484032,
+        "ratio": 1.1652,
         "unit": "bytes"
       },
       "cpp 129 KB": {
-        "ours": 27344896,
-        "theirs": 15155200,
-        "ratio": 1.8043,
+        "ours": 26804224,
+        "theirs": 15138816,
+        "ratio": 1.7706,
+        "unit": "bytes"
+      },
+      "elixir 135 KB": {
+        "ours": 25378816,
+        "theirs": 13811712,
+        "ratio": 1.8375,
         "unit": "bytes"
       },
       "go 128 KB": {
-        "ours": 14401536,
-        "theirs": 14155776,
-        "ratio": 1.0174,
+        "ours": 13959168,
+        "theirs": 14204928,
+        "ratio": 0.9827,
+        "unit": "bytes"
+      },
+      "html 141 KB": {
+        "ours": 7323648,
+        "theirs": 10698752,
+        "ratio": 0.6845,
         "unit": "bytes"
       },
       "java 128 KB": {
-        "ours": 13942784,
-        "theirs": 12582912,
-        "ratio": 1.1081,
+        "ours": 13926400,
+        "theirs": 12599296,
+        "ratio": 1.1053,
         "unit": "bytes"
       },
       "javascript 128 KB": {
-        "ours": 16121856,
-        "theirs": 13467648,
-        "ratio": 1.1971,
+        "ours": 16187392,
+        "theirs": 13516800,
+        "ratio": 1.1976,
         "unit": "bytes"
       },
       "json 128 KB": {
-        "ours": 10010624,
-        "theirs": 13172736,
-        "ratio": 0.76,
+        "ours": 8912896,
+        "theirs": 13139968,
+        "ratio": 0.6783,
+        "unit": "bytes"
+      },
+      "markdown 129 KB": {
+        "ours": 21233664,
+        "theirs": 15613952,
+        "ratio": 1.3599,
         "unit": "bytes"
       },
       "python 128 KB": {
-        "ours": 14270464,
-        "theirs": 14368768,
-        "ratio": 0.9932,
+        "ours": 14483456,
+        "theirs": 14417920,
+        "ratio": 1.0045,
         "unit": "bytes"
       },
       "rust 128 KB": {
-        "ours": 35291136,
-        "theirs": 14680064,
-        "ratio": 2.404,
+        "ours": 35864576,
+        "theirs": 14647296,
+        "ratio": 2.4485,
+        "unit": "bytes"
+      },
+      "scala 137 KB": {
+        "ours": 74219520,
+        "theirs": 13484032,
+        "ratio": 5.5043,
         "unit": "bytes"
       },
       "typescript 128 KB": {
-        "ours": 40140800,
-        "theirs": 15024128,
-        "ratio": 2.6718,
+        "ours": 40534016,
+        "theirs": 15073280,
+        "ratio": 2.6891,
+        "unit": "bytes"
+      },
+      "yaml 129 KB": {
+        "ours": 10125312,
+        "theirs": 12763136,
+        "ratio": 0.7933,
         "unit": "bytes"
       }
     }

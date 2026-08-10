@@ -117,6 +117,38 @@ GUARD = {
     "memory": ("ratio", 0.20),
 }
 
+# The eight grammars whose external scanner keeps state in C structs between
+# calls, and the file each one is already measured over by the board and the
+# census. They are a *second* corpus on purpose: `research/joinery/corpus/` is
+# one ledger program in eleven languages, and there is no ledger program to
+# write in markdown, yaml or html.
+#
+# This table is the only place joints' interpreter-over-data meets tree-sitter's
+# hand-written C head to head. Every grammar in the committed throughput
+# baseline - c, cpp, go, java, javascript, json, python, rust, typescript - is
+# one where *neither* side runs an external scanner at all, so the case the
+# customaries exist for was the one case this bench could not see.
+STATEFUL = {
+    "elixir": "router.ex",
+    "haskell": "Shared.hs",
+    "html": "viewer.html",
+    "kotlin": "Maps.kt",
+    "markdown": "README.md",
+    "scala": "Option.scala",
+    "swift": "Chunked.swift",
+    "yaml": "ci.yml",
+}
+BOARD = ROOT / "upstream" / "sources"
+
+
+def cases() -> list[tuple[str, str, Path]]:
+    """Every grammar a timing axis can run over, with the file and the corpus it
+    comes from. The ledger corpus first, in its own order, so adding the eight
+    below it cannot reorder or renumber a row anybody has already recorded."""
+    return [(n, leaf, CORPUS) for n, leaf in pairs()] + \
+           [(n, STATEFUL[n], BOARD) for n in sorted(STATEFUL)]
+
+
 # One repeated copy of a corpus file is a bigger file in the same language for
 # every grammar whose top level is a sequence of items. JSON's is one value, so
 # the copies go in an array instead. Anything else would be a different shape
@@ -124,6 +156,13 @@ GUARD = {
 def scale(grammar: str, body: str, n: int) -> str:
     if grammar == "json":
         return "[" + ",\n".join([body.strip()] * n) + "]\n"
+    # A body that does not end in a newline glues its last token to the next
+    # copy's first one: elixir's closing `end` meeting the next `defmodule`
+    # becomes `enddefmodule`, which is a different program and usually a parse
+    # error. The eleven ledger files all end clean, so this never bit; the
+    # board's corpus files are somebody else's real files and do not have to.
+    if not body.endswith("\n"):
+        body += "\n"
     return body * n
 
 
@@ -290,6 +329,8 @@ def _forge(name: str, reps: int) -> Forge:
     lang = oracle_home(name, WORK)
     (lang / "src").mkdir(parents=True, exist_ok=True)
     shutil.copyfile(grammar, lang / "src" / "grammar.json")
+    if why := transcribe(name, lang):
+        return empty._replace(why=why)
     dylib = lang / f"{name}.dylib"
 
     def build() -> str:
@@ -322,6 +363,57 @@ def _forge(name: str, reps: int) -> Forge:
     report = say(mint, ROOT).stdout
     return Forge(folio.stat().st_size, folio_ms, folio_spread, dylib.stat().st_size, min(theirs),
                  csource, own_press(report), sections(report), "")
+
+
+def transcribe(name: str, lang: Path) -> str:
+    """Lay tree-sitter's own external scanner into the oracle about to be built.
+
+    Without this the oracle for a grammar with a stateful scanner is a parser
+    with half its lexer missing, and a throughput row measured against it would
+    be measured against something no tree-sitter user can run. `tree-sitter
+    build` does not object - a dylib is allowed to carry undefined symbols until
+    somebody calls them - so the hole is silent, which is why it survived: the
+    eleven grammars that reach a timing axis today are nine with no scanner at
+    all plus bash and ruby, and bash and ruby stop early for other reasons.
+
+    The bytes come from the oracle tree `differential.py scanners` already
+    fetched and hashed at the grammar's pinned commit - the same scanner the
+    token comparison runs against - rather than a second fetch of our own.
+    `refresh` explains what a second copy of one scanner costs: two identities
+    for one parser.
+
+    This moves *their* numbers on two axes we report, both in our favour, and
+    that is the correct direction rather than a flattering one. A user of
+    tree-sitter has to compile the scanner to have a working parser, so its
+    bytes belong in the dylib the `artifact` axis weighs and its compile belongs
+    in the time the `press` axis charges. We were holding our complete artifact
+    against their incomplete one.
+    """
+    try:
+        declared = bool(json.loads((GRAMMARS / f"{name}.json").read_text(encoding="utf-8"))
+                        .get("externals"))
+    except (OSError, ValueError):
+        return ""  # `_forge` has already refused a grammar it cannot read
+    if not declared:
+        return ""
+    src = oracle_home(name, ORACLE) / "src"
+    found = sorted(src.glob("scanner.c*")) if src.is_dir() else []
+    if not found:
+        return ("declares an external scanner and none is laid down - "
+                "run `python3 tool/differential.py scanners`")
+    # Everything the scanner is built from comes too - the headers beside it
+    # (html's `tag.h`) and the sources it includes (yaml's `schema.core.c`,
+    # which it names through a macro) - and nothing generated does: `parser.c`
+    # is the oracle's own output, `grammar.json` is ours from the pinned tree,
+    # and `tree_sitter/` belongs to the CLI. Naming what to leave out is the
+    # right way round: a new authored file is then carried by default, where a
+    # list of what to take leaves it behind silently and the parser it builds is
+    # a parser nobody upstream can run.
+    made = {"parser.c", "grammar.json", "node-types.json"}
+    for p in sorted(src.iterdir()):
+        if p.is_file() and p.name not in made:
+            shutil.copyfile(p, lang / "src" / p.name)
+    return ""
 
 
 def own_press(report: str) -> float:
@@ -379,12 +471,12 @@ class Input(NamedTuple):
     why: str  # empty when both parsers read the whole thing
 
 
-def input_for(name: str, leaf: str) -> Input:
+def input_for(name: str, leaf: str, root: Path = CORPUS) -> Input:
     """A bigger file in the same language, built by repeating the corpus file
     the rest of the repository already measures over - so a throughput number
     is over the same constructs every other rung reports on, and a clone can
     rebuild it with no network."""
-    src = CORPUS / leaf
+    src = root / leaf
     if not src.exists():
         return Input(name, src, 0, 0, f"no corpus file at {here(src)}")
     body = src.read_text(encoding="utf-8")
@@ -510,10 +602,10 @@ def bench(names: list[str], axes: tuple[str, ...], reps: int) -> tuple[list[Row]
     if not ({"throughput", "startup", "incremental", "memory"} & set(axes)):
         return rows, skips
 
-    for name, leaf in pairs():
+    for name, leaf, root in cases():
         if name not in made:
             continue
-        inp = input_for(name, leaf)
+        inp = input_for(name, leaf, root)
         dylib = oracle_home(name, WORK) / f"{name}.dylib"
         why, own = (inp.why, 0.0) if inp.why else whole(inp, dylib)
         if why:
@@ -559,6 +651,16 @@ def bench(names: list[str], axes: tuple[str, ...], reps: int) -> tuple[list[Row]
         if "incremental" in axes:
             row, why = keystroke(name, inp, dylib, reps)
             (rows if row else skips).append(row or Skip("incremental", name, why))
+            # And again inside the grammar's stateful region, where a resume has
+            # scanner state to rebuild and their scanner has to re-lex forward.
+            at, label, why = within(name, inp)
+            if why:
+                if name in INSIDE:
+                    skips.append(Skip("incremental", f"{name} inside", why))
+            else:
+                row, why = keystroke(name, inp, dylib, reps, at, label)
+                (rows if row else skips).append(
+                    row or Skip("incremental", f"{name} @{label}", why))
     # Grouped by axis rather than by the order the work happened in, because an
     # axis is the thing a reader compares across languages.
     rows.sort(key=lambda r: (AXES.index(r.axis), r.case))
@@ -607,7 +709,60 @@ def caret(text: bytes, cut: int) -> int:
     return min(breaks, key=lambda i: abs(i - want)) if breaks else want
 
 
-def keystroke(name: str, inp: Input, dylib: Path, reps: int) -> tuple[Row | None, str]:
+# The node kind naming each booked grammar's stateful region: the construct its
+# customary carries organ state through, and so the one place a keystroke makes
+# an incremental parser prove it is one. Typing at 98% of a file usually lands in
+# ordinary code, where neither side has any scanner state to rebuild - which is
+# why that row can look healthy while the interesting case is untested.
+#
+# The *name* is grammar-specific knowledge and is not derivable; the *position*
+# is not hardcoded. The caret goes inside the largest instance of that kind in
+# the real parse of the real file, so it follows the corpus rather than pinning a
+# byte offset that silently rots when the file changes, and a grammar with no
+# such node skips with a reason rather than quietly measuring an ordinary offset.
+INSIDE = {
+    # A heredoc or sigil body. Its terminator is held in registers, so a parser
+    # resuming here has to know which delimiter is still open.
+    "elixir": "quoted_content",
+    # A `<script>`/`<style>` body, which stops being raw text only at the close
+    # tag matching the open tag's name - state their scanner keeps on a stack.
+    "html": "raw_text",
+    # An opaque frame: the layout rules skip its interior, so reading it means
+    # knowing how deep the block stack was on entry.
+    "markdown": "indented_code_block",
+    # An indentation frame on the organ stack.
+    "yaml": "block_sequence",
+}
+RANGE = re.compile(r"^\s*(?P<kind>\S+) \[(?P<a>\d+), (?P<b>\d+)\)")
+
+
+def within(name: str, inp: Input) -> tuple[int, str, str]:
+    """A caret inside the grammar's stateful region: offset, label, why-not."""
+    kind = INSIDE.get(name)
+    if not kind:
+        return 0, "", f"no stateful region is declared for {name}"
+    got = say([str(BIN), "parse", str(folio_for(name)), str(inp.path), "--ranges", "--all"],
+              ROOT)
+    spans = [(int(m["a"]), int(m["b"])) for line in got.stdout.splitlines()
+             if (m := RANGE.match(line)) and m["kind"] == kind]
+    if not spans:
+        return 0, "", f"no {kind} node in {inp.path.name}"
+    a, b = max(spans, key=lambda s: s[1] - s[0])
+    if b - a < 64:
+        return 0, "", f"the largest {kind} in {inp.path.name} is only {b - a} bytes"
+    # Same reason as `caret`: a space just before a newline is trailing
+    # whitespace, so the edited file still parses on both sides and the axis
+    # stays about the incremental path rather than about error recovery.
+    text = inp.path.read_bytes()
+    breaks = [i for i in range(a + 1, b) if text[i] == 0x0A]
+    if not breaks:
+        return 0, "", f"the largest {kind} in {inp.path.name} holds no newline"
+    mid = (a + b) // 2
+    return min(breaks, key=lambda i: abs(i - mid)), kind, ""
+
+
+def keystroke(name: str, inp: Input, dylib: Path, reps: int,
+              at: int | None = None, label: str = "") -> tuple[Row | None, str]:
     """Type one space near the end of the file and take it straight back out.
 
     An insert *and* its delete is one pair, so the file is the same bytes at the
@@ -631,7 +786,7 @@ def keystroke(name: str, inp: Input, dylib: Path, reps: int) -> tuple[Row | None
     is what `startup` measures, where the whole open is the number.
     """
     text = inp.path.read_bytes()
-    at = caret(text, CUT)
+    at = caret(text, CUT) if at is None else at
     mine_keys, their_keys = KEYS
     ours = [str(BIN), "amend", str(folio_for(name)), str(inp.path), "--quiet"] + \
         [f"{at}..{at}= ", f"{at}..{at + 1}="] * mine_keys
@@ -656,7 +811,8 @@ def keystroke(name: str, inp: Input, dylib: Path, reps: int) -> tuple[Row | None
     ours_cold = statistics.median(cold)
     keys = statistics.median(mine)
     lost = "" if keys < ours_cold else " · SLOWER THAN REOPENING THE FILE"
-    return Row("incremental", f"{name} @{CUT}%", keys, statistics.median(theirs_us), "us",
+    return Row("incremental", f"{name} @{label or str(CUT) + '%'}",
+               keys, statistics.median(theirs_us), "us",
                spread=spread_of(mine),
                note=f"one space at byte {at:,} of {inp.size:,}, typed and deleted · "
                     f"{2 * mine_keys} edits ours, {2 * their_keys} theirs, each side's own "
@@ -830,9 +986,10 @@ def verify(rows: list[Row], head: dict[str, Any]) -> int:
 
 
 def inventory(names: list[str], axes: tuple[str, ...], as_json: bool) -> int:
-    corpus = dict(pairs())
-    rows = [{"grammar": n, "corpus": corpus.get(n, ""), "folio": here(folio_for(n))}
-            for n in names]
+    corpus = {n: (leaf, root) for n, leaf, root in cases()}
+    rows = [{"grammar": n, "corpus": corpus.get(n, ("", CORPUS))[0],
+             "scanner": "C, stateful" if n in STATEFUL else "",
+             "folio": here(folio_for(n))} for n in names]
     if as_json:
         print(json.dumps({"axis": list(axes), "grammar": rows}, indent=2))
         return 0
@@ -844,9 +1001,9 @@ def inventory(names: list[str], axes: tuple[str, ...], as_json: bool) -> int:
     print("  startup     everything before the first tree: our press, their dlopen")
     print(f"  incremental one space typed and deleted at {CUT}% of the file, both sides")
     print("  memory      peak resident set for one parse of the same file")
-    print(f"\n{'grammar':<11} {'corpus':<16} folio")
+    print(f"\n{'grammar':<11} {'corpus':<16} {'scanner':<12} folio")
     for r in rows:
-        print(f"{r['grammar']:<11} {r['corpus']:<16} {r['folio']}")
+        print(f"{r['grammar']:<11} {r['corpus']:<16} {r['scanner']:<12} {r['folio']}")
     print("\nthroughput, startup, incremental and memory run only where both parsers read "
           "the whole file; the rest are listed as skips with the reason.")
     return 0
@@ -895,7 +1052,13 @@ def main(argv: list[str]) -> int:
     if verb not in ("run", "verify", "record", "list"):
         return oops(f"no such verb {verb!r}\n\n{USAGE}")
     try:
-        names = [p.name for p in load() if not want or p.name == want]
+        # The dossier eleven, plus the eight whose scanner keeps state - named,
+        # not `load("all")`. The held-out set exists to be measured against the
+        # eleven rather than folded into them, and thirty `tree-sitter generate`
+        # runs is minutes; these eight are here because a scanner written as
+        # data has nothing to prove on a grammar that never needed one.
+        keep = {p.name for p in load()} | set(STATEFUL)
+        names = [p.name for p in load("all") if p.name in keep and (not want or p.name == want)]
     except (OSError, ValueError) as e:
         return oops(str(e))
     if not names:
