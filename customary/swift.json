@@ -7,8 +7,17 @@
     "scanner does is a decision over the bytes at the offset and the permission set,",
     "which is why swift is the grammar where `Provision` already got furthest.",
     "",
-    "This book claims the four answers a pattern table structurally cannot reach,",
-    "and leaves the nineteen it can to `outside.roll`:",
+    "It got furthest and it is now gone: the nineteen rows it held are the",
+    "`roll:` rules below. A `Provision` was a spelling plus the trailing bytes",
+    "its scanner refuses, seated as an ordinary slate pattern, and the seat was",
+    "the approximation. `eat_operators` reads `valid_symbols` BEFORE it collects",
+    "candidates, so a fixed operator competes only where its own terminal is",
+    "wanted; a slate pattern competes everywhere and is filtered after the fact.",
+    "That difference is exactly what this book used to have to write down as a",
+    "limitation, and the paragraph that did is deleted below rather than",
+    "reworded, because the limitation is not there any more.",
+    "",
+    "This book claims the four answers a pattern table structurally cannot reach:",
     "",
     "  _custom_operator   a decision about a WHOLE maximal operator run - is this",
     "                     run one of the 31 RESERVED_OPS, exactly - which no fixed",
@@ -16,10 +25,10 @@
     "                     tested. This is the `..<` / `!=` pair the board reports:",
     "                     `..<` is reserved and must stay the seated token, `!=` is",
     "                     not and must be a custom operator.",
-    "  _bang_custom       the twentieth row of OP_SYMBOLS, which outside.zig names",
-    "                     and declines: OP_SYMBOL_SUPPRESSOR conditions it on",
-    "                     FAKE_TRY_BANG *not* being wanted, and a Provision has no",
-    "                     access to a permission set. `not_wanted` is that test.",
+    "  _bang_custom       the twentieth row of OP_SYMBOLS, and the one the roll",
+    "                     named and declined: OP_SYMBOL_SUPPRESSOR conditions it",
+    "                     on FAKE_TRY_BANG *not* being wanted, and a Provision had",
+    "                     no access to a permission set. `not_wanted` is that test.",
     "  multiline_comment  nested, so the extent is a balanced run and not a",
     "                     pattern. swift keeps the depth on the C stack through",
     "                     recursion, which is the one place in the eight where",
@@ -29,21 +38,48 @@
     "  raw_str_*          the family that reads the register: `#`-counting, and",
     "                     the mark carries the count so the closer must match it.",
     "",
-    "Left to the roll on purpose, and this is a limitation rather than a reading:",
+    "The `roll:` rules are the nineteen, longest spelling first, because that is",
+    "`full_match`'s own preference: the C overwrites it with every longer candidate",
+    "that completes, so the answer is the longest wanted fixed operator whose",
+    "illegal-terminator group permits the byte after it. They stand ahead of the",
+    "two custom-operator rules for the same reason - `eat_operators` returns",
+    "`full_match` at scanner.c:658 and CUSTOM_OPERATOR only at 679.",
+    "",
+    "What the move repaired, and it was a real wrong answer rather than a tidy-up:",
     "`&&`, `||`, `??` and `==` are legal operator runs that are NOT in RESERVED_OPS,",
-    "so the C emits its fixed terminal when that terminal is wanted and",
-    "`custom_operator` when it is not. The roll already answers the wanted half with",
-    "the cohort conditions it carries; the not-wanted half would need those",
-    "conditions restated here, so the custom rule declines all four lexically and",
-    "says so. They move when the roll does."
+    "so the C emits the fixed terminal where it is wanted and `custom_operator`",
+    "where it is not. The roll could answer only the first half, so this book had",
+    "to refuse all four lexically - a `no_probe roll_owns` guard on both custom",
+    "rules - and `a &&& b` was a stray. With the fixed rules present and gated on",
+    "`wanted`, a run the state refuses falls through to the custom rules the way it",
+    "falls through in the C, and the guard is deleted."
   ],
   "asks": "token",
   "cohort": [
-    "_custom_operator",
+    "_arrow_operator_custom",
+    "_as_bang_custom",
+    "_as_custom",
+    "_as_quest_custom",
+    "_async_keyword_custom",
     "_bang_custom",
+    "_conjunction_operator_custom",
+    "_custom_operator",
+    "_disjunction_operator_custom",
+    "_dot_custom",
+    "_eq_custom",
+    "_eq_eq_custom",
+    "_minus_then_ws",
+    "_nil_coalescing_operator_custom",
+    "_plus_then_ws",
+    "_rethrows_keyword",
+    "_throws_keyword",
+    "catch_keyword",
+    "default_keyword",
+    "else",
     "multiline_comment",
+    "raw_str_end_part",
     "raw_str_part",
-    "raw_str_end_part"
+    "where_keyword"
   ],
   "kinds": {
     "raw": 1
@@ -53,19 +89,55 @@
     "oper_run_lt": "(?!//|/\\*)(\\.[-+*/%=!<>&|^?~.]*|[-+*/%=!<>&|^?~]+)(?<=<)(?![-+*/%=!<>&|^?~.\\s])",
     "reserved_dot": "(?:\\.\\.<|\\.\\.\\.|\\.\\.|\\.)(?![-+*/%=!<>&|^?~.])",
     "reserved_plain": "(?:===|->|/\\*|\\*/|\\+=|-=|\\*=|/=|%=|>>|<<|\\+\\+|--|/|=|-|\\+|!|\\*|%|<|>|&|\\||\\^|\\?|~)(?![-+*/%=!<>&|^?~])",
-    "roll_owns": "(?:&&|\\|\\||\\?\\?|==)(?![-+*/%=!<>&|^?~])",
     "bang": "!(?![-+*/%=!<>&|^?~])",
     "open_comment": "/\\*",
     "slash_star": "/\\*",
     "star_slash": "\\*/",
-    "raw_opens": "(#+)\"",
-    "raw_body": "(?:[^#\\\\]|\\\\[^#]|#)*?(?=\\\\#)",
-    "raw_shuts": "(?:[^#\\\\]|\\\\[^#]|#)*?\"(#+)"
+    "raw_whole": "(#+)\"(?:(?!\"\\1)(?!\\\\\\1\\()[\\s\\S])*\"\\1",
+    "raw_opens": "(#+)\"(?:(?!\"\\1)(?!\\\\\\1\\()[\\s\\S])*(?=\\\\\\1\\()",
+    "raw_body": "[\\s\\S]*?(?=\\\\(#+)\\()",
+    "raw_shuts": "(?:[^#\\\\]|\\\\[^#]|#)*?\"(#+)",
+    "roll:_rethrows_keyword": "rethrows(?![0-9A-Za-z])",
+    "roll:default_keyword": "default(?![0-9A-Za-z])",
+    "roll:_throws_keyword": "throws(?![0-9A-Za-z])",
+    "roll:_async_keyword_custom": "async(?![0-9A-Za-z])",
+    "roll:catch_keyword": "catch(?![0-9A-Za-z])",
+    "roll:where_keyword": "where(?![0-9A-Za-z])",
+    "roll:else": "else(?![0-9A-Za-z])",
+    "roll:_as_bang_custom": "as!(?![/=\\-+!*%<>&|^?~])",
+    "roll:_as_quest_custom": "as\\?(?![/=\\-+!*%<>&|^?~])",
+    "roll:_arrow_operator_custom": "->(?![/=\\-+!*%<>&|^?~])",
+    "roll:_as_custom": "as(?![0-9A-Za-z])",
+    "roll:_conjunction_operator_custom": "&&(?![/=\\-+!*%<>&|^?~])",
+    "roll:_disjunction_operator_custom": "\\|\\|(?![/=\\-+!*%<>&|^?~])",
+    "roll:_eq_eq_custom": "==(?![/=\\-+!*%<>&|^?~])",
+    "roll:_nil_coalescing_operator_custom": "\\?\\?(?![/=\\-+!*%<>&|^?~])",
+    "roll:_dot_custom": "\\.(?![/=\\-+!*%<>&|^?~.])",
+    "roll:_eq_custom": "=(?![/=\\-+!*%<>&|^?~])",
+    "roll:_minus_then_ws": "-(?=[ \\t\\n\\r\\x0b\\x0c])",
+    "roll:_plus_then_ws": "\\+(?=[ \\t\\n\\r\\x0b\\x0c])"
   },
   "rules": [
     {
-      "name": "raw_string_opens",
-      "note": "scanner.c:929-948. The hashes and the quote together are the first `raw_str_part`, and the count is what every later ask compares against.",
+      "name": "raw_string_opens_and_shuts",
+      "note": "scanner.c:929-1004 read as ONE token, which is what it is. The opener is not a token: `eat_raw_str_part` counts the hashes, eats the quote, and then *falls through* into the body loop, so the answer that begins at `#\"` ends either before an interpolation or on the last hash of the close. A book that emitted the opener alone reported every raw string as two answers where the tree holds one, and the delimiter width it never re-read let `##\"a \"# b\"##` close on the inner `\"#`. The backreference is the delimiter: `\"\\1` is a close only at the width that opened it, so the body crosses a shorter run without stopping. No mark, because a string that closes in one answer was never left open.",
+      "phase": "opening",
+      "when": [
+        [
+          "probe",
+          "raw_whole"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "raw_str_end_part"
+        ]
+      ]
+    },
+    {
+      "name": "raw_string_opens_into_interpolation",
+      "note": "scanner.c:993-998 reached from the `hash_count == 0` arm. Same one answer, stopped early: `\\#(` at exactly the opening width ends the part *before* the backslash, which the C spells as a mark_end it declines to move. Mutually exclusive with the whole form by construction - neither body may cross the other's terminator - so which rule stands first says nothing. The mark is pushed here and only here, because this is the one arm that leaves the string open.",
       "phase": "opening",
       "when": [
         [
@@ -91,7 +163,7 @@
     },
     {
       "name": "raw_string_interpolates",
-      "note": "scanner.c:993-998. `\\#(` with exactly the opening count of hashes stops the part *before* the backslash, which the C spells as a mark_end it declines to move. The mark stays: the string is still open behind the interpolation.",
+      "note": "scanner.c:993-998 reached from the `RAW_STR_CONTINUING_INDICATOR` arm - the resumed part, after the interpolation's `)`. The width cannot be a backreference here because the opener is behind us, so the probe captures the run it found and the guard holds it to the mark: `\\###(` inside a `#` string is not an interpolation, and the C declines it for the same reason - it counts at most `hash_count` hashes and then finds no `(`.",
       "phase": "inside",
       "when": [
         [
@@ -102,6 +174,14 @@
         [
           "probe",
           "raw_body"
+        ],
+        [
+          "marks.top.count",
+          "=",
+          [
+            "span",
+            1
+          ]
         ]
       ],
       "then": [
@@ -194,6 +274,405 @@
       ]
     },
     {
+      "name": "roll:_rethrows_keyword",
+      "note": "scanner.c:119-163 row for `rethrows`, group ALPHANUMERIC: no ASCII letter or digit may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_rethrows_keyword"
+        ],
+        [
+          "wanted",
+          "_rethrows_keyword"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_rethrows_keyword"
+        ]
+      ]
+    },
+    {
+      "name": "roll:default_keyword",
+      "note": "scanner.c:119-163 row for `default`, group ALPHANUMERIC: no ASCII letter or digit may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:default_keyword"
+        ],
+        [
+          "wanted",
+          "default_keyword"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "default_keyword"
+        ]
+      ]
+    },
+    {
+      "name": "roll:_throws_keyword",
+      "note": "scanner.c:119-163 row for `throws`, group ALPHANUMERIC: no ASCII letter or digit may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_throws_keyword"
+        ],
+        [
+          "wanted",
+          "_throws_keyword"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_throws_keyword"
+        ]
+      ]
+    },
+    {
+      "name": "roll:_async_keyword_custom",
+      "note": "scanner.c:119-163 row for `async`, group ALPHANUMERIC: no ASCII letter or digit may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_async_keyword_custom"
+        ],
+        [
+          "wanted",
+          "_async_keyword_custom"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_async_keyword_custom"
+        ]
+      ]
+    },
+    {
+      "name": "roll:catch_keyword",
+      "note": "scanner.c:119-163 row for `catch`, group ALPHANUMERIC: no ASCII letter or digit may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:catch_keyword"
+        ],
+        [
+          "wanted",
+          "catch_keyword"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "catch_keyword"
+        ]
+      ]
+    },
+    {
+      "name": "roll:where_keyword",
+      "note": "scanner.c:119-163 row for `where`, group ALPHANUMERIC: no ASCII letter or digit may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:where_keyword"
+        ],
+        [
+          "wanted",
+          "where_keyword"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "where_keyword"
+        ]
+      ]
+    },
+    {
+      "name": "roll:else",
+      "note": "scanner.c:119-163 row for `else`, group ALPHANUMERIC: no ASCII letter or digit may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:else"
+        ],
+        [
+          "wanted",
+          "else"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "else"
+        ]
+      ]
+    },
+    {
+      "name": "roll:_as_bang_custom",
+      "note": "scanner.c:119-163 row for `as!`, group SYMBOLS: no further operator byte may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_as_bang_custom"
+        ],
+        [
+          "wanted",
+          "_as_bang_custom"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_as_bang_custom"
+        ]
+      ]
+    },
+    {
+      "name": "roll:_as_quest_custom",
+      "note": "scanner.c:119-163 row for `as?`, group SYMBOLS: no further operator byte may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_as_quest_custom"
+        ],
+        [
+          "wanted",
+          "_as_quest_custom"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_as_quest_custom"
+        ]
+      ]
+    },
+    {
+      "name": "roll:_arrow_operator_custom",
+      "note": "scanner.c:119-163 row for `->`, group SYMBOLS: no further operator byte may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_arrow_operator_custom"
+        ],
+        [
+          "wanted",
+          "_arrow_operator_custom"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_arrow_operator_custom"
+        ]
+      ]
+    },
+    {
+      "name": "roll:_as_custom",
+      "note": "scanner.c:119-163 row for `as`, group ALPHANUMERIC: no ASCII letter or digit may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_as_custom"
+        ],
+        [
+          "wanted",
+          "_as_custom"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_as_custom"
+        ]
+      ]
+    },
+    {
+      "name": "roll:_conjunction_operator_custom",
+      "note": "scanner.c:119-163 row for `&&`, group SYMBOLS: no further operator byte may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_conjunction_operator_custom"
+        ],
+        [
+          "wanted",
+          "_conjunction_operator_custom"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_conjunction_operator_custom"
+        ]
+      ]
+    },
+    {
+      "name": "roll:_disjunction_operator_custom",
+      "note": "scanner.c:119-163 row for `||`, group SYMBOLS: no further operator byte may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_disjunction_operator_custom"
+        ],
+        [
+          "wanted",
+          "_disjunction_operator_custom"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_disjunction_operator_custom"
+        ]
+      ]
+    },
+    {
+      "name": "roll:_eq_eq_custom",
+      "note": "scanner.c:119-163 row for `==`, group SYMBOLS: no further operator byte may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_eq_eq_custom"
+        ],
+        [
+          "wanted",
+          "_eq_eq_custom"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_eq_eq_custom"
+        ]
+      ]
+    },
+    {
+      "name": "roll:_nil_coalescing_operator_custom",
+      "note": "scanner.c:119-163 row for `??`, group SYMBOLS: no further operator byte may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_nil_coalescing_operator_custom"
+        ],
+        [
+          "wanted",
+          "_nil_coalescing_operator_custom"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_nil_coalescing_operator_custom"
+        ]
+      ]
+    },
+    {
+      "name": "roll:_dot_custom",
+      "note": "scanner.c:119-163 row for `.`, group SYMBOLS_OR_DOT: no operator byte and no dot may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_dot_custom"
+        ],
+        [
+          "wanted",
+          "_dot_custom"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_dot_custom"
+        ]
+      ]
+    },
+    {
+      "name": "roll:_eq_custom",
+      "note": "scanner.c:119-163 row for `=`, group SYMBOLS: no further operator byte may follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_eq_custom"
+        ],
+        [
+          "wanted",
+          "_eq_custom"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_eq_custom"
+        ]
+      ]
+    },
+    {
+      "name": "roll:_minus_then_ws",
+      "note": "scanner.c:119-163 row for `-`, group NON_WHITESPACE: whitespace must follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_minus_then_ws"
+        ],
+        [
+          "wanted",
+          "_minus_then_ws"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_minus_then_ws"
+        ]
+      ]
+    },
+    {
+      "name": "roll:_plus_then_ws",
+      "note": "scanner.c:119-163 row for `+`, group NON_WHITESPACE: whitespace must follow. `wanted` is `collect_fixed_operator_candidates` - the C never offers a fixed operator whose terminal this state refuses, and that is what lets a run it refuses reach the custom-operator rules below instead of being swallowed here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:_plus_then_ws"
+        ],
+        [
+          "wanted",
+          "_plus_then_ws"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_plus_then_ws"
+        ]
+      ]
+    },
+    {
       "name": "custom_operator_trims_trailing_angle",
       "note": "scanner.c:679-682. A run whose last character is `<`, with anything but whitespace after it, answers one byte short - which is how `Array<Int>` keeps its bracket and `a +< b` does not. The lookbehind is on the maximal run, so a `<` in the middle of one is not mistaken for the end of it. The three refusals stand ahead of the run because a guard reads where the rule has read TO: behind it they would test the byte after the operator, and `...]` would pass a reserved check aimed at `]`.",
       "phase": "ordered",
@@ -205,10 +684,6 @@
         [
           "no_probe",
           "reserved_plain"
-        ],
-        [
-          "no_probe",
-          "roll_owns"
         ],
         [
           "wanted",
@@ -246,10 +721,6 @@
         [
           "no_probe",
           "reserved_plain"
-        ],
-        [
-          "no_probe",
-          "roll_owns"
         ],
         [
           "wanted",

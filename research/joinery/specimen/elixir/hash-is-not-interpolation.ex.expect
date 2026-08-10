@@ -1,0 +1,11 @@
+# A `#` is content; only `#{` is a seam.
+#
+# The C advances over the `#` before it looks for the `{`, so a lone `#`
+# is already inside the answer when the decision is made - which means the
+# body cannot stop *at* a `#`, only at a `#` that turns out to open a brace.
+# The first body is `a#b` and it is three bytes, not one.
+roots 1
+mends 0
+holds quoted_content
+spans quoted_content 5 8
+spans quoted_content 12 13

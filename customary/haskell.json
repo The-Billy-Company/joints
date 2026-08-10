@@ -2,7 +2,7 @@
   "grammar": "haskell",
   "note": [
     "Read from tree-sitter-haskell's scanner.c (3471 lines, the largest of the",
-    "eight) and from the Haskell 2010 Report §10.3. This book claims none of the",
+    "eight) and from the Haskell 2010 Report \u00a710.3. This book claims none of the",
     "layout: `writ` already executes the `_cmd_*` orders and answers the `_cond_*`",
     "layout questions against the same stack, under the unanimity warrant its own",
     "header sets out, and it does that correctly. What `writ` cannot reach is the",
@@ -23,7 +23,7 @@
     "Every rule here is zero width. The grammar spells each condition as",
     "`SEQ(_cond_X, \".\")` - the scanner says which reading of the dot this is and",
     "the ordinary lexer still eats the byte - so the answer's whole content is its",
-    "name, and `emit … 0` is the literal reading of the C's `mark_end` before the",
+    "name, and `emit \u2026 0` is the literal reading of the C's `mark_end` before the",
     "operator.",
     "",
     "Deliberately not here: `_varsym` / `_consym` and the section family",
@@ -49,14 +49,23 @@
     "_cond_dotdot",
     "_cond_tight_dot",
     "_cond_prefix_dot",
-    "_cond_qual_dot"
+    "_cond_qual_dot",
+    "_cond_left_section_op",
+    "_cond_no_section_op",
+    "_consym",
+    "_varsym"
   ],
   "probes": {
     "dotdot": "\\.\\.(?![-!#$%&*+./<=>?@\\\\^|~:])",
     "tight_dot_id": "(?<![ \\t\\r\\n])\\.(?=['\\w])",
     "prefix_dot_id": "(?<=[ \\t\\r\\n])\\.(?=['\\w])",
     "prefix_dot_open": "(?<=[ \\t\\r\\n])\\.(?=[(\\[\"]|\\{(?!-))",
-    "qual_dot": "(?<![ \\t\\r\\n])\\.(?=['\\w]|[-!#$%&*+./<=>?@\\\\^|~:])"
+    "qual_dot": "(?<![ \\t\\r\\n])\\.(?=['\\w]|[-!#$%&*+./<=>?@\\\\^|~:])",
+    "sym_run": "([-!#$%&*+./<=>?@\\\\^|~:]+)",
+    "sym_shut": "([-!#$%&*+./<=>?@\\\\^|~:]+)\\)",
+    "sym_gap": "([-!#$%&*+./<=>?@\\\\^|~:]+)[ \\t\\r\\n]",
+    "sym_con": "(:[-!#$%&*+./<=>?@\\\\^|~:]*)",
+    "sym_routed": "(?:->\\.|->(?![-!#$%&*+./<=>?@\\\\^|~:])|=>(?![-!#$%&*+./<=>?@\\\\^|~:])|<-(?![-!#$%&*+./<=>?@\\\\^|~:])|::(?![-!#$%&*+./<=>?@\\\\^|~:])|\\|\\|\\]|#[#|](?![-!#$%&*+./<=>?@\\\\^|~:])|\\.(?:[-!#$%&*+./<=>?@\\\\^|~:]|(?:[(\\[\\\"\\w']|\\{(?!-)))|[-#|*=\\\\](?![-!#$%&*+./<=>?@\\\\^|~:])|[!~@%](?=(?:[(\\[\\\"\\w']|\\{(?!-)))|\\$\\$?(?=[a-z_(])|\\?(?=[a-z_]))"
   },
   "rules": [
     {
@@ -186,6 +195,140 @@
           "emit",
           "_cond_qual_dot",
           0
+        ]
+      ]
+    },
+    {
+      "name": "left_section_operator",
+      "note": "scanner.c:2222-2230, reached through `finish_symop` at 2251-2259. `(1 - 2 +)` cannot be decided on one lookahead token: the parser must know whether to reduce `1 - 2` as a section's operand or shift another infix. So the scanner looks PAST the operator run for the `)` and says which. `char_at(env, start, ')')` indexes the lookahead buffer from the token start, not from where `skip_whitespace` left the position, so the paren has to stand immediately after the run - which is why the operator class excluding `)` already makes the run maximal here.",
+      "phase": "ordered",
+      "when": [
+        [
+          "not_wanted",
+          "error_sentinel"
+        ],
+        [
+          "no_probe",
+          "sym_routed"
+        ],
+        [
+          "wanted",
+          "_cond_left_section_op"
+        ],
+        [
+          "probe",
+          "sym_shut"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_cond_left_section_op",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "no_section_operator",
+      "note": "scanner.c:2227. The auxiliary the comment at 2217 explains: this arm has already advanced over the whitespace behind the operator, so a following step would either swallow that whitespace into its extent or answer zero-width. Emitting NO_SECTION_OP instead retires LEFT_SECTION_OP for the next ask and leaves every other infix operator valid, so the run comes back as a varsym on the re-ask. Ordered behind the section rule because the C tests the paren first and only then the gap.",
+      "phase": "ordered",
+      "when": [
+        [
+          "not_wanted",
+          "error_sentinel"
+        ],
+        [
+          "no_probe",
+          "sym_routed"
+        ],
+        [
+          "wanted",
+          "_cond_left_section_op"
+        ],
+        [
+          "wanted",
+          "_cond_no_section_op"
+        ],
+        [
+          "probe",
+          "sym_gap"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_cond_no_section_op",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "consym",
+      "note": "scanner.c:2780. `LSymop` whose first byte is `:` is a constructor operator, and the extent is the whole maximal run because `symop_lookahead` consumed it before `MARK`. This is the rule the board was waiting on: `first:splitBy isSep rest` walled at its `:` on line 131 of the pandoc fixture, and a file that cannot lex cons cannot build a list anywhere.",
+      "phase": "ordered",
+      "when": [
+        [
+          "not_wanted",
+          "error_sentinel"
+        ],
+        [
+          "no_probe",
+          "sym_routed"
+        ],
+        [
+          "wanted",
+          "_consym"
+        ],
+        [
+          "probe",
+          "sym_con"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_consym",
+          [
+            "span",
+            1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "varsym",
+      "note": "scanner.c:2781. Everything else `lex_symop` calls `LSymop`, which is the DEFAULT arm of a classifier with eleven special cases - so the guard is `no_probe sym_routed`, stating those eleven once rather than restating the default. Five of them are conditional on the byte AFTER the operator, not on the operator: `lex_prefix` returns its special reading only when an `opening_token` follows and otherwise falls back to `LSymop`, and `lex_splice` the same for a varid or `(`. So `f $ x` and `a ! b` are varsyms while `$x` is a splice and `f !x` is a bang, and a book that routed the byte unconditionally lost the most common operator in Haskell. `f . g` reaches here too: a lone dot with neither an identifier nor an opening token behind it is composition, and the dot rules above already claim the two readings that are qualification.",
+      "phase": "ordered",
+      "when": [
+        [
+          "not_wanted",
+          "error_sentinel"
+        ],
+        [
+          "no_probe",
+          "sym_routed"
+        ],
+        [
+          "wanted",
+          "_varsym"
+        ],
+        [
+          "no_probe",
+          "sym_con"
+        ],
+        [
+          "probe",
+          "sym_run"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_varsym",
+          [
+            "span",
+            1
+          ]
         ]
       ]
     }

@@ -89,6 +89,13 @@
   },
   "rules": [
     {
+      "name": "eof_is_a_terminal_where_one_is_admitted",
+      "why": ":1332 - the C asks this *before* the block-close fallback below, so a state that admits `_eof` gets `_eof` and never the close; zero width, and the frames are left standing for whoever closes them",
+      "phase": "inside",
+      "when": [["eof"], ["wanted", "_eof"]],
+      "then": [["emit", "_eof", 0]]
+    },
+    {
       "name": "eof_closes_every_open_block",
       "why": ":1331 - a file ending inside open blocks owes one close each",
       "phase": "inside",
@@ -211,6 +218,13 @@
       "groups": ["interrupt"],
       "when": [["reg", 0, "=", 0], ["blank"], ["not_eof"]],
       "then": [["emit", "_blank_line_start", 0]]
+    },
+    {
+      "name": "line_ending_behind_the_line_s_own_blanks",
+      "why": ":1345 the not-matching branch advances over the line's leading blanks before it looks at anything, so by the time the `break` at :1380 falls through to :1542 the lookahead is the newline the soak stopped on and the token covers the blanks the C had already eaten. Sits behind `blank_line_start` for the same reason the C's `break` sits behind it, and is gated on `blank` because that is the only shape reaching :1542 from here - which is also the shape `soft_line_ending` declines (:1483 wants `not_blank`), so the two never race",
+      "phase": "layout",
+      "when": [["reg", 0, "=", 0], ["blank"], ["probe", "newline"]],
+      "then": [["set", 1, 0], ["set", 2, 0], ["set", 3, 0], ["set", 4, 0], ["set", 0, ["min", 1, "frames.depth"]], ["emit", "_line_ending", "width"]]
     },
     {
       "name": "indented_chunk_start",

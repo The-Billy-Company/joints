@@ -1,0 +1,13 @@
+# An uppercase sigil does not interpolate, and that changes both stops.
+#
+# `#{` is content here - the C only returns at a `#` when the row says the
+# family interpolates - so the first body is the whole `no #{x} seam`. The
+# backslash flips the other way: without interpolation it stops the body only
+# when the *next* byte is the closing delimiter, which is exactly the escape
+# in the second line and is not the two backslashes in any other.
+roots 1
+mends 0
+holds quoted_content
+spans quoted_content 7 19
+spans quoted_content 28 35
+spans quoted_content 37 50

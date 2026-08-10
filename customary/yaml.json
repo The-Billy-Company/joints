@@ -176,8 +176,12 @@
     "val_bgn": ":(?=[ \\t\\r\\n]|$)",
     "jsv_bgn": ":",
     "njv_bgn": ":(?=[ \\t\\r\\n,\\]}]|$)",
-    "lit_bgn": "\\|[-+]?[0-9]*",
-    "fld_bgn": ">[-+]?[0-9]*",
+    "lit_num": "(\\|[-+]?([1-9])[-+]?)(?=[ \\t\\r\\n]|$)",
+    "fld_num": "(>[-+]?([1-9])[-+]?)(?=[ \\t\\r\\n]|$)",
+    "lit_hdr": "(\\|[-+]?)(?=[ \\t\\r\\n]|$)[ \\t]*(?:#[^\\r\\n]*)?\\r?\\n(?:[ \\t]*\\r?\\n)*( *)(?=[^\\s])",
+    "fld_hdr": "(>[-+]?)(?=[ \\t\\r\\n]|$)[ \\t]*(?:#[^\\r\\n]*)?\\r?\\n(?:[ \\t]*\\r?\\n)*( *)(?=[^\\s])",
+    "lit_bgn": "\\|[-+]?(?=[ \\t\\r\\n]|$)",
+    "fld_bgn": ">[-+]?(?=[ \\t\\r\\n]|$)",
     "flw_seq_bgn": "\\[",
     "flw_seq_end": "\\]",
     "flw_map_bgn": "\\{",
@@ -196,8 +200,7 @@
     "anchor_name": "[^\\s,\\[\\]{}]+",
     "pln_blk": "(?:[^\\s\\-?:,\\[\\]{}#&*!|>'\"%@`]|[?:-](?=[^\\s]))(?:[^\\s:#]|:(?=[^\\s])|(?<=\\S)#|[ \\t]+(?=[^\\s#]))*",
     "pln_flw": "(?:[^\\s\\-?:,\\[\\]{}#&*!|>'\"%@`]|[?:-](?=[^\\s,\\[\\]{}]))(?:[^\\s:#,\\[\\]{}]|:(?=[^\\s,\\[\\]{}])|(?<=\\S)#|[ \\t]+(?=[^\\s#,\\[\\]{}]))*",
-    "blk_str_ctn": "[^\\r\\n]+",
-    "sof": "\\A"
+    "blk_str_ctn": "[^\\r\\n]+"
   },
   "classes": {
     "schema_blk_r": [
@@ -432,9 +435,7 @@
           "comment"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -825,9 +826,7 @@
           "seq_bgn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -859,6 +858,9 @@
         [
           "probe",
           "seq_bgn"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -900,6 +902,9 @@
         [
           "probe",
           "seq_bgn"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -945,6 +950,9 @@
           "seq_bgn"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
@@ -980,9 +988,7 @@
           "key_bgn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -1014,6 +1020,9 @@
         [
           "probe",
           "key_bgn"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -1057,6 +1066,9 @@
           "key_bgn"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
@@ -1083,9 +1095,7 @@
           "key_bgn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -1107,6 +1117,9 @@
         [
           "probe",
           "key_bgn"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -1135,9 +1148,7 @@
           "jsv_bgn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -1159,6 +1170,9 @@
         [
           "probe",
           "jsv_bgn"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -1187,9 +1201,7 @@
           "val_bgn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -1221,6 +1233,9 @@
         [
           "probe",
           "val_bgn"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -1264,6 +1279,9 @@
           "val_bgn"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
@@ -1278,7 +1296,7 @@
     },
     {
       "name": "implicit_value_opens_the_key_s_own_map",
-      "why": ":1197 MAY_PUSH_IMP_IND - the frame is the KEY's column, remembered when the line's first token was read, not the colon's",
+      "why": ":1197 MAY_PUSH_IMP_IND - the frame is the KEY's column, remembered when the line's first token was read, not the colon's. Asked from the register's side on purpose: the C compares against cur_ind_len, which for an empty stack is the root's own -1, and the root is a real width here (0) rather than an absent frame. `frames.top.width` in TEST position is false when nothing is pushed, which would refuse the outermost map its open; as a VALUE it reads 0, which is the root",
       "phase": "bounded",
       "when": [
         [
@@ -1290,17 +1308,13 @@
           "val_bgn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ],
         [
-          "frames.top.width",
+          "reg",
+          0,
           "!=",
-          [
-            "reg",
-            0
-          ]
+          "frames.top.width"
         ]
       ],
       "then": [
@@ -1333,9 +1347,7 @@
           "val_bgn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -1359,9 +1371,7 @@
           "njv_bgn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -1383,6 +1393,9 @@
         [
           "probe",
           "njv_bgn"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -1411,9 +1424,7 @@
           "flw_seq_bgn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -1444,6 +1455,9 @@
         [
           "probe",
           "flw_seq_bgn"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -1486,6 +1500,9 @@
           "flw_seq_bgn"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
@@ -1521,9 +1538,7 @@
           "flw_seq_end"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -1545,6 +1560,9 @@
         [
           "probe",
           "flw_seq_end"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -1578,6 +1596,9 @@
           "flw_seq_end"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
@@ -1604,9 +1625,7 @@
           "flw_map_bgn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -1637,6 +1656,9 @@
         [
           "probe",
           "flw_map_bgn"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -1679,6 +1701,9 @@
           "flw_map_bgn"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
@@ -1714,9 +1739,7 @@
           "flw_map_end"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -1738,6 +1761,9 @@
         [
           "probe",
           "flw_map_end"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -1771,6 +1797,9 @@
           "flw_map_end"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
@@ -1797,9 +1826,7 @@
           "flw_sep"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -1821,6 +1848,9 @@
         [
           "probe",
           "flw_sep"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -1849,9 +1879,7 @@
           "dqt_ctn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -1873,6 +1901,9 @@
         [
           "probe",
           "dqt_ctn"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -1901,9 +1932,7 @@
           "dqt_esc_nwl"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -1925,6 +1954,9 @@
         [
           "probe",
           "dqt_esc_nwl"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -1953,9 +1985,7 @@
           "dqt_esc_seq"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -1977,6 +2007,9 @@
         [
           "probe",
           "dqt_esc_seq"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -2005,9 +2038,7 @@
           "dqt"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -2038,6 +2069,9 @@
         [
           "probe",
           "dqt"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -2080,6 +2114,9 @@
           "dqt"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
@@ -2115,9 +2152,7 @@
           "dqt"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -2139,6 +2174,9 @@
         [
           "probe",
           "dqt"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -2167,9 +2205,7 @@
           "sqt_ctn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -2191,6 +2227,9 @@
         [
           "probe",
           "sqt_ctn"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -2219,9 +2258,7 @@
           "sqt_esc"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -2243,6 +2280,9 @@
         [
           "probe",
           "sqt_esc"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -2271,9 +2311,7 @@
           "sqt"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -2304,6 +2342,9 @@
         [
           "probe",
           "sqt"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -2346,6 +2387,9 @@
           "sqt"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
@@ -2381,9 +2425,7 @@
           "sqt"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -2407,6 +2449,9 @@
           "sqt"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
@@ -2420,8 +2465,94 @@
       ]
     },
     {
-      "name": "block_literal_same_line",
-      "why": ":691 scn_blk_str_bgn - '|' opens a string frame one column past the parent",
+      "name": "block_literal_indicated_same_line",
+      "why": ":698 - an explicit indentation indicator is relative to the parent, `ind = digit - '1'` then `ind += cur_ind`, so the frame lands `digit` columns past it once both are shifted. `number` reads the figure the group spells, where `span` would read its width",
+      "phase": "bounded",
+      "when": [
+        [
+          "wanted",
+          "_r_blk_lit_bgn"
+        ],
+        [
+          "probe",
+          "lit_num"
+        ],
+        [
+          "not_broke"
+        ]
+      ],
+      "then": [
+        [
+          "push",
+          "frames",
+          [
+            "+",
+            "frames.top.width",
+            [
+              "-",
+              [
+                "number",
+                2
+              ],
+              1
+            ]
+          ],
+          "str"
+        ],
+        [
+          "emit",
+          "_r_blk_lit_bgn",
+          [
+            "span",
+            1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "block_literal_measured_same_line",
+      "why": ":715 else-arm - with no indicator the C walks forward to the first non-empty line and takes `cur_col - 1`, never below the parent's own indent. The probe's second group is that line's blanks, so `max` over the parent is the same arithmetic without the walk. It diverges only where the C's loop would widen `ind` on a *leading blank* line indented past the body, which the spec forbids",
+      "phase": "bounded",
+      "when": [
+        [
+          "wanted",
+          "_r_blk_lit_bgn"
+        ],
+        [
+          "probe",
+          "lit_hdr"
+        ],
+        [
+          "not_broke"
+        ]
+      ],
+      "then": [
+        [
+          "push",
+          "frames",
+          [
+            "max",
+            "frames.top.width",
+            [
+              "span",
+              2
+            ]
+          ],
+          "str"
+        ],
+        [
+          "emit",
+          "_r_blk_lit_bgn",
+          [
+            "span",
+            1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "block_literal_bare_same_line",
+      "why": ":717 with the loop breaking at once - a header with no body left to measure keeps the parent's indent",
       "phase": "bounded",
       "when": [
         [
@@ -2433,20 +2564,14 @@
           "lit_bgn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
         [
           "push",
           "frames",
-          [
-            "+",
-            "column",
-            1
-          ],
+          "frames.top.width",
           "str"
         ],
         [
@@ -2456,8 +2581,8 @@
       ]
     },
     {
-      "name": "block_literal_deeper",
-      "why": ":691",
+      "name": "block_literal_indicated_deeper",
+      "why": ":698 - an explicit indentation indicator is relative to the parent, `ind = digit - '1'` then `ind += cur_ind`, so the frame lands `digit` columns past it once both are shifted. `number` reads the figure the group spells, where `span` would read its width",
       "phase": "bounded",
       "when": [
         [
@@ -2466,7 +2591,10 @@
         ],
         [
           "probe",
-          "lit_bgn"
+          "lit_num"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -2485,9 +2613,111 @@
           "frames",
           [
             "+",
-            "column",
-            1
+            "frames.top.width",
+            [
+              "-",
+              [
+                "number",
+                2
+              ],
+              1
+            ]
           ],
+          "str"
+        ],
+        [
+          "emit",
+          "_br_blk_lit_bgn",
+          [
+            "span",
+            1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "block_literal_measured_deeper",
+      "why": ":715 else-arm - with no indicator the C walks forward to the first non-empty line and takes `cur_col - 1`, never below the parent's own indent. The probe's second group is that line's blanks, so `max` over the parent is the same arithmetic without the walk. It diverges only where the C's loop would widen `ind` on a *leading blank* line indented past the body, which the spec forbids",
+      "phase": "bounded",
+      "when": [
+        [
+          "wanted",
+          "_br_blk_lit_bgn"
+        ],
+        [
+          "probe",
+          "lit_hdr"
+        ],
+        [
+          "broke"
+        ],
+        [
+          "lead",
+          "=",
+          "column"
+        ],
+        [
+          "lead",
+          ">=",
+          "frames.top.width"
+        ]
+      ],
+      "then": [
+        [
+          "push",
+          "frames",
+          [
+            "max",
+            "frames.top.width",
+            [
+              "span",
+              2
+            ]
+          ],
+          "str"
+        ],
+        [
+          "emit",
+          "_br_blk_lit_bgn",
+          [
+            "span",
+            1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "block_literal_bare_deeper",
+      "why": ":717 with the loop breaking at once - a header with no body left to measure keeps the parent's indent",
+      "phase": "bounded",
+      "when": [
+        [
+          "wanted",
+          "_br_blk_lit_bgn"
+        ],
+        [
+          "probe",
+          "lit_bgn"
+        ],
+        [
+          "broke"
+        ],
+        [
+          "lead",
+          "=",
+          "column"
+        ],
+        [
+          "lead",
+          ">=",
+          "frames.top.width"
+        ]
+      ],
+      "then": [
+        [
+          "push",
+          "frames",
+          "frames.top.width",
           "str"
         ],
         [
@@ -2497,8 +2727,94 @@
       ]
     },
     {
-      "name": "block_folded_same_line",
-      "why": ":691 with '>'",
+      "name": "block_folded_indicated_same_line",
+      "why": ":698 - an explicit indentation indicator is relative to the parent, `ind = digit - '1'` then `ind += cur_ind`, so the frame lands `digit` columns past it once both are shifted. `number` reads the figure the group spells, where `span` would read its width",
+      "phase": "bounded",
+      "when": [
+        [
+          "wanted",
+          "_r_blk_fld_bgn"
+        ],
+        [
+          "probe",
+          "fld_num"
+        ],
+        [
+          "not_broke"
+        ]
+      ],
+      "then": [
+        [
+          "push",
+          "frames",
+          [
+            "+",
+            "frames.top.width",
+            [
+              "-",
+              [
+                "number",
+                2
+              ],
+              1
+            ]
+          ],
+          "str"
+        ],
+        [
+          "emit",
+          "_r_blk_fld_bgn",
+          [
+            "span",
+            1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "block_folded_measured_same_line",
+      "why": ":715 else-arm - with no indicator the C walks forward to the first non-empty line and takes `cur_col - 1`, never below the parent's own indent. The probe's second group is that line's blanks, so `max` over the parent is the same arithmetic without the walk. It diverges only where the C's loop would widen `ind` on a *leading blank* line indented past the body, which the spec forbids",
+      "phase": "bounded",
+      "when": [
+        [
+          "wanted",
+          "_r_blk_fld_bgn"
+        ],
+        [
+          "probe",
+          "fld_hdr"
+        ],
+        [
+          "not_broke"
+        ]
+      ],
+      "then": [
+        [
+          "push",
+          "frames",
+          [
+            "max",
+            "frames.top.width",
+            [
+              "span",
+              2
+            ]
+          ],
+          "str"
+        ],
+        [
+          "emit",
+          "_r_blk_fld_bgn",
+          [
+            "span",
+            1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "block_folded_bare_same_line",
+      "why": ":717 with the loop breaking at once - a header with no body left to measure keeps the parent's indent",
       "phase": "bounded",
       "when": [
         [
@@ -2510,20 +2826,14 @@
           "fld_bgn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
         [
           "push",
           "frames",
-          [
-            "+",
-            "column",
-            1
-          ],
+          "frames.top.width",
           "str"
         ],
         [
@@ -2533,8 +2843,114 @@
       ]
     },
     {
-      "name": "block_folded_deeper",
-      "why": ":691 with '>'",
+      "name": "block_folded_indicated_deeper",
+      "why": ":698 - an explicit indentation indicator is relative to the parent, `ind = digit - '1'` then `ind += cur_ind`, so the frame lands `digit` columns past it once both are shifted. `number` reads the figure the group spells, where `span` would read its width",
+      "phase": "bounded",
+      "when": [
+        [
+          "wanted",
+          "_br_blk_fld_bgn"
+        ],
+        [
+          "probe",
+          "fld_num"
+        ],
+        [
+          "broke"
+        ],
+        [
+          "lead",
+          "=",
+          "column"
+        ],
+        [
+          "lead",
+          ">=",
+          "frames.top.width"
+        ]
+      ],
+      "then": [
+        [
+          "push",
+          "frames",
+          [
+            "+",
+            "frames.top.width",
+            [
+              "-",
+              [
+                "number",
+                2
+              ],
+              1
+            ]
+          ],
+          "str"
+        ],
+        [
+          "emit",
+          "_br_blk_fld_bgn",
+          [
+            "span",
+            1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "block_folded_measured_deeper",
+      "why": ":715 else-arm - with no indicator the C walks forward to the first non-empty line and takes `cur_col - 1`, never below the parent's own indent. The probe's second group is that line's blanks, so `max` over the parent is the same arithmetic without the walk. It diverges only where the C's loop would widen `ind` on a *leading blank* line indented past the body, which the spec forbids",
+      "phase": "bounded",
+      "when": [
+        [
+          "wanted",
+          "_br_blk_fld_bgn"
+        ],
+        [
+          "probe",
+          "fld_hdr"
+        ],
+        [
+          "broke"
+        ],
+        [
+          "lead",
+          "=",
+          "column"
+        ],
+        [
+          "lead",
+          ">=",
+          "frames.top.width"
+        ]
+      ],
+      "then": [
+        [
+          "push",
+          "frames",
+          [
+            "max",
+            "frames.top.width",
+            [
+              "span",
+              2
+            ]
+          ],
+          "str"
+        ],
+        [
+          "emit",
+          "_br_blk_fld_bgn",
+          [
+            "span",
+            1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "block_folded_bare_deeper",
+      "why": ":717 with the loop breaking at once - a header with no body left to measure keeps the parent's indent",
       "phase": "bounded",
       "when": [
         [
@@ -2546,6 +2962,9 @@
           "fld_bgn"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
@@ -2560,11 +2979,7 @@
         [
           "push",
           "frames",
-          [
-            "+",
-            "column",
-            1
-          ],
+          "frames.top.width",
           "str"
         ],
         [
@@ -2581,6 +2996,9 @@
         [
           "wanted",
           "_br_blk_str_ctn"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -2618,9 +3036,7 @@
           "tag"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -2651,6 +3067,9 @@
         [
           "probe",
           "tag"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -2693,6 +3112,9 @@
           "tag"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
@@ -2728,9 +3150,7 @@
           "anchor_name"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -2754,9 +3174,7 @@
           "anchor_name"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -2780,9 +3198,7 @@
           "acr_bgn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -2813,6 +3229,9 @@
         [
           "probe",
           "acr_bgn"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -2855,6 +3274,9 @@
           "acr_bgn"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
@@ -2890,9 +3312,7 @@
           "als_bgn"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -2923,6 +3343,9 @@
         [
           "probe",
           "als_bgn"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -2965,6 +3388,9 @@
           "als_bgn"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
@@ -3000,9 +3426,7 @@
           "pln_blk"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -3035,6 +3459,9 @@
         [
           "probe",
           "pln_blk"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",
@@ -3079,13 +3506,12 @@
           "pln_blk"
         ],
         [
+          "broke"
+        ],
+        [
           "lead",
           "=",
           "column"
-        ],
-        [
-          "probe",
-          "sof"
         ]
       ],
       "then": [
@@ -3120,9 +3546,7 @@
           "pln_flw"
         ],
         [
-          "lead",
-          "<",
-          "column"
+          "not_broke"
         ]
       ],
       "then": [
@@ -3146,6 +3570,9 @@
         [
           "probe",
           "pln_flw"
+        ],
+        [
+          "broke"
         ],
         [
           "lead",

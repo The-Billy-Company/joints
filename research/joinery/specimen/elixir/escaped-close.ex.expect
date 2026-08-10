@@ -1,0 +1,12 @@
+# `"a\"b"` - the escape ends the body, it does not extend it.
+#
+# The C stops a body at a backslash whenever the family interpolates, and
+# hands the escape itself to the grammar; the two halves `a` and `b` are two
+# answers with the escape sequence between them. A reader that treated `\"`
+# as one content byte would report one body of five bytes and a close where
+# the grammar has an escape, so the count of bodies is what discriminates.
+roots 1
+mends 0
+holds quoted_content
+spans quoted_content 5 6
+spans quoted_content 8 9

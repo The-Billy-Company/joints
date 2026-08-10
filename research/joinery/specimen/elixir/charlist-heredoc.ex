@@ -1,0 +1,3 @@
+x = '''
+single quoted heredoc
+'''

@@ -5,16 +5,24 @@
     "tree-sitter-julia's. The memory is one stack pushed two bytes at a time -",
     "`{delimiter, prefix_len}` - and the census read that as a `marks` stack whose",
     "element is a kind and a count. This book claims the string family and the",
-    "nested block comment; automatic-semicolon insertion, the import dot and the",
-    "primary-constructor keyword are four keyword look-aheads whose every branch",
-    "is gated on `valid_symbols`, so they belong to a caller that has a permission",
-    "set and are out of the cohort here.",
-    "",
+    "nested block comment, the import dot and the primary-constructor",
+    "keyword. The last two arrived from the Provision roll: every branch of",
+    "them is gated on `valid_symbols`, which rung 1 had no way to ask, so the",
+    "roll carried their bytes and none of their permission. Asked at the seam",
+    "they are whole. Automatic-semicolon insertion is still out of the cohort -",
+    "it answers a zero-width token at a position it marks *before* the bytes it",
+    "reads, and that is a seam question this book does not yet put.",
     "`interp`, `brace` and `ident` are marks the C does not keep, and that is not a",
     "liberty: the C is not asked inside an interpolation because STRING_CONTENT is",
     "not in `valid_symbols` there, and rung 1 has no parse table to say so. They",
     "are the parser's own bracket stack, standing in for it, and they carry no",
-    "answer - every rule that touches them emits nothing."
+    "answer - every rule that touches them emits nothing.",
+    "",
+    "`_by_delegation_hint` is claimed by nobody and needs no rule: kotlin's own",
+    "scanner never emits it. It is declared so that it *appears* in `valid_symbols`,",
+    "where the automatic-semicolon branch reads it as a flag for \"we are in a",
+    "delegation context\" - so it is not a token at all, and no rule here could",
+    "stand in for one. Its absence costs no structure."
   ],
   "asks": "token",
   "cohort": [
@@ -23,7 +31,9 @@
     "string_content",
     "_interpolation_expression_start",
     "_interpolation_identifier_start",
-    "multiline_comment"
+    "multiline_comment",
+    "_import_dot",
+    "_primary_constructor_keyword"
   ],
   "kinds": {
     "single": 1,
@@ -50,7 +60,9 @@
     "triple_end": "\"{3,}",
     "open_comment": "([ \\t\\r\\n\\f\\v]*)/\\*",
     "slash_star": "/\\*",
-    "star_slash": "\\*/"
+    "star_slash": "\\*/",
+    "roll:import_dot": "\\.(?!\\s*[\\r\\n]\\s*import)",
+    "roll:constructor": "([ \\t\\r\\n\\f\\v]*)constructor(?![A-Za-z0-9_])"
   },
   "rules": [
     {
@@ -561,6 +573,67 @@
         [
           "emit",
           "multiline_comment",
+          [
+            "-",
+            "width",
+            [
+              "span",
+              1
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "roll:import_dot",
+      "note": "scanner.c:851-881, whole. `scan_import_dot` marks the end before the dot, consumes it, then skips whitespace: if a newline was crossed and `import` follows, the answer is an automatic semicolon at the marked position instead, so the dot is refused. That refusal is the lookahead here. The semicolon itself is the ASI branch and still out of this cohort, so refusing hands the offset back rather than answering it wrongly.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:import_dot"
+        ],
+        [
+          "wanted",
+          "_import_dot"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_import_dot"
+        ]
+      ]
+    },
+    {
+      "name": "roll:primary_constructor_keyword",
+      "note": "scanner.c:903-916. Both halves of the guard are transcribed: the C enters under `valid_symbols[PRIMARY_CONSTRUCTOR_KEYWORD] && !valid_symbols[STRING_CONTENT]`, and that second clause is why this rule can sit in `ordered` behind the string phases without racing them. It `skip`s leading whitespace rather than consuming it, so group 1 is dropped and the token is the word alone, and it requires a non-word byte after - `constructors` is an identifier.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:constructor"
+        ],
+        [
+          "wanted",
+          "_primary_constructor_keyword"
+        ],
+        [
+          "not_wanted",
+          "string_content"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_primary_constructor_keyword",
           [
             "-",
             "width",

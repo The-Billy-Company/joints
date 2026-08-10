@@ -1,0 +1,1018 @@
+{
+  "grammar": "elixir",
+  "note": [
+    "Read from tree-sitter-elixir's scanner.c, whose `serialize` is",
+    "`return 0`: elixir is the one grammar in the eight that carries no",
+    "state at all. Its twenty quoted bodies are a walk over one table of",
+    "`{token_type, supports_interpol, end_delimiter, delimiter_length}`",
+    "against the bytes at the offset, and a table is what a book is. So",
+    "this book has no `kinds`, pushes nothing, and reads no organ - the",
+    "whole of it is twenty patterns and the order they are tried in.",
+    "",
+    "That order is the C's, and it is load bearing twice: the first row",
+    "whose terminal the state admits wins, and a row that wins with an",
+    "empty body ends the ask rather than letting the next row try. Both",
+    "are stated below rather than assumed.",
+    "",
+    "The remaining six externals - the three newline look-aheads, the two",
+    "unary-operator conditions and the quoted-atom start - are not here.",
+    "Every branch of each is a keyword read against `valid_symbols`, which",
+    "is a caller with a permission set rather than a scanner with memory,",
+    "and they sit behind their own hands for the same reason kotlin's four",
+    "do."
+  ],
+  "asks": "token",
+  "cohort": [
+    "_quoted_content_i_single",
+    "_quoted_content_i_double",
+    "_quoted_content_i_heredoc_single",
+    "_quoted_content_i_heredoc_double",
+    "_quoted_content_i_parenthesis",
+    "_quoted_content_i_curly",
+    "_quoted_content_i_square",
+    "_quoted_content_i_angle",
+    "_quoted_content_i_bar",
+    "_quoted_content_i_slash",
+    "_quoted_content_single",
+    "_quoted_content_double",
+    "_quoted_content_heredoc_single",
+    "_quoted_content_heredoc_double",
+    "_quoted_content_parenthesis",
+    "_quoted_content_curly",
+    "_quoted_content_square",
+    "_quoted_content_angle",
+    "_quoted_content_bar",
+    "_quoted_content_slash",
+    "_quoted_atom_start"
+  ],
+  "kinds": {},
+  "probes": {
+    "i_single": "(?:[^'#\\\\]|#(?!\\{))+",
+    "i_double": "(?:[^\"#\\\\]|#(?!\\{))+",
+    "i_heredoc_single": "(?:(?:(?!(?:[\\r\\n][ \\t\\r\\n]*)''')(?!#\\{)(?!\\\\(?!\\n))[\\s\\S])*[\\r\\n][ \\t\\r\\n]*(?=''')|(?:(?!(?:[\\r\\n][ \\t\\r\\n]*)''')(?!#\\{)(?!\\\\(?!\\n))[\\s\\S])+(?=#\\{|\\\\(?!\\n)|\\z))",
+    "i_heredoc_double": "(?:(?:(?!(?:[\\r\\n][ \\t\\r\\n]*)\"\"\")(?!#\\{)(?!\\\\(?!\\n))[\\s\\S])*[\\r\\n][ \\t\\r\\n]*(?=\"\"\")|(?:(?!(?:[\\r\\n][ \\t\\r\\n]*)\"\"\")(?!#\\{)(?!\\\\(?!\\n))[\\s\\S])+(?=#\\{|\\\\(?!\\n)|\\z))",
+    "i_parenthesis": "(?:[^)#\\\\]|#(?!\\{))+",
+    "i_curly": "(?:[^}#\\\\]|#(?!\\{))+",
+    "i_square": "(?:[^\\]#\\\\]|#(?!\\{))+",
+    "i_angle": "(?:[^>#\\\\]|#(?!\\{))+",
+    "i_bar": "(?:[^|#\\\\]|#(?!\\{))+",
+    "i_slash": "(?:[^/#\\\\]|#(?!\\{))+",
+    "single": "(?:[^'\\\\]|\\\\(?!'))+",
+    "double": "(?:[^\"\\\\]|\\\\(?!\"))+",
+    "heredoc_single": "(?:(?:(?!(?:[\\r\\n][ \\t\\r\\n]*)''')(?!\\\\')[\\s\\S])*[\\r\\n][ \\t\\r\\n]*(?=''')|(?:(?!(?:[\\r\\n][ \\t\\r\\n]*)''')(?!\\\\')[\\s\\S])+(?=\\\\'|\\z))",
+    "heredoc_double": "(?:(?:(?!(?:[\\r\\n][ \\t\\r\\n]*)\"\"\")(?!\\\\\")[\\s\\S])*[\\r\\n][ \\t\\r\\n]*(?=\"\"\")|(?:(?!(?:[\\r\\n][ \\t\\r\\n]*)\"\"\")(?!\\\\\")[\\s\\S])+(?=\\\\\"|\\z))",
+    "parenthesis": "(?:[^)\\\\]|\\\\(?!\\)))+",
+    "curly": "(?:[^}\\\\]|\\\\(?!\\}))+",
+    "square": "(?:[^\\]\\\\]|\\\\(?!\\]))+",
+    "angle": "(?:[^>\\\\]|\\\\(?!>))+",
+    "bar": "(?:[^|\\\\]|\\\\(?!\\|))+",
+    "slash": "(?:[^/\\\\]|\\\\(?!/))+",
+    "roll:quoted_atom": ":(?=[\"'])"
+  },
+  "rules": [
+    {
+      "name": "arbitrary_code_rather_than_a_quoted_body",
+      "note": "`find_quoted_token_info` opens by declining outright when the single- and double-quoted bodies are *both* admitted, because a state that would take either is not inside a string at all - it is reading code, and the twenty rows below would otherwise hand it the first row in the table. Guard rather than answer: it emits nothing and every row names it, which is the one thing a conjunction of tests cannot say about itself.",
+      "phase": "inside",
+      "groups": [
+        "code"
+      ],
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_single"
+        ],
+        [
+          "wanted",
+          "_quoted_content_i_double"
+        ]
+      ],
+      "then": [
+        [
+          "refuse"
+        ]
+      ]
+    },
+    {
+      "name": "i_single",
+      "note": "A single-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, `#{`, or any escape. A `#` not followed by `{` is content.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_single"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "i_single"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_i_single"
+        ]
+      ]
+    },
+    {
+      "name": "i_single_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `''`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_single"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "i_double",
+      "note": "A double-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, `#{`, or any escape. A `#` not followed by `{` is content.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_double"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "i_double"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_i_double"
+        ]
+      ]
+    },
+    {
+      "name": "i_double_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `\"\"`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_double"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "i_heredoc_single",
+      "note": "A single-quoted heredoc. The close is three 'single' bytes and *only* on a fresh line, so the run is tempered against `\\n<blanks>'''` rather than against the byte - a lone or doubled \"'\" inside the body is content. The newline and the closing line's indent belong to the content, because the C marks the end after skipping them and before it looks at the delimiter. The other way out is `#{` or an escape that is not a line continuation.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_heredoc_single"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "i_heredoc_single"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_i_heredoc_single"
+        ]
+      ]
+    },
+    {
+      "name": "i_heredoc_single_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `''`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_heredoc_single"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "i_heredoc_double",
+      "note": "A double-quoted heredoc. The close is three 'double' bytes and *only* on a fresh line, so the run is tempered against `\\n<blanks>\"\"\"` rather than against the byte - a lone or doubled '\"' inside the body is content. The newline and the closing line's indent belong to the content, because the C marks the end after skipping them and before it looks at the delimiter. The other way out is `#{` or an escape that is not a line continuation.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_heredoc_double"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "i_heredoc_double"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_i_heredoc_double"
+        ]
+      ]
+    },
+    {
+      "name": "i_heredoc_double_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `\"\"`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_heredoc_double"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "i_parenthesis",
+      "note": "A parenthesis-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, `#{`, or any escape. A `#` not followed by `{` is content.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_parenthesis"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "i_parenthesis"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_i_parenthesis"
+        ]
+      ]
+    },
+    {
+      "name": "i_parenthesis_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `))`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_parenthesis"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "i_curly",
+      "note": "A curly-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, `#{`, or any escape. A `#` not followed by `{` is content.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_curly"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "i_curly"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_i_curly"
+        ]
+      ]
+    },
+    {
+      "name": "i_curly_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `}}`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_curly"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "i_square",
+      "note": "A square-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, `#{`, or any escape. A `#` not followed by `{` is content.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_square"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "i_square"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_i_square"
+        ]
+      ]
+    },
+    {
+      "name": "i_square_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `]]`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_square"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "i_angle",
+      "note": "A angle-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, `#{`, or any escape. A `#` not followed by `{` is content.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_angle"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "i_angle"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_i_angle"
+        ]
+      ]
+    },
+    {
+      "name": "i_angle_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `>>`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_angle"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "i_bar",
+      "note": "A bar-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, `#{`, or any escape. A `#` not followed by `{` is content.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_bar"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "i_bar"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_i_bar"
+        ]
+      ]
+    },
+    {
+      "name": "i_bar_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `||`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_bar"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "i_slash",
+      "note": "A slash-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, `#{`, or any escape. A `#` not followed by `{` is content.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_slash"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "i_slash"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_i_slash"
+        ]
+      ]
+    },
+    {
+      "name": "i_slash_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `//`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_i_slash"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "single",
+      "note": "A single-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, or an escape of the delimiter. A `#` is always content here, and so is a backslash before anything but the delimiter.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_single"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "single"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_single"
+        ]
+      ]
+    },
+    {
+      "name": "single_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `''`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_single"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "double",
+      "note": "A double-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, or an escape of the delimiter. A `#` is always content here, and so is a backslash before anything but the delimiter.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_double"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "double"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_double"
+        ]
+      ]
+    },
+    {
+      "name": "double_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `\"\"`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_double"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "heredoc_single",
+      "note": "A single-quoted heredoc. The close is three 'single' bytes and *only* on a fresh line, so the run is tempered against `\\n<blanks>'''` rather than against the byte - a lone or doubled \"'\" inside the body is content. The newline and the closing line's indent belong to the content, because the C marks the end after skipping them and before it looks at the delimiter. The other way out is an escape of the delimiter.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_heredoc_single"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "heredoc_single"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_heredoc_single"
+        ]
+      ]
+    },
+    {
+      "name": "heredoc_single_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `''`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_heredoc_single"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "heredoc_double",
+      "note": "A double-quoted heredoc. The close is three 'double' bytes and *only* on a fresh line, so the run is tempered against `\\n<blanks>\"\"\"` rather than against the byte - a lone or doubled '\"' inside the body is content. The newline and the closing line's indent belong to the content, because the C marks the end after skipping them and before it looks at the delimiter. The other way out is an escape of the delimiter.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_heredoc_double"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "heredoc_double"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_heredoc_double"
+        ]
+      ]
+    },
+    {
+      "name": "heredoc_double_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `\"\"`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_heredoc_double"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "parenthesis",
+      "note": "A parenthesis-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, or an escape of the delimiter. A `#` is always content here, and so is a backslash before anything but the delimiter.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_parenthesis"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "parenthesis"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_parenthesis"
+        ]
+      ]
+    },
+    {
+      "name": "parenthesis_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `))`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_parenthesis"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "curly",
+      "note": "A curly-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, or an escape of the delimiter. A `#` is always content here, and so is a backslash before anything but the delimiter.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_curly"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "curly"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_curly"
+        ]
+      ]
+    },
+    {
+      "name": "curly_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `}}`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_curly"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "square",
+      "note": "A square-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, or an escape of the delimiter. A `#` is always content here, and so is a backslash before anything but the delimiter.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_square"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "square"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_square"
+        ]
+      ]
+    },
+    {
+      "name": "square_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `]]`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_square"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "angle",
+      "note": "A angle-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, or an escape of the delimiter. A `#` is always content here, and so is a backslash before anything but the delimiter.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_angle"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "angle"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_angle"
+        ]
+      ]
+    },
+    {
+      "name": "angle_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `>>`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_angle"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "bar",
+      "note": "A bar-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, or an escape of the delimiter. A `#` is always content here, and so is a backslash before anything but the delimiter.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_bar"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "bar"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_bar"
+        ]
+      ]
+    },
+    {
+      "name": "bar_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `||`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_bar"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "slash",
+      "note": "A slash-quoted body without a heredoc's line rule: the run is every byte that is not the delimiter, or an escape of the delimiter. A `#` is always content here, and so is a backslash before anything but the delimiter.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_slash"
+        ],
+        [
+          "no_fires",
+          "code"
+        ],
+        [
+          "probe",
+          "slash"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_content_slash"
+        ]
+      ]
+    },
+    {
+      "name": "slash_holds_nothing",
+      "note": "The C returns `false` from `scan_quoted_content` when the body was empty, and a `false` there is not a fall-through: the row was chosen, so no other row is consulted. Without this the eleventh row could answer for the second at `//`.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "_quoted_content_slash"
+        ],
+        [
+          "no_fires",
+          "code"
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "roll:quoted_atom_start",
+      "note": "scanner.c:608-616. The colon of `:\"foo\"`, and the whole branch: the C reaches it only under `valid_symbols[QUOTED_ATOM_START]`, advances one byte, marks the end there, and then *keeps the answer only if* a quote follows - so the token is the colon alone and the quote is the grammar's own. This lived in the Provision roll as a `:` with `after` of `\"` and `'`, which is the same bytes and none of the permission.",
+      "phase": "ordered",
+      "when": [
+        [
+          "probe",
+          "roll:quoted_atom"
+        ],
+        [
+          "wanted",
+          "_quoted_atom_start"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_quoted_atom_start"
+        ]
+      ]
+    }
+  ]
+}

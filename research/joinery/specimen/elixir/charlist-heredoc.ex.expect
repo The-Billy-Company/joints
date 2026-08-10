@@ -1,0 +1,9 @@
+# The charlist heredoc, whose delimiter is three `'` rather than three `"`.
+#
+# Four of the table's twenty rows are heredocs and they differ only in that
+# byte, so this is the row that catches a book that spelled the close once and
+# reused it.
+roots 1
+mends 0
+holds quoted_content
+spans quoted_content 7 30

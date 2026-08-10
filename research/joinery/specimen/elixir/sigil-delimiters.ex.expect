@@ -1,0 +1,16 @@
+# Six of the ten delimiters, each with its own terminal.
+#
+# The C's table is ten rows crossed with interpolation, and the row is chosen
+# by which terminal the parse state admits rather than by the bytes - so a
+# book gets the closing byte right for `)` and wrong for `>` without any
+# single file noticing. All six in one file is the cheapest way to make one
+# wrong row visible.
+roots 1
+mends 0
+holds quoted_content
+spans quoted_content 7 11
+spans quoted_content 24 28
+spans quoted_content 41 47
+spans quoted_content 60 65
+spans quoted_content 78 83
+spans quoted_content 96 100
