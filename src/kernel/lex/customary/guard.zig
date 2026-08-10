@@ -114,6 +114,8 @@ pub fn holds(
         .not_blank => !f.blank,
         .lull => f.lull,
         .not_lull => !f.lull,
+        .broke => f.broke,
+        .not_broke => !f.broke,
         .eof => f.eof,
         .not_eof => !f.eof,
         .fresh => a.fresh,
@@ -159,10 +161,13 @@ pub fn holds(
         else
             false,
 
-        // The bytes at the offset against the innermost mark's remembered tag. A
-        // heredoc's close, and nothing else. Read from `at` rather than from the
-        // guard's cursor, because the tag *is* what the rule is looking at.
-        .marks_top_tag => tag(a, t, o, at),
+        // The bytes at the offset - or one capture group's text - against a
+        // remembered tag. A heredoc's close reads `at` rather than the guard's
+        // cursor, because the tag *is* what the rule is looking at; html's
+        // closing name reads the group instead, because it sits past a `</` and
+        // a prefix comparison would let `</division>` close a `div`.
+        .marks_top_tag => tag(a, t, o, at, f, b, .top),
+        .marks_has_tag => tag(a, t, o, at, f, b, .any),
 
         .frames_has => hasKind(o.frames[0..o.frame_len], t.kinds),
         .marks_has => hasKind(o.marks[0..o.mark_len], t.kinds),
@@ -320,13 +325,43 @@ fn pass(
     return cmp.holds(b.ran.?[@intFromEnum(book.Pass.ran)], value(a, t.v2, o, f, b));
 }
 
-fn tag(a: *Ask, t: book.TestRow, o: *const organs.Organs, at: u32) bool {
-    const top = o.markTop() orelse return false;
-    const want = top.text();
-    if (at + want.len > a.bytes.len) return false;
-    const got = a.bytes[at..][0..want.len];
-    if (t.flags & book.TestRow.folded == 0) return std.mem.eql(u8, got, want);
-    return std.ascii.eqlIgnoreCase(got, want);
+/// Which marks a tag comparison is against: the innermost, or any of them.
+const Reach = enum { top, any };
+
+fn tag(
+    a: *Ask,
+    t: book.TestRow,
+    o: *const organs.Organs,
+    at: u32,
+    f: organs.Facts,
+    b: *const Bound,
+    reach_: Reach,
+) bool {
+    const folded = t.flags & book.TestRow.folded != 0;
+    // The grouped form compares whole: the group's own text against the whole
+    // remembered tag, so a longer name cannot pass on its prefix. The offset
+    // form has no end to compare to and reads exactly as many bytes as the tag
+    // is long, which is what a heredoc's close needs.
+    const got: ?[]const u8 = if (t.flags & book.TestRow.grouped != 0)
+        b.group(a.bytes, @intCast(@max(value(a, t.v0, o, f, b), 0)))
+    else
+        null;
+    const same = struct {
+        fn one(want: []const u8, saw: ?[]const u8, bytes: []const u8, from: u32, fold: bool) bool {
+            const seen = saw orelse blk: {
+                if (from + want.len > bytes.len) return false;
+                break :blk bytes[from..][0..want.len];
+            };
+            if (saw != null and seen.len != want.len) return false;
+            return if (fold) std.ascii.eqlIgnoreCase(seen, want) else std.mem.eql(u8, seen, want);
+        }
+    }.one;
+    return switch (reach_) {
+        .top => o.mark_len > 0 and same(o.markTopText(), got, a.bytes, at, folded),
+        .any => for (0..o.mark_len) |i| {
+            if (same(o.markText(@intCast(i)), got, a.bytes, at, folded)) break true;
+        } else false,
+    };
 }
 
 /// Score a named group of rules here without committing any of them.
@@ -383,6 +418,11 @@ fn valueAt(a: *Ask, which: u32, o: *const organs.Organs, f: organs.Facts, b: *co
         // kotlin's `$`s, a fence's backticks - and reading it off the match is how
         // a rule states that without arithmetic.
         .span => @intCast(b.group(a.bytes, @intCast(@max(v.a, 0))).len),
+        // The figure the group spells rather than its length. Truncated at the
+        // first byte that is not a digit and saturating rather than wrapping, so
+        // a group the probe let through unconstrained cannot make an offset out
+        // of a number the file chose.
+        .number => figure(b.group(a.bytes, @intCast(@max(v.a, 0)))),
         .pass => if (b.ran) |got| got[@intCast(@max(v.a, 0))] else 0,
         .reg => o.regs[@intCast(v.a)],
         .frames_top_width => if (o.frameTop()) |top| top.width else 0,
@@ -395,6 +435,25 @@ fn valueAt(a: *Ask, which: u32, o: *const organs.Organs, f: organs.Facts, b: *co
         .max => @max(kid.at(a, v.a, o, f, b, deep), kid.at(a, v.b, o, f, b, deep)),
         .min => @min(kid.at(a, v.a, o, f, b, deep), kid.at(a, v.b, o, f, b, deep)),
     };
+}
+
+/// The leading decimal run of `text` as a number, capped where a column stops
+/// being a column.
+fn figure(text: []const u8) i64 {
+    var out: i64 = 0;
+    for (text) |c| {
+        if (c < '0' or c > '9') break;
+        out = @min(out * 10 + (c - '0'), std.math.maxInt(u16));
+    }
+    return out;
+}
+
+test "a figure reads the digits it has and stops where they stop" {
+    try std.testing.expectEqual(@as(i64, 0), figure(""));
+    try std.testing.expectEqual(@as(i64, 4), figure("4"));
+    try std.testing.expectEqual(@as(i64, 12), figure("12x"));
+    try std.testing.expectEqual(@as(i64, 0), figure("x9"));
+    try std.testing.expectEqual(@as(i64, std.math.maxInt(u16)), figure("99999999999999999999"));
 }
 
 test "a bound reports the width of a group it never captured as zero" {

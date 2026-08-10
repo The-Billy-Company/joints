@@ -62,11 +62,14 @@ pub const Error = book.Error || error{
 ///
 /// `names` is a duck-typed resolver rather than a `*press.Grammar` for the same
 /// reason `outside.provision` takes one: name resolution belongs to whoever owns
-/// the numbering, and this directory does not. `external` is asked for a
-/// terminal a customary *answers* (a scanner answers externals and nothing
-/// else); `terminal` for one it only asks the parse state about, which may be any
-/// terminal at all - kotlin's semicolon insertion reads whether `else` is
-/// admitted, and `else` is an ordinary keyword.
+/// the numbering, and this directory does not. `external` is asked first for a
+/// terminal a customary *answers*, because a named external is what a scanner
+/// owes; `terminal` is the fallback, and the fallback is not a courtesy - html
+/// declares `/>` as an anonymous string, so the press keeps the ordinary token
+/// it can lex and there is no external to find, yet only the tag stack knows
+/// those two bytes end an element. `terminal` alone answers a test, which may
+/// name any terminal at all: kotlin's semicolon insertion reads whether `else`
+/// is admitted, and `else` is an ordinary keyword.
 pub const Engine = struct {
     gpa: std.mem.Allocator,
     /// The section, owned and aligned so the book's views into it are legal.
@@ -84,6 +87,30 @@ pub const Engine = struct {
     asks: []organs.Symbol,
     /// Arm index -> the terminal that arm renames an answer to.
     renames: []organs.Symbol,
+    /// Every terminal a rule could possibly answer with, flattened, and the
+    /// offsets one rule's run sits at (`reach_at[i]..reach_at[i+1]`). An empty
+    /// run means the rule emits nothing at all.
+    ///
+    /// This is the permission check a hand-written scanner does *first* -
+    /// `if (valid_symbols[X])` is the opening line of every `scanner.c` in the
+    /// held-out set - and doing it last is what made a customary cost 3.5x to 7x
+    /// tree-sitter on the four grammars that reach a throughput row. `admits`
+    /// asked the same question exactly one PCRE2 match too late.
+    reach: []organs.Symbol,
+    reach_at: []u32,
+    /// Rule indices grouped by phase, in each phase's own rule order, and where
+    /// one phase's run starts (`order_at[p]..order_at[p+1]`).
+    ///
+    /// The sweep used to walk every rule once per phase and skip the ones
+    /// belonging to another, so html asked 8 x 33 questions an offset to reach
+    /// 33 rules, and paid `stand` for phases holding no rule at all. Order
+    /// inside a phase is preserved exactly, because it is load-bearing: a rule
+    /// behind another must not answer at an offset the one in front accounted
+    /// for.
+    order: []u16,
+    order_at: [phases_max + 1]u32,
+
+    const phases_max = @typeInfo(book.Phase).@"enum".fields.len;
 
     pub const absent: organs.Symbol = std.math.maxInt(organs.Symbol);
     pub const section_align = @alignOf(book.Head);
@@ -119,7 +146,8 @@ pub const Engine = struct {
         @memset(emits, absent);
         for (program.acts, 0..) |a, i| {
             if (@as(book.Action, @enumFromInt(a.op)) != .emit) continue;
-            emits[i] = names.external(program.str(a.name)) orelse
+            const name = program.str(a.name);
+            emits[i] = names.external(name) orelse names.terminal(name) orelse
                 return Error.CustomaryUnknownTerminal;
         }
 
@@ -138,9 +166,50 @@ pub const Engine = struct {
         const renames = try gpa.alloc(organs.Symbol, program.arms.len);
         errdefer gpa.free(renames);
         for (program.arms, 0..) |m, i| {
-            renames[i] = names.external(program.str(m.name)) orelse
+            const name = program.str(m.name);
+            renames[i] = names.external(name) orelse names.terminal(name) orelse
                 return Error.CustomaryUnknownTerminal;
         }
+
+        // The union over each rule's emits, taking a classified emit's whole arm
+        // table plus the name it falls back to when no arm matches - `classify`
+        // ends in `emits[at_act]`, so the fallback is reachable and belongs in
+        // the set. An over-approximation is the right error here: the exact test
+        // still runs in `admits`, so a symbol too many costs one wasted match
+        // and a symbol too few would lose an answer.
+        const reach_at = try gpa.alloc(u32, program.rules.len + 1);
+        errdefer gpa.free(reach_at);
+        var reach: std.ArrayList(organs.Symbol) = .empty;
+        errdefer reach.deinit(gpa);
+        for (program.rules, 0..) |*r, ri| {
+            reach_at[ri] = @intCast(reach.items.len);
+            for (program.thenOf(r), r.act_at..) |act, i| {
+                if (@as(book.Action, @enumFromInt(act.op)) != .emit) continue;
+                try reach.append(gpa, emits[i]);
+                if (act.class < 0) continue;
+                const c = program.classes[@intCast(act.class)];
+                for (c.at..c.at + c.len) |arm| try reach.append(gpa, renames[arm]);
+            }
+        }
+        reach_at[program.rules.len] = @intCast(reach.items.len);
+
+        if (program.rules.len > std.math.maxInt(u16)) return Error.CustomaryBadIndex;
+        const order = try gpa.alloc(u16, program.rules.len);
+        errdefer gpa.free(order);
+        var order_at: [phases_max + 1]u32 = @splat(0);
+        var wrote: u32 = 0;
+        for (0..phases_max) |p| {
+            order_at[p] = wrote;
+            for (program.rules, 0..) |*r, ri| {
+                if (r.phase != p) continue;
+                order[wrote] = @intCast(ri);
+                wrote += 1;
+            }
+        }
+        order_at[phases_max] = wrote;
+        // A rule naming a phase outside the enum would be dropped silently here,
+        // and a dropped rule is an answer that never comes.
+        if (wrote != program.rules.len) return Error.CustomaryBadTag;
 
         return .{
             .gpa = gpa,
@@ -151,6 +220,10 @@ pub const Engine = struct {
             .emits = emits,
             .asks = asks,
             .renames = renames,
+            .reach = try reach.toOwnedSlice(gpa),
+            .reach_at = reach_at,
+            .order = order,
+            .order_at = order_at,
         };
     }
 
@@ -186,6 +259,9 @@ pub const Engine = struct {
         e.gpa.free(e.emits);
         e.gpa.free(e.asks);
         e.gpa.free(e.renames);
+        e.gpa.free(e.reach);
+        e.gpa.free(e.reach_at);
+        e.gpa.free(e.order);
         e.gpa.free(e.held);
         e.* = undefined;
     }
@@ -261,6 +337,9 @@ pub const Ask = struct {
     /// organs and must never write them, and `attempt` enforces it by applying
     /// nothing.
     scoring: bool = false,
+    /// See `Facts.broke`. Measured once per ask, from the organs' own mark, so
+    /// every rule scored at this offset reads one answer.
+    broke: bool = false,
 
     /// Walk the phases in order and return the first answer.
     ///
@@ -272,15 +351,26 @@ pub const Ask = struct {
     /// against `column` and mean one line by both.
     pub fn sweep(a: *Ask, o: *organs.Organs, at: u32) ?Hit {
         if (at > a.bytes.len) return null;
-        const over: u32 = if (a.e.program.head.trivia < 0) 0 else blk: {
+        const trivial = a.e.program.head.trivia >= 0;
+        const over: u32 = if (!trivial) 0 else blk: {
             const which: u32 = @intCast(a.e.program.head.trivia);
             break :blk guard.reach(a, which, at) orelse 0;
         };
+        // Measured over the whole gap the mark opens, not over `over` alone: a
+        // zero-width close already ate the newline this run is still behind.
+        // Clamped from both ends because a rewind can put the mark ahead of the
+        // offset, and a mark that outran its own file must not index past it.
+        const mark = @min(o.since, at);
+        a.broke = trivial and
+            std.mem.indexOfAny(u8, a.bytes[mark..@min(at + over, a.bytes.len)], "\r\n") != null;
         // A skip that runs to the end of input leaves nothing to answer at, and
         // the end itself is an offset a customary still has answers for, so the
         // sweep happens at the arrival either way.
         var hit = a.phases(o, at + over) orelse return null;
         hit.skip += over;
+        // The C's `flush` after a `mark_end`, and only after one: an answer with
+        // no extent never marked an end, so the gap it stands in stays open.
+        if (hit.len > 0) o.since = at + hit.skip + hit.len;
         return hit;
     }
 
@@ -289,15 +379,41 @@ pub const Ask = struct {
         // open blocks there, zero-width - so `at == bytes.len` is in bounds on
         // purpose and only past it is not.
         if (at > a.bytes.len) return null;
-        const shut = a.sealed(o);
+        // Every phase but `layout` stands at the offset it was handed and reads
+        // the facts of that one offset, so the seven of them were deriving one
+        // answer seven times. `layout` is the exception because it soaks the
+        // whitespace first and therefore stands somewhere else.
+        var plain = organs.facts(a.bytes, at, a.e.tab(), 0);
+        plain.broke = a.broke;
+        var shut: ?i32 = null;
+        var asked_shut = false;
         for (std.enums.values(book.Phase)) |phase| {
             if (phase.called()) continue;
+            const lo, const hi = .{ a.e.order_at[@intFromEnum(phase)], a.e.order_at[@intFromEnum(phase) + 1] };
+            if (lo == hi) continue; // no rule wears this phase: nothing to stand for
             // The layout phase measures the whitespace in front of a line, so an
             // offset the extras have already moved past has none left to read.
             if (phase == .layout and !a.fresh) continue;
-            const stood = a.stand(phase, o, at);
-            for (a.e.program.rules) |*r| {
-                if (r.phase != @intFromEnum(phase)) continue;
+            const stood: Stood = if (phase == .layout)
+                a.stand(phase, o, at)
+            else
+                .{ .at = at, .facts = plain };
+            // Only the layout phase reads it, and only a book with layout rules
+            // reaches this at all.
+            if (phase == .layout and !asked_shut) {
+                shut = a.sealed(o);
+                asked_shut = true;
+            }
+            for (a.e.order[lo..hi]) |ri| {
+                const r = &a.e.program.rules[ri];
+                // Before the guard, not after it. A rule whose every answer the
+                // state would refuse cannot answer here, and `attempt` was
+                // proving that by running the rule's PCRE2 probe and then
+                // throwing the match away in `admits`. Skipping it changes
+                // nothing observable: a guard never writes an organ, `abstain`
+                // is an action and actions run only past `admits`, so the rules
+                // this passes over are exactly the ones that returned null.
+                if (!a.reachable(ri)) continue;
                 // Inside an opaque region the only layout answer is the rule that
                 // ends it: a fenced code block's interior is bytes the grammar
                 // reads, not layout the scanner decides, and without this a
@@ -315,6 +431,22 @@ pub const Ask = struct {
             }
         }
         return null;
+    }
+
+    /// Could the state take anything this rule is able to answer with?
+    ///
+    /// The cheap half of `admits`, hoisted in front of the guard: a bitset test
+    /// per candidate name against the same `wanted` set, with no bytes read. An
+    /// effect-only rule is never gated, for the reason `admits` gives - the C has
+    /// these too, and they are how a customary remembers something about bytes it
+    /// does not claim.
+    fn reachable(a: *const Ask, ri: usize) bool {
+        const lo, const hi = .{ a.e.reach_at[ri], a.e.reach_at[ri + 1] };
+        if (lo == hi) return true;
+        for (a.e.reach[lo..hi]) |sym| {
+            if (sym != Engine.absent and a.wanted.isSet(sym)) return true;
+        }
+        return false;
     }
 
     /// Whether every terminal this rule could answer with is already answered
@@ -357,10 +489,15 @@ pub const Ask = struct {
     /// soaked. Doing it here rather than in thirty rules is the difference between
     /// engine structure and copied data.
     fn stand(a: *const Ask, phase: book.Phase, o: *const organs.Organs, at: u32) Stood {
-        if (phase != .layout) return .{ .at = at, .facts = organs.facts(a.bytes, at, a.e.tab(), 0) };
+        if (phase != .layout) {
+            var f = organs.facts(a.bytes, at, a.e.tab(), 0);
+            f.broke = a.broke;
+            return .{ .at = at, .facts = f };
+        }
         const soaked = organs.soak(a.bytes, at, a.e.tab(), a.carried(o));
         var f = organs.facts(a.bytes, soaked[0], a.e.tab(), 0);
         f.lead = soaked[1];
+        f.broke = a.broke;
         return .{ .at = soaked[0], .facts = f };
     }
 
