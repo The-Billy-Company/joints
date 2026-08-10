@@ -159,7 +159,6 @@ pub const Dialect = enum {
     kotlin_block,
     swift_block,
     ocaml_comment,
-    html_comment,
     rust_string,
     julia_block,
     lua_string,
@@ -514,7 +513,6 @@ pub fn reach(dialect: Dialect, bytes: []const u8, at: u32) ?u32 {
         .kotlin_block => slashStar(bytes, at, .keep),
         .swift_block => slashStar(bytes, at, .refuse),
         .ocaml_comment => ocamlComment(bytes, at),
-        .html_comment => htmlComment(bytes, at),
         .rust_string => rustString(bytes, at),
         .julia_block => juliaBlock(bytes, at),
         .lua_string, .lua_comment => luaContent(bytes, at),
@@ -1039,29 +1037,6 @@ test "marrow: a delimiter reads on both sides of the content" {
 
 test "marrow: an unterminated raw string declines rather than running to the end" {
     try t.expectEqual(@as(?u32, null), reach(.cpp_raw, "R\"tag(body", 6));
-}
-
-/// HTML: a whole comment, `<!--` through `-->`.
-///
-/// The same self-contained shape as kotlin's, and the reason there are two of
-/// them rather than one parameterised row: the two languages disagree about
-/// every decision that is not the spelling. HTML's close does not nest and its
-/// run of dashes is greedy, so `--->` closes; an unterminated comment is
-/// refused outright rather than accepted at end of input.
-fn htmlComment(bytes: []const u8, at: u32) ?u32 {
-    if (!std.mem.startsWith(u8, bytes[at..], "<!--")) return null;
-    var dashes: u32 = 0;
-    var i = at + 4;
-    while (i < bytes.len) : (i += 1) {
-        switch (bytes[i]) {
-            '-' => dashes += 1,
-            '>' => if (dashes >= 2) return i + 1 - at else {
-                dashes = 0;
-            },
-            else => dashes = 0,
-        }
-    }
-    return null;
 }
 
 /// Julia: the rest of a nesting block comment, closing `=#` included.

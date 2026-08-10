@@ -124,6 +124,18 @@ pub const Spans = struct {
         return out;
     }
 
+    /// `same` as a number, over the live prefix only - one flattened span at a
+    /// time rather than `flat`'s whole-stack copy, because this runs once per
+    /// token and the stack is empty for most of a file.
+    pub fn digest(s: *const Spans, h: *std.hash.Wyhash) void {
+        h.update(std.mem.asBytes(&s.len));
+        for (s.open[0..s.len]) |span| {
+            var one = span;
+            @memset(one.mark[one.mark_len..], 0);
+            h.update(std.mem.asBytes(&one));
+        }
+    }
+
     pub fn depth(s: *const Spans) u32 {
         return s.len;
     }

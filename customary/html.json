@@ -1,0 +1,1405 @@
+{
+  "grammar": "html",
+  "cohort": [
+    "_start_tag_name",
+    "_script_start_tag_name",
+    "_style_start_tag_name",
+    "_end_tag_name",
+    "erroneous_end_tag_name",
+    "_implicit_end_tag",
+    "raw_text",
+    "comment"
+  ],
+  "note": "html's tag stack, its void set, and its `can_contain` table, read out of `tag.h` and written down as rules. The stack is the only memory; everything else the scanner does is a table, and a table can live in a file.",
+  "notes": [
+    "A mark's kind is the *class* a decision reads, not the tag's enum member: 128 members do not fit a 31-kind bitset, and they do not have to, because a known name's member is a function of its spelling. The classes are disjoint, so one kind per tag is enough.",
+    "A tag is remembered folded to upper case, the way `towupper` in `scan_tag_name` folds it, so every comparison here is a folded one. An organ tag is bounded, so a custom name longer than the bound compares on its first bytes; html's own names are short enough that the bound is not reachable by anything but a deliberate one."
+  ],
+  "asks": "token",
+  "kinds": {
+    "void": 1,
+    "script": 2,
+    "style": 3,
+    "roots": 4,
+    "li": 5,
+    "dt_dd": 6,
+    "para": 7,
+    "colgroup": 8,
+    "ruby": 9,
+    "optgroup": 10,
+    "row": 11,
+    "cell": 12,
+    "plain": 13,
+    "custom": 14
+  },
+  "probes": {
+    "space_name": "([ \\t\\n\\x0b\\f\\r]*)([A-Za-z0-9:-]+)",
+    "space_style": "([ \\t\\n\\x0b\\f\\r]*)((?i:style)(?![A-Za-z0-9:-]))",
+    "self_shut": "([ \\t\\n\\x0b\\f\\r]*)/>",
+    "opens_anything": "[ \\t\\n\\x0b\\f\\r]*<(?![!/])",
+    "opens_or_ends": "(?:[ \\t\\n\\x0b\\f\\r]*<(?![!/])|[ \\t\\n\\x0b\\f\\r]*\\z)",
+    "blank_to_the_end": "[ \\t\\n\\x0b\\f\\r]*\\z",
+    "shuts_something": "[ \\t\\n\\x0b\\f\\r]*</([A-Za-z0-9:-]+)",
+    "shuts_something_known": "[ \\t\\n\\x0b\\f\\r]*</(?:(?i:blockquote|figcaption|basefont|colgroup|datalist|fieldset|menuitem|noscript|optgroup|progress|template|textarea|address|article|bgsound|caption|command|details|isindex|picture|section|summary|button|canvas|dialog|figure|footer|header|hgroup|iframe|keygen|legend|nextid|object|option|output|script|select|source|strong|aside|audio|embed|frame|image|input|label|meter|param|small|style|table|tbody|tfoot|thead|title|track|video|abbr|area|base|body|cite|code|data|form|head|html|link|main|mark|math|menu|meta|ruby|samp|slot|span|time|bdi|bdo|col|del|dfn|div|img|ins|kbd|map|nav|pre|rtc|sub|sup|svg|var|wbr|br|dd|dl|dt|em|h1|h2|h3|h4|h5|h6|hr|li|ol|rb|rp|rt|td|th|tr|ul|a|b|i|p|q|s|u)(?![A-Za-z0-9:-]))",
+    "comment": "([ \\t\\n\\x0b\\f\\r]*)(<!--(?s:.)*?--+>)",
+    "script_body": "(?:[^<]|(?i:<)[^/]|(?i:</)[^Ss]|(?i:</S)[^Cc]|(?i:</SC)[^Rr]|(?i:</SCR)[^Ii]|(?i:</SCRI)[^Pp]|(?i:</SCRIP)[^Tt])*",
+    "style_body": "(?:[^<]|(?i:<)[^/]|(?i:</)[^Ss]|(?i:</S)[^Tt]|(?i:</ST)[^Yy]|(?i:</STY)[^Ll]|(?i:</STYL)[^Ee])*",
+    "name_void": "([ \\t\\n\\x0b\\f\\r]*)((?i:basefont|menuitem|bgsound|command|isindex|keygen|nextid|source|embed|frame|image|input|param|track|area|base|link|meta|col|img|wbr|br|hr)(?![A-Za-z0-9:-]))",
+    "name_script": "([ \\t\\n\\x0b\\f\\r]*)((?i:script)(?![A-Za-z0-9:-]))",
+    "name_style": "([ \\t\\n\\x0b\\f\\r]*)((?i:style)(?![A-Za-z0-9:-]))",
+    "name_roots": "([ \\t\\n\\x0b\\f\\r]*)((?i:body|head|html)(?![A-Za-z0-9:-]))",
+    "name_li": "([ \\t\\n\\x0b\\f\\r]*)((?i:li)(?![A-Za-z0-9:-]))",
+    "name_dt_dd": "([ \\t\\n\\x0b\\f\\r]*)((?i:dd|dt)(?![A-Za-z0-9:-]))",
+    "name_para": "([ \\t\\n\\x0b\\f\\r]*)((?i:p)(?![A-Za-z0-9:-]))",
+    "name_colgroup": "([ \\t\\n\\x0b\\f\\r]*)((?i:colgroup)(?![A-Za-z0-9:-]))",
+    "name_ruby": "([ \\t\\n\\x0b\\f\\r]*)((?i:rb|rp|rt)(?![A-Za-z0-9:-]))",
+    "name_optgroup": "([ \\t\\n\\x0b\\f\\r]*)((?i:optgroup)(?![A-Za-z0-9:-]))",
+    "name_row": "([ \\t\\n\\x0b\\f\\r]*)((?i:tr)(?![A-Za-z0-9:-]))",
+    "name_cell": "([ \\t\\n\\x0b\\f\\r]*)((?i:td|th)(?![A-Za-z0-9:-]))",
+    "name_plain": "([ \\t\\n\\x0b\\f\\r]*)((?i:blockquote|figcaption|datalist|fieldset|noscript|progress|template|textarea|address|article|caption|details|picture|section|summary|button|canvas|dialog|figure|footer|header|hgroup|iframe|legend|object|option|output|select|strong|aside|audio|label|meter|small|table|tbody|tfoot|thead|title|video|abbr|cite|code|data|form|main|mark|math|menu|ruby|samp|slot|span|time|bdi|bdo|del|dfn|div|ins|kbd|map|nav|pre|rtc|sub|sup|svg|var|dl|em|h1|h2|h3|h4|h5|h6|ol|ul|a|b|i|q|s|u)(?![A-Za-z0-9:-]))",
+    "name_custom": "([ \\t\\n\\x0b\\f\\r]*)([A-Za-z0-9:-]+)",
+    "a_known_name": "[ \\t\\n\\x0b\\f\\r]*(?:(?i:blockquote|figcaption|basefont|colgroup|datalist|fieldset|menuitem|noscript|optgroup|progress|template|textarea|address|article|bgsound|caption|command|details|isindex|picture|section|summary|button|canvas|dialog|figure|footer|header|hgroup|iframe|keygen|legend|nextid|object|option|output|script|select|source|strong|aside|audio|embed|frame|image|input|label|meter|param|small|style|table|tbody|tfoot|thead|title|track|video|abbr|area|base|body|cite|code|data|form|head|html|link|main|mark|math|menu|meta|ruby|samp|slot|span|time|bdi|bdo|col|del|dfn|div|img|ins|kbd|map|nav|pre|rtc|sub|sup|svg|var|wbr|br|dd|dl|dt|em|h1|h2|h3|h4|h5|h6|hr|li|ol|rb|rp|rt|td|th|tr|ul|a|b|i|p|q|s|u)(?![A-Za-z0-9:-]))",
+    "opens_a_li_cannot_hold": "[ \\t\\n\\x0b\\f\\r]*<(?![!/])(?i:li)(?![A-Za-z0-9:-])",
+    "opens_a_dt_dd_cannot_hold": "[ \\t\\n\\x0b\\f\\r]*<(?![!/])(?i:dd|dt)(?![A-Za-z0-9:-])",
+    "opens_a_para_cannot_hold": "[ \\t\\n\\x0b\\f\\r]*<(?![!/])(?i:blockquote|figcaption|fieldset|address|article|details|section|figure|footer|header|aside|form|main|div|nav|pre|dl|h1|h2|h3|h4|h5|h6|hr|ol|p)(?![A-Za-z0-9:-])",
+    "opens_a_colgroup_cannot_hold": "(?:[ \\t\\n\\x0b\\f\\r]*<(?![!/])(?!(?i:col)(?![A-Za-z0-9:-]))[A-Za-z0-9:-]+|[ \\t\\n\\x0b\\f\\r]*\\z)",
+    "opens_a_ruby_cannot_hold": "[ \\t\\n\\x0b\\f\\r]*<(?![!/])(?i:rb|rp|rt)(?![A-Za-z0-9:-])",
+    "opens_a_optgroup_cannot_hold": "[ \\t\\n\\x0b\\f\\r]*<(?![!/])(?i:optgroup)(?![A-Za-z0-9:-])",
+    "opens_a_row_cannot_hold": "[ \\t\\n\\x0b\\f\\r]*<(?![!/])(?i:tr)(?![A-Za-z0-9:-])",
+    "opens_a_cell_cannot_hold": "[ \\t\\n\\x0b\\f\\r]*<(?![!/])(?i:td|th|tr)(?![A-Za-z0-9:-])"
+  },
+  "rules": [
+    {
+      "name": "the_raw_body_of_a_script",
+      "note": "Always an answer, never a refusal: a script whose closer never arrives is raw text to the end of the file, which makes an unterminated `<script>` a parsed document rather than a stall. Zero is legal too - `<script></script>` has an empty body - and it is decided by the permission set rather than by the bytes: raw text is the answer exactly where neither tag name is legal.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "raw_text"
+        ],
+        [
+          "not_wanted",
+          "_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "_end_tag_name"
+        ],
+        [
+          "marks.depth",
+          ">",
+          0
+        ],
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "script"
+          ]
+        ],
+        [
+          "probe",
+          "script_body"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "raw_text"
+        ]
+      ]
+    },
+    {
+      "name": "the_raw_body_of_anything_else",
+      "note": "Always an answer, never a refusal: a script whose closer never arrives is raw text to the end of the file, which makes an unterminated `<script>` a parsed document rather than a stall. Zero is legal too - `<script></script>` has an empty body - and it is decided by the permission set rather than by the bytes: raw text is the answer exactly where neither tag name is legal.",
+      "phase": "inside",
+      "when": [
+        [
+          "wanted",
+          "raw_text"
+        ],
+        [
+          "not_wanted",
+          "_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "_end_tag_name"
+        ],
+        [
+          "marks.depth",
+          ">",
+          0
+        ],
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "void",
+            "style",
+            "roots",
+            "li",
+            "dt_dd",
+            "para",
+            "colgroup",
+            "ruby",
+            "optgroup",
+            "row",
+            "cell",
+            "plain",
+            "custom"
+          ]
+        ],
+        [
+          "probe",
+          "style_body"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "raw_text"
+        ]
+      ]
+    },
+    {
+      "name": "opens_void",
+      "note": "Opens an element of class `void`.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "name_void"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_start_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "void",
+          0,
+          [
+            "group",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "opens_script",
+      "note": "Opens an element of class `script`.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_start_tag_name"
+        ],
+        [
+          "wanted",
+          "_script_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "name_script"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_script_start_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "script",
+          0,
+          [
+            "group",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "opens_style",
+      "note": "Opens an element of class `style`.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_start_tag_name"
+        ],
+        [
+          "wanted",
+          "_style_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "name_style"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_style_start_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "style",
+          0,
+          [
+            "group",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "opens_roots",
+      "note": "Opens an element of class `roots`.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "name_roots"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_start_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "roots",
+          0,
+          [
+            "group",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "opens_li",
+      "note": "Opens an element of class `li`.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "name_li"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_start_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "li",
+          0,
+          [
+            "group",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "opens_dt_dd",
+      "note": "Opens an element of class `dt_dd`.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "name_dt_dd"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_start_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "dt_dd",
+          0,
+          [
+            "group",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "opens_para",
+      "note": "Opens an element of class `para`.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "name_para"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_start_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "para",
+          0,
+          [
+            "group",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "opens_colgroup",
+      "note": "Opens an element of class `colgroup`.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "name_colgroup"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_start_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "colgroup",
+          0,
+          [
+            "group",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "opens_ruby",
+      "note": "Opens an element of class `ruby`.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "name_ruby"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_start_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "ruby",
+          0,
+          [
+            "group",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "opens_optgroup",
+      "note": "Opens an element of class `optgroup`.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "name_optgroup"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_start_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "optgroup",
+          0,
+          [
+            "group",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "opens_row",
+      "note": "Opens an element of class `row`.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "name_row"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_start_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "row",
+          0,
+          [
+            "group",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "opens_cell",
+      "note": "Opens an element of class `cell`.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "name_cell"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_start_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "cell",
+          0,
+          [
+            "group",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "opens_plain",
+      "note": "A known name with no rule of its own: its identity is its spelling and nothing reads its class.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "name_plain"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_start_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "plain",
+          0,
+          [
+            "group",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "opens_custom",
+      "note": "An unknown name is one member for every unknown name, which is why the deep close below can ask about the class and not the spelling.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_start_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "name_custom"
+        ],
+        [
+          "no_probe",
+          "a_known_name"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_start_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "push",
+          "marks",
+          "custom",
+          0,
+          [
+            "group",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "shuts_the_open_element",
+      "note": "The grammar has taken the `</` already, so this is the name alone - compared whole against the innermost tag, because a comparison of prefixes would let `</division>` close a `div`.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "not_wanted",
+          "_start_tag_name"
+        ],
+        [
+          "wanted",
+          "_end_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "space_name"
+        ],
+        [
+          "marks.top.tag",
+          "folded",
+          "group",
+          2
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "_end_tag_name",
+          [
+            "span",
+            2
+          ]
+        ],
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "shuts_nothing_and_says_so",
+      "note": "A close that matches nothing open is a token over the same bytes and pops nothing: the element it failed to close is still open, so the parser recovers around the stray rather than around a hole. Named by the terminal it answers with and guarded by the one the C's dispatch tested, which are not the same terminal.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "not_wanted",
+          "_start_tag_name"
+        ],
+        [
+          "wanted",
+          "_end_tag_name"
+        ],
+        [
+          "not_wanted",
+          "raw_text"
+        ],
+        [
+          "probe",
+          "space_name"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "erroneous_end_tag_name",
+          [
+            "span",
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "self_shuts",
+      "note": "`/>` closes the element it never named, and the pop is the whole point: the two bytes are an ordinary token the slate could lex, but only the tag stack knows they end an element, so the answer has to come from here or the stack keeps a tag the document already closed. The C answers here even with nothing to pop, without saying which terminal it answered; that is a stale symbol rather than a decision, so the depth guard declines instead of reproducing it.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "/>"
+        ],
+        [
+          "probe",
+          "self_shut"
+        ],
+        [
+          "marks.depth",
+          ">",
+          0
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "/>",
+          2
+        ],
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "a_void_element_ends_at_the_next_tag",
+      "note": "`<br>` has no close, so anything that is not a close ends it - end of input included, which is why `<br>` alone is a whole document rather than a truncated one. Decided before the name is read, exactly as the C decides it.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_implicit_end_tag"
+        ],
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "void"
+          ]
+        ],
+        [
+          "probe",
+          "opens_or_ends"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_implicit_end_tag",
+          0
+        ],
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "a_close_that_matches_the_top_implies_nothing",
+      "note": "The C's `return false` where the close is the one owed. An abstention rather than a refusal, because the rules behind this one must not answer at an offset it has accounted for.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_implicit_end_tag"
+        ],
+        [
+          "probe",
+          "shuts_something"
+        ],
+        [
+          "marks.top.tag",
+          "folded",
+          "group",
+          1
+        ]
+      ],
+      "then": [
+        [
+          "abstain"
+        ]
+      ]
+    },
+    {
+      "name": "a_close_deeper_down_unwinds_one_level",
+      "note": "Malformed html, treated kindly: `<div><p>x</div>` closes the paragraph and then the div, one implied close per ask.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_implicit_end_tag"
+        ],
+        [
+          "probe",
+          "shuts_something"
+        ],
+        [
+          "marks.has.tag",
+          "folded",
+          "group",
+          1
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_implicit_end_tag",
+          0
+        ],
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "an_unknown_close_unwinds_any_unknown_element",
+      "note": "Two unknown names share one member, so `<my-a><my-b>x</my-a>` unwinds where a comparison of spellings would report a stray. Strict at the top and loose in the search is the C's own asymmetry, not a slip.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_implicit_end_tag"
+        ],
+        [
+          "probe",
+          "shuts_something"
+        ],
+        [
+          "no_probe",
+          "shuts_something_known"
+        ],
+        [
+          "marks.has",
+          "custom"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_implicit_end_tag",
+          0
+        ],
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "a_li_element_cannot_hold_this",
+      "note": "A `li` element cannot hold li.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_implicit_end_tag"
+        ],
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "li"
+          ]
+        ],
+        [
+          "probe",
+          "opens_a_li_cannot_hold"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_implicit_end_tag",
+          0
+        ],
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "a_dt_dd_element_cannot_hold_this",
+      "note": "A `dt_dd` element cannot hold dt, dd.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_implicit_end_tag"
+        ],
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "dt_dd"
+          ]
+        ],
+        [
+          "probe",
+          "opens_a_dt_dd_cannot_hold"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_implicit_end_tag",
+          0
+        ],
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "a_para_element_cannot_hold_this",
+      "note": "A `para` element cannot hold address, article, aside, blockquote, details, div, dl, fieldset, figcaption, figure, footer, form, h1, h2, h3, h4, h5, h6, header, hr, main, nav, ol, p, pre, section.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_implicit_end_tag"
+        ],
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "para"
+          ]
+        ],
+        [
+          "probe",
+          "opens_a_para_cannot_hold"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_implicit_end_tag",
+          0
+        ],
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "a_colgroup_element_cannot_hold_this",
+      "note": "A `colgroup` element may hold only col, so anything else ends it - end of input included, because an absent name is not that one.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_implicit_end_tag"
+        ],
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "colgroup"
+          ]
+        ],
+        [
+          "probe",
+          "opens_a_colgroup_cannot_hold"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_implicit_end_tag",
+          0
+        ],
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "a_ruby_element_cannot_hold_this",
+      "note": "A `ruby` element cannot hold rb, rt, rp.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_implicit_end_tag"
+        ],
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "ruby"
+          ]
+        ],
+        [
+          "probe",
+          "opens_a_ruby_cannot_hold"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_implicit_end_tag",
+          0
+        ],
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "a_optgroup_element_cannot_hold_this",
+      "note": "A `optgroup` element cannot hold optgroup.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_implicit_end_tag"
+        ],
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "optgroup"
+          ]
+        ],
+        [
+          "probe",
+          "opens_a_optgroup_cannot_hold"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_implicit_end_tag",
+          0
+        ],
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "a_row_element_cannot_hold_this",
+      "note": "A `row` element cannot hold tr.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_implicit_end_tag"
+        ],
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "row"
+          ]
+        ],
+        [
+          "probe",
+          "opens_a_row_cannot_hold"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_implicit_end_tag",
+          0
+        ],
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "a_cell_element_cannot_hold_this",
+      "note": "A `cell` element cannot hold td, th, tr.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_implicit_end_tag"
+        ],
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "cell"
+          ]
+        ],
+        [
+          "probe",
+          "opens_a_cell_cannot_hold"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_implicit_end_tag",
+          0
+        ],
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "the_three_a_document_may_leave_open",
+      "note": "`html`, `head` and `body` are closed by end of input, which is what lets a document omit `</body></html>` as most do.",
+      "phase": "enclosing",
+      "when": [
+        [
+          "wanted",
+          "_implicit_end_tag"
+        ],
+        [
+          "marks.top.kind",
+          "in",
+          [
+            "roots"
+          ]
+        ],
+        [
+          "probe",
+          "blank_to_the_end"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_implicit_end_tag",
+          0
+        ],
+        [
+          "pop",
+          "marks"
+        ]
+      ]
+    },
+    {
+      "name": "a_comment",
+      "note": "`<!--` to the first `>` at least two dashes lead into. A `>` with fewer resets the count, which is the C's fallthrough, and an unterminated comment is no comment at all. Attempted wherever a `<!` stands, which is why no rule above reads one: the C routes `<!` away before it ever consults the ancestry.",
+      "phase": "bounded",
+      "when": [
+        [
+          "wanted",
+          "comment"
+        ],
+        [
+          "probe",
+          "comment"
+        ]
+      ],
+      "then": [
+        [
+          "skip",
+          [
+            "span",
+            1
+          ]
+        ],
+        [
+          "emit",
+          "comment",
+          [
+            "span",
+            2
+          ]
+        ]
+      ]
+    }
+  ]
+}

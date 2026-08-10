@@ -90,6 +90,14 @@ pub const Columns = struct {
         return out;
     }
 
+    /// `same` as a number, over the live prefix only. Two stacks `same` says
+    /// yes about hash alike, because everything `same` reads is fed here and
+    /// the dead tail is read by neither.
+    pub fn digest(c: *const Columns, h: *std.hash.Wyhash) void {
+        h.update(std.mem.asBytes(&c.len));
+        h.update(std.mem.sliceAsBytes(c.deep[0..c.len]));
+    }
+
     pub fn top(c: *const Columns) u16 {
         return if (c.len == 0) 0 else c.deep[c.len - 1];
     }

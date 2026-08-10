@@ -4,17 +4,25 @@ Ten of the eleven grammars upstream hand some terminals to a C function we do no
 link and never will. Most of what those scanners do is recognize a spelling the
 DSL could not host, and `../outside.zig` answers that with a table of rows.
 
-These seven files are the rest: the cases where the answer is a function of the
+These six files are the rest: the cases where the answer is a function of the
 bytes **and a memory every previous token built** - a column stack behind
-`_indent`, a heredoc's tag, which fence opened a Python string, what element is
-still open in an HTML document. That is a different animal from a row, so it gets
-a different seam rather than a cleverer table.
+`_indent`, a heredoc's tag, which fence opened a Python string. That is a
+different animal from a row, so it gets a different seam rather than a cleverer
+table.
+
+There were seven until 2026-08-09. `lineage.zig` remembered what element was
+still open in an HTML document, and it is the first hand a customary retired:
+`customary/html.json` claims all eight of html's externals, and `build.zig` now
+embeds the books, so there is no longer a way to reach an HTML document without
+the book that supersedes it. That last clause is the whole precondition - a hand
+is retirable exactly when nothing can reach an offset without its replacement,
+and while a book needed a path typed on the command line, none of these was.
 
 They are the *hands*, and they are entirely internal. Nothing outside
 `kernel/lex/` may name one - the charter seals this area through
 `../scanner.zig` - and nothing in here imports anything above it. `../outside.zig`
 is the only caller: it stays at the area root because it is the hub that drives
-all seven and the one file here that knows what a grammar is. The hands
+all six and the one file here that knows what a grammar is. The hands
 themselves know about bytes and about their own memory, and that is all.
 
 | File | The shape it remembers |
@@ -23,7 +31,6 @@ themselves know about bytes and about their own memory, and that is all.
 | `fence.zig` | Delimited spans: read an opener, remember what closes it, hunt the match. A stack of open marks, a per-dialect opener, and one shared hunt. |
 | `marrow.zig` | Content bounded by marks the parser itself lexes. Carries nothing: at a content offset the captured close is still in the bytes behind it. |
 | `scry.zig` | A token whose extent is not the bytes that decided it. |
-| `lineage.zig` | The stack of open elements: what encloses what, and when a close is implied. HTML is the language that needs it. |
 | `writ.zig` | Layout the parser *commands*, where the offside rule is layout a scanner detects. Haskell's, and the inversion is the whole module. |
 | `caesura.zig` | A break the line demands and the file never spells - JavaScript's automatic semicolon. Carries no memory either, and decides on the parser's expected set rather than on state. |
 

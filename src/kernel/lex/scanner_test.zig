@@ -1129,7 +1129,6 @@ const seats = [_]struct { troupe: []const u8, grammars: []const []const u8 }{
     // have to come back here and say so.
     .{ .troupe = "marrow/swift_raw#raw_str_end_part", .grammars = &.{"swift"} },
     .{ .troupe = "marrow/ocaml_comment#comment", .grammars = &.{"ocaml"} },
-    .{ .troupe = "marrow/html_comment#comment", .grammars = &.{"html"} },
     .{ .troupe = "marrow/rust_string#string_content", .grammars = &.{"rust"} },
     .{ .troupe = "marrow/julia_block#_block_comment_rest", .grammars = &.{"julia"} },
     .{ .troupe = "marrow/lua_string#_block_string_start", .grammars = &.{"lua"} },
@@ -1175,7 +1174,6 @@ const seats = [_]struct { troupe: []const u8, grammars: []const []const u8 }{
     // Anchored on `_implicit_end_tag`, which is the one spelling in html's
     // cohort no other grammar in the thirty declares - `comment` is declared by
     // half of them and `raw_text` by four.
-    .{ .troupe = "lineage/html#_implicit_end_tag", .grammars = &.{"html"} },
     // Haskell's commanded layout. Ten names, and every one of the ten is
     // haskell's alone across the thirty - no other grammar declares even a
     // single `_cmd_*` or `_cond_layout_*`, which is a wider margin than any
@@ -1236,7 +1234,6 @@ fn mechanism(t_: *const outside.Troupe) []const u8 {
                 .kotlin_block => "marrow/kotlin_block",
                 .swift_block => "marrow/swift_block",
                 .ocaml_comment => "marrow/ocaml_comment",
-                .html_comment => "marrow/html_comment",
                 .rust_string => "marrow/rust_string",
                 .julia_block => "marrow/julia_block",
                 .lua_string => "marrow/lua_string",
@@ -1254,9 +1251,6 @@ fn mechanism(t_: *const outside.Troupe) []const u8 {
             .css => "scry/css",
             .toml => "scry/toml",
             .haskell => "scry/haskell",
-        },
-        .lineage => switch (t_.line) {
-            .html => "lineage/html",
         },
         .writ => "writ",
         .abut => "abut",

@@ -98,6 +98,17 @@ use build_options by abi face_joints
 // need the regex engine, `joint` the diagnostic channel, `weave` both.)
 use irregex
 use joints by abi face_joints
+// The scanners-as-data books, embedded by `build.zig` off `customary/*.json` and
+// read by `scanner.zig` for a grammar that arrived without one. Scoped to `lex`,
+// because that is the one zone with any business knowing a book exists: `press`
+// carries the section as opaque bytes and `folio` stores them.
+//
+// A grant rather than a file in the tree on purpose. The books are data the
+// product ships, not source it compiles, and generating the shelf is what makes
+// "adding a book is adding a file" true — a checked-in index would be a list to
+// forget. The dependency is on a module `build.zig` writes, so this line is the
+// decision that the binary carries its own scanners.
+use customary_shelf by lex
 
 // Structural laws. The reach ceiling is what the tree needs today — lower it
 // when a file moves nearer what it depends on; never raise it to go green.

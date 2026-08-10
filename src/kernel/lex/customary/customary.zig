@@ -62,3 +62,11 @@ pub const soak = organs.soak;
 /// half of the story; `Engine.bind` is the load-time half.
 pub const press = scribe.press;
 pub const Note = scribe.Note;
+/// What `press` returns aligned to, so a caller holding its bytes can spell the
+/// type it must free them through — freeing an over-aligned allocation as a bare
+/// `[]const u8` hands the allocator the wrong alignment.
+pub const alignment = scribe.alignment;
+/// What pressing a book as written can fail on, distinct from `Error`, which is
+/// what *reading* a pressed one can. Both reach `Scanner.compile` now that it
+/// presses the shelved book for a grammar that arrived without one.
+pub const PressError = scribe.Error;

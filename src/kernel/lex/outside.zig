@@ -67,12 +67,12 @@
 //! of a shape, which is the most that is true.
 
 const std = @import("std");
+const irregex = @import("irregex");
 const offside = @import("hand/offside.zig");
 const fence = @import("hand/fence.zig");
 const marrow = @import("hand/marrow.zig");
 const caesura = @import("hand/caesura.zig");
 const scry = @import("hand/scry.zig");
-const lineage = @import("hand/lineage.zig");
 const writ = @import("hand/writ.zig");
 const grain = @import("../grain/grain.zig");
 const press = @import("../../press/press.zig");
@@ -133,99 +133,23 @@ pub fn holds(p: *const Provision, bytes: []const u8, end: u32) bool {
     return false;
 }
 
-/// What tree-sitter-swift's scanner refuses to let follow one of its operator
-/// externals, named for the group in its `OP_ILLEGAL_TERMINATORS` table.
-///
-/// This is the whole reason those terminals are external, and it is trailing
-/// context rather than memory: `=` is the assignment operator only where no
-/// further operator byte follows it, because `=~` is a custom operator and
-/// `==` is its own token. The scanner spells that as a refusal and so do we.
-const Terminator = enum { alphanumeric, symbols, symbols_or_dot, non_whitespace };
-
-/// The bytes the scanner's `switch (lexer->lookahead)` lists, in its order.
-const op_bytes = [_][]const u8{ "/", "=", "-", "+", "!", "*", "%", "<", ">", "&", "|", "^", "?", "~" };
-
-/// `iswalnum`, as bytes. The scanner reads codepoints, so a non-ASCII letter
-/// after `where` is a refusal there and an acceptance here - which is the
-/// direction that costs a wrong tree, so it is the one place in this table
-/// worth naming as a known divergence rather than a transcription.
-const op_alnum = blk: {
-    const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    var list: [chars.len][]const u8 = undefined;
-    // Sliced out of the literal rather than built from each byte, so every
-    // element points into static data and the table can be a `const`.
-    for (0..chars.len) |i| list[i] = chars[i .. i + 1];
-    break :blk list;
-};
-
-/// Swift's operator and keyword externals, and this is the derivation rather
-/// than a reading of the names.
-///
-/// tree-sitter-swift's scanner holds three parallel tables - `OPERATORS` for
-/// the spelling, `OP_SYMBOLS` for the terminal, `OP_ILLEGAL_TERMINATORS` for
-/// the refusal - and this is those three joined, in their order. So the
-/// spelling of `where_keyword` is `where` because the scanner's own table says
-/// so at that index, not because the name ends in `_keyword`.
-///
-/// Nineteen of the scanner's twenty rows. `_bang_custom` is the twentieth and
-/// is declined: `OP_SYMBOL_SUPPRESSOR` conditions it on `FAKE_TRY_BANG` *not*
-/// being wanted, which is a question about the parse table, and a `Provision`
-/// is a function of bytes with no access to one. Seating it would mean lexing
-/// the `!` of `try!` as a postfix operator - a plausible tree, which is the
-/// thing this table exists to refuse.
-const swift_roll = blk: {
-    const Op = struct { []const u8, []const u8, Terminator };
-    const ops = [_]Op{
-        .{ "_arrow_operator_custom", "->", .symbols },
-        .{ "_dot_custom", "\\.", .symbols_or_dot },
-        .{ "_conjunction_operator_custom", "&&", .symbols },
-        .{ "_disjunction_operator_custom", "\\|\\|", .symbols },
-        .{ "_nil_coalescing_operator_custom", "\\?\\?", .symbols },
-        .{ "_eq_custom", "=", .symbols },
-        .{ "_eq_eq_custom", "==", .symbols },
-        .{ "_plus_then_ws", "\\+", .non_whitespace },
-        .{ "_minus_then_ws", "-", .non_whitespace },
-        .{ "_throws_keyword", "throws", .alphanumeric },
-        .{ "_rethrows_keyword", "rethrows", .alphanumeric },
-        .{ "default_keyword", "default", .alphanumeric },
-        .{ "where_keyword", "where", .alphanumeric },
-        .{ "else", "else", .alphanumeric },
-        .{ "catch_keyword", "catch", .alphanumeric },
-        .{ "_as_custom", "as", .alphanumeric },
-        .{ "_as_quest_custom", "as\\?", .symbols },
-        .{ "_as_bang_custom", "as!", .symbols },
-        .{ "_async_keyword_custom", "async", .alphanumeric },
-    };
-    var out: [ops.len]Provision = undefined;
-    for (ops, 0..) |op, i| out[i] = .{
-        .name = op[0],
-        .pattern = op[1],
-        // Trailing context only. `after` states what must follow and `never`
-        // what may not, and the scanner's four groups are exactly three of the
-        // first and one of the second.
-        .never = switch (op[2]) {
-            .alphanumeric => &op_alnum,
-            .symbols => &op_bytes,
-            .symbols_or_dot => &(op_bytes ++ [_][]const u8{"."}),
-            .non_whitespace => &.{},
-        },
-        .after = switch (op[2]) {
-            // `_plus_then_ws` is named for this: the scanner refuses `+` unless
-            // whitespace follows, which is how `a + b` is an operator and
-            // `a+b` a custom one. End of file has none, and refusing there is
-            // the scanner's answer too - `iswspace('\0')` is false.
-            .non_whitespace => &.{ " ", "\t", "\n", "\r", "\x0b", "\x0c" },
-            else => &.{},
-        },
-        // Both swift's alone in the thirty, and both from this same scanner.
-        .cohort = &.{ "_implicit_semi", "_fake_try_bang" },
-    };
-    break :blk out;
-};
-
 /// The roll. Ordered by the grammar that motivated each row, which is a
 /// comment about provenance and nothing the lookup depends on.
-pub const roll = swift_roll ++ [_]Provision{
+///
+/// Swift's nineteen operator and keyword rows used to head this table, joined
+/// out of its scanner's three parallel arrays (`OPERATORS`, `OP_SYMBOLS`,
+/// `OP_ILLEGAL_TERMINATORS`). They live in `customary/swift.json` now, one
+/// `roll:` rule each, and they read better there for a reason worth writing
+/// down: a `Provision` is a function of bytes alone, so the refusal it could
+/// state was trailing context and nothing else. A customary rule is asked at
+/// the seam, where the parse table is in scope, so the same nineteen rows carry
+/// `wanted` as well - which is what the C actually consults
+/// (`collect_fixed_operator_candidates`) and what this table could only
+/// approximate. The approximation was load-bearing: with `==` seated in the
+/// flat slate, `custom_operator` won the offset and `a == b` came out an
+/// `infix_expression`; asked at the seam it is `_eq_eq_custom` and an
+/// `equality_expression`, which is the tree tree-sitter builds.
+pub const roll = [_]Provision{
     // Rust. `string_content` stops at a backslash rather than consuming it, so
     // the grammar's own `escape_sequence` - immediate, and longer at that
     // offset - still takes the escape. Stopping at the quote is what leaves
@@ -303,18 +227,6 @@ pub const roll = swift_roll ++ [_]Provision{
         .cohort = &.{ "simple_symbol", "hash_key_symbol" },
     },
 
-    // Elixir. `:` before a quote, and nothing else - the scanner advances one
-    // byte, marks the end, and then only *looks* at the delimiter, so the
-    // quote is the grammar's own token and must not be eaten. It is external
-    // for the same reason ruby's hash key is: `:"a"` is an atom and `: "a"` is
-    // a colon before a string, and only the next byte tells them apart.
-    .{
-        .name = "_quoted_atom_start",
-        .pattern = ":",
-        .after = &.{ "\"", "'" },
-        .cohort = &.{ "_not_in", "_before_unary_op" },
-    },
-
     // JavaScript and TypeScript share their scanner. The ternary `?` is
     // external only to keep it away from optional chaining and optional
     // parameters, both of which the state already separates.
@@ -340,32 +252,6 @@ pub const roll = swift_roll ++ [_]Provision{
         .pattern = "(?:[^/\\\\\\[\\n]|\\\\.|\\[(?:[^\\]\\\\\\n]|\\\\.)*\\])+",
         .lexis = .{ .immediate = true },
         .cohort = &.{ "_template_chars", "_ternary_qmark" },
-    },
-
-    // Kotlin. Both are the preamble's own case: an ordinary spelling that is
-    // only legal somewhere, written in C because the DSL cannot say where.
-    // `_import_dot` appears in exactly two rules - `_import_identifier` and
-    // the wildcard tail of `import_header` - so the dot between `kotlin` and
-    // `contracts` is the only dot in the language a state admits it at, and
-    // `constructor` likewise heads `primary_constructor` and nothing else.
-    // Neither states trailing context, so both defer to anything the grammar
-    // spelled itself: where a state admits the literal `.` or a
-    // `simple_identifier` as well, the grammar's own terminal still wins and
-    // these fire only where it has none. Kotlin's third external,
-    // `_by_delegation_hint`, gets no row and needs no hand either: its own
-    // scanner never emits it. It is declared so that it appears in
-    // `valid_symbols`, where the automatic-semicolon branch reads it as a flag
-    // for "we are in a delegation context" - so it is not a token at all, and
-    // nothing here could stand in for one. Its absence costs no structure.
-    .{
-        .name = "_import_dot",
-        .pattern = "\\.",
-        .cohort = &.{ "_primary_constructor_keyword", "_by_delegation_hint" },
-    },
-    .{
-        .name = "_primary_constructor_keyword",
-        .pattern = "constructor",
-        .cohort = &.{ "_import_dot", "_by_delegation_hint" },
     },
 
     // Scala's simple strings. Read off the scanner rather than inferred from
@@ -522,7 +408,7 @@ pub const Troupe = struct {
 
     /// The terminal whose presence says this language uses this shape.
     anchor: []const u8,
-    kind: enum { offside, fence, marrow, caesura, scry, lineage, writ, abut },
+    kind: enum { offside, fence, marrow, caesura, scry, writ, abut },
     dialect: fence.Dialect = .python,
     /// Which separator rule to run, when `kind` is `.caesura`. A discriminator
     /// like `dialect` and `vein` rather than a set of knobs, because the three
@@ -571,8 +457,6 @@ pub const Troupe = struct {
     /// for the same reason they are beside each other: a row uses exactly one
     /// of the three, and which one is what `kind` already says.
     sight: scry.Dialect = .css,
-    /// Whose element containment rules, when `kind` is `.lineage`.
-    line: lineage.Dialect = .html,
     /// Layout, when `kind` is `.offside`.
     newline: []const u8 = "",
     indent: []const u8 = "",
@@ -695,18 +579,6 @@ pub const Troupe = struct {
     body: []const u8 = "",
     close: []const u8 = "",
     escape: []const u8 = "",
-    /// The close that does not match what is open, when `kind` is `.lineage`.
-    /// A part rather than a refinement: html's `erroneous_end_tag_name` is a
-    /// real token over real bytes, and a hand that returned nothing instead
-    /// would leave `</div>` inside a `<p>` unlexable rather than mismatched.
-    stray: []const u8 = "",
-    /// The close the language infers where the file spells none. Zero-width,
-    /// and the part that needs the ancestry rather than the offset.
-    implied: []const u8 = "",
-    /// The delimiter that opens and closes in one mark: html's `/>`. Named
-    /// apart from `close` because it ends the element it is *inside* rather
-    /// than the one a matching name would end.
-    shut: []const u8 = "",
 };
 
 /// Every shape this lexer can stand in for. One row per language convention.
@@ -1249,38 +1121,16 @@ pub const troupes = [_]Troupe{
         .kin = "_line_doc_content",
         .hushed = &.{"float_literal"},
     },
-    // HTML comments. `_implicit_end_tag` is the cohort; `comment` is the most
-    // common external name in the population and means something different in
-    // half of them.
-    .{
-        .anchor = "comment",
-        .kind = .marrow,
-        .vein = .html_comment,
-        .body = "comment",
-        .kin = "_implicit_end_tag",
-    },
-    // HTML's element ancestry, which is the rest of that same C function and
-    // the whole of why `<p>hi</p>` did not parse: with `_start_tag_name`
-    // unanswered, `p` is never a tag name and every byte between the brackets
-    // falls to `text`.
+    // HTML's two rows - its comment and its element ancestry - stood here until
+    // 2026-08-09, and `customary/html.json` is where they went. Both were
+    // html's alone: each cohort named `_implicit_end_tag`, which no other
+    // grammar in the population declares, and `seated` requires `kin`.
     //
-    // `opens` is ordered to match `lineage.Opener`, because the opener has to
-    // say on the way out which of the three it was - html names the script and
-    // style openers separately so the grammar can expect a raw body. The anchor
-    // is `_implicit_end_tag` rather than one of the tag names: it is the one
-    // spelling in this cohort that no other grammar in the population declares,
-    // where `comment` is declared by half of them.
-    .{
-        .anchor = "_implicit_end_tag",
-        .kind = .lineage,
-        .line = .html,
-        .opens = &.{ "_start_tag_name", "_script_start_tag_name", "_style_start_tag_name" },
-        .body = "raw_text",
-        .close = "_end_tag_name",
-        .stray = "erroneous_end_tag_name",
-        .implied = "_implicit_end_tag",
-        .shut = "/>",
-    },
+    // The reason they could *leave*, where the rows above cannot yet, is not
+    // that the transcription is better - it is that `build.zig` now embeds the
+    // books, so html has its scanner with no path typed and no folio minted.
+    // A hand is retirable exactly when nothing can reach an offset without the
+    // book that supersedes it; before the shelf, no hand was.
     // Bash heredocs. The delimiter is read at the redirect and the body
     // begins a line later; `heredoc_redirect` spells the newline between them,
     // so the wait costs the carry nothing.
@@ -1441,8 +1291,6 @@ pub fn provision(t: *const Troupe, names: anytype) ?Cast {
     c.spelled = names.external(t.spelled);
     c.close = names.external(t.close);
     c.escape = names.external(t.escape);
-    c.stray = names.external(t.stray);
-    c.implied = names.external(t.implied);
     c.brace = names.external(t.brace);
     c.sever = names.external(t.sever);
     c.seal = names.external(t.seal);
@@ -1458,11 +1306,6 @@ pub fn provision(t: *const Troupe, names: anytype) ?Cast {
             .shut = names.external(b.shut),
         };
     }
-    // html's is declared as the anonymous string `/>` rather than a named
-    // terminal, so it is looked up across the whole set: the press keeps the
-    // ordinary token for a spelling it can lex, and this hand has to answer for
-    // it anyway because it is what pops the element.
-    c.shut = names.terminal(t.shut);
     // Read from the whole terminal set rather than the externals, because what
     // the hand needs is the parse table's answer about a spelling and not who
     // lexes it. tree-sitter's `||` is declared external and is also an ordinary
@@ -1509,9 +1352,6 @@ pub fn seated(t: *const Troupe, c: *const Cast) bool {
         .{ .name = t.close, .got = c.close },
         .{ .name = t.escape, .got = c.escape },
         .{ .name = t.kin, .got = c.kin },
-        .{ .name = t.stray, .got = c.stray },
-        .{ .name = t.implied, .got = c.implied },
-        .{ .name = t.shut, .got = c.shut },
         .{ .name = t.brace, .got = c.brace },
         .{ .name = t.sever, .got = c.sever },
         .{ .name = t.seal, .got = c.seal },
@@ -1563,9 +1403,9 @@ pub fn claimed(t: *const Troupe, name: []const u8) bool {
     // `gate`, `sign`, `kin` and `hushed` are read from the permission set and
     // never emitted, so a hand does not answer them and must not claim them.
     const named = [_][]const u8{
-        t.newline, t.indent,  t.dedent, t.body,  t.close, t.escape,
-        t.stray,   t.implied, t.shut,   t.brace, t.sever, t.seal,
-        t.unbrace, t.spelled,
+        t.newline, t.indent, t.dedent, t.body, t.close,
+        t.escape,  t.brace,  t.sever,  t.seal, t.unbrace,
+        t.spelled,
     };
     for (named) |n| if (n.len > 0 and std.mem.eql(u8, n, name)) return true;
     for (t.opens) |n| if (std.mem.eql(u8, n, name)) return true;
@@ -1668,9 +1508,6 @@ pub const Cast = struct {
     spelled: ?press.Symbol = null,
     close: ?press.Symbol = null,
     escape: ?press.Symbol = null,
-    stray: ?press.Symbol = null,
-    implied: ?press.Symbol = null,
-    shut: ?press.Symbol = null,
 };
 
 /// The zero-width answers already given at one offset, and why that is a proof
@@ -1725,7 +1562,7 @@ pub const Cast = struct {
 ///
 /// `ceiling` clears every legitimate run: the longest is a file closing its
 /// blocks at EOF, bounded by `offside.Columns.max` at 96, then
-/// `lineage.Tags.max` at 64 and `fence.Spans.max` at 16. `cohort` bounds the
+/// `fence.Spans.max` at 16. `cohort` bounds the
 /// distinct symbols one *unmoved* shape may answer, where the real number is
 /// one - the abut cohort keys on disjoint bytes, and every other zero-width
 /// hand moves a stack per answer. A full `cohort` refuses, so the smaller
@@ -1799,7 +1636,6 @@ pub const Spent = struct {
 pub const Carry = struct {
     columns: offside.Columns = .{},
     spans: fence.Spans = .{},
-    tags: lineage.Tags = .{},
     /// The memory a *customary* has, when this grammar carries one.
     ///
     /// In here rather than beside the engine because everything the seam already
@@ -1853,7 +1689,6 @@ pub const Carry = struct {
     pub fn rewind(c: *Carry) void {
         c.columns.reset();
         c.spans.reset();
-        c.tags.reset();
         c.organs.reset();
         c.spent = .{};
     }
@@ -1869,9 +1704,59 @@ pub const Carry = struct {
     pub fn same(a: *const Carry, b: *const Carry) bool {
         return a.columns.same(&b.columns) and
             a.spans.same(&b.spans) and
-            a.tags.same(&b.tags) and
             a.organs.same(&b.organs) and
             a.spent.same(&b.spent);
+    }
+
+    /// This memory in one word, so a parse can record where its scan stood at
+    /// every token for the price of a `u64` each and a later parse can ask
+    /// whether it is standing there now.
+    ///
+    /// `same` without `spent`, and the omission is the whole difference between
+    /// the two. `spent` is the repeat guard for zero-extent answers *at one
+    /// offset*: it is bookkeeping about the question being asked rather than
+    /// memory carried between them, and it is empty at every offset a scan has
+    /// not yet been asked at. A digest is only ever compared across a jump to a
+    /// fresh offset, where both sides hold nothing, so including it would
+    /// compare two empties in the common case and refuse a sound jump in the
+    /// rare one.
+    ///
+    /// A collision admits a jump the comparison should have refused, at 2^-64
+    /// per lift against a value derived from the live bytes of both stacks and
+    /// the organs. The alternative is carrying a kilobyte per token.
+    ///
+    /// Every organ that is a *state*. `since` is the exception and is carried
+    /// beside this word rather than in it, because a reuse has to move it and
+    /// cannot move a hash - see `Organs.digest` and `graft.Stance`.
+    pub fn digest(c: *const Carry) u64 {
+        var h = std.hash.Wyhash.init(0);
+        c.columns.digest(&h);
+        c.spans.digest(&h);
+        c.organs.digest(&h);
+        return h.final();
+    }
+
+    /// Where the last answer with extent ended, the one organ that is an offset.
+    pub fn since(c: *const Carry) u32 {
+        return c.organs.since;
+    }
+
+    /// Put that offset where a scan of the bytes this one skipped would have
+    /// left it. The scan's half of a reuse: `engine.step` moves `since` for every
+    /// answer that had extent, so a run that lexed those bytes one at a time
+    /// would stand somewhere particular, and a reuse that jumps them owes the
+    /// same bookkeeping. Without it the next `broke` measures its gap from
+    /// wherever this scan last stopped, which is behind the bytes it skipped,
+    /// and reports a newline the reused piece already accounted for.
+    ///
+    /// The caller supplies the offset rather than this deriving one, because the
+    /// only thing that knows it is the record the earlier parse left. Deriving
+    /// it - "the reuse ended here, so say the answer ended here" - reads as
+    /// obviously right and is a fiction on any grammar whose hand answers with
+    /// no extent: python's every external is zero-width, so its `since` is
+    /// **never** moved at all, and claiming one landed refuses every candidate.
+    pub fn handed(c: *Carry, at: u32) void {
+        c.organs.since = at;
     }
 
     /// Whether this exact zero-extent answer has already been given here.
@@ -1893,14 +1778,18 @@ pub const Carry = struct {
     /// stack whose pops cannot be told apart, so html's implied closes - all
     /// zero-width, one pop each - would be refused after the first.
     ///
+    /// Those closes are the customary's marks now rather than a tag stack of their
+    /// own, and the low sixteen bits this used to pack them into are free. They stay
+    /// free instead of being reclaimed: the two remaining stacks keep the exact bits
+    /// they had, so nothing about a grammar without a book moves.
+    ///
     /// The organs fold in by `xor` and weigh exactly nothing while they are
     /// untouched (`Organs.shape` states that as its contract), so a grammar with
     /// no customary gets the identical word it got before they existed - the
     /// zero-cost claim, as an equality rather than as a hope.
     fn shape(c: *const Carry) u64 {
         return ((@as(u64, c.columns.depth()) << 32) |
-            (@as(u64, c.spans.depth()) << 16) |
-            c.tags.depth()) ^ c.organs.shape();
+            (@as(u64, c.spans.depth()) << 16)) ^ c.organs.shape();
     }
 };
 
@@ -1991,7 +1880,15 @@ fn written(
 ) ?Hit {
     const e = book orelse return null;
     const already = carry.spent.standing(at, asked);
-    const hit = e.step(&carry.organs, bytes, at, fresh, wanted, named, already) orelse return null;
+    const was = carry.organs.frameDepth();
+    const marked = carry.organs.markDepth();
+    const hit = e.step(&carry.organs, bytes, at, fresh, wanted, named, already) orelse {
+        irregex.assay.trace(.lex, "customary {d}: refused · frames {d} · marks {d} · spent {d}\n", .{ at, was, marked, already.len });
+        return null;
+    };
+    irregex.assay.trace(.lex, "customary {d}: symbol {d} skip {d} len {d} · frames {d} -> {d} · marks {d} -> {d}\n", .{
+        at, hit.symbol, hit.skip, hit.len, was, carry.organs.frameDepth(), marked, carry.organs.markDepth(),
+    });
     return .{ .symbol = hit.symbol, .len = hit.len, .skip = hit.skip };
 }
 
@@ -2037,14 +1934,6 @@ fn offer(
     for (casts) |*c| {
         if (c.troupe.kind != .fence) continue;
         if (opening(c, carry, bytes, at, wanted)) |h| return h;
-    }
-    // Above `marrow` because html's raw body outranks html's comment at the
-    // same offset, and that ordering is the spec's first line rather than a
-    // preference: `<script><!--x--></script>` is four bytes of raw text and a
-    // comment nobody lexed, because inside a script nothing is a comment.
-    for (casts) |*c| {
-        if (c.troupe.kind != .lineage) continue;
-        if (enclosing(c, carry, bytes, at, wanted)) |h| return h;
     }
     // Last, because a bounded run is the only hand whose bytes the parser has
     // already walked into: it fires at an offset the grammar's own opening
@@ -2186,131 +2075,6 @@ fn unwritten(
         else => c.seams[@intFromEnum(b.seam)] orelse return null,
     };
     return .{ .symbol = which, .len = b.len, .skip = b.skip };
-}
-
-/// html's element ancestry: six parts behind one dispatch.
-///
-/// One function rather than a phase per part, because the parts are not ranked
-/// against each other - they are *arms of a single decision* the specification
-/// makes by looking at one byte. A close and an implied close and a raw body
-/// are all answers to "what is at this `<`", and splitting them into phases
-/// would invent a precedence the specification does not have.
-///
-/// The order below is that dispatch, transcribed. Two details of it are load
-/// bearing and neither is obvious:
-///
-///   * **The raw body is decided before whitespace is skipped**, so a script
-///     body owns its own leading blanks, and it is decided by the *expected
-///     set* rather than by the bytes: raw text is the answer exactly where
-///     neither tag name is legal.
-///   * **Everything past the `<` is lookahead.** The specification marks the
-///     token's end at the `<` and then reads forward to decide, so an implied
-///     close is zero-width there however many bytes it had to read - which is
-///     `Hit`'s `skip + len` at its narrowest, both fields zero once the
-///     whitespace is gone.
-fn enclosing(
-    c: *const Cast,
-    carry: *Carry,
-    bytes: []const u8,
-    at: u32,
-    wanted: *const std.DynamicBitSetUnmanaged,
-) ?Hit {
-    const opening_wanted = want(wanted, c.opens[0]);
-    const closing_wanted = want(wanted, c.close);
-    if (c.body) |sym| {
-        if (wanted.isSet(sym) and !opening_wanted and !closing_wanted) {
-            // Nothing open means nothing knows which mark ends the body, and
-            // the specification refuses outright rather than falling through to
-            // the arms below.
-            const shut = lineage.raw(&carry.tags) orelse return null;
-            return .{ .symbol = sym, .len = lineage.reach(shut, bytes, at) };
-        }
-    }
-    var i = at;
-    while (i < bytes.len and std.ascii.isWhitespace(bytes[i])) i += 1;
-    const skip = i - at;
-    // Past the last byte is the specification's `lookahead == '\0'` arm, which
-    // exists so a document may omit `</body></html>` as most do.
-    if (i >= bytes.len) return implies(c, carry, bytes, i, skip, wanted);
-    switch (bytes[i]) {
-        // A comment is the same `<` read by a different hand, and this one
-        // declines rather than racing it: the specification routes `<!` away
-        // before it ever consults the ancestry.
-        '<' => {
-            if (i + 1 < bytes.len and bytes[i + 1] == '!') return null;
-            return implies(c, carry, bytes, i, skip, wanted);
-        },
-        '/' => {
-            const sym = c.shut orelse return null;
-            if (!wanted.isSet(sym)) return null;
-            if (i + 1 >= bytes.len or bytes[i + 1] != '>') return null;
-            // The specification answers here even with nothing to pop, without
-            // saying which terminal it answered; that is a stale symbol rather
-            // than a decision, so this declines instead of reproducing it.
-            if (carry.tags.depth() == 0) return null;
-            carry.tags.pop();
-            return .{ .symbol = sym, .len = 2, .skip = skip };
-        },
-        else => {
-            if (!opening_wanted and !closing_wanted) return null;
-            if (c.body) |sym| if (wanted.isSet(sym)) return null;
-            if (opening_wanted) return begins(c, carry, bytes, i, skip, wanted);
-            return ends(c, carry, bytes, i, skip);
-        },
-    }
-}
-
-/// A tag name that opens an element, and which of the three openers it is.
-fn begins(
-    c: *const Cast,
-    carry: *Carry,
-    bytes: []const u8,
-    at: u32,
-    skip: u32,
-    wanted: *const std.DynamicBitSetUnmanaged,
-) ?Hit {
-    const it = lineage.open(c.troupe.line, bytes, at) orelse return null;
-    const sym = c.opens[@intFromEnum(it.which)] orelse return null;
-    // The specification guards this arm on the plain opener alone and then
-    // emits whichever of the three the name turned out to be. Requiring the one
-    // it emits keeps a state that admits only some of them from being handed a
-    // token it would reject; where all three are admitted together, as html's
-    // grammar makes them, the guard costs nothing.
-    if (!wanted.isSet(sym)) return null;
-    if (!carry.tags.push(it.tag)) return null;
-    return .{ .symbol = sym, .len = it.len, .skip = skip };
-}
-
-/// A tag name that closes an element, or fails to and is a different terminal
-/// for it.
-fn ends(c: *const Cast, carry: *Carry, bytes: []const u8, at: u32, skip: u32) ?Hit {
-    const it = lineage.close(&carry.tags, bytes, at) orelse return null;
-    if (it.matched) {
-        const sym = c.close orelse return null;
-        carry.tags.pop();
-        return .{ .symbol = sym, .len = it.len, .skip = skip };
-    }
-    // A mismatch is a token over the same bytes and pops nothing: the element
-    // it failed to close is still open, and the parser recovers around the
-    // stray rather than around a hole.
-    const sym = c.stray orelse return null;
-    return .{ .symbol = sym, .len = it.len, .skip = skip };
-}
-
-/// The close the ancestry owes before the next tag can open.
-fn implies(
-    c: *const Cast,
-    carry: *Carry,
-    bytes: []const u8,
-    at: u32,
-    skip: u32,
-    wanted: *const std.DynamicBitSetUnmanaged,
-) ?Hit {
-    const sym = c.implied orelse return null;
-    if (!wanted.isSet(sym)) return null;
-    if (!lineage.implied(&carry.tags, bytes, at)) return null;
-    carry.tags.pop();
-    return .{ .symbol = sym, .len = 0, .skip = skip };
 }
 
 /// A run of content whose end is computed from where it starts.
@@ -3053,7 +2817,6 @@ test "outside: the ledger refuses the two-cycle the old slot let through" {
     // the longest legitimate run the tree can produce fits *under* the ceiling
     // with room left, and a hand answering unconditionally is stopped *by* it.
     try std.testing.expect(offside.Columns.max < Spent.ceiling);
-    try std.testing.expect(lineage.Tags.max < Spent.ceiling);
     try std.testing.expect(fence.Spans.max < Spent.ceiling);
     var spin: Spent = .{};
     var got: u32 = 0;

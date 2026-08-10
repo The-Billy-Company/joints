@@ -270,10 +270,11 @@ const Scribe = struct {
 
         // A nullary fact, and the largest family: eight line facts plus `fresh`.
         const bare = [_]struct { []const u8, book.Test }{
-            .{ "bol", .bol },          .{ "not_bol", .not_bol },
-            .{ "blank", .blank },      .{ "not_blank", .not_blank },
-            .{ "lull", .lull },        .{ "not_lull", .not_lull },
-            .{ "eof", .eof },          .{ "not_eof", .not_eof },
+            .{ "bol", .bol },     .{ "not_bol", .not_bol },
+            .{ "blank", .blank }, .{ "not_blank", .not_blank },
+            .{ "lull", .lull },   .{ "not_lull", .not_lull },
+            .{ "broke", .broke }, .{ "not_broke", .not_broke },
+            .{ "eof", .eof },     .{ "not_eof", .not_eof },
             .{ "fresh", .fresh },
         };
         for (bare) |b| if (std.mem.eql(u8, op, b[0])) {
@@ -386,15 +387,25 @@ const Scribe = struct {
             row.v0 = try s.value(t[1]);
             row.cmp = @intFromEnum(try s.cmp(try s.word(t[2])));
             row.v1 = try s.value(t[3]);
-        } else if (std.mem.eql(u8, op, "marks.top.tag")) {
-            row.op = @intFromEnum(book.Test.marks_top_tag);
-            if (t.len > 1) {
-                const w = try s.word(t[1]);
-                if (!std.mem.eql(u8, w, "folded")) {
-                    s.blameAt("marks.top.tag: unknown word `{s}`", .{w});
+        } else if (std.mem.eql(u8, op, "marks.top.tag") or std.mem.eql(u8, op, "marks.has.tag")) {
+            row.op = @intFromEnum(if (op[6] == 't')
+                book.Test.marks_top_tag
+            else
+                book.Test.marks_has_tag);
+            var i: usize = 1;
+            while (i < t.len) : (i += 1) {
+                const w = try s.word(t[i]);
+                if (std.mem.eql(u8, w, "folded")) {
+                    row.flags |= book.TestRow.folded;
+                } else if (std.mem.eql(u8, w, "group")) {
+                    i += 1;
+                    if (i == t.len) return s.shape(op);
+                    row.flags |= book.TestRow.grouped;
+                    row.v0 = try s.value(t[i]);
+                } else {
+                    s.blameAt("{s}: unknown word `{s}`", .{ op, w });
                     return Error.CustomaryUnknownWord;
                 }
-                row.flags |= book.TestRow.folded;
             }
         } else if (std.mem.eql(u8, op, "frames.has") or std.mem.eql(u8, op, "marks.has")) {
             if (t.len != 2) return s.shape(op);
@@ -552,10 +563,12 @@ const Scribe = struct {
                 if (xs.items.len == 0) return Error.CustomaryBadShape;
                 const head = try s.word(xs.items[0]);
                 const arity: usize = if (std.mem.eql(u8, head, "span") or
+                    std.mem.eql(u8, head, "number") or
                     std.mem.eql(u8, head, "reg") or
                     std.mem.eql(u8, head, "frames.at.width")) 2 else 3;
                 if (xs.items.len != arity) return s.shape(head);
                 if (std.mem.eql(u8, head, "span")) return s.node(.span, @intCast(try s.whole(xs.items[1])), 0);
+                if (std.mem.eql(u8, head, "number")) return s.node(.number, @intCast(try s.whole(xs.items[1])), 0);
                 if (std.mem.eql(u8, head, "reg")) {
                     return s.node(.reg, @intCast(try s.register(xs.items[1])), 0);
                 }

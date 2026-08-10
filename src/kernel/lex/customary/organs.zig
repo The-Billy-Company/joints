@@ -37,17 +37,34 @@ pub const Symbol = u32;
 /// `frames` is markdown's declared organ size and the deepest of the eight -
 /// the same 96 `offside.Columns` chose, for the same reason: it is the depth of
 /// nesting a real file reaches before the answer is that the file is generated.
-/// `marks` is 8 because the deepest carried-state nesting anyone found is
-/// kotlin's interpolation inside a triple-quoted string inside an
-/// interpolation, and that is three. `regs` is 8 because markdown needs six.
+/// `marks` is 64 because the organ carries two populations with very different
+/// depths. Quoting nests three deep at worst - kotlin's interpolation inside a
+/// triple-quoted string inside an interpolation - but html's tag stack is a mark
+/// stack too, and element ancestry is not quoting: a document that opens sixteen
+/// literals is pathological, one that opens sixteen elements is a navigation bar.
+/// So this is 64, the number the hand-written ancestry chose for the same stack
+/// before `customary/html.json` replaced it and `hand/lineage.zig` was deleted,
+/// and a sixty-fifth mark declines to open rather than growing a hot path.
+/// `regs` is 8 because markdown needs six.
 pub const frames_max = 96;
-pub const marks_max = 8;
+pub const marks_max = 64;
 pub const regs_max = 8;
 /// How wide a remembered delimiter may be. A heredoc tag is an identifier and a
 /// raw-string fence is a run of `#`, so this is generous; a longer one is
 /// refused at load rather than truncated at scan, because a truncated tag would
 /// close a string the author did not close.
 pub const tag_max = 24;
+/// How many tag bytes every open mark may hold *between them*.
+///
+/// One arena rather than a buffer per slot, because `marks_max * tag_max` is a
+/// product no document pays: sixty-four open elements would need 1.5 KB of tag
+/// room and the deepest point of pdf.js's viewer - sixteen elements, `html >
+/// body > div ×11 > menu > button > span` - spells 55 bytes of names. A stack is
+/// the one shape where an arena needs no allocator: pushes append, pops
+/// truncate, so the live bytes are always a prefix and the free room is always
+/// the rest. This is ~3.5x the deepest thing measured, and a full arena declines
+/// a push exactly as a full stack does.
+pub const tags_max = 192;
 
 /// One open layout region: how many columns it holds and what kind it is.
 ///
@@ -63,30 +80,48 @@ pub const Frame = extern struct { width: u16, kind: u8, pad: u8 = 0 };
 /// many `#`s opened a raw string, kotlin how many `$`s prefix an interpolation,
 /// a fence how many backticks it owes. The tag is the other half - a heredoc
 /// remembers a word, and `marks.top.tag` compares the bytes at the offset
-/// against it, optionally case-folded.
+/// against it, optionally case-folded - and it is a *length* here rather than
+/// the bytes, because the bytes live in the shared arena (`tags_max`). Four
+/// bytes wide, so the depth html needs costs what one 24-byte slot used to.
 pub const Mark = extern struct {
     kind: u8,
     len: u8,
     count: u16,
-    tag: [tag_max]u8,
-
-    pub fn text(m: *const Mark) []const u8 {
-        return m.tag[0..m.len];
-    }
 };
 
 /// Two stacks and a register bank. Copied by value; compared with `same`.
 pub const Organs = struct {
     frames: [frames_max]Frame = undefined,
     marks: [marks_max]Mark = undefined,
+    /// Every open mark's tag, concatenated innermost-last. A mark's slice is its
+    /// own `len` at the offset the lens before it sum to, which is why nothing
+    /// stores that offset: a stack of lengths already spells it.
+    tags: [tags_max]u8 = undefined,
     regs: [regs_max]u32 = @splat(0),
     frame_len: u8 = 0,
     mark_len: u8 = 0,
+    tag_len: u16 = 0,
+    /// Where the last answer that had extent ended - the mark `Facts.broke` is
+    /// measured from, and the only organ that is an offset rather than a state.
+    ///
+    /// It is here, in the carried memory, because the fact it serves is carried:
+    /// tree-sitter-yaml's `has_nwl` is `cur_row > scanner->row`, and `row` is
+    /// **serialized scanner state that only a `mark_end` moves**. Its dedent
+    /// path returns `BL` without ever calling `mark_end`, so the token's end
+    /// defaults to its start, the run of blanks in front of it is re-scanned by
+    /// every following call, and the row it crossed stays crossed for all of
+    /// them. A `broke` measured from this ask's own skip loses that the moment
+    /// the first zero-width close eats the newline, and a mapping that dedents
+    /// across a blank line then reads its next key as a continuation of the
+    /// block it just closed.
+    since: u32 = 0,
 
     pub fn reset(o: *Organs) void {
         o.frame_len = 0;
         o.mark_len = 0;
+        o.tag_len = 0;
         o.regs = @splat(0);
+        o.since = 0;
     }
 
     pub fn frameDepth(o: *const Organs) u32 {
@@ -109,6 +144,22 @@ pub const Organs = struct {
         return if (o.mark_len == 0) null else &o.marks[o.mark_len - 1];
     }
 
+    /// The tag bytes mark `i` remembers. Empty for a mark that remembers none,
+    /// which is every mark a book pushed without one.
+    pub fn markText(o: *const Organs, i: u32) []const u8 {
+        if (i >= o.mark_len) return &.{};
+        var from: u16 = 0;
+        for (o.marks[0..i]) |m| from += m.len;
+        return o.tags[from..][0..o.marks[i].len];
+    }
+
+    /// The innermost mark's tag, without the walk: the live arena ends where the
+    /// innermost mark's bytes do.
+    pub fn markTopText(o: *const Organs) []const u8 {
+        const top = o.markTop() orelse return &.{};
+        return o.tags[o.tag_len - top.len ..][0..top.len];
+    }
+
     /// Push, or refuse. A refusal is a full stack, and a full stack is a file
     /// nesting past the census depth: the answer is to decline the push and let
     /// the rule's other actions stand, exactly as `offside.Columns` does, rather
@@ -123,9 +174,17 @@ pub const Organs = struct {
     pub fn pushMark(o: *Organs, kind: u8, count: u32, tag: []const u8) void {
         if (o.mark_len == marks_max) return;
         const len: u8 = @intCast(@min(tag.len, tag_max));
-        var m: Mark = .{ .kind = kind, .len = len, .count = @intCast(@min(count, std.math.maxInt(u16))), .tag = @splat(0) };
-        @memcpy(m.tag[0..len], tag[0..len]);
-        o.marks[o.mark_len] = m;
+        // A full arena declines like a full stack, one level down: the room is
+        // shared, so a document deep enough to exhaust it is the same
+        // pathological file the depth ceiling already answers for.
+        if (@as(usize, o.tag_len) + len > tags_max) return;
+        @memcpy(o.tags[o.tag_len..][0..len], tag[0..len]);
+        o.tag_len += len;
+        o.marks[o.mark_len] = .{
+            .kind = kind,
+            .len = len,
+            .count = @intCast(@min(count, std.math.maxInt(u16))),
+        };
         o.mark_len += 1;
     }
 
@@ -134,7 +193,9 @@ pub const Organs = struct {
     }
 
     pub fn popMark(o: *Organs) void {
-        if (o.mark_len > 0) o.mark_len -= 1;
+        if (o.mark_len == 0) return;
+        o.mark_len -= 1;
+        o.tag_len -= o.marks[o.mark_len].len;
     }
 
     /// Pop down to and including the innermost entry of `kind`, or empty the
@@ -152,7 +213,7 @@ pub const Organs = struct {
     pub fn popMarkUntil(o: *Organs, kind: u8) void {
         while (o.mark_len > 0) {
             const at = o.marks[o.mark_len - 1].kind;
-            o.mark_len -= 1;
+            o.popMark();
             if (at == kind) return;
         }
     }
@@ -176,15 +237,42 @@ pub const Organs = struct {
     /// reason, as `outside.Carry.same`.
     pub fn same(a: *const Organs, b: *const Organs) bool {
         if (a.frame_len != b.frame_len or a.mark_len != b.mark_len) return false;
+        if (a.tag_len != b.tag_len or a.since != b.since) return false;
         if (!std.mem.eql(u32, &a.regs, &b.regs)) return false;
         for (a.frames[0..a.frame_len], b.frames[0..b.frame_len]) |x, y| {
             if (x.width != y.width or x.kind != y.kind) return false;
         }
         for (a.marks[0..a.mark_len], b.marks[0..b.mark_len]) |*x, *y| {
-            if (x.kind != y.kind or x.count != y.count) return false;
-            if (!std.mem.eql(u8, x.text(), y.text())) return false;
+            if (x.kind != y.kind or x.count != y.count or x.len != y.len) return false;
         }
-        return true;
+        // The lens matched pairwise, so the arenas are cut the same way and one
+        // comparison of the live prefix settles every tag at once.
+        return std.mem.eql(u8, a.tags[0..a.tag_len], b.tags[0..b.tag_len]);
+    }
+
+    /// `same` as a number, field for field and live prefix for live prefix, so
+    /// two organs `same` says yes about hash alike. The dead tails are
+    /// `undefined` and are read by neither.
+    ///
+    /// `since` is **out**, and is the one organ a reader has to carry beside
+    /// this word rather than in it. Every other organ is a state, and two scans
+    /// holding the same states are the same scan wherever they stand; `since` is
+    /// a byte offset, and an edit moves every offset after it by a delta, so no
+    /// comparison of two absolute ones can agree across an edit.
+    ///
+    /// It was folded in as a distance from the offset being read, which is
+    /// shift-proof and still wrong: it makes the word say "and the last answer
+    /// with extent ended this far back", which no jump over unread bytes can
+    /// ever satisfy. A reuse has to *move* that offset the way it moves every
+    /// other one it copies, which it cannot do to a hash. See `graft.Stance`.
+    pub fn digest(o: *const Organs, h: *std.hash.Wyhash) void {
+        h.update(std.mem.asBytes(&o.frame_len));
+        h.update(std.mem.asBytes(&o.mark_len));
+        h.update(std.mem.asBytes(&o.tag_len));
+        h.update(std.mem.sliceAsBytes(&o.regs));
+        h.update(std.mem.sliceAsBytes(o.frames[0..o.frame_len]));
+        h.update(std.mem.sliceAsBytes(o.marks[0..o.mark_len]));
+        h.update(o.tags[0..o.tag_len]);
     }
 
     /// This state in one word, for the zero-width progress ledger.
@@ -205,6 +293,11 @@ pub const Organs = struct {
     /// Zero for untouched organs, exactly, which is the zero-cost property: a
     /// grammar with no customary folds a zero into `Carry.shape` and gets the
     /// same word the hands got before this organ existed.
+    ///
+    /// `since` is deliberately out. It moves only when an answer had extent, and
+    /// an answer with extent moved the offset, which retires the ledger's whole
+    /// row - so folding it in could distinguish nothing the offset had not
+    /// already distinguished.
     pub fn shape(o: *const Organs) u64 {
         var out: u64 = (@as(u64, o.frame_len) << 8) | o.mark_len;
         for (o.regs, 0..) |r, i| out ^= @as(u64, r) *% (0x9E37_79B9_7F4A_7C15 +% i);
@@ -228,6 +321,27 @@ pub const Facts = struct {
     lull: bool,
     column: u32,
     eof: bool,
+    /// Whether a line ending stands between the last answer that had extent and
+    /// this offset - `Organs.since` to here.
+    ///
+    /// The one thing about a line no offset can be asked. yaml's whole alphabet
+    /// turns on tree-sitter-yaml's `has_nwl`, which is "the row advanced since
+    /// the last token ended" - a fact about the gap between two tokens, not
+    /// about the bytes at either end. The nearest local proxy, "this offset is
+    /// the line's first non-blank byte", agrees with it everywhere except the
+    /// two places it cannot. The first token of a file has no previous token, so
+    /// nothing was crossed, and the C reads that line as a continuation while
+    /// the proxy reads it as a fresh one; a whole document's outermost mapping
+    /// hangs off that. And a run of zero-width closes at one offset are all
+    /// still on the far side of the same newline, which the proxy sees once and
+    /// then loses, because the first close consumed the blanks it was measured
+    /// from - the reason the mark lives in the organs and not in the ask.
+    ///
+    /// Only a book that declares `trivia` can see this. Everywhere else the gap
+    /// was the caller's extras, stepped over before the customary was asked, so
+    /// the honest answer is that the customary does not know - and false is what
+    /// it means, since such a book never asks.
+    broke: bool = false,
 };
 
 /// Blanks from `at`, as a new offset and the columns they are worth.
@@ -323,7 +437,7 @@ test "same reads the live prefix and not the dead bytes" {
     try std.testing.expect(!a.same(&b));
     b.pushMark(3, 2, "EOF");
     try std.testing.expect(a.same(&b));
-    b.marks[0].tag[0] = 'e';
+    b.tags[0] = 'e';
     try std.testing.expect(!a.same(&b));
 }
 
@@ -331,7 +445,36 @@ test "a tag longer than the ceiling is truncated rather than overrunning" {
     var o: Organs = .{};
     const long = "A" ** (tag_max + 9);
     o.pushMark(1, 0, long);
-    try std.testing.expectEqual(@as(usize, tag_max), o.markTop().?.text().len);
+    try std.testing.expectEqual(@as(usize, tag_max), o.markTopText().len);
+}
+
+test "the shared arena cuts every mark's tag where its own length says" {
+    var o: Organs = .{};
+    o.pushMark(1, 0, "html");
+    o.pushMark(2, 0, "body");
+    o.pushMark(3, 0, "");
+    o.pushMark(4, 0, "span");
+    try std.testing.expectEqualStrings("html", o.markText(0));
+    try std.testing.expectEqualStrings("body", o.markText(1));
+    try std.testing.expectEqualStrings("", o.markText(2));
+    try std.testing.expectEqualStrings("span", o.markTopText());
+    // A pop hands the arena back, so the next push reuses the same bytes.
+    o.popMark();
+    try std.testing.expectEqualStrings("", o.markTopText());
+    o.pushMark(5, 0, "menu");
+    try std.testing.expectEqualStrings("menu", o.markTopText());
+    try std.testing.expectEqual(@as(u32, 4), o.markDepth());
+}
+
+test "a full arena declines a push instead of overrunning the room" {
+    var o: Organs = .{};
+    const wide = "A" ** tag_max;
+    for (0..marks_max) |_| o.pushMark(1, 0, wide);
+    try std.testing.expectEqual(@as(u32, tags_max / tag_max), o.markDepth());
+    try std.testing.expect(o.tag_len <= tags_max);
+    // And the marks that did seat still read back whole.
+    try std.testing.expectEqualStrings(wide, o.markText(0));
+    try std.testing.expectEqualStrings(wide, o.markTopText());
 }
 
 test "untouched organs weigh nothing in the progress word" {

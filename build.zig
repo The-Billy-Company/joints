@@ -40,6 +40,28 @@ pub fn build(b: *std.Build) void {
     version.addOption([:0]const u8, "version", zon.version);
     version.addOption([:0]const u8, "package", @tagName(zon.name));
 
+    // The books, in the binary.
+    //
+    // `customary/<grammar>.json` *is* the scanner for a grammar that has one, and
+    // a scanner the product cannot find is a scanner that does not ship. Until
+    // now the only three ways to a book were a typed `--customary`, an
+    // environment knob, and a file beside the grammar.json - so a bare
+    // `joints lex html.json`, the C ABI, and every library embedder all found
+    // nothing and fell through to the hand-written scanner. That is what made
+    // every hand permanently load-bearing: a hand is compiled in and always
+    // there, a book needed a path, and no amount of transcription can retire a
+    // fallback the binary still depends on.
+    //
+    // Embedding does not answer "which directory" - it deletes the question,
+    // which is the objection `intake.zig` raises against defaulting to one
+    // ("nothing has to guess a repo root from a binary's cwd"). The three
+    // deliberate ways still outrank this one; see `intake.customary`.
+    //
+    // Enumerated off the directory rather than listed, so adding a book is
+    // adding a file. `build.zig` is re-run every invocation, so there is no
+    // list that can go stale.
+    const shelf = books(b);
+
     // The engine joints's lexer stands on. Named here rather than inside the
     // module list twice, because the test build needs the identical dependency
     // and a second `b.dependency` call for a different optimize mode would
@@ -242,13 +264,14 @@ pub fn build(b: *std.Build) void {
     // `proof.zig` would have charged it to `zig build test -Dtest-filter=<what you
     // touched>`. Debug, not ReleaseFast: every claim in it is settled at comptime
     // and there is nothing for the optimizer to do.
+    const idiom_lib = b.createModule(.{
+        .root_source_file = b.path("src/idiom.zig"),
+        .target = target,
+        .optimize = .Debug,
+        .imports = &.{.{ .name = "irregex", .module = irregex_mod }},
+    });
     const idiom = b.addRunArtifact(b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/idiom.zig"),
-            .target = target,
-            .optimize = .Debug,
-            .imports = &.{.{ .name = "irregex", .module = irregex_mod }},
-        }),
+        .root_module = idiom_lib,
         // Reaching twenty-eight modules also collects their inline tests, and the
         // suite already runs those. `idiom:` narrows the run to the one test this
         // step exists for, exactly as `census:` does above - and the run still
@@ -263,6 +286,12 @@ pub fn build(b: *std.Build) void {
         "idiom",
         "Does the package speak its own idiom: one lifecycle shape per kind of owner",
     ).dependOn(&idiom.step);
+
+    // Every module rooted at the library's own sources, because the seam that
+    // reads the shelf is `scanner.zig` and all five reach it. The benches and
+    // the two faces import `lib` and inherit it from there.
+    for ([_]*std.Build.Module{ lib, test_lib, proof, census_lib, idiom_lib }) |m|
+        m.addAnonymousImport("customary_shelf", .{ .root_source_file = shelf });
 
     // The bench rungs. Not part of `test` and not part of `check`: a rung
     // measures a trade rather than asserting an invariant, and the ones with a
@@ -359,4 +388,59 @@ pub fn build(b: *std.Build) void {
         "bench-gloss",
         "Every query the pinned grammars ship, compiled: acceptance, dead patterns, lookup, #match?",
     ).dependOn(&bench_gloss.step);
+}
+
+/// Every `customary/*.json`, copied beside a generated index that embeds them.
+///
+/// A generated index rather than one anonymous import per book, because the
+/// lookup is by grammar name at run time and `@import` names are comptime: the
+/// scanner has a `gr.name` and needs the bytes, which is a table. The books are
+/// copied into the same generated directory so the index's `@embedFile` names
+/// resolve as siblings.
+///
+/// Sorted, because directory order is the filesystem's business and Zig
+/// content-addresses this file - an unsorted walk would hand two machines
+/// different bytes for the same tree and cost a cache miss apiece.
+fn books(b: *std.Build) std.Build.LazyPath {
+    const gpa = b.allocator;
+    const io = b.graph.io;
+    var dir = b.build_root.handle.openDir(io, "customary", .{ .iterate = true }) catch
+        @panic("joints: cannot read customary/ — the books are not optional");
+    defer dir.close(io);
+
+    var found: std.ArrayList([]const u8) = .empty;
+    var it = dir.iterate();
+    while (it.next(io) catch @panic("joints: cannot walk customary/")) |entry| {
+        if (entry.kind != .file) continue;
+        if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
+        found.append(gpa, b.dupe(entry.name)) catch @panic("OOM");
+    }
+    std.mem.sort([]const u8, found.items, {}, struct {
+        fn less(_: void, a: []const u8, c: []const u8) bool {
+            return std.mem.lessThan(u8, a, c);
+        }
+    }.less);
+
+    const wf = b.addWriteFiles();
+    var src: std.ArrayList(u8) = .empty;
+    src.appendSlice(gpa,
+        \\//! Generated by `build.zig` from `customary/*.json` — do not edit.
+        \\//!
+        \\//! The scanner-as-data books, in the binary. `kernel/lex/scanner.zig`
+        \\//! reads this when a grammar arrived without one.
+        \\
+        \\pub const Book = struct { name: []const u8, json: []const u8 };
+        \\
+        \\pub const shelf = [_]Book{
+        \\
+    ) catch @panic("OOM");
+    for (found.items) |name| {
+        _ = wf.addCopyFile(b.path(b.fmt("customary/{s}", .{name})), name);
+        src.appendSlice(gpa, b.fmt(
+            "    .{{ .name = \"{s}\", .json = @embedFile(\"{s}\") }},\n",
+            .{ name[0 .. name.len - ".json".len], name },
+        )) catch @panic("OOM");
+    }
+    src.appendSlice(gpa, "};\n") catch @panic("OOM");
+    return wf.add("shelf.zig", src.items);
 }

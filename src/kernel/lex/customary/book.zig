@@ -103,6 +103,10 @@ pub const Test = enum(u32) {
     not_blank,
     lull,
     not_lull,
+    /// See `Facts.broke`: whether the gap this ask arrived over held a line
+    /// ending. yaml's three standings are this fact crossed with `lead`.
+    broke,
+    not_broke,
     eof,
     not_eof,
     /// Whether no extra has been stepped over since the last token ended.
@@ -125,9 +129,16 @@ pub const Test = enum(u32) {
     frames_at_width,
     frames_top_width,
     marks_top_count,
-    /// The bytes at the offset against the innermost mark's remembered tag,
-    /// exactly or case-folded. A heredoc's close, and nothing else.
+    /// The bytes at the offset - or one capture group's text - against the
+    /// innermost mark's remembered tag, exactly or case-folded. A heredoc's
+    /// close reads the offset; a tag name reads the group, because html's
+    /// closing name sits two bytes past the `<` and has to compare whole rather
+    /// than as a prefix.
     marks_top_tag,
+    /// The same comparison against *any* mark rather than the innermost, which
+    /// is html's dig-deeper close: a stray `</div>` unwinds one level per ask
+    /// while a `div` is still open somewhere below.
+    marks_has_tag,
     frames_has,
     marks_has,
     reg,
@@ -214,7 +225,10 @@ pub const TestRow = extern struct {
     pub const after: u32 = 1 << 3;
     pub const until: u32 = 1 << 4;
     pub const folded: u32 = 1 << 5;
-    pub const known: u32 = to | one | from | after | until | folded;
+    /// A tag comparison reads capture group `v0` instead of the bytes at the
+    /// offset, so it compares whole and not as a prefix.
+    pub const grouped: u32 = 1 << 6;
+    pub const known: u32 = to | one | from | after | until | folded | grouped;
 };
 
 pub const ActRow = extern struct {
@@ -265,6 +279,13 @@ pub const Val = enum(u32) {
     sub,
     max,
     min,
+    /// The decimal number one capture group spells, zero for a group that did
+    /// not participate. `span` reads a run's *length*; this reads a written
+    /// figure, which is a different thing a scanner sometimes needs: yaml's
+    /// block-scalar header may carry an explicit indentation indicator, and
+    /// `|4` means four columns rather than a two-byte header. Nine copied rules
+    /// per header shape is what the alternative costs.
+    number,
 };
 
 pub const ProbeRow = extern struct {
@@ -471,7 +492,7 @@ fn proveText(b: *const Book, s: Span) Error!void {
 /// No `Book`, unlike its siblings: a value names no text and no other section, so
 /// it is the one row that can be judged entirely on itself.
 fn proveValue(v: ValRow, i: usize) Error!void {
-    if (v.tag > @intFromEnum(Val.min)) return Error.CustomaryBadTag;
+    if (v.tag > @intFromEnum(Val.number)) return Error.CustomaryBadTag;
     // A child index must be strictly below its parent's, which makes the pool a
     // topologically sorted DAG and evaluation a walk that cannot revisit. The
     // encoder emits children first, so this is free to hold and it is the whole
@@ -531,6 +552,11 @@ fn proveTest(b: *const Book, t: TestRow) Error!void {
         },
         .frames_at_width => if (t.v0 == none or t.v1 == none) return Error.CustomaryBadIndex,
         .frames_at_kind => if (t.v0 == none) return Error.CustomaryBadIndex,
+        // A grouped tag comparison names the group in `v0`; the ungrouped form
+        // reads the offset and names nothing.
+        .marks_top_tag, .marks_has_tag => {
+            if ((t.flags & TestRow.grouped != 0) != (t.v0 != none)) return Error.CustomaryBadIndex;
+        },
         .wanted, .not_wanted, .named, .not_named, .sole => {
             if (t.name.len == 0) return Error.CustomaryBadText;
         },
