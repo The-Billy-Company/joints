@@ -43,6 +43,7 @@ import sys
 from collections import Counter
 from dataclasses import dataclass, field, replace
 from pathlib import Path
+from typing import NamedTuple
 
 ROOT = Path(__file__).resolve().parent.parent
 BOOK = ROOT / "customary"
@@ -65,6 +66,16 @@ def read(path: Path) -> str:
     a byte above 0x7F except through a negated class.
     """
     return path.read_bytes().decode("latin-1")
+
+
+#: PCRE2's absolute end of subject, and python's spelling of the same assertion.
+#: The two languages disagree about `\Z` - in PCRE2 it permits a final newline,
+#: in python it does not - so a book is written in the engine's dialect and this
+#: is the one token that has to be carried across. Spelling `$` instead would be
+#: wrong in both: a heredoc that runs to the end of a file ending in a newline
+#: would report its content one byte short.
+def dialect(pattern: str) -> str:
+    return re.sub(r"(?<!\\)((?:\\\\)*)\\z", r"\1\\Z", pattern)
 
 
 # ---------------------------------------------------------------- the program
@@ -130,6 +141,14 @@ class Book:
     #: deeply indented line inside a fence reads as the start of indented code.
     #: tree-sitter gets this from `valid_symbols`; a customary declares it.
     opaque: tuple = ()
+    #: The probe matching what lies BETWEEN two tokens, if this grammar's extras
+    #: do not cover it. A grammar whose every terminal is external declares no
+    #: whitespace extra, because in its C the scanner soaks its own:
+    #: tree-sitter-yaml opens every `scan` with a loop over spaces, tabs and line
+    #: breaks before it looks at anything. That loop is one fact about the
+    #: grammar, not a clause in each of its arms, so it is declared once and the
+    #: step advances over it before any rule is scored.
+    trivia: str | None = None
 
     PHASES = ("inside", "matched", "layout", "commanded", "opening",
               "enclosing", "bounded", "ordered")
@@ -141,9 +160,9 @@ class Book:
     def load(name: str) -> "Book":
         raw = json.loads((BOOK / f"{name}.json").read_text())
         kinds = raw.get("kinds", {})
-        probes = {k: re.compile(v) for k, v in raw.get("probes", {}).items()}
+        probes = {k: re.compile(dialect(v)) for k, v in raw.get("probes", {}).items()}
         classes = {
-            k: [(re.compile(pat), sym) for pat, sym in arms]
+            k: [(re.compile(dialect(pat)), sym) for pat, sym in arms]
             for k, arms in raw.get("classes", {}).items()
         }
         rules = []
@@ -163,6 +182,7 @@ class Book:
             raw["grammar"], tuple(raw.get("cohort", ())), kinds, probes, classes,
             tuple(rules), raw.get("tab", 8), raw.get("budget"),
             raw.get("asks", "line"), tuple(raw.get("opaque", ())),
+            raw.get("trivia"),
         )
         if book.asks not in ("line", "token"):
             raise SystemExit(f"customary: {name}: unknown ask points {book.asks!r}")
@@ -232,12 +252,17 @@ class Organs:
     frames: list = field(default_factory=list)  # (width, kind)
     marks: list = field(default_factory=list)  # (kind, count, tag)
     regs: list = field(default_factory=lambda: [0] * 8)
+    #: Where the last answer that had extent ended - the mark `Facts.broke` is
+    #: measured from, and the only organ that is an offset rather than a state.
+    #: The C's `scanner->row`, which only a `mark_end` moves, so a run of
+    #: zero-width closes stays on the far side of the newline it crossed.
+    since: int = 0
 
     def copy(self) -> "Organs":
-        return Organs(list(self.frames), list(self.marks), list(self.regs))
+        return Organs(list(self.frames), list(self.marks), list(self.regs), self.since)
 
     def key(self) -> tuple:
-        return (tuple(self.frames), tuple(self.marks), tuple(self.regs))
+        return (tuple(self.frames), tuple(self.marks), tuple(self.regs), self.since)
 
     def depth(self) -> tuple:
         return (len(self.frames), len(self.marks))
@@ -259,6 +284,14 @@ class Facts:
     lull: bool
     column: int
     eof: bool
+    #: Whether the inter-token skip this ask arrived over held a line ending.
+    #: The one thing about a line no offset can be asked - tree-sitter-yaml's
+    #: `has_nwl` is a fact about the gap between two tokens, and its nearest
+    #: local proxy ("the line's first non-blank byte") disagrees with it at the
+    #: first token of a file, which has no previous token. Only a book that
+    #: declares `trivia` can see it; elsewhere the gap was the caller's extras
+    #: and the customary never saw them.
+    broke: bool = False
 
 
 def soak(text: str, at: int, tab: int, carry: int = 0) -> tuple:
@@ -319,8 +352,23 @@ class Engine:
     #: legitimate run of them is bounded; past this a customary is looping.
     STALL = 512
 
+    #: The tests this side answers by fiat rather than by reading anything. The
+    #: permission set is the caller's, and rung 1 has no parse table, so `wanted`
+    #: is yes and `not_wanted` is no for every terminal at every offset. That is
+    #: the least-wrong constant for a book whose rows are told apart by the
+    #: *bytes*, and it fabricates an impossible state for one whose rows are told
+    #: apart by the *permission* - elixir's twenty quoted bodies are mutually
+    #: exclusive, so a state admitting two of them is one no parser presents, and
+    #: it is exactly the state a row's exclusivity guard exists to refuse. A rule
+    #: turned away here was turned away by this tool's own blindness, and `fiat`
+    #: is where that is written down so the verdict can say so.
+    FABRICATED = frozenset(("wanted", "not_wanted", "named", "not_named", "sole",
+                            "mending"))
+
     def __init__(self, book: Book):
         self.book = book
+        #: offset -> the terminals whose every rule a fabricated test turned away.
+        self.fiat: dict = {}
 
     def step(self, text: str, at: int, organs: Organs, fresh: bool = True,
              spent: frozenset = frozenset()) -> Hit | None:
@@ -334,10 +382,26 @@ class Engine:
         terminal ordered behind it is unreachable. See the module header for why
         `wanted` itself is not modelled.
         """
+        # A book whose grammar declares no whitespace extra soaks its own, and
+        # says so once in its preamble rather than in every arm. Step over it
+        # before any rule is scored - the bytes come back as the hit's `skip`, so
+        # a token's extent is still only the token - and remember whether a line
+        # ending was among them, which is the one fact no offset can be asked.
+        over = 0
+        if self.book.trivia is not None:
+            m = self.book.probes[self.book.trivia].match(text, at)
+            over = m.end() - at if m else 0
+        # Measured over the whole gap the mark opens, not over `over` alone: a
+        # zero-width close already ate the newline this run is still behind.
+        mark = min(organs.since, at)
+        broke = self.book.trivia is not None and any(
+            c in "\r\n" for c in text[mark:at + over])
+        at += over
         for phase in Book.PHASES:
             if phase in Book.CALLED or (phase == "layout" and not fresh):
                 continue
             off, f = self.stand(phase, text, at, organs)
+            f = replace(f, broke=broke)
             sealed = self.sealed(organs)
             for rule in self.book.rules:
                 if rule.phase != phase:
@@ -348,6 +412,11 @@ class Engine:
                     continue
                 hit, abstained = self.attempt(rule, text, off, organs, f, fresh)
                 if hit is not None:
+                    # The C's `flush` after a `mark_end`, and only after one: an
+                    # answer with no extent never marked an end, so the gap it
+                    # stands in stays open for whatever answers next.
+                    if hit.length > 0:
+                        organs.since = hit.start + hit.length
                     return hit
                 if abstained:
                     return None
@@ -382,7 +451,13 @@ class Engine:
         than an input a rule reads."""
         bound = {}
         for test in rule.when:
+            # Cleared per test so the taint names the test that turned the rule
+            # away, not one that a passing `fires` left behind earlier in the same
+            # guard. Every other key in `bound` is a binding and outlives its test.
+            bound.pop("fiat", None)
             if not self.holds(test, text, at, organs, f, fresh, bound):
+                if test[0] in Engine.FABRICATED or bound.get("fiat"):
+                    self.fiat.setdefault(at, set()).update(rule.emits)
                 return None, False
         return self.apply(rule, text, at, organs, bound), bound.get("abstain", False)
 
@@ -537,6 +612,10 @@ class Engine:
             return f.lull
         if op == "not_lull":
             return not f.lull
+        if op == "broke":
+            return f.broke
+        if op == "not_broke":
+            return not f.broke
         if op == "eof":
             return f.eof
         if op == "not_eof":
@@ -603,7 +682,9 @@ class Engine:
                 off = at + (bound.get("eaten", 0)
                             if len(test) > 2 and test[2] == "after" else 0)
                 off, lead = soak(text, off, self.book.tab)
-            any_holds = self.scored(test[1], text, off, organs, fresh, lead)
+            any_holds, fiat = self.scored(test[1], text, off, organs, fresh, lead)
+            if fiat:
+                bound["fiat"] = True
             return any_holds if op == "fires" else not any_holds
         if op == "frames.top.width":
             if not organs.frames:
@@ -613,14 +694,27 @@ class Engine:
             if not organs.marks:
                 return False
             return compare(organs.marks[-1][1], test[1], self.value(test[2], organs, f, bound))
-        if op == "marks.top.tag":
+        if op in ("marks.top.tag", "marks.has.tag"):
             if not organs.marks:
                 return False
-            tag = organs.marks[-1][2]
-            got = text[at : at + len(tag)]
-            if test[1] == "folded":
-                return got.upper() == tag.upper()
-            return got == tag
+            reach = organs.marks[-1:] if op == "marks.top.tag" else organs.marks
+            words = [w for w in test[1:] if isinstance(w, str)]
+            fold = "folded" in words
+            # The grouped form compares whole - one capture group's text against
+            # the whole remembered tag - so a longer name cannot pass on its
+            # prefix. The offset form reads exactly as many bytes as the tag is
+            # long, which is what a heredoc's close needs and all it has.
+            caught = None
+            if "group" in words:
+                m = bound.get("match")
+                caught = (m.group(test[test.index("group") + 1]) or "") if m else ""
+            for _, _, tag in reach:
+                got = caught if caught is not None else text[at : at + len(tag)]
+                if caught is not None and len(got) != len(tag):
+                    continue
+                if (got.upper() == tag.upper()) if fold else (got == tag):
+                    return True
+            return False
         if op == "frames.has":
             return any(k == self.book.kind(test[1]) for _, k in organs.frames)
         if op == "marks.has":
@@ -629,27 +723,39 @@ class Engine:
             return compare(organs.regs[test[1]], test[2], self.value(test[3], organs, f, bound))
         raise SystemExit(f"customary: unknown test {op!r}")
 
-    def scored(self, group: str, text, at, organs: Organs, fresh, lead: int = 0) -> bool:
-        """Whether any rule in `group` would hold here, guard only.
+    def scored(self, group: str, text, at, organs: Organs, fresh, lead: int = 0) -> tuple:
+        """Whether any rule in `group` would hold here, guard only, and whether
+        that verdict rested on a test this side fabricates.
 
         A copy of the organs goes in, so nothing a scored guard reads can be
         changed by scoring it - which is the whole difference between this and
         actually running the rule, and it is why the recursion is one level deep
         by construction: a scored rule's own `fires` test scores against the same
         frozen copy and cannot descend into a group that scores it back.
+
+        The second half of the answer is what keeps `FABRICATED` from leaking: a
+        `no_fires` is a plain test to the rule that names it, so a group admitted
+        by a fiat `wanted` would otherwise turn away a row for a reason that reads
+        like the bytes and is not.
         """
         f = replace(facts(text, at, self.book.tab), lead=lead)
         frozen = organs.copy()
+        fiat = False
         for rule in self.book.rules:
             if group not in rule.groups:
                 continue
-            if all(
-                self.holds(t, text, at, frozen, f, fresh, {})
-                for t in rule.when
-                if t[0] not in ("fires", "no_fires")
-            ):
-                return True
-        return False
+            held, guessed = True, False
+            for t in rule.when:
+                if t[0] in ("fires", "no_fires"):
+                    continue
+                guessed = guessed or t[0] in Engine.FABRICATED
+                if not self.holds(t, text, at, frozen, f, fresh, {}):
+                    held = False
+                    break
+            if held:
+                return True, guessed
+            fiat = fiat or guessed
+        return False, fiat
 
     def kind_test(self, got: int, test) -> bool:
         if test[1] == "in":
@@ -676,6 +782,18 @@ class Engine:
             m = bound.get("match")
             got = m.group(v[1]) if m else None
             return len(got) if got else 0
+        if isinstance(v, list) and v[0] == "number":
+            # The figure the group spells rather than its length, truncated at
+            # the first byte that is not a digit and capped where a column stops
+            # being a column.
+            m = bound.get("match")
+            got = (m.group(v[1]) if m else None) or ""
+            digits = ""
+            for c in got:
+                if not c.isdigit():
+                    break
+                digits += c
+            return min(int(digits), 0xFFFF) if digits else 0
         if isinstance(v, str) and v.startswith("pass."):
             return bound[v]
         if v == "frames.top.width":
@@ -1188,8 +1306,17 @@ def check(book: Book, paths: list, loud: bool = False, quiet: bool = False) -> t
     where: Counter = Counter()
     fenced = [0, 0]  # under the envelope: missed · spurious
     left: Counter = Counter()
+    # Why a zero could be a zero. A cohort of hidden terminals wears no name in a
+    # tree, so `oracle_leaves` filters every one of them out and the comparison is
+    # empty for a reason that has nothing to do with agreement; a grammar with no
+    # oracle installed here is empty for a third reason. Counted so the verdict can
+    # name which silence it is standing in instead of printing `held` over nothing.
+    mute = 0
+    #: Answers the permission set would have settled; see `Engine.FABRICATED`.
+    fiats = 0
     for path in paths:
         text = read(path)
+        engine.fiat = {}
         got, _ = engine.walk(text)
         theirs = oracle_leaves(book.grammar, path, book.cohort)
         worn = {k: v for k, v in surface(book.grammar).items()
@@ -1198,11 +1325,20 @@ def check(book: Book, paths: list, loud: bool = False, quiet: bool = False) -> t
         mine = [(h.start, worn[h.symbol]) for h in got if worn.get(h.symbol)]
         if theirs is None:
             print(f"  {path.name}: oracle unavailable, {len(got)} emitted")
+            mute += 1
             continue
         ours, ts = set(mine), set(theirs)
         hit = ours & ts
-        miss = sorted(ts - ours)
+        # A miss the permission set would have decided is this tool's hole, not the
+        # book's error: `Engine.fiat` says which terminals a fabricated test turned
+        # away and where. Counted with the invisible terminals, which are the other
+        # thing a tree cannot settle.
+        fiat = {(off, name) for off, name in (ts - ours)
+                if any(worn.get(t) == name for t in engine.fiat.get(off, ()))}
+        miss = sorted(ts - ours - fiat)
         spur = sorted(ours - ts)
+        blind += sorted(fiat)
+        fiats += len(fiat)
         share = 100.0 * len(hit) / len(ts) if ts else 100.0
         tally[0] += len(hit)
         tally[1] += len(miss)
@@ -1253,7 +1389,42 @@ def check(book: Book, paths: list, loud: bool = False, quiet: bool = False) -> t
               f"the grammar reaches there: {fenced[0]} missed · {fenced[1]} spurious")
         for name, n in left.most_common():
             print(f"        {name:<32} {n:>6}")
-    return bad, tally, fenced
+    surf = surface(book.grammar)
+    seen = tuple(k for k in (book.cohort or surf) if surf.get(k))
+    return bad, tally, fenced, Silence(mute, len(paths), seen, tuple(book.cohort), fiats)
+
+
+class Silence(NamedTuple):
+    """Why a check that scored nothing scored nothing.
+
+    Four zeros read identically on the page and mean different things, so the
+    verdict needs them apart: no oracle answered (`mute`), the cohort is hidden
+    terminals no tree names (`seen` empty), the corpus was there and the answers
+    were the *permission set's* to decide, which this side fabricates (`fiat`), or
+    there were simply no files. Only the fifth reading - a corpus that holds no
+    instance of a claimed terminal - is a corpus problem rather than a harness
+    one, and it is what is left when the four are ruled out.
+    """
+
+    mute: int
+    files: int
+    seen: tuple
+    cohort: tuple
+    fiat: int = 0
+
+    def why(self) -> str | None:
+        if not self.files:
+            return "no files"
+        if not self.seen:
+            return (f"none of the {len(self.cohort)} terminal(s) this book claims wears a "
+                    f"name in a tree, so nothing it answers is observable here")
+        if self.mute >= self.files:
+            return f"no oracle answered for any of {self.files} file(s)"
+        if self.fiat:
+            return (f"{self.fiat} answer(s) were the permission set's to decide, and rung 1 "
+                    f"has no parse table - this book's rows are told apart by which terminal "
+                    f"the state admits, so the board is its gate")
+        return f"the corpus holds no instance of any claimed terminal"
 
 
 # ------------------------------------------------------- 1b: the composition
@@ -1365,9 +1536,11 @@ FALLBACK = {
     # not on those has not been tested.
     "kotlin": (ROOT / "research",),
     "scala": (ROOT / "research",),
+    "swift": (ROOT / "research",),
     "haskell": (ROOT / "research",),
     "html": (ROOT / "research",),
     "yaml": (ROOT / "research",),
+    "elixir": (ROOT / "research",),
 }
 
 
@@ -1377,8 +1550,10 @@ def suffixes(grammar: str) -> tuple:
         "kotlin": (".kt",),
         "yaml": (".yml", ".yaml"),
         "scala": (".scala",),
+        "swift": (".swift",),
         "haskell": (".hs",),
         "html": (".html",),
+        "elixir": (".ex", ".exs"),
         "python": (".py",),
     }.get(grammar, ())
 
@@ -1434,9 +1609,17 @@ def main(argv: list) -> int:
 
     print(f"customary {args.verb}: {book.grammar}, {len(paths)} file(s)")
     if args.verb == "check":
-        bad, _, fenced = check(book, paths, loud=args.loud, quiet=args.quiet)
+        bad, tally, fenced, quiet_as = check(book, paths, loud=args.loud, quiet=args.quiet)
+        if not bad and not any(tally[:3]):
+            # `held` over nothing compared is the vacuous pass the module header
+            # calls a kill, so it exits 2 - "could not be asked" - and says which
+            # silence it is. The board is what gates these books until the harness
+            # can see them; a count of zero should not have to be read as a hint.
+            print(f"UNASKED: nothing was compared - {quiet_as.why()}")
+            return 2
         if not bad:
-            print("held: every answer agrees, asked at every offset")
+            print(f"held: every answer agrees over {tally[0]} compared, "
+                  f"asked at every offset")
             return 0
         if not any(fenced):
             # The residue is over-generation the parse table forbids, and the
