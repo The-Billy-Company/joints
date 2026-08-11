@@ -1,347 +1,517 @@
-# joints: a grammar is data - and so is its scanner
+# joints: A Parsing Engine Whose Grammars Are Data
 
-- [Status](#status)
-- [What an external scanner still costs us](#what-an-external-scanner-still-costs-us)
+> [!NOTE]
+> Nothing here is ready to sit under an editor you depend on. There is a
+> parser, a tree, an incremental re-parse and a C ABI, and ten of the thirty
+> pinned grammars still stop somewhere. Take
+> [tree-sitter](https://tree-sitter.github.io/tree-sitter/) for production work.
+>
+> Everything below says where that line is and how to move it.
+
 - [Overview](#overview)
-- [Why this over tree-sitter?](#why-this-over-tree-sitter)
-- [The idea](#the-idea)
-- [Vocabulary](#vocabulary)
+- [Should I Be Using This?](#should-i-be-using-this)
+- [Support](#support)
+- [Install](#install)
+- [Where It Stands](#where-it-stands)
+- [Scanners as Data](#scanners-as-data)
+- [Why Not tree-sitter](#why-not-tree-sitter)
+- [The Idea](#the-idea)
+- [The Vocabulary](#the-vocabulary)
+- [The C ABI](#the-c-abi)
 - [Layout](#layout)
-- [Where this came from](#where-this-came-from)
-
-## Status
-
-**The falsifier has been run, and it did not kill the design - and there is a
-parser now.** What exists: the press (a tree-sitter `grammar.json` importer, an
-LR(0) collection, LALR lookaheads, and conflict resolution that reaches zero
-residual conflicts on eleven real grammars), the stack-effect monoid M2 with the
-cursor that composes it, a terminal scanner, the customaries that give that
-scanner the state a C external scanner would have kept (eight grammars, shipped
-in the binary), a single-stack reference walk to
-check the algebra against, the balanced tree the joints hang from (M3, the
-spine), the concrete syntax tree a parse yields (the quire, with delete-and-
-supply repair at every refusal), the weave that holds a file open and re-parses
-across edits, the folio artifact - including the codex form that packs N
-languages into one mmap-able file - the vectorized structural first pass under
-the lexer (grain), the succinct balanced-parentheses encoding of the tree
-(vellum), the Myhill-Nerode quotients over the pressed table (M5), the CLI that
-drives all of it (`parse`, `amend`, `mint`, and the measurement verbs), and
-`libjnt`, the C ABI.
-
-That order is on purpose: the central claim has a falsifier measurable *before*
-a parser exists, so the measurement came first. It says the product of segment
-effects reproduces the whole-file effect no matter how finely the file is cut,
-across eleven grammars, with nothing disagreeing. Read
-[`research/LANDSCAPE.md`](research/LANDSCAPE.md) for the argument,
-[`research/joinery/`](research/joinery) for the part that had to be earned, and
-[rung 1's verdict](research/joinery/TESTING.md) for what the numbers were -
-including the part where the kill condition as originally written was not met,
-and why that number turned out to be the wrong one to have chosen.
-
-Every number there is reproducible from a clone. `zig build test` needs nothing;
-the eleven-grammar sweep needs the grammars, so fetch them first:
-`python3 tool/grammars.py fetch`, then `zig build && python3 tool/rung1.py`.
-[CONTRIBUTING.md](CONTRIBUTING.md) has the rest.
-
-**Where the parse stands, over thirty grammars and 527 KB of real files.**
-`python3 tool/plumb.py board` holds every byte of the corpus against
-tree-sitter's own tree and buckets it: **79.55% of the corpus gets a tree, and
-0.39% of that is read as something else.** Twenty of the thirty grammars are at
-100%, two of them - yaml and markdown - only since the scanners became data, for
-the reason the next section is about. `zig build census` names the wall each
-grammar stops at and who owns it - of thirty, **five parse whole with no wall at
-all, twenty read to whole once repair is allowed**, eleven stop on a terminal no
-scanner here answers, two on a rule their own customary is missing, eight on a
-genuinely empty table cell, three on the reference walk rather than the fork
-loop, and one on a fold.
-
-Every figure in that paragraph, and rung 4's below, was taken on `bf8e0ad`
-(2026-08-09). A corpus total is only true of the tree it was measured on - four
-boards published in one morning here once disagreed by ~1,900 bytes with all four
-correct about different trees - so re-run the two commands rather than trusting
-the numbers if this tree has moved.
-
-**The size claim is met, and not by the monoid that was supposed to carry it.**
-[Rung 4](research/joinery/TESTING.md#rung-4---is-the-quotient-worth-its-build-time)
-measures the folio against tree-sitter's compiled parser in bits per production,
-and joints is smaller on all eleven, from 0.139x to 0.987x, with no grammar
-losing. That win is the folio's encoding. M5 - built, measured, recorded -
-contributed almost none of it: the bisimulation merges 0 to 19 states out of
-thousands, the column alphabet narrows by 1.00x to 1.09x, and the DAFSA *loses*
-to a sorted array by 2.85x to 4.33x, so the folio keeps writing the array. One
-caveat that cuts the other way and belongs here rather than in a footnote: `ours`
-includes a lexicon section per grammar that tree-sitter emits as compiled machine
-code inside the `.so` and so does not pay for in this currency. A prediction that
-came out right for the wrong reason is still a prediction that came out wrong,
-and both halves are above.
-
-What is *not* built, in the order it costs a reader something:
-
-- **The query engine (gloss).** Nobody consumes a parser through its parse API;
-  they consume it through queries - highlighting, folding, structural selection,
-  injections. Until this exists there is no adoption path for an editor however
-  good the trees are, and it is the largest thing left.
-- **An edit door on the C ABI.** `jnt_parse` is the only way in. The weave holds
-  a file open across keystrokes and re-parses the changed branch, which is the
-  whole reason to pick an incremental parser, and it is reachable from the CLI
-  only. The ABI also walks down and no other direction: no parent, no siblings,
-  no cursor.
-- **The semiring abstraction repair should settle into** - M4 as a *parameter*
-  rather than one policy family. The semiring itself is built and proven
-  (`irregex.math.semiring`); mend does not take it yet.
-
-The table below marks each monoid's real state.
-
-Every number quoted about tree-sitter below was read out of its source, its
-issue tracker, or a measurement taken on 2026-08-02. A number about joints is
-either measured - in which case the instrument that produced it is named beside
-it and reproducible from a clone - or a target with a kill condition attached, in
-which case it is labelled as one. Rungs 1 and 4 have been run; the rest have not.
-
-## What an external scanner still costs us
-
-A tree-sitter grammar can declare an **external scanner** - a hand-written C
-function that lexes what a regex cannot: Python's indentation, Ruby's heredocs,
-OCaml's nested comments. Shipping per-language C is the one thing this package
-exists not to do, so joints transcribes the *mechanism* instead. A **customary**
-is a grammar's scanner written as data: rules over a fixed algebra of typed
-organs - a frame stack for layout, a mark stack for delimited spans, eight
-registers - read by one interpreter that ships once for every language. A
-grammar gets a rule only when its own declarations earn it, never because a
-token is spelled the way some other language spells it. If nothing earns it, the
-grammar gets silence: a token we cannot produce beats a token we produce
-wrongly, and the wrong kind is invisible until somebody reads the tree.
-
-Eight grammars keep per-language state in C structs across calls - haskell,
-markdown, yaml, scala, swift, elixir, kotlin, html - and that is **310 of the
-382 externals** declared across the held-out set. All eight have a book now, and
-those books claim **198 of the 310**. The previous version of this paragraph
-ended "no reader that refuses to understand C is going to lower those, and I am
-not going to pretend otherwise," which was wrong, and wrong in the direction
-that flatters the writer for candour instead of measuring. The 112 unclaimed are
-the honest remainder, and they are not evenly spread. haskell declares 48
-externals and its book claims 8 of them; 18 more are answered by a hand-written
-Zig scanner, `hand/writ.zig`, and the other 22 are answered by nothing at all.
-`joints lex` will say exactly that for any grammar. A book covering part of a
-grammar retires nothing.
-
-Two grammars moved from *nothing* to a tree because of this. **yaml goes 0.0% to
-100% standing and markdown 5.4% to 100%** - and the two are not equally proven.
-markdown's 3,304 bytes are judged against tree-sitter's own tree: 516 agree, 6
-are read as something else, the rest is whitespace no kind comparison can speak
-to. yaml's 18,935 bytes are **unjudged**, every one of them, because
-tree-sitter's yaml scanner does not compile here and there is no oracle to hold
-them against. So yaml is a tree where there was no tree, which is worth having,
-and it is *not* a claim that the tree is right. html is the strong evidence
-instead: 47,047 judged bytes, **zero** read as something else, its 505-line
-hand-written ancestry scanner deleted, and the differential reports no
-differences at all.
-
-The census names which scanner declined, rather than blaming the language.
-Eleven of thirty grammars still stop on a terminal no scanner here answers, but
-that eleven splits: six hand the token to C nobody has transcribed, three have a
-hand that exists and produced nothing at that offset - a defect in the hand, not
-an absence - and two want a declared extra that is in no action row at all. Two
-more stop with owner `customary`: markdown on `_soft_line_ending`, yaml on
-`_bl`. That is the sentence worth having. "Nobody wrote a scanner" is a wall you
-cannot act on; "this grammar's book claims this terminal and produced nothing
-here" points at the rule to fix.
-
-So be concrete about what a grammar with unanswered externals still gets. It
-imports; nineteen unfamiliar grammars went in cold with no refusals at the front
-door. It presses; sixteen of those nineteen reached zero residual conflicts. It
-ships a folio smaller than the shared library - seventeen had a buildable `.so`
-to compare against and the folio won every time, median 29% of its size. And it
-parses every construct that does not need the external. That is a real product;
-"parses whole except inside heredocs" is worth having. "Supports every language"
-would still be a lie, which is why it is no longer the title.
+- [Build and Test](#build-and-test)
+- [How It Is Proven](#how-it-is-proven)
+- [Provenance](#provenance)
 
 ## Overview
 
-joints is a parsing system for editors and agents: give it a file, get back a
+joints is a parsing system for editors and agents: hand it a file, get back a
 concrete syntax tree that survives edits, tolerates broken code, and answers
-structural queries. Same job as tree-sitter.
+structural queries. That is tree-sitter's job description too.
 
-The difference is what a grammar becomes. In tree-sitter a grammar becomes a C
-program, and that one choice is upstream of everything painful about it - a
-30 MB `parser.c`, a shared library per language, a grammar that needs 20 GB of
-RAM to build, 25 MB of WASM before a browser can highlight ten languages.
+The difference is what a grammar becomes. tree-sitter compiles a grammar into a
+C program, and everything painful downstream follows from that one choice - a
+30 MB `parser.c`, a shared library per language, an ABI window to keep matched,
+25 MB of WASM before a browser can highlight ten languages.
 
-Here a grammar becomes **data**: a table in a file. One binary plus one
-**folio** is every language you support. No C compiler in the loop, no `.so` per
-language, no ABI window, no Emscripten pin, no `parser.c` in git.
+Here a grammar becomes data: tables in one mmap-able file called a **folio**.
+One binary plus one folio is every language you support, with no C compiler in
+the loop and no generated source in git.
 
-Its scanner does too. The part of a tree-sitter grammar that stays C even after
-the table is generated - the external scanner, with its own `malloc`, its own
-`serialize`/`deserialize`, its own struct of state carried between calls - is a
-**customary** here: rules over typed organs, read by one interpreter. Which means
-the sentence above has no asterisk on it.
+The scanner becomes data too. The part of a tree-sitter grammar that stays C
+after the table is generated - the external scanner, with its own `malloc`, its
+own `serialize`/`deserialize`, and its own struct carried between calls - is a
+**customary** here: rules over typed organs, read by one interpreter that ships
+once for every language.
 
-The runtime is arena-only and freestanding-capable, which is the part that
-matters for reach. It runs in a browser, in an editor, on a phone, in a sandbox,
-inside another language's FFI, with no per-surface build story.
+That is what takes the asterisk off the sentence above, and it is the newest
+half of the design. [Scanners as Data](#scanners-as-data) is what it cost and
+what it bought.
 
-## Why this over tree-sitter?
+The input is the ecosystem's own work rather than a new notation. `grammar.json`
+is a declarative file committed in most tree-sitter grammar repositories, and
+three hundred maintained grammars with their `highlights.scm` are person-decades
+that cannot be out-engineered, so they get imported and their node names are
+preserved byte for byte.
 
-Honestly: today, reach and nothing else - it returns a tree now, from one binary
-and one file. Of the eight grammars that lean hardest on external scanners, five
-are at 100% standing (two of them only since their scanners became data) and
-three are not: kotlin 46.8%, haskell 56.9%, swift 91.7%, all still parsing "whole
-except inside the layout" (see above). And gloss does not exist, so the query
-files that make a tree *useful* have nothing to run on yet. The pitch when it
-lands is four things, and speed is not one of them.
+## Should I Be Using This?
 
-**Size.** Tree-sitter's dense parse table is 64% of `parser.c` at 24.3% density.
-Predicate minterms plus action-bisimulation plus a DAFSA should land materially
-under its in-flight CSR work, which itself takes C# from 29 MB to 8.5 MB.
+Six answers, and the first one is no.
 
-**Reach.** One artifact, no toolchain. The grammars that cannot be built today
-because CI runs out of memory are the clearest possible statement of the
-problem.
+- **To ship a syntax-aware feature this quarter** – no, take
+  [tree-sitter](https://tree-sitter.github.io/tree-sitter/). It parses more
+  languages more completely than this does today and it has the ecosystem, and
+  no amount of algebra downstream changes either fact this year.
+- **To embed several languages with no per-language build story** – here. One
+  binary links `libjnt`, opens one file, and gains every grammar pressed into
+  it, with no toolchain, no `.so` per language, and no Emscripten pin.
+- **To parse a grammar whose CI cannot build it** – here, and this is the
+  clearest statement of the problem. A grammar that needs 20 GB of RAM to
+  compile a C table is a grammar the incumbent cannot ship.
+- **To read how an LR parse becomes an algebra** – [The Idea](#the-idea), then
+  [`research/LANDSCAPE.md`](research/LANDSCAPE.md). Every stage is a folder with
+  its own README.
+- **To take the argument rather than the code** – [`research/`](research/README.md),
+  where each dossier separates what is claimed from what the world already knew
+  from what would prove it wrong.
+- **For a Python or Rust package** – not yet. Both names are reserved at
+  `0.0.0` and export nothing, because a stub returning plausible values is worse
+  than an empty one.
 
-**Recovery you can steer.** Tree-sitter's `error_cost` is a greedy heuristic with
-no author-facing knob, which is why typing `justif` in a CSS rule gives you an
-`attribute_name` inside an `ERROR`. Here repair is a shortest path in the
-tropical semiring with weights declared in the grammar, so that case is a
-one-line grammar edit rather than a core patch.
+The dividing line is whether you want a parser or an argument about parsers.
+Today this repository is much better at the second, and it says so in numbers
+rather than in adjectives.
 
-**Edits that do not invalidate the suffix.** Tree-sitter reuses left to right,
-so opening a block comment at the top of a file re-parses the file. Because a
-segment here stores a *function* rather than a *state*, that edit costs
-`O(log n)`.
+## Support
 
-Do not reach for joints over tree-sitter for throughput. Tree-sitter's
-throughput is fine, and nobody is waiting on a parser.
+- Bugs and feature requests go through this repository's issues. A parse
+  complaint wants the grammar pin, the bytes, and the verb you ran, because a
+  tree without its subject is a tree nobody can reproduce.
+- Vulnerabilities never go in a public issue. Open a private security advisory
+  on this repository instead.
+- [irregex](https://github.com/The-Billy-Company/irregex),
+  [gist](https://github.com/The-Billy-Company/gist),
+  [relate](https://github.com/The-Billy-Company/relate) and
+  [blast](https://github.com/The-Billy-Company/blast) are separate repositories
+  with their own trackers. File a regex or a search problem there; it moves here
+  if the cause turns out to be the parse.
 
-## The idea
+## Install
 
-A monoid is a set with an associative product and an identity. That is the whole
-prerequisite for three things at once: parallel evaluation (re-bracket freely,
-so a product is a prefix scan of `O(log n)` depth), incremental update (keep the
-product in a balanced tree and one changed factor costs `O(log n)`), and
-composition with no base point (an element is a *function*, so it does not care
-what came before it).
+Two prerequisites, and neither is a download to remember: **Zig 0.16.0**, the
+`minimum_zig_version` in [`build.zig.zon`](build.zig.zon), and a checkout of
+irregex as a *sibling directory*, because the manifest resolves it as
+`../irregex` while the two halves of the lexer conversation still move together.
 
-That third property is the one tree-sitter gives up, and it is where the suffix
+```sh
+git clone https://github.com/The-Billy-Company/irregex
+git clone https://github.com/The-Billy-Company/joints
+cd joints
+zig build
+```
+
+That writes three artifacts under `zig-out/`: the `joints` CLI, `libjnt` as both
+a shared library and a static archive, and [`include/jnt.h`](include/jnt.h).
+Nothing else is needed to parse a file, and no step of it touches the network.
+
+The eight CLI verbs split in two. `parse`, `amend`, `query` and `mint` are the
+product - a tree, the tree again after an edit without re-reading the file, a
+compiled `.scm` asked about one, and a grammar pressed into a folio. `grammar`,
+`lex`, `state` and `survey` look at the machinery, and they are why the other
+four could be written at all.
+
+```sh
+joints mint python.json -o python.folio          # a grammar becomes a file
+joints parse python.folio app.py                 # a file becomes a tree
+joints amend python.folio app.py 120..124=chunk  # an edit becomes a re-parse
+joints query python.folio highlights.scm app.py  # a tree becomes answers
+```
+
+`joints --version` and a bare `joints` print the synopsis, which is built from
+the verb table at comptime so it cannot describe a set the dispatcher does not
+have. Exit codes follow the family: 0 ran, 1 a clean negative answer, 2 an
+error.
+
+## Where It Stands
+
+There is a parser, and most of the machinery the design asked for is under it.
+
+- **Built and measured** – the press (a `grammar.json` importer, an LR(0)
+  collection, LALR lookaheads, and conflict resolution that reaches zero
+  residual conflicts on eleven real grammars), the terminal scanner and the
+  customaries beneath it, every monoid in [The Idea](#the-idea), the tree with
+  delete-and-supply repair at every refusal, the incremental weave, the folio
+  and the codex that packs many into one, the query engine, the CLI, and
+  `libjnt`. [Layout](#layout) is the directory-by-directory version.
+- **Reachable from a C host** – parsing, editing, and the whole node
+  neighborhood. See [The C ABI](#the-c-abi).
+- **Built but not reachable from a C host** – the query engine. `joints query`
+  drives it and `libjnt` has no `jnt_query_*`, which is exactly where an editor
+  would reach for it. This is the largest thing missing.
+- **Proven but not wired** – the tropical semiring the repair walks under.
+  `mend` ships four author-facing policies rather than taking the semiring as
+  the parameter it should be.
+
+The order those landed in was deliberate. The central claim has a falsifier
+measurable *before* a parser exists, so the measurement came first: the product
+of segment effects reproduces the whole-file effect no matter how finely the
+file is cut, across eleven grammars, with nothing disagreeing. Read
+[rung 1's verdict](research/joinery/TESTING.md) for what the numbers were,
+including the part where the kill condition as originally written was not met
+and why that number turned out to be the wrong one to have chosen.
+
+Where the parse stands is one command rather than a paragraph, because a count
+pasted into a page is a count that ages into a lie. `python3 tool/standing.py`
+holds every byte of the pinned corpus and answers coverage, structure and
+agreement as three separate questions. As this was written it reads **20 of 30
+grammars whole, all 30 handing back a sound forest over 114,019 nodes, 79.5% of
+the corpus standing and 89.6% covered**:
+
+```text
+joints `a25375c50` · tree `60651098a` (live) · oracle `d85e736fa` seated but
+**no verdict live on this arm** (0 of 30 held)
+```
+
+That stamp is not decoration. Four boards published in one morning here
+disagreed by ~1,900 bytes with all four correct about different trees - and the
+second half of this one says no oracle judged these bytes, which is why nothing
+above claims the trees are *right* rather than present.
+
+The ten grammars that stop are named and owned. `zig build census` says which
+wall each hits and whose defect it is, which is the sentence worth having:
+"nobody wrote a scanner" is a wall you cannot act on, and "this grammar's book
+claims this terminal and produced nothing here" points at the rule to fix.
+
+The size claim is met, and not by the monoid that was supposed to carry it.
+[Rung 4](research/joinery/TESTING.md#rung-4---is-the-quotient-worth-its-build-time)
+measures the folio against tree-sitter's compiled parser in bits per production
+and joints is smaller on all eleven, from 0.139x to 0.987x, with no grammar
+losing - recorded at `f6018936c`. That win is the folio's encoding. The
+quotient contributed almost none of it: the bisimulation merges 0 to 19 states
+out of thousands, the column alphabet narrows by 1.00x to 1.09x, and the DAFSA
+*loses* to a sorted array by 2.85x to 4.33x, so the folio keeps writing the
+array.
+
+One caveat cuts the other way. Our side includes a lexicon section per grammar
+that tree-sitter emits as compiled machine code inside the `.so` and so does not
+pay for in this currency. A prediction that came out right for the wrong reason
+is still a prediction that came out wrong, and both halves are above.
+
+## Scanners as Data
+
+A tree-sitter grammar can declare an **external scanner**, a hand-written C
+function that lexes what a regex cannot: Python's indentation, Ruby's heredocs,
+OCaml's nested comments. Shipping per-language C is the one thing this package
+exists not to do, so joints transcribes the mechanism instead.
+
+A customary is a grammar's scanner written as data - rules over a fixed algebra
+of typed organs, a frame stack for layout, a mark stack for delimited spans,
+eight registers - read by one interpreter that ships once for every language.
+Eight books ride in the binary today, for elixir, haskell, html, kotlin,
+markdown, scala, swift and yaml.
+
+A grammar gets a rule only when its own declarations earn it, never because a
+token is spelled the way some other language spells it. If nothing earns it the
+grammar gets silence, because a token we cannot produce beats a token we produce
+wrongly, and the wrong kind is invisible until somebody reads the tree.
+
+html is the strong evidence. Its 72,288 bytes parse whole under one root, its
+505-line hand-written ancestry scanner is deleted, and the differential against
+tree-sitter reports no differences at all.
+
+yaml and markdown are the honest halves of the same result. Both went from
+nothing to a whole tree once their scanners became data, and only markdown's is
+judged against tree-sitter's own tree - yaml's is unjudged, every byte of it,
+because tree-sitter's yaml scanner does not compile here and there is no oracle
+to hold it against. A tree where there was no tree is worth having, and it is
+not a claim that the tree is right.
+
+How many externals a book actually claims is a live number and is deliberately
+not written here. `joints lex` says it for any grammar, and
+[`research/customary/CENSUS.md`](research/customary/CENSUS.md) reads each
+scanner's `serialize` as the specification of what a stand-in has to hold. That
+census is also where the roster got corrected: the prose used to say eight
+grammars keep state in C across calls, and read against `serialize` it is six.
+
+So be concrete about what a grammar with unanswered externals still gets. It
+imports, it presses, it ships a folio smaller than the shared library, and it
+parses every construct that does not need the external. "Parses whole except
+inside heredocs" is a real product; "supports every language" would be a lie,
+which is why it is not the title.
+
+## Why Not tree-sitter
+
+Today, reach and nothing else, and only if reach is what is stopping you. The
+pitch when the rest lands is four things, and throughput is not one of them.
+
+- **Size** – tree-sitter's dense parse table is 64% of `parser.c` at 24.3%
+  density. Predicate minterms plus action-bisimulation plus a DAFSA should land
+  materially under its in-flight compressed-row work, which itself takes C# from
+  29 MB to 8.5 MB.
+- **Reach** – one artifact and no toolchain. The grammars that cannot be built
+  today because CI runs out of memory are the clearest possible statement of the
+  problem.
+- **Recovery you can steer** – tree-sitter's `error_cost` is a greedy heuristic
+  with no author-facing knob, which is why typing `justif` in a CSS rule gives
+  you an `attribute_name` inside an `ERROR`. Here repair is a shortest path in
+  the tropical semiring with weights declared in the grammar, so that case is a
+  one-line grammar edit rather than a core patch.
+- **Edits that do not invalidate the suffix** – tree-sitter reuses left to
+  right, so opening a block comment at the top of a file re-parses the file.
+  Because a segment here stores a *function* rather than a *state*, that edit
+  costs `O(log n)`.
+
+Throughput's absence from that list is a decision about what to argue rather
+than a concession. It used to be a concession, while the parse was quadratic in
+file length; that defect is closed, and `python3 tool/bench.py run
+--axis=throughput` now splits fourteen grammars **seven rows to joints and seven
+to tree-sitter** at 128 KB each on one machine.
+
+The split is neither noise nor evenly spread. Every measured grammar whose
+external scanner keeps state in C is a loss, which is the customary interpreter
+being an interpreter where tree-sitter runs compiled C, and six of the eight
+grammars without one are wins.
+
+So the honest version is that throughput is no longer a reason to avoid joints
+on an ordinary grammar, it is still a reason to avoid it on markdown or yaml,
+and nobody is waiting on a parser either way.
+
+## The Idea
+
+A monoid is a set with an associative product and an identity, and that is the
+whole prerequisite for three things at once.
+
+Parallel evaluation, because a product can be re-bracketed freely and so becomes
+a prefix scan of `O(log n)` depth. Incremental update, because the product kept
+in a balanced tree costs `O(log n)` to repair when one factor changes.
+Composition with no base point, because an element is a *function* and does not
+care what came before it.
+
+That third property is the one tree-sitter gives up, and it is where suffix
 invalidation comes from. A state must be recomputed when its predecessor
-changes. A function need not.
+changes; a function need not.
 
-joints runs five monoids over one balanced tree:
+joints runs five monoids over one balanced tree, and the research dossiers call
+them M1 to M5.
 
-| | The monoid | What it buys | State |
-|---|---|---|---|
-| **M1** | lexical transition functions | data-parallel lexing; an edit does not invalidate downstream lexing | a scanner that tokenizes real files, and the customaries that answer 198 of the 310 externals whose C keeps state between calls - the remaining 112 are still unanswered. Grain's vectorized first pass sits under it and pays up to 3.6x on the walk - but its line index repays only a forward sweep, and is 0.08x-0.43x on jumbled access |
-| **M2** | LR stack effects, the **joints** | position-independent reparse; parallel parse; GLR paid only where the element is multi-valued | built and measured - rung 1 |
-| **M3** | balanced parentheses | the tree itself, at 2n+o(n) bits, navigated by range min-max | built both ways. The spine is generic over the monoid and verified against random edit streams; vellum settles it at **2.82 bits of shape a node** - 1.96x smaller end to end, because kind, span and field are facts about the grammar and do not compress into parentheses. 5x faster on `depth`, **30-100x slower on `parent`**, 105x faster to re-index after a keystroke |
-| **M4** | a semiring parameter | least-cost repair, ranking, ambiguity counting - one walk, different `⊕` | repair ships as mend: delete-and-supply at the refusal, four author-facing policies. The semiring is built and proven in `irregex.math.semiring`; mend does not take it as a parameter yet |
-| **M5** | Myhill-Nerode quotients | the size win: coarser alphabets, minimized tables | built, measured, and it **found almost nothing** - 0 to 19 states merged out of thousands, columns 1.00x-1.09x narrower, and the DAFSA 2.85x-4.33x *worse* than the sorted array it was meant to replace. The relation is worth keeping because it is the only thing that can assert no two states are interchangeable. But the size win at rung 4 is the folio's encoding, not this |
+- **M1, lexical transition functions**, buy data-parallel lexing and an edit
+  that does not invalidate downstream lexing. The scanner tokenizes real files,
+  the customaries answer the externals whose C keeps state between calls, and
+  the vectorized first pass under it pays up to 3.6x on a forward walk - though
+  its line index repays only a forward sweep and costs 0.08x to 0.43x on
+  jumbled access.
+- **M2, LR stack effects, the joints**, buy position-independent reparse,
+  parallel parse, and GLR paid only where the element is multi-valued. This is
+  the one genuinely new thing here and the one rung 1 was built to kill.
+- **M3, balanced parentheses**, buy the tree itself at 2n+o(n) bits, navigated
+  by range min-max. It is built both ways: the spine is generic over the monoid
+  and verified against random edit streams, and vellum settles it at 2.82 bits
+  of shape a node, 1.96x smaller end to end, 5x faster on `depth`, 30-100x
+  slower on `parent`, and 105x faster to re-index after a keystroke.
+- **M4, a semiring parameter**, buys least-cost repair, ranking and ambiguity
+  counting from one walk with a different `⊕`. Repair ships as `mend` with four
+  author-facing policies; the semiring is proven in irregex and `mend` does not
+  take it yet.
+- **M5, Myhill-Nerode quotients**, were supposed to buy the size win and
+  [found almost nothing](#where-it-stands). The relation is worth keeping
+  because it is the only thing that can assert no two states are
+  interchangeable, and the size win at rung 4 belongs to the folio's encoding.
 
 Four features, one splice implementation, one set of tests. That economy is the
 actual argument; the individual monoids are mostly known.
 
-The one genuinely new thing is M2 maintained in a balanced tree, and it has a
-clean way to die: if joints do not converge toward rank one on real grammars and
-real files, composition costs `|Q|` per join and tree-sitter's O(1)-per-token
-walk wins. That measurement needs no parser and is
-[rung 1](research/joinery/TESTING.md).
+The new claim has a clean way to die. If joints do not converge toward rank one
+on real grammars and real files, composition costs `|Q|` per join and
+tree-sitter's O(1)-per-token walk wins - a measurement that needs no parser and
+is [rung 1](research/joinery/TESTING.md).
 
-## Vocabulary
+## The Vocabulary
 
-The metaphor is bookmaking, and it carries weight rather than decoration:
-**you write a rubric; the press compiles it into a folio. At runtime the grain
+The metaphor is bookmaking, and it carries weight rather than decoration: you
+write a rubric, the press compiles it into a folio, and at runtime the grain
 reads the material, joints compose along the spine, mend repairs what is torn,
-gloss answers questions, and the result settles from quire into vellum.**
+gloss answers questions, and the result settles from quire into vellum.
 
-| Word | What it is |
-|---|---|
-| **rubric** | the grammar source you write (`.rubric`) |
-| **press** | the compiler: rubric to LR(1) to quotient to DAFSA to folio |
-| **folio** | the artifact: one pressed grammar, one mmap-able file |
-| **codex** | several folios under one cover: N languages, one mmap-able file, one sealed directory |
-| **grain** | the SIMD first pass - strings, comments, brackets, indent columns |
-| **joint** | one stack-effect element |
-| **spine** | the monoid-annotated balanced tree everything is bound to |
-| **mend** | least-cost repair under the tropical semiring |
-| **quire** / **vellum** | the live editable tree, and its settled succinct encoding |
-| **gloss** | the query engine |
+- **rubric** – the grammar source you write.
+- **press** – the compiler: rubric to LR(1) to quotient to DAFSA to folio.
+- **folio** – the artifact: one pressed grammar, one mmap-able file.
+- **codex** – several folios under one cover, which is the whole of the "N
+  languages, one file" claim.
+- **grain** – the SIMD first pass over strings, comments, brackets and indent
+  columns.
+- **joint** – one stack-effect element.
+- **spine** – the monoid-annotated balanced tree everything is bound to.
+- **mend** – least-cost repair under the tropical semiring.
+- **quire** and **vellum** – the live editable tree, and its settled succinct
+  encoding.
+- **gloss** – the query engine: a `.scm` pressed into a program, and run against
+  a tree.
 
-The C ABI is `libjnt`, symbols prefixed `jnt_`, matching irregex's `libirgx` /
-`irgx_`. It is real: 32 exports behind [`include/jnt.h`](include/jnt.h), built
-as both a shared library (which owns the header install) and a static archive
-that links standing alone. `zig build` installs all three under `zig-out/`.
+## The C ABI
+
+`libjnt` is 47 exports behind [`include/jnt.h`](include/jnt.h), symbols prefixed
+`jnt_`, matching irregex's `libirgx` and `irgx_`.
+
+There are two doors on the same tree. `jnt_parse` answers *what is this file*,
+and `jnt_weave_*` answers *what is it now, given that it was that a moment
+ago* - the question an editor asks a thousand times an hour, and the only
+question an incremental parser exists for.
+
+One node vocabulary covers both, because which door a tree came through is not a
+thing a highlighter should have to know. `jnt_node_parent`, `_next`, `_prev`,
+`_next_named`, `_prev_named`, `_by_field`, `_depth` and `_covering` walk in every
+direction rather than down only, and the last of them answers what encloses the
+cursor, which is the question a viewport asks.
+
+There is no cursor type, on purpose. tree-sitter ships one because its `TSNode`
+is a struct whose parent costs a walk from the root; here a node is a `u32`
+index into an arena and its parent is a field read, so a cursor would be a
+handle wrapping a handle and one more thing for a host to leak.
+
+A weave hands back a *borrowed* tree that it owns and refreshes in place, so
+`jnt_tree_free` on it is a no-op. The alternative, a fresh owned tree per amend,
+makes every host that stores the pointer wrong in a way that only shows up under
+fast typing, which is exactly when nobody is looking at their allocator.
+
+Nothing aborts. Every entry returns a status, so a malformed file, a wrong
+language or a host that miscounted an edit span can never terminate the process,
+and `jnt_last_error()` holds the sentence the CLI would have printed. The rest
+of the host's obligations are in
+[`src/surface/abi/README.md`](src/surface/abi/README.md).
 
 ## Layout
 
-What exists:
+Two trees, and the split between them is the point: `research/` is the argument
+and `src/` is the part of it that compiles.
 
 ```text
 research/          the argument, and the claim that has to be earned
   LANDSCAPE.md     the map: incumbent measured, five monoids, order of proof
   joinery/         CLAIM · PRIOR_ART · TESTING for the one new thing
-  joinery/corpus/  one ledger program in eleven languages - every per-language number
-grammars.toml      the eleven tree-sitter grammars every number is measured over, pinned
-tool/              fetch and check those grammars; run rung 1 as a gate
-customary/         one book per grammar: the scanner-as-data, embedded at build time
+  joinery/corpus/  one ledger program in eleven languages
+grammars.toml      the thirty tree-sitter grammars the rungs measure over, pinned
+tool/              fetch and check those grammars; run the rungs as gates
+customary/         one book per grammar: the scanner-as-data, embedded at build
 test/grammar/      the one grammar committed, so the test build needs no network
-charter.zone       the zoning import topology, judged against the real `@import` graph
-include/           `jnt.h`, the normative statement of the C ABI
-src/press/         the compiler: grammar.json in, LR(0) → LALR → resolved tables out
-src/folio/         the artifact: write, map, verify, slice - and the codex of many
-src/kernel/grain/  the vectorized structural pass under the scanner: lines and indents
-src/kernel/lex/    the terminal scanner (M1), and the customary interpreter under it
-src/kernel/joint/  the stack-effect monoid (M2) and the cursor that composes it
+charter.zone       the zoning import topology, judged against the real @import graph
+include/           jnt.h, the normative statement of the C ABI
+bindings/          the reserved Python and Rust packages
+src/press/         the compiler: grammar.json in, LR(0) → LALR → resolved out
+src/folio/         the artifact: write, map, verify, slice - and the codex
+src/kernel/grain/  the vectorized structural pass: lines and indents
+src/kernel/lex/    the terminal scanner, and the customary interpreter under it
+src/kernel/joint/  the stack-effect monoid and the cursor that composes it
 src/kernel/walk/   a single-stack reference LR walk, to check the algebra against
-src/kernel/spine/  the monoid-annotated balanced tree everything binds to (M3)
+src/kernel/spine/  the monoid-annotated balanced tree everything binds to
 src/kernel/quire/  the tree a parse yields, with mend at every refusal
 src/kernel/weave/  a file held open: spine and quire maintained across an edit
-src/kernel/vellum/ the tree settled into balanced parentheses - at rest, and across an edit
-src/surface/face/  the CLI: grammar · lex · state · survey · parse · amend · mint
-src/surface/abi/   libjnt's bodies and its `export fn` root
-```
-
-Still to come:
-
-```text
+src/kernel/vellum/ the tree settled into balanced parentheses
 src/kernel/gloss/  the query engine
+src/surface/face/  the CLI: grammar · lex · state · survey · parse · amend · query · mint
+src/surface/abi/   libjnt: the parse door, the edit door, and one node vocabulary
 ```
 
-Vellum landed above `quire` rather than inside it, which was the plan's one wrong
-guess about its own shape: vellum reads the quire it settles *and* the spine it
-hangs the parenthesis word on, so a file under `kernel/quire/` would have been
-importing up the page. Gloss will land in the same band for the same reason - it
-reads `folio` for the query it was handed and `quire` for the tree it matches
-against.
+Two directories landed one band higher than the plan guessed, for the same
+reason. vellum reads the quire it settles *and* the spine it hangs the
+parenthesis word on, and gloss reads the folio for the query it was handed and
+the quire for the tree it matches against, so either one filed under
+`kernel/quire/` would have been importing up the page.
 
-The importer is not a nice-to-have. Three hundred maintained grammars with
-`highlights.scm` are person-decades and cannot be out-engineered, so they get
-imported. `grammar.json` is a declarative data file committed in most grammar
-repos, and if the importer preserves node names the query files come along
-unmodified.
+## Build and Test
 
-## Where this came from
+There are three test binaries, one per root, and a filter only searches the one
+you name. An unfiltered `zig build test` runs all three.
+
+```sh
+zig build check                    # compile everything, install nothing - the fastest red
+zig build test                     # the library, the CLI and the ABI
+zig build face -Dtest-filter=...   # just the CLI's tests
+zig build abi                      # just the C ABI's
+zig build idiom                    # the package-wide vocabulary proof
+```
+
+Only the grammar sweep needs the network, and it is the last thing CI runs so a
+press regression is never downstream of somebody else's repository being
+reachable. The thirty grammars are pinned in [`grammars.toml`](grammars.toml) by
+repo, commit, path and sha256 rather than vendored.
+
+```sh
+python3 tool/grammars.py fetch     # the only verb that uses the network
+python3 tool/grammars.py verify    # hash disk against the manifest, offline
+python3 tool/rung1.py              # the falsifier, ~13 s over eleven grammars
+python3 tool/standing.py           # the board: coverage, structure, agreement
+python3 tool/glance.py             # the query differential against tree-sitter
+```
+
+Measure against a pin and never against a path. Everyone builds into the same
+`zig-out`, so a comparison naming `zig-out/bin/joints` is naming whatever is
+there when each half runs - which once turned a reference arm into a treatment
+arm mid-measurement and produced a clean thirty-of-thirty for entirely the wrong
+reason. `tool/pin.py` builds a prefix plus a record of the tree that produced
+it, and every instrument reads `JOINTS_BIN`.
+
+[CONTRIBUTING.md](CONTRIBUTING.md) has the rest, including the house rules that
+come up in review and the reason a passing test writes to stdout.
+
+## How It Is Proven
+
+Two of the design's rungs have been run, rung 1 and rung 4, and the rest have
+not. Every number on this page is either measured, in which case the instrument
+that produced it is named beside it and reproducible from a clone, or a target
+with a kill condition attached, in which case it is labelled as one.
+
+- **A falsifier that ran before the parser existed.** Rung 1 fails if any
+  grammar keeps a residual conflict, if any chain disagrees about the product of
+  its segment effects, or if the residue gets past two. It is a CI gate, not a
+  one-time result.
+- **An oracle that is a different parser.** `tool/glance.py` asks `joints query`
+  and `tree-sitter query` the same harvested `.scm` files over the same sources
+  and diffs the answers twice, as multisets and as sequences. Every real fault
+  in the matcher so far was invisible to the unit tests, which agreed with the
+  implementation because both were written from one reading of the notation.
+- **A compiler that refuses out loud.** Seventy-four of the eighty-two query
+  files the pinned grammars ship compile, and the eight refusals trace to three
+  causes, each named in
+  [`src/kernel/gloss/README.md`](src/kernel/gloss/README.md). A compiler that
+  accepted all eighty-two by treating the hard ones as no-ops would be worth
+  less than one that accepts seventy-four and says which eight and why.
+- **A page that names the tree its numbers are true of.** CI's `record` job
+  refuses a page you changed that reports a measured figure and names no tree or
+  binary, ratcheting forward from a committed pin.
+- **Structure as law.** [`charter.zone`](charter.zone) declares zones, seals and
+  a reach ceiling, judged by `zoning verify` against the real `@import` graph
+  rather than against anybody's memory of it.
+- **A test list that cannot quietly shrink.** Every `*_test.zig` is named in
+  [`src/proof.zig`](src/proof.zig) and no production file may name one, because
+  a suite that silently lost a file is indistinguishable from a green one.
+  `python3 tool/roll.py` refuses both halves.
+
+## Provenance
 
 joints is the fifth package in a family built on
 [irregex](https://github.com/The-Billy-Company/irregex), the regex engine and
 C-ABI floor the others stand on. Its siblings are
-[gist](https://github.com/The-Billy-Company/gist) (indexed ripgrep-parity
-search), [relate](https://github.com/The-Billy-Company/relate)
-(compression-as-search kinship and repetition), and
-[blast](https://github.com/The-Billy-Company/blast) (provenance and live blast
-radius).
+[gist](https://github.com/The-Billy-Company/gist) for indexed ripgrep-parity
+search, [relate](https://github.com/The-Billy-Company/relate) for
+compression-as-search kinship, and
+[blast](https://github.com/The-Billy-Company/blast) for provenance and blast
+radius.
 
-Most of what joints needs already exists down there: mmap portals, BLAKE3
+Most of what joints needs already existed down there: mmap portals, BLAKE3
 signets, atomic artifact publishing, the dual-clock freshness model, bitsets,
 hash-consing, union-find, byte-balanced parallel fan-out, and the succinct
-rank/select and wavelet structures. Seven pieces are missing - a monoid concept
-with a parallel prefix scan, the measured balanced tree, Paige-Tarjan
-refinement, balanced parentheses with a range min-max tree, a semiring
-abstraction, a DAFSA, and an unsealed minterm alphabet. All seven are general
+rank/select and wavelet structures. Seven pieces were missing, all seven general
 mathematics, so all seven belong in irregex rather than here.
 
 The payoff runs back the other way too. relate currently finds function
 boundaries by counting braces and climbing sixteen lines looking for something
 that resembles a signature, and normalizes identifiers to `I` and numbers to `N`
-against a hand-unioned keyword list. Both are honest approximations of a parse.
-An actual parser retires both.
+against a hand-unioned keyword list. Both are honest approximations of a parse,
+and an actual parser retires both.
 
-Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+joints reads tree-sitter grammars; it does not link, vendor or ship tree-sitter
+itself, and nothing at run time depends on it. [NOTICE](NOTICE) attributes the
+one third-party file in the tree, the committed json grammar fixture.
+
+Apache-2.0. See [LICENSE](LICENSE). The changelog is towncrier: fragments in
+[`changelog.d/`](changelog.d/README.md) fold into a release.
