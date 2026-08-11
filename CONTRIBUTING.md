@@ -126,6 +126,28 @@ monoid.
 `survey` exits 1 whenever anything refused, so nine grammars out of eleven
 "fail" on their own today. Read what a run says, not what it returns.
 
+If you touch the query engine, run the other differential too:
+
+```sh
+python3 tool/glance.py            # ~60 s; add --verbose for every disagreeing capture
+```
+
+It asks `joints query` and `tree-sitter query` the same harvested `.scm` files
+over the same sources and compares the answers twice - as multisets, which
+catches a missing or surplus capture, and as sequences, which catches an order
+a highlighter would resolve differently. The verdicts separate what is ours to
+fix from what is not: `unparsed` means our *parser* gave up on the file and the
+query ran over a forest, which is a charge against the parse and not against
+the matcher, and `ours-refused` means the compiler would not build the query at
+all. Neither should be read as a matcher defect, and both are counted so you
+can see when one turns into the other.
+
+The point of it is that a matcher tested only against itself is tested against
+the reading of the notation its author already had. Every real fault in the
+matcher so far - one match per node where upstream places several, an anchor
+inherited from a quantifier that matched nothing, a capture bound on the way
+back up - was invisible to the unit tests and obvious on the first run of this.
+
 ## Measure against a pinned binary, never against a path
 
 Everyone builds into the same `zig-out`, so a before/after comparison that

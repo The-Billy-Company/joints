@@ -11,11 +11,12 @@ comes out is a program: names are already symbol ids, fields are already field
 ids, a supertype is already a membership test, and a regex is already an
 `irregex` program. Reading it back is a bounds check and a cast.
 
-Running it against a tree is not here. The compiler needs no tree at all, which
-is why it could be built in the same wave as the tree surface it will eventually
-use.
+Running it against a tree is `scribe.zig`, and it is the only file here that
+needs a tree at all. The other five are why it can be small: by the time a walk
+starts, every question a step asks has already been reduced to an integer
+compare.
 
-## Five files, and the seam between them is the interesting part
+## Six files, and the seam between them is the interesting part
 
 | | What it owns |
 |---|---|
@@ -24,6 +25,7 @@ use.
 | `sift.zig` | The predicate policy: which four we evaluate, what the rest are, and what a refusal means. |
 | `stencil.zig` | The program - the bytes the folio carries and the view a matcher reads them through. |
 | `gloss.zig` | The lowering: rubric + lemma + sift → stencil, with the reachability check on the way past. |
+| `scribe.zig` | The matcher: a program and a `quire` tree in, a stream of matches out. |
 
 `rubric` is deliberately grammar-blind. Splitting syntax from resolution is what
 lets the compiler say *which* of the two a file got wrong, and the corpus made
@@ -95,6 +97,51 @@ header is the authority on this.
 `#match?` is the one worth measuring, because tree-sitter compiles its regex in
 the host binding once per candidate match. Here it is compiled with the query.
 The rung reports the ratio.
+
+## Running it: a pattern is tried at a node, never at the file
+
+`scribe.zig` is one pre-order pass, and at each node it tries only the patterns
+that could root there. `Sieve` keys the pattern list on the root step's kind, so
+a `highlights.scm` with four hundred patterns costs one lookup per node rather
+than four hundred attempts. A pattern whose root pins no kind - `(_)`, a bare
+`_`, a top-level group - has no key to file under and is tried everywhere, which
+is the honest price of writing one. The two lists merge back into ascending
+pattern order, so one node's own answers arrive in the order the file wrote
+them.
+
+That is not the order the caller reads, though, and the difference is the
+point. A pattern rooted on a `declaration_list` has answered for every function
+inside it before the walk has descended to the first one, so searching order is
+a fact about the search. A match is held until the walk reaches where it
+*finishes* - not where it begins: `["<" ">"] @punctuation.bracket` binds both
+brackets in one match and is not settled until the closing one, so a
+`(primitive_type) @type.builtin` between them is handed over first even though
+it starts later. Ties go to the match that opened higher up, then to the earlier
+pattern. It matters because a highlighter resolves two captures on one byte by
+which came last, so the order is part of the answer rather than a rendering of
+it.
+
+Below the root it is one recursion over frames, and every construct in the
+notation is one of two moves: advance to the next step because this one has had
+what it needs, or consume one more child. `?` and `*` may advance at zero, `+`
+and a plain step only after one, and `*` and `+` may go round again. Written
+that way rather than as a case per quantifier, a *quantified group* works
+without being spelled out anywhere: the group opens a frame whose exhaustion
+returns to the step that opened it, and the same two moves then read as "leave
+the group" and "repeat it". Quantifiers are greedy, so `(pair)+ @p` binds every
+pair in one match rather than handing back one match per pair - which is what
+every doc-comment rule in the corpus is written against.
+
+An anchor is about **named** siblings. tree-sitter's `.` before the first child
+constrains it to be the first *named* node, so an anchored step steps over an
+anonymous token freely and over a named one never. A comment is named, so an
+extra between two anchored children breaks the anchor - exactly as it does
+upstream, and the same answer `reach.zig` gives for the sibling walks.
+
+One thing is declined rather than guessed at: a group written as an alternative
+of a `[...]` choice consumes a *run* where the choice is asking about one node.
+`Cursor.declined` counts each one, so a caller reading zero matches can tell
+"no" from "not asked".
 
 ## Static reachability, and how few it finds
 

@@ -96,4 +96,5 @@ test {
     _ = @import("kernel/quire/reach_test.zig");
     _ = @import("kernel/gloss/rubric_test.zig");
     _ = @import("kernel/gloss/gloss_test.zig");
+    _ = @import("kernel/gloss/scribe_test.zig");
 }

@@ -121,11 +121,26 @@ def builds(rel: str) -> bool:
     behind, and the tree reads `STALE` permanently until something unrelated moves.
     A gate that cannot be satisfied by doing what it asks is not cautious.
 
+    `src/surface/abi/` is the fourth root and the same unclearable case. It is the
+    root module of `libjnt` - `addLibrary` in `build.zig`, reached from
+    `exports.zig` and named by nothing on the CLI's side of the tree - so editing
+    it writes a new *library* and never a new `zig-out/bin/joints`. It is a
+    directory rather than a file because `bank.zig` and `loom.zig` are reachable
+    only through `exports.zig`, so the whole island stands or falls together.
+
+    What this line is really asking is "could this file have moved the binary the
+    stamp is standing on", and that binary is always the CLI - `home()` derives the
+    root from `zig-out/bin/`. So a root that builds a different product is excluded
+    here even though it is emphatically a product: `libjnt` is the artifact hosts
+    link against. If this ever stamps the library too, this predicate wants a
+    binary argument rather than a longer denylist.
+
     Only the mtime side takes this exclusion. The digest still covers every file,
     because "is this the same tree as over there" is a different question from "can
     this binary be believed" and drift wants the whole answer.
     """
     return rel not in ("src/proof.zig", "src/idiom.zig") \
+        and not rel.startswith("src/surface/abi/") \
         and not rel.endswith(("_test.zig", ".md", ".DS_Store"))
 
 

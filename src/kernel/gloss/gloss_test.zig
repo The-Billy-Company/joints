@@ -175,6 +175,38 @@ test "gloss: an unknown name is refused, not silently matched against nothing" {
     try std.testing.expectError(gloss.Error.QueryUnknownLiteral, b.compile("(object \"<<<\")"));
 }
 
+test "gloss: the name a refusal reports outlives the reader that found it" {
+    var b = try Board.of();
+    defer b.deinit();
+
+    // The bug this pins was invisible to every test above, because none of them
+    // read `fault.name` - and it was not a wrong name, it was freed memory.
+    // `compile` frees the rubric's arena on its way out, a literal's unescaped
+    // text lives in that arena, so the one refusal that names a literal handed
+    // back a slice of released memory. It printed as blanks against a real
+    // grammar. Asserted here against `src`'s own address range rather than by
+    // comparing the text, since the text is what read *correctly* right up
+    // until the allocator reused the page.
+    const src = "(object \"<<<\")";
+    var fault: gloss.Fault = .{};
+    try std.testing.expectError(gloss.Error.QueryUnknownLiteral, gloss.compile(gpa, &b.l, src, &fault));
+    try std.testing.expect(fault.name.len > 0);
+    const lo = @intFromPtr(src.ptr);
+    const at = @intFromPtr(fault.name.ptr);
+    try std.testing.expect(at >= lo and at + fault.name.len <= lo + src.len);
+    // Quotes and all, so a reader can tell which of the two namespaces was
+    // searched - `"<<<"` is a token that does not exist, not a rule.
+    try std.testing.expectEqualStrings("\"<<<\"", fault.name);
+
+    // A name written as a bare word was always source-backed and has to stay
+    // that way: the repair must not start re-cutting every refusal from the
+    // first quote it can find, which for this query is nowhere.
+    var word: gloss.Fault = .{};
+    const other = "(binary_expresion) @x";
+    try std.testing.expectError(gloss.Error.QueryUnknownKind, gloss.compile(gpa, &b.l, other, &word));
+    try std.testing.expectEqualStrings("binary_expresion", word.name);
+}
+
 test "gloss: a field this kind never carries is dead, and says where" {
     var b = try Board.of();
     defer b.deinit();

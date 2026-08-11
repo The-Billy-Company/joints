@@ -101,7 +101,12 @@ const quire = joints.kernel.quire;
 /// what they cost to obtain differs, and that difference is the whole reason
 /// the folio exists.
 pub const Parser = union(enum) {
-    minted: struct { mapped: folio.MappedVolume, bound: folio.Bound },
+    /// `folio` is the title `load` already picked out of the volume to bind,
+    /// kept rather than dropped because a caller can want the *artifact* and
+    /// not only the tables bound from it: `gloss` builds its index off the
+    /// folio's own symbol, field and supertype tables. It is a view over
+    /// `mapped`'s bytes and costs nothing to hold.
+    minted: struct { mapped: folio.MappedVolume, bound: folio.Bound, folio: folio.Folio },
     pressed: struct { grammar: press.Grammar, built: press.Result },
 
     pub fn deinit(p: *Parser) void {
@@ -333,7 +338,7 @@ pub fn load(
             try e.print("joints: cannot bind {s}: {s}\n", .{ path, @errorName(err) });
             return null;
         };
-        return .{ .minted = .{ .mapped = mapped, .bound = bound } };
+        return .{ .minted = .{ .mapped = mapped, .bound = bound, .folio = f } };
     } else |err| switch (err) {
         // Not a folio, so it is a grammar.json until proven otherwise.
         error.FolioBadMagic, error.FolioTooSmall => {},

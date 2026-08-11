@@ -525,8 +525,16 @@ QPATTERN = re.compile(r"^ *pattern: (\d+)\s*$")
 # the switch is the row numbers and not the bytes. Demanding the index is what
 # dropped every multi-line parent on the floor, and a dropped parent is a field
 # never grafted; see `.local/queryprobe.py`.
+# The name is `[\w.-]+` and not `\w+` because a capture name is a dotted path in
+# every real query - `@function.method`, `@punctuation.bracket`,
+# `@type.builtin` - and `graft_fields` below is the one caller that never sees
+# one, since it writes its own query and names the two captures itself. Widened
+# when `glance.py` began reading production `.scm` files through this same
+# regex: a name pattern that stops at the first dot does not fail, it silently
+# reports the capture missing, which is the one outcome a differential must not
+# manufacture on its own.
 QCAPTURE = re.compile(
-    r"^ *capture: (?:\d+ - )?(\w+), start: \((\d+), (\d+)\), end: \((\d+), (\d+)\)")
+    r"^ *capture: (?:\d+ - )?([\w.\-]+), start: \((\d+), (\d+)\), end: \((\d+), (\d+)\)")
 
 
 def declared(doc: dict[str, Any], kind: str, key: str) -> list[str]:

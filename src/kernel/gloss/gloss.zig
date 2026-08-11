@@ -3,16 +3,17 @@
 //! tree-sitter ships a query as source and re-parses it in every process that
 //! wants it. Here it is pressed once - names resolved to symbol ids, fields to
 //! field ids, supertypes to a membership test, regexes proved compilable - and
-//! carried in the artifact beside the tables it is about. Running the program
-//! against a tree is somebody else's file; nothing here needs a tree, which is
-//! exactly why it can be written before there is one.
+//! carried in the artifact beside the tables it is about.
 //!
-//! Four layers, and each is ignorant of the one below on purpose:
+//! Five layers, and each is ignorant of the one below on purpose:
 //!
 //!   `rubric`   syntax. Knows the notation, knows no grammar.
 //!   `lemma`    the grammar's facts, indexed the way a query asks for them.
 //!   `sift`     the predicate policy and the four filters we run ourselves.
 //!   `stencil`  the program, and the bytes the folio carries it as.
+//!   `scribe`   the program run against a tree, which is the only one of the
+//!              five that needs one - and why the other four could be written
+//!              before there was a tree to run them on.
 //!
 //! This file is the lowering that walks a rubric with a lemma in hand and
 //! writes a stencil. It is also where **static reachability** lives, which is
@@ -28,11 +29,21 @@ const rubric = @import("rubric.zig");
 const lemma = @import("lemma.zig");
 const sift = @import("sift.zig");
 const stencil = @import("stencil.zig");
+const scribe = @import("scribe.zig");
 
 pub const Rubric = rubric.Rubric;
 pub const Lemma = lemma.Lemma;
 pub const Program = stencil.Program;
 pub const Op = sift.Op;
+
+/// Running one. `open` takes the program and the tree and hands back a cursor;
+/// everything a match needs is built there and once.
+pub const Ask = scribe.Ask;
+pub const Cursor = scribe.Cursor;
+pub const Match = scribe.Match;
+pub const Capture = scribe.Capture;
+pub const Foreign = scribe.Foreign;
+pub const open = scribe.open;
 /// Where a refusal happened, in the source the caller handed in. Re-exported
 /// because a caller who compiles a file has to be able to say which byte of it
 /// was wrong without importing the parser to name the type.
@@ -120,7 +131,63 @@ pub fn compile(
 ) Error!Compiled {
     var r = try rubric.read(gpa, src, fault);
     defer r.deinit();
-    return lower(gpa, l, &r, fault);
+    return lower(gpa, l, &r, fault) catch |err| {
+        // `Fault.name` is documented to borrow from `src`, and for every name
+        // written as a bare word it does. A `"literal"` is the exception: the
+        // reader unescapes it into the rubric's arena, so `"\\("` can reach a
+        // regex as `\(`, and the `defer` above frees that arena on the way out
+        // of this function. So the one refusal that named a literal handed back
+        // a slice of memory this call had already released, and the caller
+        // printed whatever was left there - blanks, in the case that found it.
+        //
+        // Re-cut from the source rather than copied, because a copy needs an
+        // owner and a fault has none: it is a value the caller keeps on its own
+        // stack. `at` is the start of the item, so the first quote at or after
+        // it opens the literal - only an optional `field:` prefix and blanks
+        // can stand between, and neither can hold a quote.
+        if (fault) |f| if (!within(src, f.name)) {
+            f.name = literalAt(src, f.at);
+        };
+        return err;
+    };
+}
+
+/// Whether this slice points into those bytes.
+///
+/// Asked of the addresses and not of the contents, which is the difference
+/// between the question and a plausible-looking answer to a different one: a
+/// literal's unescaped text is very often a substring of the file that spelled
+/// it - `"nil"` contains `nil` - so a content search would call the dangling
+/// slice borrowed and leave the bug exactly where it was.
+fn within(src: []const u8, name: []const u8) bool {
+    if (name.len == 0) return true;
+    const lo = @intFromPtr(src.ptr);
+    const at = @intFromPtr(name.ptr);
+    return at >= lo and at + name.len <= lo + src.len;
+}
+
+/// The literal that begins at or after `at`, quotes and all, as it stands in
+/// the file. Empty when the source does not hold one - which cannot happen for
+/// a refusal that named a literal, and is the right answer if it ever does.
+///
+/// Quotes included on purpose. `"fallthrough" is not a name go knows` says
+/// which of the two namespaces was searched; `fallthrough is not a name go
+/// knows` reads like a rule name and sends the reader looking in the other one.
+fn literalAt(src: []const u8, at: u32) []const u8 {
+    var i = @min(at, src.len);
+    while (i < src.len and src[i] != '"') i += 1;
+    if (i == src.len) return "";
+    var j = i + 1;
+    while (j < src.len) : (j += 1) {
+        // The reader already accepted this string, so the closing quote is
+        // there; the escape skip is what stops `"\""` from ending one byte early.
+        if (src[j] == '\\') {
+            j += 1;
+            continue;
+        }
+        if (src[j] == '"') return src[i .. j + 1];
+    }
+    return "";
 }
 
 /// The same thing with the reading already done, for a caller measuring the
@@ -422,4 +489,5 @@ test {
     _ = lemma;
     _ = sift;
     _ = stencil;
+    _ = scribe;
 }

@@ -265,7 +265,15 @@ pub const Lemma = struct {
     /// subtree a splice can reach, which is the honest bound: a hidden rule
     /// puts its own children under whoever absorbed it.
     pub fn admits(l: *const Lemma, parent: u32, child: u32) bool {
-        return l.kids.has(parent, child);
+        if (l.kids.has(parent, child)) return true;
+        // An extra goes between any two tokens, so it is a child of whatever
+        // the parse was inside - and it appears on no right-hand side, so the
+        // closure below cannot reach it. Asked here rather than folded into
+        // `kids`, because that bitset is also the supertype membership relation
+        // and a comment is a member of nothing. The list is the two or three
+        // rules a grammar declares, so the scan is shorter than a bit test.
+        for (l.f.extras()) |e| if (e == child) return true;
+        return false;
     }
 
     /// Every concrete kind in a category, ascending. Allocated; the caller

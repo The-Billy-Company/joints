@@ -1,19 +1,20 @@
 //! The joints CLI.
 //!
-//! Seven verbs, in two groups. Four look at the machinery: `grammar` imports a
+//! Eight verbs, in two groups. Four look at the machinery: `grammar` imports a
 //! tree-sitter `grammar.json` and reports what the press made of it, `state`
 //! prints one LR state, `lex` runs the terminal scanner over a real file, and
 //! `survey` is rung 1 of `research/joinery/TESTING.md` — the measurement that
-//! decided whether the whole package was a good idea. Two are the product:
+//! decided whether the whole package was a good idea. Four are the product:
 //! `parse` returns a tree, `amend` returns the tree again after an edit without
-//! re-reading the file, and `mint` turns a grammar into a folio. All three are
-//! real now; the machinery verbs are why they could be written at all.
+//! re-reading the file, `query` asks a compiled `.scm` about one, and `mint`
+//! turns a grammar into a folio. All four are real now; the machinery verbs
+//! are why they could be written at all.
 //!
 //! Exit codes follow the family: 0 ran, 1 a clean negative answer, 2 an error.
 //! `survey` uses that 1 for something specific: the kill condition tripped.
 //!
 //! This file is the dispatcher and nothing else. Each verb is one sibling with
-//! one `run`, and `verbs` below is the only place the seven are enumerated, so
+//! one `run`, and `verbs` below is the only place the eight are enumerated, so
 //! the usage text a reader is shown and the table a run is dispatched through
 //! cannot describe different sets. They used to: dispatch was a chain of seven
 //! `std.mem.eql` arms each with its own arity guard, and the synopsis was a
@@ -91,6 +92,12 @@ const verbs = [_]Verb{
         .does = "re-parse across edits",
     },
     .{
+        .name = "query",  .min = 3,  .run = &@import("query.zig").run,
+        .needs = "a grammar.json or folio, a query.scm and a source file",
+        .spell = "query <grammar.json|folio> <query.scm> <file>...",
+        .does = "run a query, print the matches",
+    },
+    .{
         .name = "mint",  .min = 1,  .run = &@import("mint.zig").run,
         .needs = "a grammar.json or a folio",
         .spell = "mint <grammar.json|folio>... [-o P] [--customary P]",
@@ -126,6 +133,7 @@ const synopsis = blk: {
 const intake = @import("intake.zig");
 const mend_policies = intake.spellings(joints.kernel.quire.Mend, intake.default.mend);
 const remint_policies = intake.spellings(joints.kernel.weave.Policy, intake.default.remint);
+const foreign_policies = intake.spellings(joints.kernel.gloss.Foreign, intake.default.foreign);
 
 const usage =
     \\joints - parsing as algebra
@@ -153,6 +161,16 @@ const usage =
     \\  --cold      re-read the whole file per edit, for the comparison
     \\  --policy=P  how far the re-mint window widens: 
 ++ remint_policies ++
+    \\
+    \\  --language=NAME  which grammar, when the folio holds several
+    \\
+    \\query flags:
+    \\  --captures  one line per capture instead of a match and its captures
+    \\  --json      the whole answer as one JSON object per file
+    \\  --dead      the patterns this grammar can never match, and why
+    \\  --quiet     the verdict only, no stdout
+    \\  --foreign=P a predicate we carry but cannot run: 
+++ foreign_policies ++
     \\
     \\  --language=NAME  which grammar, when the folio holds several
     \\
@@ -228,4 +246,5 @@ test {
     _ = @import("grammar.zig");
     _ = @import("lex.zig");
     _ = @import("intake.zig");
+    _ = @import("query.zig");
 }

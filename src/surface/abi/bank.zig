@@ -69,12 +69,14 @@ pub const none: u32 = quire.none;
 threadlocal var fault_buf: [512:0]u8 = undefined;
 threadlocal var fault_len: usize = 0;
 
-fn clear() void {
+/// Public because the doors are several files and the fault channel is one:
+/// `loom.zig` reports through the same buffer `jnt_last_error` reads.
+pub fn clear() void {
     fault_len = 0;
     fault_buf[0] = 0;
 }
 
-fn fail(status: Status, comptime fmt: []const u8, args: anytype) Status {
+pub fn fail(status: Status, comptime fmt: []const u8, args: anytype) Status {
     const written = std.fmt.bufPrintZ(&fault_buf, fmt, args) catch blk: {
         // The detail outgrew the slot; the head of it still names the fault.
         fault_buf[fault_buf.len - 1] = 0;
@@ -194,6 +196,18 @@ pub const Parser = struct {
     pub fn grammar(p: *const Parser) *const press.Grammar {
         return if (p.bound) |*b| &b.grammar else &p.bank.source.pressed.gr;
     }
+
+    /// The pressed tables behind this parser, wherever they came from. The
+    /// mapped arm reads them out of the binding and the JSON arm out of the
+    /// bank, and no caller wants to know which - the weave door asks for
+    /// exactly these three and a `Gather` asks for the same.
+    pub fn collection(p: *const Parser) *const press.Collection {
+        return if (p.bound) |*b| &b.collection else &p.bank.source.pressed.built.collection;
+    }
+
+    pub fn tables(p: *const Parser) *const press.Tables {
+        return if (p.bound) |*b| &b.tables else &p.bank.source.pressed.built.tables;
+    }
 };
 
 /// `jnt_parser_new`. `language` null means "the obvious one", which exists
@@ -242,9 +256,7 @@ pub fn parserNew(bank: ?*Bank, language_z: ?[*:0]const u8, out: ?**Parser) Statu
         unbind(p);
         return fail(.grammar, "{s} has no lexable terminal at all", .{gr.name});
     };
-    const collection = if (p.bound) |*b| &b.collection else &p.bank.source.pressed.built.collection;
-    const tables = if (p.bound) |*b| &b.tables else &p.bank.source.pressed.built.tables;
-    p.gather = quire.Gather.init(gpa, gr, collection, tables, &p.sc) catch {
+    p.gather = quire.Gather.init(gpa, gr, p.collection(), p.tables(), &p.sc) catch {
         p.sc.deinit();
         unbind(p);
         return fail(.out_of_memory, "out of memory", .{});
@@ -297,14 +309,39 @@ pub fn parserBlind(p: *const Parser) u32 {
 
 // ── the tree ─────────────────────────────────────────────────────────────────
 
-/// One parse: the quire, its survey, and the renders it has been asked for.
+/// One parse, and the renders it has been asked for.
+///
+/// Two doors make one of these and a host cannot tell which: `jnt_parse` hands
+/// back a tree that owns its quire, and `jnt_weave_tree` lends the one the
+/// weave is maintaining. `own` is the whole of the difference, and it exists so
+/// that the node vocabulary below is written once rather than twice.
 pub const Tree = struct {
     parser: *Parser,
     q: quire.Quire,
-    found: quire.Quire.Survey,
+    /// Whether freeing this handle frees the parse under it. False for a
+    /// weave's, which is refreshed in place under a stable handle every time
+    /// the file changes.
+    own: bool = true,
+    /// The soundness survey, run on the first ask and kept.
+    ///
+    /// Lazy rather than per parse, which it was until the weave arrived: the
+    /// survey is a walk of every node, and charging one to a keystroke would
+    /// tax the door built to make a keystroke cheap. A host that never asks
+    /// never pays, and one that asks twice pays once.
+    found: ?quire.Quire.Survey = null,
     /// The s-expression render, cached per `Show` - a tree does not change
     /// under a handle, so the second ask is a pointer return.
     rendered: [2]?[:0]u8 = .{ null, null },
+
+    /// Drop what this handle rendered, keeping the handle. The step a weave
+    /// takes when the file underneath it has moved.
+    pub fn stale(t: *Tree) void {
+        for (&t.rendered) |*r| {
+            if (r.*) |s| gpa.free(s);
+            r.* = null;
+        }
+        t.found = null;
+    }
 };
 
 /// `jnt_parse`. The tree comes back on every status `.ok`, accepted or not;
@@ -321,25 +358,36 @@ pub fn parse(parser: ?*Parser, text: ?[*]const u8, len: usize, out: ?**Tree) Sta
     var q = p.gather.run(bytes) catch |err| {
         return fail(.out_of_memory, "parse failed: {s}", .{@errorName(err)});
     };
-    // Surveyed on every parse, not on request - the same contract the CLI
-    // keeps. A tree that is not a tree must say so from the first question.
-    const found = q.survey(gpa) catch |err| {
-        q.deinit();
-        return fail(.out_of_memory, "survey failed: {s}", .{@errorName(err)});
-    };
     const t = gpa.create(Tree) catch {
         q.deinit();
         return fail(.out_of_memory, "out of memory", .{});
     };
-    t.* = .{ .parser = p, .q = q, .found = found };
+    t.* = .{ .parser = p, .q = q };
     slot.* = t;
     return .ok;
 }
 
+/// `jnt_tree_free`. A no-op on a tree a weave lends, which is not defensive:
+/// that handle is the weave's, it is refreshed rather than replaced, and there
+/// is nothing about it a host could correctly free.
 pub fn treeFree(t: *Tree) void {
-    for (t.rendered) |r| if (r) |s| gpa.free(s);
+    if (!t.own) return;
+    t.stale();
     t.q.deinit();
     gpa.destroy(t);
+}
+
+/// `jnt_tree_sound`: whether the arena is a tree at all - every node reached
+/// exactly once, children in source order and inside their parents.
+///
+/// 1 sound, 0 not, and `.out_of_memory` when the walk could not be afforded,
+/// because "could not tell" and "not a tree" are different answers and a host
+/// acting on the second is about to report a defect nobody has.
+pub fn treeSound(t: *Tree) c_int {
+    if (t.found == null) {
+        t.found = t.q.survey(gpa) catch return @intFromEnum(Status.out_of_memory);
+    }
+    return @intFromBool(t.found.?.sound());
 }
 
 pub fn stopKind(t: *const Tree) StopKind {
@@ -437,6 +485,80 @@ pub fn nodeField(t: *const Tree, ref: u32) ?[]const u8 {
     return if (held(t, ref)) t.q.field(ref) else null;
 }
 
+// ── the neighbourhood ────────────────────────────────────────────────────────
+// Every one of these is `reach.zig` behind a bounds check. What is deliberately
+// NOT here is a cursor handle: tree-sitter ships one because its `TSNode` is a
+// 24-byte struct whose parent costs a walk from the root, so a stateful cursor
+// is the only affordable way down a tree. Here a node is a `u32` index and its
+// parent is a field read, which makes a cursor a struct that would hold the two
+// integers a host is already holding. The accessors below are what it would
+// have been made of.
+
+/// Whoever holds this node, or JNT_NONE for a root - and for a ref that is not
+/// a node, since absence is the honest answer to both.
+pub fn nodeParent(t: *const Tree, ref: u32) u32 {
+    if (!held(t, ref)) return none;
+    return t.q.parent(ref) orelse none;
+}
+
+/// The neighbours in the run holding this node, extras included. The top of
+/// the tree is a run and not a node, so the sibling of a root is the next
+/// root - a parse that stopped early hands back a forest and this walks it.
+pub fn nodeNext(t: *const Tree, ref: u32) u32 {
+    if (!held(t, ref)) return none;
+    return t.q.nextSibling(ref) orelse none;
+}
+
+pub fn nodePrev(t: *const Tree, ref: u32) u32 {
+    if (!held(t, ref)) return none;
+    return t.q.prevSibling(ref) orelse none;
+}
+
+/// The neighbours a query could match by name. A comment is one of them:
+/// being an extra does not exempt it, which is tree-sitter's answer and not a
+/// convenience - see `reach.zig`'s header.
+pub fn nodeNextNamed(t: *const Tree, ref: u32) u32 {
+    if (!held(t, ref)) return none;
+    return t.q.nextNamedSibling(ref) orelse none;
+}
+
+pub fn nodePrevNamed(t: *const Tree, ref: u32) u32 {
+    if (!held(t, ref)) return none;
+    return t.q.prevNamedSibling(ref) orelse none;
+}
+
+/// The child this node files under `want`, or JNT_NONE. The first such child,
+/// because a production can file two steps under one name; an extra is never
+/// the answer.
+pub fn nodeByField(t: *const Tree, ref: u32, want: []const u8) u32 {
+    if (!held(t, ref)) return none;
+    return t.q.childByFieldName(ref, want) orelse none;
+}
+
+/// Parent hops to a root, so every root is zero.
+pub fn nodeDepth(t: *const Tree, ref: u32) u32 {
+    return if (held(t, ref)) t.q.depth(ref) else 0;
+}
+
+/// The deepest node covering `[from, to)`, or JNT_NONE when no root does.
+///
+/// The question an editor asks on every frame - highlight the viewport, not
+/// the file - and the reason absence is a real answer: a range inside a
+/// stretch a mend walked past is covered by nothing, where tree-sitter's
+/// single root would claim it.
+pub fn nodeCovering(t: *const Tree, from: u32, to: u32) u32 {
+    if (from > to) return none;
+    return t.q.descendantForByteRange(from, to) orelse none;
+}
+
+/// Nodes under this one, counting it. 0 for a ref that is not a node, and 0
+/// when the walk could not be afforded - a real subtree is at least itself, so
+/// zero is unambiguous either way.
+pub fn nodeSpread(t: *const Tree, ref: u32) u32 {
+    if (!held(t, ref)) return 0;
+    return t.q.subtreeSize(gpa, ref) catch 0;
+}
+
 // -------------------------------------------------------- the wiring, asserted
 
 const testing = std.testing;
@@ -444,7 +566,8 @@ const testing = std.testing;
 /// The committed 13 KB json grammar, same fixture the library tests press.
 const json_grammar = @embedFile("json_grammar");
 
-fn pressedBank() !*Bank {
+/// Shared with `loom.zig`, whose door needs the same three handles under it.
+pub fn testBank() !*Bank {
     // Through the C door, not around it: write the grammar to a temp file and
     // open it by path, because the path arm is the contract being tested.
     // The tmp dir lives under `.zig-cache/tmp/` relative to the test's cwd,
@@ -461,7 +584,7 @@ fn pressedBank() !*Bank {
 }
 
 test "a grammar.json opens as a bank of one and parses through the ABI" {
-    const bank = try pressedBank();
+    const bank = try testBank();
     defer close(bank);
     try testing.expectEqual(@as(u32, 1), bank.count());
     try testing.expectEqualStrings("json", bank.title(0).?);
@@ -491,7 +614,7 @@ test "a grammar.json opens as a bank of one and parses through the ABI" {
 }
 
 test "the wrong language is refused with the roster, not guessed at" {
-    const bank = try pressedBank();
+    const bank = try testBank();
     defer close(bank);
     var p: *Parser = undefined;
     try testing.expectEqual(Status.language, parserNew(bank, "python", &p));
@@ -500,7 +623,7 @@ test "the wrong language is refused with the roster, not guessed at" {
 }
 
 test "a ref past the arena answers none, never a read" {
-    const bank = try pressedBank();
+    const bank = try testBank();
     defer close(bank);
     var p: *Parser = undefined;
     try testing.expectEqual(Status.ok, parserNew(bank, null, &p));

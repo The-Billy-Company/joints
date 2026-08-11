@@ -117,6 +117,33 @@ GUARD = {
     "memory": ("ratio", 0.20),
 }
 
+# How far past parity a row must land before losing to the incumbent counts as a
+# regression on its own, independent of the percentage band above.
+#
+# The bands exist because an absolute duration is not portable between machines
+# or between two afternoons on one machine. Which side of 1.0 a row lands on is a
+# different fact: it is the sign of a comparison rather than its size, and it is
+# the only thing this file is really for. Guarding magnitude alone let cpp go
+# 0.986 -> 1.112 while `verify` printed `ok` and closed with "14 guarded numbers
+# held" - a row handed to tree-sitter by the gate whose job is to notice that.
+#
+# The dead zone is 10%, and it is derived from repeatability rather than taste.
+# The tempting number was the 1%-5% each run prints in its own `±` column, but
+# that is the spread of *replicates inside one run*, and the ratio's real noise
+# is wider because the two sides are separate program invocations that the OS
+# schedules differently. Two `verify` runs over one unchanged tree, six minutes
+# apart, moved python 8.1%, html 6.7%, elixir 5.9% and rust 3.8%. So 5% would
+# have failed on noise, which is how a gate teaches people to ignore it. 10% is
+# about 1.2x the worst honest excursion measured.
+#
+# What that buys and what it costs, since the cost is real: a row that lands at
+# 1.11 twice running is called, and a row hovering at 1.02 is not. The second is
+# not a hole to plug with a smaller number - it is a genuinely ambiguous row, and
+# it gets `at parity` printed against it instead of a verdict this harness cannot
+# support. Deciding those needs replicates across runs, which is a different
+# instrument than this one.
+CROSSING = 0.10
+
 # The eight grammars whose external scanner keeps state in C structs between
 # calls, and the file each one is already measured over by the board and the
 # census. They are a *second* corpus on purpose: `research/joinery/corpus/` is
@@ -953,7 +980,15 @@ def record(rows: list[Row], head: dict[str, Any]) -> int:
 def verify(rows: list[Row], head: dict[str, Any]) -> int:
     """Hold this run to the committed one. Bytes are held absolutely because
     they are deterministic; a duration is held by its ratio to tree-sitter,
-    which is the part of a timing that survives a change of machine."""
+    which is the part of a timing that survives a change of machine.
+
+    Two rules, watching two different things. The **band** asks whether a number
+    got materially worse, and it is wide because an absolute timing on a shared
+    laptop is. The **crossing** asks whether a row we held is now the
+    incumbent's, which is a claim about the sign of a comparison rather than its
+    size and needs no such generosity - see `CROSSING`. A row can pass the first
+    and fail the second, and when it does the second is the one worth reading.
+    """
     if not BASELINE.exists():
         return oops(f"no baseline at {here(BASELINE)}; run `python3 tool/bench.py record`")
     was = json.loads(BASELINE.read_text(encoding="utf-8"))
@@ -968,12 +1003,22 @@ def verify(rows: list[Row], head: dict[str, Any]) -> int:
         now = r.ours if field == "ours" else r.ratio
         then = old[field]
         checked += 1
+        slipped = field == "ratio" and then <= 1.0 < now
+        lost = slipped and now > 1.0 + CROSSING
         if then and now > then * (1 + slack):
             faults.append(f"{r.axis}/{r.case}: {field} {then:.4g} -> {now:.4g}, "
-                          f"past the {int(slack * 100)}% slack")
+                          f"past the {int(slack * 100)}% slack"
+                          + (" - and the row went to tree-sitter" if lost else ""))
+        elif lost:
+            faults.append(f"{r.axis}/{r.case}: ratio {then:.4g} -> {now:.4g}, a row we held "
+                          f"is tree-sitter's now; inside the {int(slack * 100)}% slack, "
+                          f"which is why the band alone could not see it")
         else:
             move = (now / then - 1) * 100 if then else 0.0
-            print(f"   ok {r.axis:<11} {r.case:<18} {field} {now:.4g} ({move:+.1f}%)")
+            said = " <-- taken from tree-sitter" if field == "ratio" and now <= 1.0 < then else \
+                   f" <-- at parity, was ours; under the {int(CROSSING * 100)}% dead zone" \
+                   if slipped else ""
+            print(f"   ok {r.axis:<11} {r.case:<18} {field} {now:.4g} ({move:+.1f}%){said}")
     sys.stdout.flush()
     for f in faults:
         print(f"bench: {f}", file=sys.stderr)

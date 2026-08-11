@@ -173,32 +173,32 @@ test "idiom: every type that frees itself takes the shape its ownership calls fo
         // named here or re-exported by something that is. Which leaves the count
         // below the job it is actually good at - noticing a departure.
         for (.{
-            @import("kernel/lex/scanner.zig"),      @import("kernel/lex/lexicon.zig"),
-            @import("kernel/lex/admit.zig"),        @import("kernel/joint/joint.zig"),
-            @import("kernel/walk/drive.zig"),       @import("kernel/spine/spine.zig"),
-            @import("kernel/spine/tree.zig"),       @import("kernel/spine/arbor.zig"),
-            @import("kernel/quire/quire.zig"),      @import("kernel/quire/gather.zig"),
-            @import("kernel/quire/bough.zig"),      @import("kernel/quire/graft.zig"),
-            @import("kernel/weave/weave.zig"),      @import("folio/folio.zig"),
-            @import("folio/binding.zig"),           @import("folio/forme.zig"),
-            @import("press/press.zig"),             @import("press/lalr.zig"),
-            @import("press/copy/grammar.zig"),      @import("press/copy/galley.zig"),
-            @import("press/cast/lr0.zig"),          @import("press/cast/first.zig"),
-            @import("press/cast/sets.zig"),         @import("press/cast/retrace.zig"),
-            @import("press/quarrel/settle.zig"),    @import("press/quarrel/forks.zig"),
-            @import("press/quarrel/workbench.zig"), @import("press/quarrel/attribution.zig"),
+            @import("kernel/lex/scanner.zig"),             @import("kernel/lex/lexicon.zig"),
+            @import("kernel/lex/admit.zig"),               @import("kernel/joint/joint.zig"),
+            @import("kernel/walk/drive.zig"),              @import("kernel/spine/spine.zig"),
+            @import("kernel/spine/tree.zig"),              @import("kernel/spine/arbor.zig"),
+            @import("kernel/quire/quire.zig"),             @import("kernel/quire/gather.zig"),
+            @import("kernel/quire/bough.zig"),             @import("kernel/quire/graft.zig"),
+            @import("kernel/weave/weave.zig"),             @import("folio/folio.zig"),
+            @import("folio/binding.zig"),                  @import("folio/forme.zig"),
+            @import("press/press.zig"),                    @import("press/lalr.zig"),
+            @import("press/copy/grammar.zig"),             @import("press/copy/galley.zig"),
+            @import("press/cast/lr0.zig"),                 @import("press/cast/first.zig"),
+            @import("press/cast/sets.zig"),                @import("press/cast/retrace.zig"),
+            @import("press/quarrel/settle.zig"),           @import("press/quarrel/forks.zig"),
+            @import("press/quarrel/workbench.zig"),        @import("press/quarrel/attribution.zig"),
             // `press/quotient.zig` publishes nothing self-freeing - `Quotient`
             // lives in the table's arena on purpose - but `minterm.Alphabet` and
             // `dafsa.Set` own memory, so their files are here rather than the door.
-            @import("press/quotient.zig"),          @import("press/minterm.zig"),
+            @import("press/quotient.zig"),                 @import("press/minterm.zig"),
             @import("press/dafsa.zig"),
             // `vellum`'s two declaring files and not its `vellum.zig`: a facade
             // re-exporting `Sheet` would have it judged twice, and the count below
             // would then be describing a package with two of them in it.
-                        @import("kernel/vellum/sheet.zig"),
-            @import("kernel/vellum/word.zig"),      @import("kernel/grain/ruling.zig"),
-            @import("kernel/gloss/rubric.zig"),     @import("kernel/gloss/lemma.zig"),
-            @import("kernel/gloss/stencil.zig"),    @import("kernel/gloss/gloss.zig"),
+                               @import("kernel/vellum/sheet.zig"),
+            @import("kernel/vellum/word.zig"),             @import("kernel/grain/ruling.zig"),
+            @import("kernel/gloss/rubric.zig"),            @import("kernel/gloss/lemma.zig"),
+            @import("kernel/gloss/stencil.zig"),           @import("kernel/gloss/gloss.zig"),
             // The customary's facade and not `engine.zig`: its one owner is the
             // bound engine, and the book, the organs and the guard are plain
             // values over borrowed bytes - which is the property that lets a
@@ -226,8 +226,11 @@ test "idiom: every type that frees itself takes the shape its ownership calls fo
 /// file has no import path to them. Their one `deinit` is `parse.zig`'s, which
 /// takes the shape the rule asks for.
 ///
-/// 63 to 73 is one wave (`grain`, `vellum`, a quotient), 73 to 79 is `gloss`, and
-/// 80 is the customary engine.
+/// 63 to 73 is one wave (`grain`, `vellum`, a quotient), 73 to 79 is `gloss`'s
+/// compiler, 80 is the customary engine, and 81 is `gloss.Cursor` - the matcher
+/// that runs a compiled query against a tree. It is reached through
+/// `gloss.zig`'s re-export rather than by naming `scribe.zig` here, because the
+/// two would judge the one type twice.
 /// Thirteen of those sixteen arrived in files this roster had no line for, so they
 /// were not judged against a stale pin - they were not judged at all. That is the
 /// reading a count cannot give you, and it is `tool/roll.py`'s question now.
@@ -236,4 +239,4 @@ test "idiom: every type that frees itself takes the shape its ownership calls fo
 /// no file behind to notice, so nothing walks up to it; the roster still names
 /// every file it should and the answer is quietly smaller. That is the case worth
 /// a pin, and the case a directory walk cannot see.
-const lifecycles = 80;
+const lifecycles = 81;

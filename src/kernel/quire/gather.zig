@@ -101,6 +101,31 @@
 //! owns are the leads of its second symbol onwards, and the ones it must leave
 //! behind are the ones no symbol has claimed yet.
 //!
+//! ## Why this is one file, when the house rule is 500 lines
+//!
+//! Because it was measured rather than argued. Grouping the methods into the
+//! eight clusters anybody would draw on sight - the loop, mend, weave, the memo,
+//! growth, absorb, strands, reduce - and asking which of this struct's fields
+//! each cluster touches, no seam appears anywhere. `weave`, `grow` and `reduce`
+//! own **nothing** exclusively. The best-encapsulated cluster is the memo, and it
+//! reads twenty-four fields to call six its own. A third of the fields are
+//! touched by three or more clusters, and a quarter by four or more.
+//!
+//! So a split into files would hand each file a pointer to a struct it does not
+//! own and let it mutate twenty to forty of its fields, which is the monolith
+//! with import statements in front of it and a worse locality story - the parse
+//! loop's working set is the point. A cap is a proxy for simplicity and this is
+//! the case where paying it makes the code worse.
+//!
+//! The one real candidate, if this is revisited: the memo cluster (`bind`,
+//! `offer`, `spread`, `snap`, `veiling`, `menuOf`, `recall`, `landing`,
+//! `record`, `lone_record`, `remember`, `flock`) exclusively owns `descent`,
+//! `menus`, `lands`, `veiled`, `looks` and `ticks`. That is a cache with its own
+//! invariants and it could become a struct that owns those six behind a narrow
+//! interface. It is a design job - the eighteen other fields it reads have to
+//! become arguments or stay behind - and not a file move, which is exactly why
+//! nobody should do it as a line-count errand.
+//!
 //! ## Spans
 //!
 //! A node spans from the first byte of its first token to the last byte of its

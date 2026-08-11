@@ -52,6 +52,7 @@ const lex = joints.kernel.lex.scanner;
 const scribe = joints.kernel.lex.customary;
 const quire = joints.kernel.quire;
 const weave = joints.kernel.weave;
+const gloss = joints.kernel.gloss;
 
 /// `path`'s whole contents, or `null` after printing why not to `w`.
 ///
@@ -224,7 +225,7 @@ pub fn tokenless(err: Unlexable) u8 {
     };
 }
 
-/// What the face's two enum-valued flags mean when unspoken.
+/// What the face's three enum-valued flags mean when unspoken.
 ///
 /// Here rather than in the verb that reads them because the usage block in
 /// `main.zig` has to name the same member the parser applies, and it named it as
@@ -235,6 +236,11 @@ pub const default = struct {
     pub const mend: quire.Mend = .fell;
     /// `amend --policy=`.
     pub const remint: weave.Policy = .prove;
+    /// `query --foreign=`. The library's own default, restated rather than
+    /// softened: a CLI that quietly matched past a filter it cannot run would
+    /// hand back the matches that filter existed to remove, and the caller has
+    /// no way to know it happened.
+    pub const foreign: gloss.Foreign = .refuse;
 };
 
 /// `E`'s members as a sentence: `"fell (default), none, keep, relent"` with a

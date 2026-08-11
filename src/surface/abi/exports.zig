@@ -14,6 +14,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const bank = @import("bank.zig");
+const loom = @import("loom.zig");
 
 /// Same upstream MSVC workaround the siblings carry: a static or object
 /// artifact for any `-msvc` target cannot compile the default panic's stack
@@ -27,7 +28,10 @@ else
 /// The C-ABI compatibility integer. Bump only for a breaking layout or
 /// signature change; an additive symbol keeps it.
 export fn jnt_abi_version() u32 {
-    return 1;
+    // 2: the weave door and the neighbourhood arrived, both additive - but
+    // `jnt_tree_sound` lost its `const` and gained JNT_NOMEM, and a caller
+    // holding a `const jnt_tree *` has to know.
+    return 2;
 }
 
 /// The package semver, NUL-terminated and static, so a binding can gate the
@@ -156,10 +160,11 @@ export fn jnt_tree_supplied(t: *const bank.Tree) u32 {
 }
 
 /// Whether the arena is a tree at all - every node reached once, children in
-/// order and inside their parents. 1 sound, 0 not; the survey runs on every
-/// parse, so this is a report, never a fresh walk.
-export fn jnt_tree_sound(t: *const bank.Tree) c_int {
-    return @intFromBool(t.found.sound());
+/// order and inside their parents. 1 sound, 0 not, JNT_NOMEM when the walk
+/// could not be afforded. Walked on the first ask and kept, so asking twice
+/// costs once and never asking costs nothing.
+export fn jnt_tree_sound(t: *bank.Tree) c_int {
+    return bank.treeSound(t);
 }
 
 /// The whole forest as an s-expression, one root per line, in tree-sitter's
@@ -228,9 +233,114 @@ export fn jnt_node_field(t: *const bank.Tree, ref: u32, len: ?*usize) ?[*]const 
     return f.ptr;
 }
 
+// ── the neighbourhood ────────────────────────────────────────────────────────
+// No cursor handle, deliberately: a node here is a u32 index and its parent is
+// a field read, so a cursor would hold the integers the host already has. See
+// `bank.zig`.
+
+/// Whoever holds this node; JNT_NONE for a root, and for a ref that is not a
+/// node. The top of the tree is a run rather than a node, so the roots of a
+/// parse that stopped early are siblings of each other and children of nothing.
+export fn jnt_node_parent(t: *const bank.Tree, ref: u32) u32 {
+    return bank.nodeParent(t, ref);
+}
+
+/// The neighbours in the run holding this node, anonymous ones included.
+export fn jnt_node_next(t: *const bank.Tree, ref: u32) u32 {
+    return bank.nodeNext(t, ref);
+}
+
+export fn jnt_node_prev(t: *const bank.Tree, ref: u32) u32 {
+    return bank.nodePrev(t, ref);
+}
+
+/// The neighbours a query could match by name. A comment is one of them.
+export fn jnt_node_next_named(t: *const bank.Tree, ref: u32) u32 {
+    return bank.nodeNextNamed(t, ref);
+}
+
+export fn jnt_node_prev_named(t: *const bank.Tree, ref: u32) u32 {
+    return bank.nodePrevNamed(t, ref);
+}
+
+/// The child this node files under `field[0..len]`, or JNT_NONE. `len` 0 with
+/// a NUL-terminated `field` is not accepted - pass the length, as everywhere
+/// else a string crosses in this direction.
+export fn jnt_node_by_field(t: *const bank.Tree, ref: u32, field: ?[*]const u8, len: usize) u32 {
+    const f = field orelse return bank.none;
+    return bank.nodeByField(t, ref, f[0..len]);
+}
+
+/// Parent hops to a root, so every root is 0.
+export fn jnt_node_depth(t: *const bank.Tree, ref: u32) u32 {
+    return bank.nodeDepth(t, ref);
+}
+
+/// The deepest node covering [from, to), or JNT_NONE when no root does. The
+/// viewport question, answered without a walk from the top.
+export fn jnt_node_covering(t: *const bank.Tree, from: u32, to: u32) u32 {
+    return bank.nodeCovering(t, from, to);
+}
+
+/// Nodes under this one, counting it; 0 for a non-node and 0 when the walk
+/// could not be afforded.
+export fn jnt_node_spread(t: *const bank.Tree, ref: u32) u32 {
+    return bank.nodeSpread(t, ref);
+}
+
+// ── the weave: one file, held open ───────────────────────────────────────────
+
+/// Hold a file open on this parser. The weave borrows the parser exactly as a
+/// tree does; free weaves before the parser they came from.
+export fn jnt_weave_new(p: ?*bank.Parser, out: ?**loom.Held) c_int {
+    return @intFromEnum(loom.weaveNew(p, out));
+}
+
+export fn jnt_weave_free(h: *loom.Held) void {
+    loom.weaveFree(h);
+}
+
+/// Read `text[0..len]` in cold. Calling it a second time reads a second file:
+/// everything the weave was holding about the first is stood down.
+export fn jnt_weave_warp(h: ?*loom.Held, text: ?[*]const u8, len: usize) c_int {
+    return @intFromEnum(loom.weaveWarp(h, text, len));
+}
+
+/// Replace [from, to) with `insert[0..len]`. The offsets address the file as
+/// it stands, so a run of these is a session and not a set of patches.
+export fn jnt_weave_amend(h: ?*loom.Held, from: u32, to: u32, insert: ?[*]const u8, len: usize) c_int {
+    return @intFromEnum(loom.weaveAmend(h, from, to, insert, len));
+}
+
+/// The tree as the file stands: BORROWED from the weave, stable across edits,
+/// and not to be freed. NULL until something has been read in. Node refs taken
+/// before an edit do not survive it; this handle does.
+export fn jnt_weave_tree(h: *loom.Held) ?*bank.Tree {
+    return loom.weaveTree(h);
+}
+
+/// How many bytes the file holds, which is what the next amend is checked
+/// against.
+export fn jnt_weave_len(h: *const loom.Held) usize {
+    return loom.weaveLen(h);
+}
+
+/// How far the re-mint window widens: JNT_POLICY_PROVE (the default),
+/// JNT_POLICY_SNAP, or JNT_POLICY_WHOLE. A cost decision, never a correctness
+/// one. Takes effect from the next amend.
+export fn jnt_weave_policy(h: ?*loom.Held, policy: c_int) c_int {
+    return @intFromEnum(loom.weavePolicy(h, policy));
+}
+
+/// What the last warp or amend cost, written into `*out`.
+export fn jnt_weave_cost(h: ?*const loom.Held, out: ?*loom.Cost) c_int {
+    return @intFromEnum(loom.weaveCost(h, out));
+}
+
 test {
     // The shims are one-liners over tested bodies; what a test here can still
     // catch is a signature that stopped compiling as C-callable.
     std.testing.refAllDecls(@This());
     _ = bank;
+    _ = loom;
 }
