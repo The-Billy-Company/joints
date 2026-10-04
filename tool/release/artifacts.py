@@ -281,7 +281,7 @@ def packages(args):
             [
                 "uvx",
                 "--from",
-                "twine==6.2.0",
+                "twine==7.0.0",
                 "twine",
                 "check",
                 *map(str, sorted((output / "python").iterdir())),
