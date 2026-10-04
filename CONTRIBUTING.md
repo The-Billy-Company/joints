@@ -261,12 +261,13 @@ tree as it stands now.
 
 ## Releasing
 
-Not yet - this package has no `release.yml`, no release-please, and no
-registry it publishes to, deliberately: parts of the design (gloss, vellum,
-the quotient) are still ahead, and wiring release automation onto a `0.0.0`
-package would document a promise the code doesn't keep. When it does ship
-something worth versioning, it graduates onto the shared model every other
-Billy-Company OSS package follows - see
+The Python and Rust bindings currently require a separately built `libjnt`.
+All version mirrors remain `0.0.0`. The existing
+[release workflow](.github/workflows/release.yml) builds an unbundled Python
+package and verifies its import; it does not build or verify native artifacts
+or publish the Rust crate. Before the first native binding release, prepare
+the artifacts and their clean-install checks, version parity, and CI gates
+under the shared Billy-Company OSS release contract. See
 [RELEASING.md](https://github.com/The-Billy-Company/.github/blob/main/RELEASING.md).
 
 ## What CI will run

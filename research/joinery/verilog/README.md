@@ -150,3 +150,9 @@ the one that costs least. Anything ranking from `distinct` (including `voice`)
 is ranking the wrong thing; `witness.py` sorts by bytes and prints which wall a
 count ordering would have led with, so the disagreement is visible rather than
 rediscoverable.
+
+Historical provenance: each chapter retains the qualification of its own run.
+In particular, [`RESULT-7-leaf.md`](RESULT-7-leaf.md) attributes its pinned
+figures to `leaflane`, binary `69c0b9172`, tree `0d4217867`, and labels its live
+cross-reads separately. The earlier damage figures above are the historical
+readings in [`RESULT-2-witness.md`](RESULT-2-witness.md), not a new measurement.

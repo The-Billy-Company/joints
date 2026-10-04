@@ -31,3 +31,7 @@ plus a sentence for a path that is not there. The same program runs unchanged
 against the dylib. The bodies live in `src/surface/abi/bank.zig` and are
 tested as plain Zig; the export shims are one-liners, so what the C boundary
 can still get wrong is a signature, and the test build compiles them all.
+
+Historical provenance: the ABI implementation and this report were committed
+together in repo `0347118f906bee0fca87276a998668b2f4dacad5`. The checks above describe that source
+tree; no binary digest was retained in the original fragment.

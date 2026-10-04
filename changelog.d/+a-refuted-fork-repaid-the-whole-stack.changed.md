@@ -15,3 +15,8 @@ prefix claim is maintained rather than assumed.
 
 Worth 77.0 ns/byte from 82.3 on the cpp corpus. The suite's fork/roost tests
 hold the collapsed stack byte-identical to the full rebuild.
+
+Historical provenance: the keel change and this timing report were committed
+together in repo `bf3924c`. The intermediate benchmark binaries were not stamped
+in the original report; the timings describe that experiment and need a new run
+before being used as a claim about the current tree.

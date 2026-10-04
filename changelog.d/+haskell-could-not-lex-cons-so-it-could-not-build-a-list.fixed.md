@@ -32,3 +32,7 @@ shifted into it must be followed by a dot. The state that completes `T.Text` exi
 holding `_qualified_type -> _qualifying_module name .` - and the parse had no head in it.
 83 of the 86 remaining stray bytes are the `>` left over after each felled `-`. The one
 genuine lexer gap left on this fixture is `haddock`, worth two bytes.
+
+Historical provenance: the symop book changes and these measurements were
+committed together in repo `57d219a`. The report did not retain the before/after
+binary digests; these are historical figures, not a measurement of current HEAD.

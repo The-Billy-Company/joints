@@ -97,3 +97,9 @@ one line - `cache: kept 30`, or `re-minted 12`, or the names of the grammars it
 skipped and why - under every measurement. One line is the difference between
 that afternoon and a minute, and it is there because a board that reports only
 its numbers reads as a board that earned them.
+
+Historical provenance: the poison described above is the retained Aug 4 binary
+`.local/bench/pin/outliner` (the pre-rename path), SHA-256
+`37333442772536706a2cf17fc3de6b1d3374c69b7d49861b7be3e18a34fc99c2`.
+The original fragment was committed in repo `8d3269e`; the later board's binary
+digest was not recorded here, so its totals describe that historical run.

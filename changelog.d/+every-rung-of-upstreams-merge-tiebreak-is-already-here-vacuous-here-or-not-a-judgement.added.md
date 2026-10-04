@@ -33,3 +33,8 @@ Nothing shipped but the finding. `research/joinery/arity/RESULT-3-structure.md`
 has both boards, the citations, and the three controls — including the one that
 refused a cross-tree comparison that would otherwise have published a
 4,368-byte zig regression four sibling lanes caused.
+
+Historical provenance: [`RESULT-3-structure.md`](../research/joinery/arity/RESULT-3-structure.md)
+records pair A at repo `459c0975c` (`flat`/`folds`) and pair B at repo
+`97218d61e` (`ctl4`/`deep4`), each with its own source manifest and oracle.
+Those are the two pairs quoted here.

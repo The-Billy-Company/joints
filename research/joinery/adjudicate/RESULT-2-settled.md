@@ -195,3 +195,8 @@ verilog because the oracle refuses the grammar on corpus files. My witnesses are
 four-line modules the oracle does answer on — which is why the rows are
 measurable — but the only bytes I certify as upstream's sit in the one grammar
 where the cross-check cannot run.
+
+Historical provenance: the eighteen witnesses are the paired measurements in
+[`RESULT-1-gaps.md`](RESULT-1-gaps.md), taken with binary/tree pairs
+`df015ae32`/`f7c6b3ef0` and `93513d7c8`/`986eb8ece`. Both runs returned the
+same verdicts; this analysis refers to those runs.

@@ -57,3 +57,8 @@ python3 research/joinery/felled/board.py --price
 Both arms are one executable a single `--no-supply` flag apart. Check the arm
 says *30 of 30 verdicts live* first — an unsighted arm reports `square=0`, which
 is also what a perfect grammar reports.
+
+Historical provenance: [`RESULT-1-unproven.md`](RESULT-1-unproven.md)
+records the `unproven` tree `ace700af2993` and repaired `felled` tree
+`b78d53779933`, and distinguishes which figures survive the sibling changes
+between them. That qualification applies to this summary.

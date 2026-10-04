@@ -110,3 +110,8 @@ joints parse upstream/grammars/verilog.json <the file above>
 
 The revert is byte-exact: all thirty folios re-minted after it compare identical
 to the ones minted before the change.
+
+Historical provenance: the reverted width-test experiment and this result were
+recorded in repo `766cc09`. The temporary treatment was removed before that
+commit, and the original result did not retain its binary digest; the quoted
+before/after board is historical evidence, not a measurement of current HEAD.

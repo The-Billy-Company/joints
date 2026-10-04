@@ -15,3 +15,8 @@ copying path is unchanged and still takes everything the check refuses.
 
 Worth 92.8 ns/byte from 97.3 on the cpp corpus, and the shape is the point:
 the one mint that finally claims a list is now the only time its run moves.
+
+Historical provenance: this implementation and its timing report were committed
+together in repo `bf3924c`. The intermediate benchmark binaries were not stamped
+in the original report; the timings describe that experiment and need a new run
+before being used as a claim about the current tree.

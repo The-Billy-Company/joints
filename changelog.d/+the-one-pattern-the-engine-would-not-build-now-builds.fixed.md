@@ -18,3 +18,8 @@ externally scanned terminals it is blind to, not this one, and that half is
 unchanged. What did move is build time: markdown's slate is **2.85x faster**
 (1,060 ms to 372 ms), because a refusal made `admit` bisect six levels deep to
 name the culprit and discard every attempt on the way.
+
+Historical provenance: the lexer-budget change and this report were committed
+together in repo `c85fedd`, including the irregex revision selected by
+`build.zig.zon`. The original fragment did not retain its two binary digests;
+the comparison is the historical experiment accompanying that source change.

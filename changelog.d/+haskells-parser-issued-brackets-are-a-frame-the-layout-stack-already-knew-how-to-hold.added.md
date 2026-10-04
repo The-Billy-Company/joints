@@ -36,3 +36,8 @@ is structure being built that was not built before rather than a mend being
 suppressed. php, scala and elixir are held in the arm permanently, because a
 corpus total is exactly what hid the keyword seat that repaired verilog while
 taking php from 67,697 square bytes to 662.
+
+Historical provenance: [`RESULT-1-brackets.md`](../research/joinery/haskell/RESULT-1-brackets.md)
+records these arms as repo `7d72a5d` plus the working tree, built at
+2026-08-06 ~19:30Z with the two-row bracket field deleted and restored.
+Its source-snapshot qualification applies to the figures here as well.

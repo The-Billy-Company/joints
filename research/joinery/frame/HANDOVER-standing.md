@@ -110,3 +110,8 @@ python3 tool/attest.py verify                 # why the identity is the sources
 
 Full working: [`RESULT-1-frame.md`](RESULT-1-frame.md) ·
 [`README.md`](README.md).
+
+Historical provenance: these findings are the same readings as
+[`RESULT-1-frame.md`](RESULT-1-frame.md): pin `frame`, binary `cf697da9f`,
+source tree `986eb8ece`, oracle `800ede524`. The handover's totals refer to that
+run, rather than to the tree on which the handover is later read.

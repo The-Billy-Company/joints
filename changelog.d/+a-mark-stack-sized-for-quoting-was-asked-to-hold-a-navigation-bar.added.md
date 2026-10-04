@@ -43,3 +43,7 @@ permission set's and the differential is this book's gate. The 128 tag types do
 not fit a 31-kind bitset and do not have to - a kind here is the *class* a
 decision reads, and a known name's member is a function of its spelling, so
 identity stays in the tag and only the classes are enumerated.
+
+Historical provenance: the html book, arena change, and this measurement report
+were committed together in repo `08a6464`. The original report did not retain a
+binary digest; the quoted corpus figures describe that implementation's run.

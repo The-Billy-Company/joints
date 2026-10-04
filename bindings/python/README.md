@@ -47,7 +47,7 @@ Run the native integration checks after building:
 PYTHONPATH=bindings/python python3 -m unittest discover -s bindings/python/tests
 ```
 
-This source interface ships no native wheel yet. The Rust binding remains a
-name reservation; building a native frontend also needs that Rust interface.
+This source interface ships no native wheel yet. The
+[Rust binding](../rust/README.md) also uses a separately built native library.
 
 Apache-2.0; see `LICENSE` and `NOTICE`.

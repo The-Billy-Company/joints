@@ -64,3 +64,9 @@ by two binaries a day apart may well parse the corpus to the same byte, and if
 they do, the mixed board is *numerically* fine and still unattributable - that
 is the whole point. A rule that only fired when the number moved would be the
 same instrument one level in.
+
+Historical provenance: the older binary proposed here is retained under its
+pre-rename path `.local/bench/pin/outliner`, SHA-256
+`37333442772536706a2cf17fc3de6b1d3374c69b7d49861b7be3e18a34fc99c2`.
+This prediction was first committed in repo `0814bfa`; the subsequent trial
+and its corrected timing are recorded in [`RESULT-2-race.md`](RESULT-2-race.md).

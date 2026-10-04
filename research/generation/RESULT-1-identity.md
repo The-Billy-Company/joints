@@ -129,3 +129,10 @@ read-back the previous lane's `Refused` guard stops the run outright (observed,
 first attempt at this trial). The gap is the other half — a binary installed
 without a fresher mtime, which is every pinned build, every `cp -p`, and every
 `JOINTS_BIN` pointed at somebody else's tree.
+
+Historical provenance: the older build used by `stage.py` is retained under
+its pre-rename path `.local/ink/base/bin/outliner`, SHA-256
+`55c91c2004b7ad24f3daaab14d7716e094d9e5bb0c22f91dcb8e591a2bdeefd0`.
+The result was first committed in repo `0814bfa`. The original report did not
+retain a digest for the then-current build; its nondeterminism counts are
+observations from that run, as qualified above.

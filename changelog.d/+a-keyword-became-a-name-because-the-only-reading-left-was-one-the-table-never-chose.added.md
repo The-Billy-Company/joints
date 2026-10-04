@@ -83,3 +83,9 @@ open question this leaves.
 The row stays red. `collate.py adjudicated` still reports it, which is the
 check that should have caught it in the first place and the one thing here that
 needed no building.
+
+Historical provenance: the named `coverlane` control's retained
+`.local/pin/coverlane/pin.json` records tree `05e30080303b`, binary
+`346d880fc87f`. The same experiments are recorded in
+[`parameter/README.md`](../research/joinery/parameter/README.md); the third
+experiment uses the single-binary switch described there.

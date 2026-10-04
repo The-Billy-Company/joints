@@ -39,3 +39,9 @@ and that are the reason this repair is believable rather than lucky:
 
 `tool/specimen.py run --grammar=elixir` goes **4/5 → 5/5**; the witness has been
 red since it was written.
+
+Historical provenance: the corrected repair figures come from the four-arm
+table in [`RESULT-2-do-block.md`](RESULT-2-do-block.md): control tree
+`9043729ee111`, binary `a046d3858526`; paired tree `572f101904b7`, binary
+`b2eac71bc20e`. The all-run split uses the oracle `d85e736fa` recorded in
+[`RESULT-1-split.md`](RESULT-1-split.md).

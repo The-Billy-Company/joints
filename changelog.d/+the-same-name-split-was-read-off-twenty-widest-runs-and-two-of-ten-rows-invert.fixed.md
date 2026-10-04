@@ -32,3 +32,8 @@ same-name ones with it.
 and `rack.widest` rather than re-deriving either, so it can only disagree with
 `rack` about which runs get printed. Written up in
 `research/joinery/elixir/RESULT-1-split.md`.
+
+Historical provenance: [`RESULT-1-split.md`](../research/joinery/elixir/RESULT-1-split.md)
+records the frozen oracle as `d85e736fa` on pin `elixirlane`. That pin's retained
+manifest records source tree `b08566533455` and binary `7ba49dcdc66c`.
+These are the all-run measurements summarized above.

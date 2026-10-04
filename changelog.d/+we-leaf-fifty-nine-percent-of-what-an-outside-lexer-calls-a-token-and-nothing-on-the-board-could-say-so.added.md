@@ -92,3 +92,8 @@ parenthesising concatenations in **lvalue** position, where a parenthesis is not
 legal verilog: it manufactured a wall of its own at
 `{(mem_rdata_q[31:25]), …} <= …` that was one edit away from being reported as a
 third defect.
+
+Historical provenance: [`RESULT-7-leaf.md`](../research/joinery/verilog/RESULT-7-leaf.md)
+attributes the pinned readings to `leaflane`, binary `69c0b9172`, tree
+`0d4217867`, and separately identifies the three live-tree binaries used for
+cross-reads. Those qualifications apply to the summarized figures here.

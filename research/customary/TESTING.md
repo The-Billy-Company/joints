@@ -121,3 +121,9 @@ status. *Kill: a fact the census can no longer report.*
 Forward throughput against the C scanners, and the keystroke bench extended to
 edits *inside* stateful regions, where the `O(log n)` claim is either observable
 or it is not. *Kill: it is not.*
+
+Historical provenance: this testing record was committed in repo `8313fb4`.
+The baseline is retained in `.local/customary/board-before.json`; it reports the
+same corpus buckets quoted above. That capture predates board stamping and
+contains no measured-binary digest, so the baseline is historical evidence to
+re-run, rather than a claim that today's tree has those totals.

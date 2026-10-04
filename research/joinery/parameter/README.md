@@ -89,3 +89,9 @@ So the discriminator is not the class either. A `sided` orphan is fatal at
 89368 and load-bearing at 78013 - same grammar, same class, and the same shape
 down to the trace lines. Whatever separates them is finer than anything the
 cell carries. Naming it is the open question.
+
+Historical provenance: the retained `.local/pin/*/pin.json` manifests record
+`heft` as tree `7c07931f6a0b`, binary `6fa340df491c`; `bh` as tree
+`92e7faa9b55a`, binary `71e827fc81a7`; and the two-repair control `coverlane`
+as tree `05e30080303b`, binary `346d880fc87f`. The third repair is the
+single-binary switch already qualified above.

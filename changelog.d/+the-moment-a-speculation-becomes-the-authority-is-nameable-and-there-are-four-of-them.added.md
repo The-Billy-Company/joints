@@ -34,3 +34,7 @@ the token silences it entirely. So the identity dissolves precisely where the
 confirmation would have to be observed - which is itself the strongest evidence
 yet that the discriminator is not in the table: it is not anywhere durable at
 all. Whether that dissolution is the defect or merely hides it is open.
+
+Historical provenance: this report was first committed in repo `8c61f3b`.
+The original fragment did not retain a binary digest for its behavior-neutral
+comparison; its figures remain the historical experiment recorded above.
