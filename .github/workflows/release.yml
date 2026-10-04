@@ -66,16 +66,16 @@ jobs:
           ref: ${{ steps.context.outputs.source_sha }}
           persist-credentials: false
       - id: version
-        uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        uses: The-Billy-Company/.github/actions/package-release@c5c6bb5aa3c92007f6acdda41dd7fde051ca5736
         with:
           command: version
           args: --root joints
       - if: steps.context.outputs.publish == 'true'
-        uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        uses: The-Billy-Company/.github/actions/package-release@c5c6bb5aa3c92007f6acdda41dd7fde051ca5736
         with:
           command: version
           args: --root joints --tag ${{ steps.context.outputs.tag }}
-      - uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+      - uses: The-Billy-Company/.github/actions/package-release@c5c6bb5aa3c92007f6acdda41dd7fde051ca5736
         with:
           command: changelog
           args: >-
@@ -85,19 +85,19 @@ jobs:
           python3 control/tool/publisher.py --selftest
           python3 -O -m unittest discover -s control/tool -p test_release_finalize.py
       - if: steps.context.outputs.publish == 'true'
-        uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        uses: The-Billy-Company/.github/actions/package-release@c5c6bb5aa3c92007f6acdda41dd7fde051ca5736
         with:
           command: tag-ancestor
           args: ${{ github.repository }} ${{ steps.context.outputs.source_sha }} --branch main
       - if: steps.context.outputs.publish == 'true'
-        uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        uses: The-Billy-Company/.github/actions/package-release@c5c6bb5aa3c92007f6acdda41dd7fde051ca5736
         with:
           command: ci-status
           args: >-
             ${{ github.repository }} ${{ steps.context.outputs.source_sha }}
             --check-name release-ready --timeout-seconds 3600 --interval-seconds 30
       - if: steps.context.outputs.publish == 'true'
-        uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        uses: The-Billy-Company/.github/actions/package-release@c5c6bb5aa3c92007f6acdda41dd7fde051ca5736
         with:
           command: ci-status
           args: >-
@@ -283,12 +283,12 @@ jobs:
           --source-sha "$SOURCE_SHA" --artifact-run "$ARTIFACT_RUN"
           --artifact-root dist --source-root joints
       - id: pypi
-        uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        uses: The-Billy-Company/.github/actions/package-release@c5c6bb5aa3c92007f6acdda41dd7fde051ca5736
         with:
           command: registry-probe
           args: pypi joints ${{ env.VERSION }}
       - id: crates
-        uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        uses: The-Billy-Company/.github/actions/package-release@c5c6bb5aa3c92007f6acdda41dd7fde051ca5736
         with:
           command: registry-probe
           args: crates joints ${{ env.VERSION }}
@@ -478,7 +478,7 @@ jobs:
           pattern: native-*
           path: dist/native
           merge-multiple: true
-      - uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+      - uses: The-Billy-Company/.github/actions/package-release@c5c6bb5aa3c92007f6acdda41dd7fde051ca5736
         with:
           command: notes
           args: >-

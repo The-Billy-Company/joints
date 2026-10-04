@@ -334,11 +334,11 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+      - uses: The-Billy-Company/.github/actions/package-release@c5c6bb5aa3c92007f6acdda41dd7fde051ca5736
         with:
           command: version
           args: --root .
-      - uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+      - uses: The-Billy-Company/.github/actions/package-release@c5c6bb5aa3c92007f6acdda41dd7fde051ca5736
         with:
           command: changelog
           args: --root .
