@@ -34,8 +34,8 @@ state 620`, the third `->` of
 correct answer there is silence: both dot conditions require a `.` at the
 offset and the bytes are a space followed by `->`. State 620 arrives on `name`,
 holds only
-`_modid_prefix -> name . _qual_dot` and `. _tight_dot`, and folds nothing, so a `name`
-shifted into it must be followed by a dot. The state that completes `T.Text`
+`_modid_prefix -> name . _qual_dot` and `. _tight_dot`, and folds nothing, so a
+`name` shifted into it must be followed by a dot. The state that completes `T.Text`
 exists - 805, holding `_qualified_type -> _qualifying_module name .` - and the
 parse had no head in it. 83 of the 86 remaining stray bytes are the `>` left over
 after each felled `-`. The one genuine lexer gap left on this fixture is
