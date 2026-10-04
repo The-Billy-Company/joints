@@ -109,7 +109,7 @@ Tree-sitter lets a grammar declare an external as a **literal** rather than a
 named symbol, and those carry `"type": "STRING"` with a `value` and no `name`.
 The filter drops them silently.
 
-```
+```text
 bash        29 externals,  6 dropped: '}' ']' '<<' '<<-' '(' 'esac'
 scala       31 externals,  6 dropped: 'else' 'catch' 'finally' 'extends' 'derives' 'with'
 python      12 externals,  4 dropped: ')' ']' '}' 'except'
@@ -126,13 +126,13 @@ across the corpus: 463 named externals seen, 21 literal externals dropped
 drops. It is a declared external. The `scanner` branch should have claimed it
 and could not, because `g.blind` holds 22 of bash's 29 externals:
 
-```
+```text
 bash   ']'  spellings=['\]', ']']  blind-hit=[]  |blind|=22
 ```
 
 Widen the set by one clause and the hit is there:
 
-```
+```text
 bash  named blind=22  widened=28  added=['(', '<<', '<<-', ']', 'esac', '}']
 ```
 

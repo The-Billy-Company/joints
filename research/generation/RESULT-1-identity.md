@@ -13,7 +13,7 @@ scratch paths, every result digested and its length recorded.
 It differs for **at least fourteen of thirty**, and the measurement is worse
 than that sentence:
 
-```
+```text
 6 mints of each of 30 grammars, one binary, one machine
 reproducible: 16   NOT reproducible: 14
   cpp       3 distinct folios in 6 mints, 3 distinct length(s)
@@ -112,7 +112,7 @@ control trial that is fourteen artifacts.
 3.8s board, giving the replacement an mtime **older** than the folios so the
 cache's freshness rule stays quiet:
 
-```
+```text
 today's source detectors: nothing  ← none of them re-reads the binary
 ```
 

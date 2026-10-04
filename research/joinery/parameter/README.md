@@ -36,7 +36,7 @@ that comma separates two `parameter_port_declaration`s, so the fold is refuted
 on the very token that opened the split. The spared read is orphaned at birth
 and is the only reading left. It shifts the comma into state 819:
 
-```
+```text
 state 819 — list_of_param_assignments_repeat51 -> , . param_assignment
   shifts: simple_identifier, \
 ```
