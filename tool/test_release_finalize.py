@@ -1,7 +1,9 @@
 """Offline controls for immutable release assets and finalization order."""
 
 import argparse
+import json
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -241,6 +243,111 @@ class FinalizationControls(unittest.TestCase):
         ):
             finalizer.finalize(args)
         self.assertEqual(mutations, ["create", "upload"])
+
+    def test_release_commands_bind_repository_without_a_git_workspace(self):
+        packages = self.root / "dist"
+        for directory in ("python", "rust", "native"):
+            (packages / directory).mkdir(parents=True)
+        files = {}
+        for name in (
+            "python/joints-0.1.0.whl",
+            "python/joints-0.1.0.tar.gz",
+            "rust/joints-0.1.0.crate",
+            "native/joints-0.1.0-linux-x86_64.tar.gz",
+            "native/joints-0.1.0-macos-arm64.tar.gz",
+            "packages.json",
+        ):
+            path = packages / name
+            path.write_bytes(name.encode())
+            files[path.name] = path
+        (self.root / "control").mkdir()
+        source = self.root / "joints"
+        source.mkdir()
+        notes = self.root / "notes.md"
+        notes.write_text("Original curated release notes")
+        args = argparse.Namespace(
+            tag="v0.1.0",
+            version="0.1.0",
+            source_sha="e" * 40,
+            artifact_run="123",
+            packages=packages,
+            native_directory=packages / "native",
+            source_root=source,
+            notes=notes,
+        )
+        command_log = self.root / "commands.jsonl"
+        executable = self.root / "gh"
+        executable.write_text(
+            f"#!{sys.executable}\n"
+            "import json, sys\n"
+            "from pathlib import Path\n"
+            "arguments = sys.argv[1:]\n"
+            "if any((path / '.git').exists() for path in "
+            "(Path.cwd(), *Path.cwd().parents)):\n"
+            "    sys.exit('test workspace unexpectedly has a Git root')\n"
+            "if '--repo' not in arguments or "
+            f"arguments[arguments.index('--repo') + 1] != {finalizer.REPOSITORY!r}:\n"
+            "    sys.exit('fatal: not a git repository')\n"
+            f"with Path({str(command_log)!r}).open('a') as output:\n"
+            "    output.write(json.dumps(arguments) + '\\n')\n"
+        )
+        executable.chmod(0o700)
+        original_run = finalizer.subprocess.run
+
+        def commands():
+            if not command_log.exists():
+                return []
+            return [json.loads(line) for line in command_log.read_text().splitlines()]
+
+        def execute(command, *, cwd=None, check=False):
+            if command[0] == "gh":
+                return original_run(
+                    [str(executable), *command[1:]], cwd=self.root, check=check
+                )
+            checksum = packages / "SHA256SUMS"
+            checksum.write_text("controlled original checksums")
+            files[checksum.name] = checksum
+            return None
+
+        def lookup(tag):
+            mutations = [command[1] for command in commands()]
+            if "create" not in mutations:
+                return None
+            return {
+                "tag_name": tag,
+                "assets": [
+                    {
+                        "name": name,
+                        "id": index,
+                        "state": "uploaded",
+                        "size": path.stat().st_size,
+                    }
+                    for index, (name, path) in enumerate(files.items())
+                ]
+                if "upload" in mutations
+                else [],
+            }
+
+        def output(command, **kwargs):
+            if command[0] == "git":
+                return args.source_sha + "\n" if "rev-parse" in command else ""
+            index = int(command[-1].rsplit("/", 1)[1])
+            return list(files.values())[index].read_bytes()
+
+        with (
+            patch.dict(os.environ, {"GITHUB_REPOSITORY": finalizer.REPOSITORY}),
+            patch.object(finalizer.subprocess, "check_output", side_effect=output),
+            patch.object(finalizer.subprocess, "run", side_effect=execute),
+            patch.object(finalizer, "release", side_effect=lookup),
+            patch.object(finalizer, "assert_context") as context,
+        ):
+            finalizer.finalize(args)
+        self.assertEqual(
+            [command[1] for command in commands()], ["create", "upload", "edit"]
+        )
+        self.assertEqual(context.call_count, 4)
+        self.assertIn("--draft", commands()[0])
+        self.assertIn("--draft=false", commands()[2])
 
 
 if __name__ == "__main__":

@@ -24,6 +24,10 @@ def run(*command, cwd=None):
     subprocess.run(command, cwd=cwd, check=True)
 
 
+def release_command(*arguments):
+    run("gh", "release", *arguments, "--repo", REPOSITORY)
+
+
 def assert_context(args):
     run(
         sys.executable,
@@ -142,9 +146,7 @@ def finalize(args):
     existing = release(args.tag)
     if existing is None:
         assert_context(args)
-        run(
-            "gh",
-            "release",
+        release_command(
             "create",
             args.tag,
             "--verify-tag",
@@ -163,16 +165,14 @@ def finalize(args):
     missing = [str(path) for name, path in expected.items() if name not in attached]
     if missing:
         assert_context(args)
-        run("gh", "release", "upload", args.tag, *missing)
+        release_command("upload", args.tag, *missing)
     attached = release(args.tag)
     require(
         attached is not None and attached["tag_name"] == args.tag, "release disappeared"
     )
     verify_assets(attached, expected, complete=True)
     assert_context(args)
-    run(
-        "gh",
-        "release",
+    release_command(
         "edit",
         args.tag,
         "--notes-file",
