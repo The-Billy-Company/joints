@@ -1,0 +1,21 @@
+# Shared package-release contract for the experimental source bindings.
+[package]
+name = "joints"
+version_source = "build.zig.zon"
+version_kind = "zig-zon"
+
+[changelog]
+directory = "changelog.d"
+file = "CHANGELOG.md"
+ignore = [ ".gitkeep", "README.md" ]
+types = [ "note", "added", "changed", "deprecated", "removed", "fixed", "security" ]
+stem_pattern = '^\+[a-z0-9]+(-[a-z0-9]+)*$'
+min_body_chars = 40
+
+[ci]
+required_check = "release-ready"
+default_branch = "main"
+
+[registries]
+pypi = "joints"
+crates = "joints"

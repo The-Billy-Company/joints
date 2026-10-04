@@ -261,14 +261,26 @@ tree as it stands now.
 
 ## Releasing
 
-The Python and Rust bindings currently require a separately built `libjnt`.
-All version mirrors remain `0.0.0`. The existing
-[release workflow](.github/workflows/release.yml) builds an unbundled Python
-package and verifies its import; it does not build or verify native artifacts
-or publish the Rust crate. Before the first native binding release, prepare
-the artifacts and their clean-install checks, version parity, and CI gates
-under the shared Billy-Company OSS release contract. See
-[RELEASING.md](https://github.com/The-Billy-Company/.github/blob/main/RELEASING.md).
+`release.toml` declares the shared package-release contract. Keep the Zig
+version, both package manifests, Python `__version__`, and generated Cargo lock
+in agreement. Write a fragment with the change, render it with Towncrier, then
+curate the folded `CHANGELOG.md` section before tagging. Preserve historical
+figures with their recorded sources and limits.
+
+The Python and Rust packages require a separately supplied ABI 2 `libjnt`.
+The release pipeline builds native Linux x86_64 and macOS arm64 archives and
+portable Python/Rust packages, exercises installed artifacts on their declared
+runtime floors, and checks the exact commit's `release-ready` result. Every
+channel builds before any version is published. Registry retries verify
+identical bytes; an unreachable registry is an error.
+
+Dispatch [the workflow](.github/workflows/release.yml) on an untagged branch to
+build and verify without publishing. A `vX.Y.Z` tag reachable from main runs
+the publication path: shared preflight, artifact checks, publisher readiness,
+OIDC registry publication, public-index verification, and curated GitHub
+release finalization. Credentials are short lived and no registry upload runs
+from a developer machine. See
+[the shared release contract](https://github.com/The-Billy-Company/.github/blob/main/RELEASING.md).
 
 ## What CI will run
 

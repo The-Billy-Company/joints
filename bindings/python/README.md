@@ -1,7 +1,8 @@
 # joints for Python
 
 Open a grammar folio, parse source, and run structural queries through `libjnt`.
-The binding is experimental and requires a separately built native library.
+The 0.1.0 binding is experimental and requires a separately supplied native
+library with ABI 2.
 
 ```sh
 zig build
@@ -47,7 +48,14 @@ Run the native integration checks after building:
 PYTHONPATH=bindings/python python3 -m unittest discover -s bindings/python/tests
 ```
 
-This source interface ships no native wheel yet. The
-[Rust binding](../rust/README.md) also uses a separately built native library.
+The Python wheel and sdist contain the interface; no native library or grammar
+bank is bundled. Install the package and download the matching native archive
+from [Joints releases](https://github.com/The-Billy-Company/joints/releases):
+`joints-0.1.0-linux-x86_64.tar.gz` or `joints-0.1.0-macos-arm64.tar.gz`.
+Set `JOINTS_LIB` to the extracted archive's `lib/libjnt.so` or
+`lib/libjnt.dylib`. Its `grammar/json.json` is a reproducible starting bank;
+compile other grammars with the included CLI. The native archives are tested
+on Ubuntu 24.04 (glibc 2.39) and macOS 14. Other targets require a source build.
+The [Rust binding](../rust/README.md) uses the same native archives.
 
 Apache-2.0; see `LICENSE` and `NOTICE`.

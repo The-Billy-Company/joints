@@ -11,7 +11,7 @@
 # `joints` was, which is the better outcome anyway: the registry entry is the one
 # surface a stranger reads first, and it should be a word.
 name = "joints"
-version = "0.0.0" # x-release-please-version
+version = "0.1.0" # x-release-please-version
 edition = "2024"
 rust-version = "1.85"
 license = "Apache-2.0"
@@ -23,15 +23,10 @@ description = "Experimental safe Rust binding to libjnt: parsing, repair confide
 links = "jnt"
 build = "build.rs"
 readme = "README.md"
-homepage = "https://github.com/The-Billy-Company"
+homepage = "https://github.com/The-Billy-Company/joints"
+repository = "https://github.com/The-Billy-Company/joints"
+documentation = "https://github.com/The-Billy-Company/joints/blob/main/bindings/rust/README.md"
 authors = [ "The Billy Company" ]
-# No `repository` and no `documentation`. The sibling packages set both, and the
-# temptation here was to point at `The-Billy-Company/joints` because
-# CONTRIBUTING.md already tells people to clone it - but that repository is not
-# public yet, and a metadata field is a promise the registry renders as a link.
-# A 404 on the one page a stranger lands on is worse than an absent row. Both
-# fields go in with the version that ships alongside the public repository.
-#
 # crates.io allows five keywords, so each has to earn its slot. `parser` and
 # `parsing` are both here because the category is searched under both spellings;
 # `incremental` and `tree-sitter` are what somebody types when they have the

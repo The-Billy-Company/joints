@@ -13,9 +13,11 @@ established for each consumer's inputs.
 
 ## Current status
 
-As of **3 October 2026**, the native bindings work, while package metadata
-remains at `0.0.0`. They require a separately built `libjnt` with **ABI 2**.
-No native binding release has been published.
+Version **0.1.0** is experimental. The Python and Rust packages require a
+separately supplied, target-matching `libjnt` with **ABI 2**. The release
+provides native archives for Linux x86_64 and macOS arm64. They are built and
+tested on Ubuntu 24.04 (glibc 2.39) and macOS 14 respectively; other targets
+currently require a source build.
 
 | Interface | Implemented today |
 |---|---|
@@ -199,12 +201,19 @@ an immutable binary instead of a shared build directory.
 
 ## Releases and support
 
-The [release workflow](.github/workflows/release.yml) currently builds an
-unbundled Python package and checks that it imports. The first native binding
-release still needs version parity, native artifact and clean-install
-verification, and the shared release gates. Rust publication is not wired into
-that workflow. Use source checkouts and explicitly selected native artifacts
-for now.
+[Release assets](https://github.com/The-Billy-Company/joints/releases) include
+`joints-0.1.0-linux-x86_64.tar.gz` and `joints-0.1.0-macos-arm64.tar.gz`.
+Each extracts into its own versioned directory with `bin/`, `lib/`, `include/`,
+`grammar/`, and an integrity manifest. Install the Python package or Rust crate
+separately, then select that archive's native library using `JOINTS_LIB` or
+`JOINTS_LIB_DIR`. The bindings do not download a native library for you.
+
+The [release workflow](.github/workflows/release.yml) builds all channels,
+tests actual installed packages with the matching native library, and checks
+versions, notes, main ancestry, and CI before publication. Published registry
+artifacts are checked again before the GitHub release is finalized. A manual
+workflow run builds and verifies without publishing. See the
+[release notes](CHANGELOG.md) for the scope of 0.1.0.
 
 Report bugs through this repository's issues, including the grammar pin,
 source bytes, command or API call, and confidence or error evidence. Report

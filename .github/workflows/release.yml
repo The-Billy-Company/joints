@@ -1,34 +1,11 @@
-# Publish the Python package to PyPI when a version tag is pushed.
-#
-# ONE-TIME SETUP: this uses PyPI Trusted Publishing, so there is no API token to
-# rotate or leak. On PyPI, add a trusted publisher for the `joints` project
-# pointing at this repository, workflow `release.yml`, environment `pypi`. Until
-# the project exists it is a "pending" publisher, which - PyPI is explicit about
-# this - does NOT reserve the name and is invalidated if somebody else registers
-# `joints` first. The name is only held once this workflow has actually run.
-#
-# DELIBERATELY SMALLER THAN THE SIBLINGS. `irregex` runs the full house release
-# contract: a `release.toml`, the shared `package-release` action gating version
-# parity across every mirror, changelog fragment quality, CI-green and
-# tag-ancestor checks, a wheel matrix, a cross-ABI smoke, and a parallel
-# crates.io leg. None of that is load-bearing yet, because the wheel here is pure
-# metadata: `0.0.0` exports nothing, bundles no native library, and is
-# `py3-none-any`. Porting gates that guard a native artifact before the artifact
-# exists would be ceremony that has never been exercised on a real release, which
-# is the kind of thing that fails the first time it matters. It arrives with the
-# first version that ships a binding.
-#
-# crates.io is absent for the same reason and one more: `joints 0.0.0` was
-# published there by hand, because crates.io will not accept a trusted-publisher
-# configuration for a crate that does not exist yet.
-
+# Portable bindings use a separate, matching libjnt. Every native target and
+# installed package passes before either registry receives a version upload.
 name: release
 
 on:
   push:
-    tags: [ "v*" ]
-  # A manual run builds and verifies and stops short of publishing, so the
-  # pipeline can be exercised without spending a version number.
+    tags: ["v*"]
+  # Dispatch builds and verifies without credentials or registry writes.
   workflow_dispatch:
 
 permissions:
@@ -36,118 +13,463 @@ permissions:
 
 concurrency:
   group: release-${{ github.ref }}
-  # Never cancel a release mid-flight: a cancelled upload is the one state that
-  # is neither published nor safe to retry blindly.
   cancel-in-progress: false
 
+defaults:
+  run:
+    shell: bash
+
+env:
+  ZIG_VERSION: 0.16.0
+  IRREGEX_SHA: 508ad3158efc8346469427e18276f01790c17229
+  RUST_VERSION: 1.85.0
+
 jobs:
-  build:
-    name: build
-    runs-on: ubuntu-latest
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    outputs:
+      version: ${{ fromJSON(steps.version.outputs.result).version }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - id: version
+        uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        with:
+          command: version
+          args: --root .
+      - if: startsWith(github.ref, 'refs/tags/v')
+        uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        with:
+          command: version
+          args: --root . --tag ${{ github.ref_name }}
+      - uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        with:
+          command: changelog
+          args: >-
+            --root . --require-fragments-empty
+            --version ${{ fromJSON(steps.version.outputs.result).version }}
+      - name: The publisher readiness helper still refuses invalid claims
+        run: python3 tool/publisher.py --selftest
+      - if: startsWith(github.ref, 'refs/tags/v')
+        uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        with:
+          command: tag-ancestor
+          args: ${{ github.repository }} ${{ github.sha }} --branch main
+      - if: startsWith(github.ref, 'refs/tags/v')
+        uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        with:
+          command: ci-status
+          args: >-
+            ${{ github.repository }} ${{ github.sha }}
+            --check-name release-ready --timeout-seconds 3600 --interval-seconds 30
 
+  native:
+    name: native (${{ matrix.target }})
+    needs: preflight
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x86_64, runner: ubuntu-24.04 }
+          - { target: macos-arm64, runner: macos-14 }
+    defaults:
+      run:
+        working-directory: joints
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: joints
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: The-Billy-Company/irregex
+          ref: ${{ env.IRREGEX_SHA }}
+          path: irregex
+          persist-credentials: false
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+          use-cache: false
+      - name: Build and record native artifacts on their actual host
+        env:
+          TARGET: ${{ matrix.target }}
+        run: >-
+          python3 tool/release/artifacts.py native --version "$VERSION"
+          --target "$TARGET" --irregex-sha "$IRREGEX_SHA" --output dist/native
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-${{ matrix.target }}
+          path: joints/dist/native/
+          if-no-files-found: error
+
+  packages:
+    needs: [preflight, native]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: joints
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: joints
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: native-linux-x86_64
+          path: joints/dist/native
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: false
-
-      # On a tag, the tag IS the claim about what is being published, so it has
-      # to agree with the metadata before anything is built. Read out of
-      # `pyproject.toml` with tomllib rather than a grep, so a version that moved
-      # into a different table cannot read as a match.
-      - name: The tag must name the version being published
-        if: startsWith(github.ref, 'refs/tags/v')
-        env:
-          TAG: ${{ github.ref_name }}
+      - name: Install the declared Python and Rust floors
         run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import os, sys, tomllib, pathlib
-          declared = tomllib.loads(
-              pathlib.Path("bindings/python/pyproject.toml").read_text()
-          )["project"]["version"]
-          tagged = os.environ["TAG"].removeprefix("v")
-          if declared != tagged:
-              print(f"::error::tag {os.environ['TAG']} names {tagged!r} but "
-                    f"bindings/python/pyproject.toml declares {declared!r}")
-              sys.exit(1)
-          print(f"tag and metadata agree on {declared}")
-          PY
-
-      - name: Build the sdist and the wheel
-        working-directory: bindings/python
-        run: uv build
-
-      # What the index will read, checked before the index is asked to read it.
-      - name: Check the metadata the index will read
-        working-directory: bindings/python
-        run: uvx twine check dist/*
-
-      # The wheel has to install and import on a clean interpreter. Trivial while
-      # the package is metadata only, and exactly the step that stops being
-      # trivial the moment it carries a native library - so it is here from the
-      # start rather than added after the first broken wheel.
-      - name: Install the built wheel and import it
-        working-directory: bindings/python
-        run: |
-          set -euo pipefail
-          uv venv /tmp/verify
-          uv pip install --python /tmp/verify/bin/python dist/*.whl
-          /tmp/verify/bin/python -c \
-            "import joints; print('import OK, __version__ =', joints.__version__)"
-
+          uv python install 3.12
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+      - name: Build packages and verify the packaged Rust crate
+        run: >-
+          python3 tool/release/artifacts.py packages --version "$VERSION"
+          --native "dist/native/joints-$VERSION-linux-x86_64.tar.gz"
+          --python "$(uv python find 3.12)" --rust-toolchain "$RUST_VERSION" --output dist
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: dist
-          path: bindings/python/dist/*
+          name: packages
+          path: |
+            joints/dist/python/
+            joints/dist/rust/
+            joints/dist/packages.json
           if-no-files-found: error
 
-  publish:
-    name: publish
-    # Only a tag publishes. A manual run stops after `build`.
+  smoke:
+    name: installed packages (${{ matrix.target }})
+    needs: [preflight, native, packages]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x86_64, runner: ubuntu-24.04 }
+          - { target: macos-arm64, runner: macos-14 }
+    defaults:
+      run:
+        working-directory: joints
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: joints
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: packages
+          path: joints/dist
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: native-${{ matrix.target }}
+          path: joints/dist/native
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          enable-cache: false
+      - name: Install the declared Python and Rust floors
+        run: |
+          uv python install 3.12
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+      - name: Parse, query, refuse malformed input, and prove ownership on installed packages
+        env:
+          TARGET: ${{ matrix.target }}
+        run: >-
+          python3 tool/release/artifacts.py verify --version "$VERSION"
+          --native "dist/native/joints-$VERSION-$TARGET.tar.gz" --packages dist
+          --python "$(uv python find 3.12)" --rust-toolchain "$RUST_VERSION"
+
+  registry-probes:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
+    needs: [preflight, smoke]
+    runs-on: ubuntu-24.04
+    outputs:
+      pypi: ${{ steps.pypi.outputs.result }}
+      crates: ${{ steps.crates.outputs.result }}
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: packages
+          path: dist
+      - id: pypi
+        uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        with:
+          command: registry-probe
+          args: pypi joints ${{ env.VERSION }}
+      - id: crates
+        uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        with:
+          command: registry-probe
+          args: crates joints ${{ env.VERSION }}
+      # A present version is only a successful retry when the public index and
+      # downloaded bytes agree with every artifact this build tested.
+      - name: Refuse versions that already publish different bytes
+        run: python3 tool/release/artifacts.py probe --version "$VERSION" --packages dist
+
+  auth-crates:
+    if: startsWith(github.ref, 'refs/tags/v') && needs.registry-probes.outputs.crates == 'absent'
+    needs: registry-probes
+    runs-on: ubuntu-24.04
+    environment: crates-io
+    permissions:
+      id-token: write
+    steps:
+      # The action's post step revokes this readiness token. Publishers obtain
+      # fresh tokens only after both registries have accepted the identity.
+      - uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+
+  auth-pypi:
+    # The crates identity is checked first: PyPI may create a pending project
+    # during minting. Readiness never uploads a version and burns its token.
+    if: >-
+      !cancelled() && startsWith(github.ref, 'refs/tags/v') &&
+      needs.registry-probes.result == 'success' &&
+      (needs.auth-crates.result == 'success' || needs.auth-crates.result == 'skipped') &&
+      needs.registry-probes.outputs.pypi == 'absent'
+    needs: [registry-probes, auth-crates]
+    runs-on: ubuntu-24.04
     environment: pypi
     permissions:
-      # The OIDC token Trusted Publishing exchanges for an upload credential.
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Mint and burn a PyPI credential without uploading
+        run: python3 tool/publisher.py pypi-readiness
+
+  publish-python:
+    if: >-
+      !cancelled() && startsWith(github.ref, 'refs/tags/v') &&
+      needs.registry-probes.result == 'success' &&
+      (needs.auth-crates.result == 'success' || needs.auth-crates.result == 'skipped') &&
+      (needs.auth-pypi.result == 'success' || needs.auth-pypi.result == 'skipped')
+    needs: [registry-probes, auth-crates, auth-pypi]
+    runs-on: ubuntu-24.04
+    environment: pypi
+    permissions:
+      contents: read
       id-token: write
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: dist
+          name: packages
           path: dist
+      - if: needs.registry-probes.outputs.pypi == 'absent'
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          packages-dir: dist/python/
 
-      - id: tag
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
-      # Probed before the OIDC token is minted: a retry after a flake, or a
-      # dispatch on a tag that already shipped, must land on "already there"
-      # rather than spend a credential on an upload PyPI will reject anyway. A
-      # published version is immutable on PyPI, so "already present" is success
-      # and not a collision - and a registry that does not answer is never
-      # treated as absent, because that is the reading that double-publishes.
-      - id: probe
+  publish-rust:
+    if: >-
+      !cancelled() && startsWith(github.ref, 'refs/tags/v') &&
+      needs.registry-probes.result == 'success' &&
+      (needs.auth-crates.result == 'success' || needs.auth-crates.result == 'skipped') &&
+      (needs.auth-pypi.result == 'success' || needs.auth-pypi.result == 'skipped')
+    needs: [preflight, registry-probes, auth-crates, auth-pypi]
+    runs-on: ubuntu-24.04
+    environment: crates-io
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: joints
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: packages
+          path: joints/dist
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: native-linux-x86_64
+          path: joints/dist/native
+      - if: needs.registry-probes.outputs.crates == 'absent'
+        name: Install the declared Rust floor
+        run: rustup toolchain install "$RUST_VERSION" --profile minimal
+      - if: needs.registry-probes.outputs.crates == 'absent'
+        id: auth
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+      - if: needs.registry-probes.outputs.crates == 'absent'
+        name: Publish only the crate bytes the build verified
+        working-directory: joints
         env:
-          VERSION: ${{ steps.tag.outputs.version }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: >-
+          python3 tool/release/artifacts.py publish-crate --version "$VERSION"
+          --native "dist/native/joints-$VERSION-linux-x86_64.tar.gz" --packages dist
+          --rust-toolchain "$RUST_VERSION"
+
+  public-index:
+    name: public index (${{ matrix.target }})
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [preflight, publish-python, publish-rust]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x86_64, runner: ubuntu-24.04 }
+          - { target: macos-arm64, runner: macos-14 }
+    defaults:
+      run:
+        working-directory: joints
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: joints
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: packages
+          path: joints/dist
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: native-${{ matrix.target }}
+          path: joints/dist/native
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          enable-cache: false
+      - name: Install the declared Python and Rust floors
+        run: |
+          uv python install 3.12
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+      - name: Download indexed artifacts, compare hashes, and repeat the installed proof
+        env:
+          TARGET: ${{ matrix.target }}
+        run: >-
+          python3 tool/release/artifacts.py registry --version "$VERSION"
+          --native "dist/native/joints-$VERSION-$TARGET.tar.gz" --packages dist
+          --python "$(uv python find 3.12)" --rust-toolchain "$RUST_VERSION"
+
+  github-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [preflight, public-index]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: packages
+          path: dist
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: native-*
+          path: dist/native
+          merge-multiple: true
+      - uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        with:
+          command: notes
+          args: >-
+            --root . --version ${{ env.VERSION }} --out ${{ runner.temp }}/release-notes.md
+            --repo ${{ github.repository }}
+      - name: Finalize the experimental release after both public channels pass
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          NOTES: ${{ runner.temp }}/release-notes.md
         run: |
           set -euo pipefail
-          code=$(curl -sS -o /tmp/probe.json -w '%{http_code}' \
-            "https://pypi.org/pypi/joints/${VERSION}/json" || echo 000)
-          case "$code" in
-            200) state=present ;;
-            404) state=absent ;;
-            *)   state=error ;;
-          esac
-          echo "state=$state" >> "$GITHUB_OUTPUT"
-          echo "joints ${VERSION} on PyPI: $state (HTTP $code)"
-          [ "$state" != error ] || {
-            echo "::error::PyPI did not answer for joints ${VERSION} —" \
-                 "a network failure is never treated as \"absent\"." >&2
-            exit 1
-          }
+          python3 tool/release/artifacts.py checksums --packages dist --native-directory dist/native
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, subprocess, urllib.error, urllib.parse, urllib.request
 
-      - if: steps.probe.outputs.state == 'absent'
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+          repo, tag = os.environ["GITHUB_REPOSITORY"], os.environ["TAG"]
+          endpoint = f"https://api.github.com/repos/{repo}/releases/tags/{urllib.parse.quote(tag, safe='')}"
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, request, response, code, message, headers, url):
+                  raise RuntimeError("unexpected release API redirect")
+
+          def release():
+              request = urllib.request.Request(endpoint, headers={
+                  "Accept": "application/vnd.github+json",
+                  "Authorization": "Bearer " + os.environ["GH_TOKEN"],
+              })
+              try:
+                  with urllib.request.build_opener(NoRedirect).open(request, timeout=30) as response:
+                      return json.load(response)
+              except urllib.error.HTTPError as error:
+                  if error.code == 404:
+                      return None
+                  raise RuntimeError(f"release API refused lookup: HTTP {error.code}") from error
+
+          def gh(*args):
+              subprocess.run(["gh", *args], check=True)
+
+          existing = release()
+          if existing is None:
+              gh("release", "create", tag, "--verify-tag", "--draft", "--prerelease",
+                 "--title", f"Joints {os.environ['VERSION']} (experimental)",
+                 "--notes-file", os.environ["NOTES"])
+              existing = release()
+          if existing is None or existing["tag_name"] != tag:
+              raise RuntimeError("release did not resolve to the requested tag")
+          files = sorted(pathlib.Path("dist/native").glob("*.tar.gz"))
+          files += sorted(pathlib.Path("dist/python").iterdir())
+          files += sorted(pathlib.Path("dist/rust").iterdir())
+          files += [pathlib.Path("dist/packages.json"), pathlib.Path("dist/SHA256SUMS")]
+          expected = {path.name: path for path in files}
+          if len(expected) != len(files):
+              raise RuntimeError("release asset filenames collide")
+          assets = {asset["name"]: asset for asset in existing["assets"]}
+          if set(assets) - set(expected):
+              raise RuntimeError("release already has unexpected assets")
+          # gh handles redirects when downloading from the asset API. Never
+          # replace an existing asset: a retry must prove its actual bytes.
+          for name, asset in assets.items():
+              data = subprocess.check_output([
+                  "gh", "api", "-H", "Accept: application/octet-stream",
+                  f"repos/{repo}/releases/assets/{asset['id']}",
+              ])
+              if hashlib.sha256(data).digest() != hashlib.sha256(expected[name].read_bytes()).digest():
+                  raise RuntimeError(f"published release asset differs: {name}")
+          missing = [str(path) for name, path in expected.items() if name not in assets]
+          if missing:
+              gh("release", "upload", tag, *missing)
+          attached = release()
+          if attached is None or {asset["name"] for asset in attached["assets"]} != set(expected):
+              raise RuntimeError("uploaded release asset inventory differs")
+          for asset in attached["assets"]:
+              path = expected[asset["name"]]
+              if asset["state"] != "uploaded" or asset["size"] != path.stat().st_size:
+                  raise RuntimeError(f"release asset upload is incomplete: {path.name}")
+              data = subprocess.check_output([
+                  "gh", "api", "-H", "Accept: application/octet-stream",
+                  f"repos/{repo}/releases/assets/{asset['id']}",
+              ])
+              if hashlib.sha256(data).digest() != hashlib.sha256(path.read_bytes()).digest():
+                  raise RuntimeError(f"uploaded release asset differs: {path.name}")
+          gh("release", "edit", tag, "--notes-file", os.environ["NOTES"],
+             "--prerelease", "--draft=false")
+          PY

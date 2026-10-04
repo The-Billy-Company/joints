@@ -1,13 +1,15 @@
 # What has to be true before a change lands.
 #
-# Four jobs, because they are four different pieces of news. `grammars` asks
+# The original four gates cover different pieces of news. `grammars` asks
 # whether the pins in `grammars.toml` still resolve to the bytes they claim -
 # that is a fact about upstream repositories, it needs no compiler, and it can
 # go red on a day nobody touched this repo. `press` asks whether the code still
 # builds and still holds rung 1's claims. `topology` asks whether the import
 # graph still matches `charter.zone`, which needs neither the network
 # nor a compiler and so lands its answer first. `record` asks whether the pages
-# that report numbers still say which tree those numbers are true of.
+# that report numbers still say which tree those numbers are true of. The
+# release contract and installed package checks also feed `release-ready`,
+# the stable verdict the tag workflow requires on this exact commit.
 #
 # The order inside `press` is load-bearing rather than tidy, and it is: build,
 # test, then fetch, then sweep. `zig build test` needs no network and no
@@ -29,8 +31,9 @@
 # `path:` outside the workspace, so both repositories are checked out into
 # subdirectories of the workspace, which makes them siblings of each other and
 # makes that relative path resolve as written. Nothing is patched for CI: what
-# builds here is the layout a contributor actually clones. The sibling is taken
-# at its default branch, because a path dependency has no pin to honor.
+# builds here is the layout a contributor actually clones. The sibling is pinned
+# to the same commit the release proves, so a moving dependency cannot change
+# the meaning of `release-ready` after it passes.
 #
 # No credentials, no GPU, no tree-sitter. joints never links tree-sitter and
 # never shells its runtime, so nothing here installs it.
@@ -55,6 +58,8 @@ env:
   # the two packages compile into one artifact, so they cannot disagree about
   # the compiler.
   ZIG_VERSION: 0.16.0
+  IRREGEX_SHA: 508ad3158efc8346469427e18276f01790c17229
+  RUST_VERSION: 1.85.0
 
 jobs:
   grammars:
@@ -174,6 +179,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: The-Billy-Company/irregex
+          ref: ${{ env.IRREGEX_SHA }}
           path: irregex
           token: ${{ secrets.ECOSYSTEM_TOKEN || github.token }}
           persist-credentials: false
@@ -320,3 +326,115 @@ jobs:
       # naming a test again.
       - name: every test file runs, and no production file names one
         run: python3 tool/roll.py
+
+  release-contract:
+    name: release contract
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        with:
+          command: version
+          args: --root .
+      - uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        with:
+          command: changelog
+          args: --root .
+      - name: The release tools refuse invalid artifact and publisher claims
+        run: |
+          python3 tool/publisher.py --selftest
+          python3 -m unittest discover -s tool/release -p 'test_*.py'
+
+  package-checks:
+    name: packaged bindings (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x86_64, runner: ubuntu-24.04 }
+          - { target: macos-arm64, runner: macos-14 }
+    defaults:
+      run:
+        working-directory: joints
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: joints
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: The-Billy-Company/irregex
+          ref: ${{ env.IRREGEX_SHA }}
+          path: irregex
+          persist-credentials: false
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+          use-cache: false
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          enable-cache: false
+      - name: Read the same version authority the release contract checks
+        id: version
+        working-directory: joints
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, re
+          text = pathlib.Path("build.zig.zon").read_text()
+          version = re.search(r'\.version\s*=\s*"([^"]+)"', text).group(1)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              print(f"version={version}", file=output)
+          PY
+      - name: Install the declared Python and Rust floors
+        run: |
+          uv python install 3.12
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+      - name: Build the native release archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TARGET: ${{ matrix.target }}
+        run: >-
+          python3 tool/release/artifacts.py native --version "$VERSION"
+          --target "$TARGET" --irregex-sha "$IRREGEX_SHA" --output dist/native
+      - name: Build portable Python packages and the verified Rust archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TARGET: ${{ matrix.target }}
+        run: >-
+          python3 tool/release/artifacts.py packages --version "$VERSION"
+          --native "dist/native/joints-$VERSION-$TARGET.tar.gz"
+          --python "$(uv python find 3.12)" --rust-toolchain "$RUST_VERSION" --output dist
+      - name: Prove the installed wheel, sdist and Rust archive on their native host
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TARGET: ${{ matrix.target }}
+        run: >-
+          python3 tool/release/artifacts.py verify --version "$VERSION"
+          --native "dist/native/joints-$VERSION-$TARGET.tar.gz" --packages dist
+          --python "$(uv python find 3.12)" --rust-toolchain "$RUST_VERSION"
+
+  # `always()` makes a failed or skipped prerequisite produce a failed verdict,
+  # rather than a missing check that a release poll could mistake for a queue.
+  release-ready:
+    name: release-ready
+    if: always()
+    needs: [grammars, record, press, topology, release-contract, package-checks]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Every required job succeeded on this commit
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          results = json.loads(os.environ["RESULTS"])
+          failed = {name: job["result"] for name, job in results.items()
+                    if job["result"] != "success"}
+          if failed:
+              raise SystemExit(f"release prerequisites did not pass: {failed}")
+          print("all release prerequisites passed on this commit")
+          PY

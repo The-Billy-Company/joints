@@ -1,6 +1,6 @@
 .{
     .name = .joints,
-    .version = "0.0.0", // x-release-please-version
+    .version = "0.1.0", // x-release-please-version
     .fingerprint = 0x85f7afd4d1dc33e6,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{

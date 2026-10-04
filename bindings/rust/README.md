@@ -1,15 +1,16 @@
 # joints
 
-Experimental safe Rust access to the separately built `libjnt`. The crate
+Experimental 0.1.0 Rust access to the separately supplied `libjnt`. The crate
 provides grammar banks, parsers, immutable trees, byte positions, repair
 evidence, and in-process tree-sitter notation queries. It has no Rust
 dependencies and does not invoke Zig during a consumer's Cargo build.
 
 ## Build and link
 
-Build the native library from the joints repository first. It currently needs
-Zig 0.16 and the sibling `irregex` checkout described in the repository's
-`CONTRIBUTING.md`:
+Use the matching native archive from
+[Joints releases](https://github.com/The-Billy-Company/joints/releases), or
+build from source with Zig 0.16 and the sibling `irregex` checkout described
+in the repository's `CONTRIBUTING.md`:
 
 ```sh
 zig build
@@ -22,6 +23,12 @@ packaged crate, point at a native build for the same target as Cargo:
 ```sh
 JOINTS_LIB_DIR=/absolute/path/to/joints/zig-out/lib cargo build
 ```
+
+Release archives are `joints-0.1.0-linux-x86_64.tar.gz` and
+`joints-0.1.0-macos-arm64.tar.gz`. Set `JOINTS_LIB_DIR` to the extracted
+archive's `lib/` directory. The included `grammar/json.json` is a reproducible
+starting bank. Native archives are tested on Ubuntu 24.04 (glibc 2.39) and
+macOS 14; other targets require a source build.
 
 The default links the standalone `libjnt.a`. The build script copies that
 archive into Cargo's output directory, so a sibling shared library cannot
@@ -107,7 +114,7 @@ currently exposes immutable parses, so there is no
 edit operation that could invalidate a borrowed node. The native incremental
 weave API has not been wrapped here yet.
 
-This is an experimental `0.0.0` API. Parse correctness must be demonstrated on
+This is an experimental `0.1.0` API. Parse correctness must be demonstrated on
 the consumer's corpus before replacing an existing CI parser; structural
 soundness alone does not prove language coverage or finding parity.
 

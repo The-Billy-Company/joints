@@ -1,5 +1,5 @@
-# The Python interface uses ctypes over a separately built libjnt. Bundling
-# native libraries into platform wheels belongs to the first native release.
+# The Python interface uses ctypes over a separately supplied libjnt.
+# Native archives are distributed separately from the portable Python package.
 
 [build-system]
 requires = [ "hatchling>=1.27" ]
@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "joints"
-version = "0.0.0" # x-release-please-version
+version = "0.1.0" # x-release-please-version
 # Says what the project is, then what this version is not, in that order. PyPI
 # renders this line in search results where a caveat further down never reaches
 # the reader deciding whether to install.
@@ -39,13 +39,11 @@ classifiers = [
 # rather than a belt and braces.
 
 [project.urls]
-# No source or documentation URL. `CONTRIBUTING.md` already tells people to
-# clone `The-Billy-Company/joints`, and the temptation was to put that here -
-# but the repository is not public yet, and a URL in project metadata is a
-# promise PyPI renders as a link. An absent row beats a 404 on the one page a
-# stranger lands on. Both go in with the release that ships beside the public
-# repository.
-Homepage = "https://github.com/The-Billy-Company"
+Homepage = "https://github.com/The-Billy-Company/joints"
+Source = "https://github.com/The-Billy-Company/joints"
+Documentation = "https://github.com/The-Billy-Company/joints/blob/main/bindings/python/README.md"
+Changelog = "https://github.com/The-Billy-Company/joints/blob/main/CHANGELOG.md"
+Issues = "https://github.com/The-Billy-Company/joints/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = [ "joints" ]
