@@ -45,6 +45,9 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import NamedTuple
 
+from breadth import SOURCES as PINNED_SOURCES, source_of
+from rung1 import pairs
+
 ROOT = Path(__file__).resolve().parent.parent
 BOOK = ROOT / "customary"
 CORPUS = ROOT / "research" / "joinery" / "corpus"
@@ -1525,37 +1528,29 @@ def corpus_for(grammar: str) -> list:
 
 
 #: Where else to look for a grammar's own language in this tree.
-FALLBACK = {
+# The specimens under `research/joinery/specimen/<lang>/` are the adversarial
+# half of these corpora - escaped quotes at a close, greedy `"""`, nested
+# interpolation, an unterminated string - and they were written against these
+# exact scanners. A transcription that agrees on a real file and not on those
+# has not been tested, so every committed book looks under research too.
+FALLBACK = {book.stem: (ROOT / "research",) for book in BOOK.glob("*.json")}
+FALLBACK.update({
     "markdown": (ROOT / "research", ROOT / "src", ROOT / "changelog.d"),
     "python": (ROOT / "tool",),
     "zig": (ROOT / "src",),
-    # The specimens under `research/joinery/specimen/<lang>/` are the adversarial
-    # half of these corpora - escaped quotes at a close, greedy `"""`, nested
-    # interpolation, an unterminated string - and they were written against these
-    # exact scanners. A transcription that agrees on one 966-line real file and
-    # not on those has not been tested.
-    "kotlin": (ROOT / "research",),
-    "scala": (ROOT / "research",),
-    "swift": (ROOT / "research",),
-    "haskell": (ROOT / "research",),
-    "html": (ROOT / "research",),
-    "yaml": (ROOT / "research",),
-    "elixir": (ROOT / "research",),
-}
+})
 
 
 def suffixes(grammar: str) -> tuple:
-    return {
-        "markdown": (".md",),
-        "kotlin": (".kt",),
-        "yaml": (".yml", ".yaml"),
-        "scala": (".scala",),
-        "swift": (".swift",),
-        "haskell": (".hs",),
-        "html": (".html",),
-        "elixir": (".ex", ".exs"),
-        "python": (".py",),
-    }.get(grammar, ())
+    if grammar != "python" and not (BOOK / f"{grammar}.json").is_file():
+        return ()
+    if grammar in PINNED_SOURCES:
+        leaf = source_of(grammar)
+    else:
+        leaf = next((Path(file) for name, file in pairs() if name == grammar), None)
+    primary = (leaf.suffix,) if leaf is not None else ()
+    # A source pin gives the primary suffix; scripts and YAML accept these too.
+    return primary + {"yaml": (".yaml",), "elixir": (".exs",)}.get(grammar, ())
 
 
 def main(argv: list) -> int:

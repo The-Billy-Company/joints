@@ -15,6 +15,8 @@ const std = @import("std");
 const builtin = @import("builtin");
 const bank = @import("bank.zig");
 const loom = @import("loom.zig");
+const query = @import("query.zig");
+const scars = @import("scars.zig");
 
 /// Same upstream MSVC workaround the siblings carry: a static or object
 /// artifact for any `-msvc` target cannot compile the default panic's stack
@@ -175,6 +177,21 @@ export fn jnt_tree_sexp(t: *bank.Tree, all: c_int, len: ?*usize) ?[*:0]const u8 
     return bank.sexp(t, all != 0, len);
 }
 
+/// The authoritative list of deletions and supplied terminals.
+export fn jnt_tree_scars(t: *const bank.Tree) u32 {
+    return scars.count(t);
+}
+
+export fn jnt_tree_scar(t: ?*const bank.Tree, i: u32, out: ?*scars.Scar) c_int {
+    return @intFromEnum(scars.get(t, i, out));
+}
+
+export fn jnt_tree_scar_word(t: *const bank.Tree, i: u32, len: ?*usize) ?[*]const u8 {
+    const word = scars.word(t, i) orelse return null;
+    if (len) |n| n.* = word.len;
+    return word.ptr;
+}
+
 // ── the nodes ────────────────────────────────────────────────────────────────
 // A node is a u32 ref into the tree it came from; JNT_NONE is the answer
 // that is not a node. Every accessor bounds-checks, so a stale or invented
@@ -231,6 +248,58 @@ export fn jnt_node_field(t: *const bank.Tree, ref: u32, len: ?*usize) ?[*]const 
     const f = bank.nodeField(t, ref) orelse return null;
     if (len) |l| l.* = f.len;
     return f.ptr;
+}
+
+// ── queries ──────────────────────────────────────────────────────────────────
+
+export fn jnt_query_compile(p: ?*const bank.Parser, scm: ?[*]const u8, len: usize, out: ?**query.Query) c_int {
+    return @intFromEnum(query.compile(p, scm, len, out));
+}
+
+export fn jnt_query_free(q: *query.Query) void {
+    query.free(q);
+}
+
+export fn jnt_query_pattern_count(q: *const query.Query) u32 {
+    return query.patternCount(q);
+}
+
+export fn jnt_query_capture_count(q: *const query.Query) u32 {
+    return query.captureCount(q);
+}
+
+export fn jnt_query_capture_name(q: *const query.Query, id: u32, len: ?*usize) ?[*]const u8 {
+    const name = query.captureName(q, id) orelse return null;
+    if (len) |n| n.* = name.len;
+    return name.ptr;
+}
+
+export fn jnt_query_exec(q: ?*const query.Query, t: ?*const bank.Tree, text: ?[*]const u8, len: usize, foreign: c_int, out: ?**query.Result) c_int {
+    return @intFromEnum(query.exec(q, t, text, len, foreign, out));
+}
+
+export fn jnt_query_result_free(r: *query.Result) void {
+    query.resultFree(r);
+}
+
+export fn jnt_query_result_count(r: *const query.Result) u32 {
+    return query.resultCount(r);
+}
+
+export fn jnt_query_result_pattern(r: *const query.Result, match: u32) u32 {
+    return query.resultPattern(r, match);
+}
+
+export fn jnt_query_result_capture_count(r: *const query.Result, match: u32) u32 {
+    return query.resultCaptureCount(r, match);
+}
+
+export fn jnt_query_result_capture_id(r: *const query.Result, match: u32, capture: u32) u32 {
+    return query.resultCaptureId(r, match, capture);
+}
+
+export fn jnt_query_result_capture_node(r: *const query.Result, match: u32, capture: u32) u32 {
+    return query.resultCaptureNode(r, match, capture);
 }
 
 // ── the neighbourhood ────────────────────────────────────────────────────────
@@ -343,4 +412,6 @@ test {
     std.testing.refAllDecls(@This());
     _ = bank;
     _ = loom;
+    _ = query;
+    _ = scars;
 }

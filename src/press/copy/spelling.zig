@@ -189,7 +189,17 @@ pub fn renderPattern(self: *Import, node: json.Value) Error!?[]const u8 {
 /// whole of what this moves - it and eight other extras are the corpus's
 /// structural extras, and it is the only one of the nine reaching nothing.
 pub fn bodyPattern(self: *Import, name: []const u8, node: json.Value) Error!?g.Pattern {
-    if (try atomPattern(self, node)) |atom| return atom;
+    const o = obj(node) orelse return null;
+    const kind = str(o.get("type")) orelse return null;
+    // A rule-level rank, field or alias wraps structure. Unwrapping it here
+    // would name the token after the rule and discard its child recipe. Only
+    // token wrappers fuse that recipe into one lexical atom; extras retain
+    // their explicitly steppable reading below.
+    const structure = lexeme.isWrapper(kind) and
+        !std.mem.eql(u8, kind, "TOKEN") and !std.mem.eql(u8, kind, "IMMEDIATE_TOKEN");
+    if (!structure or self.lexical.contains(name)) {
+        if (try atomPattern(self, node)) |atom| return atom;
+    }
     if (!self.lexical.contains(name)) return null;
     return if (try renderPattern(self, node)) |rx| .{ .regex = rx } else null;
 }

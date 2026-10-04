@@ -354,3 +354,112 @@ test "scribe: a group inside a choice is declined rather than guessed at" {
     try t.expectEqual(1, hits);
     try t.expect(cur.declined > 0);
 }
+
+test "scribe: nested descendants enumerate assignments and retain outer captures" {
+    const b = try Bench.of();
+    defer b.deinit();
+    // The document and field each have one child; only the grandchild varies.
+    // Advancing the root's sibling position after the first answer loses both
+    // remaining numbers, just as an impl loses every method after its first.
+    const got = try glean(
+        b,
+        "(document (object (pair key: (string (string_content) @key) value: (array (number) @n))))",
+        .{ .on = "{\"a\":[1,2,3]}" },
+    );
+    defer gpa.free(got);
+    try t.expectEqualStrings("0 key=a n=1\n0 key=a n=2\n0 key=a n=3", got);
+}
+
+test "scribe: nested fields and anchors keep unmatched siblings out" {
+    const b = try Bench.of();
+    defer b.deinit();
+    const got = try glean(b, "(document (array (object (pair value: (number) @n))))", .{
+        .on = "[{\"a\":1},{\"b\":true},{\"c\":3}]",
+    });
+    defer gpa.free(got);
+    try t.expectEqualStrings("0 n=1\n0 n=3", got);
+    const pinned = try glean(b, "(document (array (array . (number) @n)))", .{
+        .on = "[[true,1,2],[3]]",
+    });
+    defer gpa.free(pinned);
+    try t.expectEqualStrings("0 n=3", pinned);
+}
+
+test "scribe: nested sibling combinations settle in capture order" {
+    const b = try Bench.of();
+    defer b.deinit();
+    const got = try glean(b, "(document (array (array (number) @a) (array (number) @b)))", .{
+        .on = "[[1,2],[3,4]]",
+    });
+    defer gpa.free(got);
+    // Both matches ending at 3 precede either ending at 4, as independently
+    // checked against tree-sitter; each shared prefix is still captured twice.
+    try t.expectEqualStrings("0 a=1 b=3\n0 a=2 b=3\n0 a=1 b=4\n0 a=2 b=4", got);
+}
+
+test "scribe: nested quantified fields retain their greedy and empty arms" {
+    const b = try Bench.of();
+    defer b.deinit();
+    const got = try glean(
+        b,
+        "(document (object (pair key: (string (string_content) @key) value: (array (number)* @n))))",
+        .{ .on = "{\"a\":[1],\"b\":[]}" },
+    );
+    defer gpa.free(got);
+    try t.expectEqualStrings("0 key=a n=1\n0 key=b", got);
+}
+
+test "scribe: a missing regex allocation refuses the run" {
+    const b = try Bench.of();
+    defer b.deinit();
+    var q = try b.gather.run(doc);
+    defer q.deinit();
+    var compiled = try gloss.compile(gpa, &b.l, "((string_content) @x (#not-match? @x \"^a$\"))", null);
+    defer compiled.deinit();
+    // The predicate-slot array succeeds; compiling its matcher is the next
+    // allocation. Losing it used to leave null and admit every candidate.
+    var fail = t.FailingAllocator.init(gpa, .{ .fail_index = 1 });
+    try t.expectError(error.OutOfMemory, gloss.open(fail.allocator(), compiled.view().?, .{
+        .q = &q,
+        .src = doc,
+        .index = &b.l,
+    }));
+    try t.expect(fail.has_induced_failure);
+}
+
+test "scribe: regex scratch loss does not satisfy a negative predicate" {
+    const b = try Bench.of();
+    defer b.deinit();
+    var q = try b.gather.run(doc);
+    defer q.deinit();
+    var compiled = try gloss.compile(gpa, &b.l, "((string_content) @x (#not-match? @x \"^a$\"))", null);
+    defer compiled.deinit();
+    var fail = t.FailingAllocator.init(gpa, .{});
+    var cur = try gloss.open(fail.allocator(), compiled.view().?, .{ .q = &q, .src = doc, .index = &b.l });
+    defer cur.deinit();
+    // Keep traversal and capture storage available; the cold regex scratch is
+    // the next allocation. A swallowed failure used to invert into a match.
+    try cur.stack.ensureTotalCapacity(fail.allocator(), q.nodes.len);
+    try cur.found.ensureTotalCapacity(fail.allocator(), 1);
+    fail.fail_index = fail.alloc_index;
+    try t.expectError(error.OutOfMemory, cur.next());
+    try t.expect(fail.has_induced_failure);
+}
+
+test "scribe: quantified groups commit through nested nodes while plain groups enumerate" {
+    const b = try Bench.of();
+    defer b.deinit();
+    // These keep the existing greedy run, including its choices inside a node.
+    // The last control removes the quantifier and owes every sibling pairing.
+    const cases = .{
+        .{ "(array ((number) @a (true) @b)+)", "[1,true,2,true]", "0 a=1 b=true a=2 b=true" },
+        .{ "(array ((array (number) @n))+)", "[[1,2],[3,4]]", "0 n=1 n=3" },
+        .{ "(array ((array (number) @a) (array (number) @b))+)", "[[1,2],[3,4]]", "0 a=1 b=3" },
+        .{ "(array ((number) @a (number) @b))", "[1,2,3]", "0 a=1 b=2\n0 a=1 b=3\n0 a=2 b=3" },
+    };
+    inline for (cases) |case| {
+        const got = try glean(b, case[0], .{ .on = case[1] });
+        defer gpa.free(got);
+        try t.expectEqualStrings(case[2], got);
+    }
+}

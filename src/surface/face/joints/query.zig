@@ -390,15 +390,9 @@ fn machine(
     try jstring(w, language);
     try w.writeAll(",\"path\":");
     try jstring(w, path);
-    // `sound` rides the answer because a query over a forest is a real answer
-    // to the wrong tree, and a machine reading this has no other way to tell
-    // that from a disagreement about matching. The human verdict says the same
-    // thing on stderr.
-    try w.print(",\"patterns\":{d},\"roots\":{d},\"sound\":{s},\"matches\":[", .{
-        p.patternCount(),
-        q.roots.len,
-        if (q.stop == .accepted) "true" else "false",
-    });
+    try w.print(",\"patterns\":{d}", .{p.patternCount()});
+    try evidence(w, q);
+    try w.writeAll(",\"matches\":[");
     // Spelled out rather than written as a `while (…catch…) |m|`, because the
     // refusal arm has to leave the loop and close the object: a caller reading
     // NDJSON gets a parseable line either way, and learns the trouble from the
@@ -425,6 +419,14 @@ fn machine(
     try w.writeAll("]}\n");
 }
 
+/// Captures can come from a partial or repaired tree. Expose what was parsed
+/// and surveyed so a CI consumer can decide which spans it can judge.
+fn evidence(w: *std.Io.Writer, q: *const quire.Quire) !void {
+    const found = try q.survey(q.gpa);
+    try w.print(",\"accepted\":{},\"sound\":{}", .{ q.stop == .accepted, found.sound() });
+    try parse.evidence(w, q, found);
+}
+
 fn jstring(w: *std.Io.Writer, s: []const u8) !void {
     try w.writeByte('"');
     for (s) |ch| switch (ch) {
@@ -436,6 +438,103 @@ fn jstring(w: *std.Io.Writer, s: []const u8) !void {
         else => if (ch < 0x20) try w.print("\\u{x:0>4}", .{ch}) else try w.writeByte(ch),
     };
     try w.writeByte('"');
+}
+
+fn reading(q: *const quire.Quire) !std.json.Parsed(std.json.Value) {
+    var out: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer out.deinit();
+    try out.writer.writeAll("{\"query\":true");
+    try evidence(&out.writer, q);
+    try out.writer.writeByte('}');
+    return std.json.parseFromSlice(std.json.Value, std.testing.allocator, out.written(), .{ .allocate = .alloc_always });
+}
+
+test "query json surveys an accepted tree rather than equating acceptance with soundness" {
+    // One child lies outside its parent, the shape the former accepted-only
+    // answer could call sound. No parser can repair this arena for the test.
+    const nodes = [_]quire.Node{
+        .{ .kind = .of(0), .start = 0, .len = 2, .kids_at = 0, .kids_len = 1 },
+        .{ .kind = .of(0), .start = 3, .len = 1, .kids_at = 0, .kids_len = 0 },
+    };
+    const gr: joints.press.Grammar = undefined;
+    const q: quire.Quire = .{
+        .gpa = std.testing.allocator,
+        .gr = &gr,
+        .nodes = &nodes,
+        .kids = &.{1},
+        .roots = &.{0},
+        .stop = .accepted,
+    };
+    var answer = try reading(&q);
+    defer answer.deinit();
+    const obj = answer.value.object;
+    try std.testing.expect(obj.get("accepted").?.bool);
+    try std.testing.expect(!obj.get("sound").?.bool);
+    const survey = obj.get("survey").?.object;
+    try std.testing.expect(!survey.get("sound").?.bool);
+    try std.testing.expectEqual(@as(i64, 2), survey.get("walked").?.integer);
+    try std.testing.expectEqual(@as(i64, 1), survey.get("loose").?.integer);
+}
+
+test "query json keeps a sound partial forest distinct from an accepted parse" {
+    const nodes = [_]quire.Node{
+        .{ .kind = .of(0), .start = 0, .len = 2, .kids_at = 0, .kids_len = 0 },
+    };
+    const gr: joints.press.Grammar = undefined;
+    const q: quire.Quire = .{
+        .gpa = std.testing.allocator,
+        .gr = &gr,
+        .nodes = &nodes,
+        .kids = &.{},
+        .roots = &.{0},
+        .stop = .{ .stray = 3 },
+    };
+    var answer = try reading(&q);
+    defer answer.deinit();
+    const obj = answer.value.object;
+    try std.testing.expect(!obj.get("accepted").?.bool);
+    try std.testing.expect(obj.get("sound").?.bool);
+    const stop = obj.get("stop").?.object;
+    try std.testing.expectEqualStrings("stray", stop.get("kind").?.string);
+    try std.testing.expectEqual(@as(i64, 3), stop.get("at").?.integer);
+}
+
+test "query json exposes deletion and supply spans on an accepted repaired tree" {
+    const nodes = [_]quire.Node{
+        .{ .kind = .of(0), .start = 0, .len = 5, .kids_at = 0, .kids_len = 0 },
+    };
+    var gr: joints.press.Grammar = undefined;
+    gr.names = &.{ "root", "\"" };
+    const scars = [_]quire.Scar{
+        .{ .at = 1, .over = 3, .heads = 1, .shifted = 2, .felled = true, .why = .{ .stray = 1 } },
+        .{ .at = 4, .over = 4, .gave = 1, .heads = 1, .shifted = 3, .felled = false, .why = .{ .stray = 4 } },
+    };
+    const q: quire.Quire = .{
+        .gpa = std.testing.allocator,
+        .gr = &gr,
+        .nodes = &nodes,
+        .kids = &.{},
+        .roots = &.{0},
+        .stop = .accepted,
+        .mends = 1,
+        .skipped = 2,
+        .supplied = 1,
+        .scars = &scars,
+    };
+    var answer = try reading(&q);
+    defer answer.deinit();
+    const obj = answer.value.object;
+    try std.testing.expect(obj.get("accepted").?.bool);
+    try std.testing.expect(obj.get("sound").?.bool);
+    try std.testing.expectEqual(@as(i64, 1), obj.get("mends").?.integer);
+    try std.testing.expectEqual(@as(i64, 2), obj.get("skipped").?.integer);
+    try std.testing.expectEqual(@as(i64, 1), obj.get("supplied").?.integer);
+    const repairs = obj.get("scars").?.array.items;
+    try std.testing.expectEqual(@as(usize, 2), repairs.len);
+    try std.testing.expectEqual(@as(i64, 1), repairs[0].object.get("at").?.integer);
+    try std.testing.expectEqual(@as(i64, 3), repairs[0].object.get("over").?.integer);
+    try std.testing.expectEqualStrings("\"", repairs[1].object.get("gave").?.string);
+    try std.testing.expectEqual(repairs[1].object.get("at").?.integer, repairs[1].object.get("over").?.integer);
 }
 
 /// What the run came to, in the terms of the file it ran over.

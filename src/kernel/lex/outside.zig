@@ -1809,12 +1809,12 @@ pub const Hit = struct { symbol: press.Symbol, len: u32, skip: u32 = 0 };
 /// line's layout, then a new span opening. Python's own scanner is written in
 /// exactly that order, and Ruby, which has no layout, skips the middle.
 ///
-/// `fresh` says no extra has been stepped over since the last token ended, and
-/// two phases read it: the layout one and the caesura. That split is the
-/// specifications': Python's scanner measures the whitespace itself and so must
-/// be asked before anything eats it, and a caesura is a question about the
-/// whitespace between two tokens, so an offset the extras already moved past
-/// has none left to read. Ruby's and Rust's openers instead begin by skipping
+/// `fresh` says no extra has been stepped over since the last token ended. A
+/// caesura asks about that untouched gap. `after_node` says an extra node was
+/// skipped, which gives layout another ask: refusing before a trailing comment
+/// does not spend the newline after it. Anonymous whitespace does not grant
+/// another ask, because an already answered newline must not emit one again
+/// when the skip reaches EOF. Ruby's and Rust's openers begin by skipping
 /// whitespace, so they have to be reachable at an offset the extras moved to; a
 /// hand asked only at fresh offsets would never see `let s = r#"..."#`.
 ///
@@ -1832,6 +1832,7 @@ pub fn step(
     bytes: []const u8,
     at: u32,
     fresh: bool,
+    after_node: bool,
     wanted: *const std.DynamicBitSetUnmanaged,
     named: *const std.DynamicBitSetUnmanaged,
 ) ?Hit {
@@ -1848,7 +1849,7 @@ pub fn step(
     // shape at the ask, so this is the write catching up to the read.
     const asked = carry.shape();
     const hit = written(book, carry, asked, bytes, at, fresh, wanted, named) orelse
-        offer(casts, carry, bytes, at, fresh, wanted, named) orelse return null;
+        offer(casts, carry, bytes, at, fresh, after_node, wanted, named) orelse return null;
     // Skipped bytes count as progress for the same reason consumed ones do:
     // the cursor ends past where it started, so the next ask is a different
     // question and the ledger below is not needed to say so.
@@ -1898,6 +1899,7 @@ fn offer(
     bytes: []const u8,
     at: u32,
     fresh: bool,
+    after_node: bool,
     wanted: *const std.DynamicBitSetUnmanaged,
     named: *const std.DynamicBitSetUnmanaged,
 ) ?Hit {
@@ -1911,7 +1913,7 @@ fn offer(
             if (inside(c, carry, span, bytes, at, wanted)) |h| return h;
         }
     }
-    if (fresh) for (casts) |*c| {
+    if (fresh or after_node) for (casts) |*c| {
         if (c.troupe.kind != .offside) continue;
         if (layout(c, casts, carry, bytes, at, wanted)) |h| return h;
     };

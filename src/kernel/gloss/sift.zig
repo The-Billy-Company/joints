@@ -163,6 +163,7 @@ fn resolve(op: Op, args: []const rubric.Arg) Op {
 /// rather than a failure at load - which is the whole difference between a
 /// program and a hope.
 fn compiles(gpa: std.mem.Allocator, src: []const u8) Error!void {
-    var p = irregex.Pattern.compile(gpa, src) catch return Error.QueryBadRegex;
+    var p = irregex.Pattern.compile(gpa, src) catch |err|
+        return if (err == error.OutOfMemory) error.OutOfMemory else Error.QueryBadRegex;
     p.deinit();
 }

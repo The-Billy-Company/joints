@@ -14,6 +14,8 @@ signature. This directory is its bodies.
 | `exports.zig` | The `export fn` root, and nothing else. Every symbol is a one-liner over a body below. |
 | `bank.zig` | Open a file of languages, lend a parser out of it, hand trees back - and the node vocabulary both doors answer through. |
 | `loom.zig` | The edit door: a file held open across keystrokes, and what one of them cost. |
+| `query.zig` | Compile query notation with gloss and collect its matcher’s captures. |
+| `scars.zig` | The parser’s authoritative repair spans and supplied terminals. |
 
 `exports.zig` is a separate root from `src/root.zig` for a linker reason rather
 than a taste one: a Zig `export fn` is emitted by *every* compilation that
@@ -51,10 +53,46 @@ one document's bytes. Sharing the parser's would leave a `jnt_parse` on that
 parser reading through a ruling that describes some other file. One scanner
 compile per file opened, paid once, against a wrong answer per parse.
 
+## Queries and repair provenance
+
+`jnt_query_compile` compiles tree-sitter query notation against a parser’s
+grammar using `kernel/gloss`. The handle owns its metadata and compiled program,
+so the query source may be released after compilation. `jnt_query_exec` runs the
+existing matcher on a tree from that exact parser and returns an owned array of
+matches. Each match carries its source pattern index and captures identified by
+name and node ref. A successful result may contain no matches.
+
+Text predicates such as `#eq?` and `#match?` read the original source supplied
+to execution; that buffer is borrowed only during the call. The foreign policy
+is explicit: `JNT_FOREIGN_REFUSE` reports an unsupported filter,
+`JNT_FOREIGN_ADMIT` keeps its matches without applying that filter, and
+`JNT_FOREIGN_DENY` removes them. A branch the matcher cannot evaluate is refused
+rather than reported as a successful partial result. Query syntax, unknown
+names, and unsupported execution return `JNT_FORMAT` through the shared error
+channel; allocation failures return `JNT_NOMEM`.
+
+A query borrows its parser identity, and results borrow both query and tree.
+Free a result before freeing either owner or editing a weave’s tree. Captured
+refs address the parse that was queried; a new edit invalidates those refs.
+Compiling and executing do not retain either caller’s source buffer.
+
+`jnt_tree_scars`, `jnt_tree_scar`, and `jnt_tree_scar_word` expose exactly what
+`Quire.scars` records. Deletions name `[at, over)`; supplies have zero width,
+`supplied == 1`, and a terminal spelling. The context records the live heads,
+shift count, whether recovery felled the stack, and the refusal kind. These are
+repair facts, not invented `ERROR` nodes.
+
+A consumer deciding whether it can trust an outline should check accepted,
+sound, exactly one root, and zero scars. A repaired parse can still be accepted
+and sound; `mends` alone counts only deletions and misses supplied terminals.
+The native query door accepts partial trees, leaving confidence policy to its
+caller.
+
 ## Rules a host has to keep, and what happens when it doesn't
 
 **Lifetimes are a chain.** A tree or a weave borrows its parser; a parser
-borrows its bank. Free trees and weaves, then parsers, then the bank. A parser
+borrows its bank. Free query results before their trees and queries, then free
+trees, weaves and queries before parsers, then the bank. A parser
 owns the scratch its parses run in, so use one per thread - two parsers on two
 threads are fine, one parser on two is not.
 
@@ -84,11 +122,6 @@ affordable way down a tree. Here a node is an index and its parent is a field
 read, so a cursor would be a struct holding the two integers the host is already
 holding. `jnt_node_parent` / `_next` / `_prev` / `_next_named` / `_prev_named` /
 `_by_field` / `_depth` / `_covering` are what it would have been made of.
-
-**No query door yet.** `kernel/gloss` compiles a `.scm` against a pressed
-grammar and runs it against a tree, and neither half is reachable from here.
-That is the largest thing still missing from this directory, and the top-level
-README says so in the same words.
 
 **No `jnt_weave` knob for the deliberate breaks.** `weave.Bend` exists so the
 fuzz can prove itself able to fail. A door that let a host ask for a known-wrong

@@ -52,7 +52,7 @@ const char *jnt_version(void);
 #define JNT_OK 0
 #define JNT_INVALID (-1)  /* NULL argument, or a handle misused            */
 #define JNT_IO (-2)       /* the file could not be read at all             */
-#define JNT_FORMAT (-3)   /* read, and not a folio/codex this build loads  */
+#define JNT_FORMAT (-3)   /* artifact or query this build cannot use       */
 #define JNT_LANGUAGE (-4) /* language not in the bank, or several unnamed  */
 #define JNT_GRAMMAR (-5)  /* grammar.json refused by the importer or press */
 #define JNT_NOMEM (-6)
@@ -144,6 +144,28 @@ int32_t jnt_tree_sound(jnt_tree *tree);
  * tree, rendered once and cached, NUL-terminated; NULL only on OOM. */
 const char *jnt_tree_sexp(jnt_tree *tree, int32_t all, size_t *len);
 
+/* The parser's authoritative repair list. A deletion removes [at, over);
+ * a supply has supplied==1 and zero width, with its terminal spelling lent
+ * by jnt_tree_scar_word. heads/shifted/felled describe the refusal's context;
+ * stop is JNT_STRAY or JNT_UNEXPECTED. scar count is mends + supplied.
+ * Strict consumers should require zero scars, since a repaired parse may
+ * finish accepted and sound. These facts are not synthetic ERROR nodes. */
+typedef struct {
+  uint32_t at;
+  uint32_t over;
+  uint32_t supplied;
+  uint32_t heads;
+  uint32_t shifted;
+  uint32_t felled;
+  int32_t stop;
+} jnt_scar;
+uint32_t jnt_tree_scars(const jnt_tree *tree);
+int32_t jnt_tree_scar(const jnt_tree *tree, uint32_t i, jnt_scar *out);
+
+/* Supplied terminal spelling, borrowed pointer + length. NULL for a deletion
+ * or an out-of-range scar; jnt_tree_scar returns JNT_INVALID past the end. */
+const char *jnt_tree_scar_word(const jnt_tree *tree, uint32_t i, size_t *len);
+
 /* ── the nodes ───────────────────────────────────────────────────── */
 
 /* A node is a uint32_t ref into the tree it came from; JNT_NONE is the
@@ -174,6 +196,53 @@ uint32_t jnt_node_kid(const jnt_tree *tree, uint32_t ref, uint32_t i);
 
 /* The field this node is filed under in its parent; NULL when unfiled. */
 const char *jnt_node_field(const jnt_tree *tree, uint32_t ref, size_t *len);
+
+/* ── queries ────────────────────────────────────────────────────── */
+
+typedef struct jnt_query jnt_query;
+typedef struct jnt_query_result jnt_query_result;
+
+/* Compile the tree-sitter query notation using this parser's grammar. Source
+ * may be freed on return. The query owns its metadata and borrows the parser:
+ * free results, then queries, then the parser. Syntax/name errors are
+ * JNT_FORMAT with the query byte offset in jnt_last_error. */
+int32_t jnt_query_compile(const jnt_parser *parser, const char *scm, size_t len, jnt_query **out);
+void jnt_query_free(jnt_query *query);
+uint32_t jnt_query_pattern_count(const jnt_query *query);
+uint32_t jnt_query_capture_count(const jnt_query *query);
+
+/* Capture name borrowed from the query, pointer + length; NULL past the end. */
+const char *jnt_query_capture_name(const jnt_query *query, uint32_t id, size_t *len);
+
+/* Foreign predicates the engine cannot evaluate. Core predicates such as
+ * #eq? and #match? always run; directives such as #set! do not filter. */
+#define JNT_FOREIGN_REFUSE 0
+#define JNT_FOREIGN_ADMIT 1
+#define JNT_FOREIGN_DENY 2
+
+/* Eagerly collect matches in the engine's order. The tree must belong to the
+ * exact parser used to compile the query. text must be the original parsed
+ * bytes (needed by text predicates), borrowed only during this call. A clean
+ * zero-match run succeeds with an empty result; unsupported predicates under
+ * REFUSE, and query branches the matcher cannot evaluate, return JNT_FORMAT
+ * without publishing partial matches.
+ *
+ * Results own their arrays and borrow both query and tree. Free them before
+ * freeing either owner or editing a weave's tree; captured node refs address
+ * that particular parse. Querying a partial/repaired tree returns findings in
+ * that tree; callers decide their confidence using stop/sound/mend accessors. */
+int32_t jnt_query_exec(const jnt_query *query, const jnt_tree *tree,
+                       const char *text, size_t len, int32_t foreign,
+                       jnt_query_result **out);
+void jnt_query_result_free(jnt_query_result *result);
+uint32_t jnt_query_result_count(const jnt_query_result *result);
+
+/* Pattern indices follow source order. Pattern/ID/node accessors answer
+ * JNT_NONE past the end; capture count answers 0 for a missing match. */
+uint32_t jnt_query_result_pattern(const jnt_query_result *result, uint32_t match);
+uint32_t jnt_query_result_capture_count(const jnt_query_result *result, uint32_t match);
+uint32_t jnt_query_result_capture_id(const jnt_query_result *result, uint32_t match, uint32_t capture);
+uint32_t jnt_query_result_capture_node(const jnt_query_result *result, uint32_t match, uint32_t capture);
 
 /* ── the neighbourhood ───────────────────────────────────────────── */
 

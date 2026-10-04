@@ -1,56 +1,53 @@
-# joints
+# joints for Python
 
-**Incremental parsing built on composable stack effects.** A parser generator
-that reads tree-sitter's own `grammar.json`, so the grammars the ecosystem
-already wrote are the input, and packs every language into one mmap-able file.
+Open a grammar folio, parse source, and run structural queries through `libjnt`.
+The binding is experimental and requires a separately built native library.
 
-## This version exports nothing, on purpose
+```sh
+zig build
+export PYTHONPATH="$PWD/bindings/python"
+export JOINTS_LIB="$PWD/zig-out/lib/libjnt.so"  # libjnt.dylib on macOS
+```
 
-`0.0.0` reserves the name. The engine is Zig, reached through a C ABI (`libjnt`,
-`jnt_` symbols); the Python binding over it is not written yet. A stub that
-returned plausible values would be worse than an empty package, because a
-dependency that imports is one somebody builds on. Nothing will break when the
-real binding lands, because there is no surface here to break.
+```python
+from joints import Bank
 
-Installing today gets you `joints.__version__` and this page.
+with Bank("python.folio") as bank, bank.parser() as parser:
+    with parser.parse(source_bytes) as tree:
+        with parser.query("(function_definition name: (identifier) @name)") as query:
+            for node in query.captures(tree).get("name", []):
+                print(node.text, node.start_point)
+```
 
-## The idea
+`Bank` accepts a single folio, a multi-language codex, or a tree-sitter
+`grammar.json`. Select a codex language with `bank.parser("python")`.
+Minting once avoids rebuilding grammar tables when a process opens the bank.
 
-A parse step's effect on the stack is an element of a monoid, so the effects of
-two adjacent regions compose into the effect of the region containing both.
-Everything else follows from that one property:
+A strict parse requires one root, acceptance, no deleted or supplied tokens,
+and a structurally sound tree. It raises `ParseError` when that evidence is
+missing. `parser.parse(source, strict=False)` exposes a partial forest together
+with `stop`, `mends`, `skipped`, `supplied`, `repairs`, and `roots`
+for callers that can use recovery. A sound forest alone does not establish that
+source was understood.
 
-| Property | Why it holds |
-|---|---|
-| Position independence | a region parses without knowing what precedes it - its effect is composed in afterward instead of inherited |
-| Parallelism | the file cuts into segments that parse independently, then reduce pairwise |
-| Incrementality | an edit invalidates only the segments it touches; the surrounding composition is reused, not re-derived |
-| One artifact | N languages pack into one file, so a tool ships one binary and one file rather than a shared library per grammar |
+Nodes expose byte spans, source text, byte-based row/column positions, children,
+fields, parents, and siblings. Queries return ordered matches or captures grouped
+by name. Unknown predicates are refused unless the caller explicitly passes
+`foreign="admit"` or `foreign="deny"`.
 
-The claim that composed segment effects really do reproduce a whole-file parse
-has a falsifier measurable *before* a parser exists, so that measurement came
-first - across eleven real grammars, with nothing disagreeing.
+Use one bank and parser per thread. Close trees and queries before their parser,
+then close the bank; context managers enforce that order. Accessing nodes after
+their tree closes raises an error. Importing the package does not load native code.
+`JOINTS_LIB` selects a library explicitly; otherwise a bundled library, the local
+checkout's build, or the system library is tried.
 
-## Status
+Run the native integration checks after building:
 
-Built and tested: the grammar importer, the LR(0) collection with LALR
-lookaheads and conflict resolution, the terminal scanner, the stack-effect
-monoid and the cursor that composes it, the balanced tree, the concrete syntax
-tree with delete-and-supply repair at every refusal, the incremental reparse
-across edits, the packed multi-language artifact, the CLI, and the C ABI.
+```sh
+PYTHONPATH=bindings/python python3 -m unittest discover -s bindings/python/tests
+```
 
-Not built: the SIMD first pass, the query engine, the settled succinct encoding,
-and the quotient the size claim depends on - so the size claim is still a
-target, not a result.
+This source interface ships no native wheel yet. The Rust binding remains a
+name reservation; building a native frontend also needs that Rust interface.
 
-Source opens under [The Billy Company](https://github.com/The-Billy-Company),
-alongside [irregex](https://github.com/The-Billy-Company/irregex) (the regex
-engine), [gist](https://github.com/The-Billy-Company/gist) (indexed
-ripgrep-parity search),
-[relate](https://github.com/The-Billy-Company/relate) (similarity by
-compression), and [blast](https://github.com/The-Billy-Company/blast)
-(provenance and blast radius).
-
-## License
-
-Apache-2.0. See `LICENSE` and `NOTICE`.
+Apache-2.0; see `LICENSE` and `NOTICE`.

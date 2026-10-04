@@ -1,7 +1,5 @@
-# The wheel is pure metadata today. When the binding lands it stops being
-# `py3-none-any`, because the transport will be ctypes over a bundled `libjnt`,
-# which makes the wheel platform-tagged - see the sibling `irregex` package for
-# the shape that takes.
+# The Python interface uses ctypes over a separately built libjnt. Bundling
+# native libraries into platform wheels belongs to the first native release.
 
 [build-system]
 requires = [ "hatchling>=1.27" ]
@@ -13,7 +11,7 @@ version = "0.0.0" # x-release-please-version
 # Says what the project is, then what this version is not, in that order. PyPI
 # renders this line in search results where a caveat further down never reaches
 # the reader deciding whether to install.
-description = "Incremental parsing built on composable stack effects - a tree-sitter alternative that packs every language into one mmap-able file. Reserved at 0.0.0: the engine is Zig and the Python binding is not written yet."
+description = "Experimental parsing and structural queries over grammar data, with Python bindings to libjnt."
 readme = "README.md"
 # Not caution, and not the eventual binding's floor discovered by testing: it is
 # the floor the sibling packages hold, and admitting interpreters this project
@@ -28,19 +26,14 @@ authors = [ { name = "The Billy Company" } ]
 # restatement of the name.
 keywords = [ "parser", "parsing", "incremental", "tree-sitter", "cst", "syntax-tree" ]
 classifiers = [
-  # The one classifier that is load-bearing here. Everything else about this
-  # release is metadata; this is the field that tells a stranger not to plan
-  # around it yet.
-  "Development Status :: 1 - Planning",
+  # This interface is experimental; native distribution is still separate.
+  "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
   "Topic :: Software Development :: Compilers",
   "Topic :: Text Processing :: General",
 ]
-# No `Typing :: Typed` (there is no `py.typed`, because there is nothing to
-# type) and no language classifier for the engine: it is Zig, PyPI has no
-# classifier for Zig, and claiming Rust or C because a neighbouring field would
-# accept it is how metadata starts lying.
+# The engine is Zig; the interface is Python and ships no native binary yet.
 # No `License ::` classifier: the SPDX `license` field above is PEP 639
 # metadata, and the two spellings together are an error in current tooling
 # rather than a belt and braces.

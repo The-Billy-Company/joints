@@ -866,9 +866,11 @@ pub const Scanner = struct {
     pub fn next(s: *Scanner, bytes: []const u8, at: u32, expected: ?*const Expected) Step {
         s.restarting(at);
         var i = at;
-        while (true) switch (s.read(bytes, i, i == at, expected)) {
+        var after_node = false;
+        while (true) switch (s.read(bytes, i, i == at, after_node, expected)) {
             .token => |tok| {
                 if (!s.stepping(tok.symbol, expected)) return .{ .token = tok };
+                after_node = after_node or s.kept.isSet(tok.symbol);
                 i = tok.end();
             },
             .stray => |off| return .{ .stray = off },
@@ -963,10 +965,12 @@ pub const Scanner = struct {
     ) !Step {
         s.restarting(at);
         var i = at;
-        while (true) switch (s.read(bytes, i, i == at, expected)) {
+        var after_node = false;
+        while (true) switch (s.read(bytes, i, i == at, after_node, expected)) {
             .token => |tok| {
                 if (!s.stepping(tok.symbol, expected)) return .{ .token = tok };
                 if (s.kept.isSet(tok.symbol)) try keep.append(gpa, tok);
+                after_node = after_node or s.kept.isSet(tok.symbol);
                 i = tok.end();
             },
             .stray => |off| return .{ .stray = off },
@@ -1140,8 +1144,12 @@ pub const Scanner = struct {
     /// tree-sitter's order and both are load-bearing: the whitespace in front
     /// of a Python line *is* its indentation, so an extra must not eat it
     /// before the offside rule sees it, and end of input still owes a dedent
-    /// for every block left open. `fresh` goes through rather than gating the
-    /// call, because only the layout hand needs it - see `outside.step`.
+    /// for every block left open. `fresh` gates the caesura and immediate
+    /// terminals, while `after_node` lets layout be asked again after an extra
+    /// node passes. A trailing comment refuses before its own bytes, but its
+    /// newline is still owed. Anonymous whitespace cannot grant that second
+    /// ask: consuming an already answered newline would otherwise create
+    /// another newline at EOF.
     ///
     /// Asked only when there is a state to ask on behalf of. A hand answers out
     /// of the permission set and has no reading of "everything is admitted": a
@@ -1150,10 +1158,10 @@ pub const Scanner = struct {
     /// slate alone, which is the same silence `next`'s header already warns a
     /// context-dependent grammar to expect - a grammar with hands is exactly
     /// one of those.
-    fn read(s: *Scanner, bytes: []const u8, i: u32, fresh: bool, expected: ?*const Expected) Step {
+    fn read(s: *Scanner, bytes: []const u8, i: u32, fresh: bool, after_node: bool, expected: ?*const Expected) Step {
         if (s.outward()) if (expected) |e| {
             const book = if (s.book) |*b| b else null;
-            if (outside.step(s.casts, book, &s.carry, bytes, i, fresh, &e.wanted, &e.named)) |h| {
+            if (outside.step(s.casts, book, &s.carry, bytes, i, fresh, after_node, &e.wanted, &e.named)) |h| {
                 return .{ .token = .{ .symbol = h.symbol, .start = i + h.skip, .len = h.len } };
             }
         };

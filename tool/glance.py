@@ -53,6 +53,8 @@ half the corpus and call it a clean run.
   python3 tool/glance.py --json       the whole answer as one object
   python3 tool/glance.py --list       what would be compared, without running it
   python3 tool/glance.py --verbose    every disagreement, not the first few
+  python3 tool/glance.py --check      prove incomplete or repaired trees are not
+                                      blamed on the query matcher
 """
 
 from __future__ import annotations
@@ -165,7 +167,7 @@ def theirs_of(case: Case, lang: Path) -> tuple[list[Hit], str]:
 
 
 def ours_of(case: Case) -> tuple[list[Hit], str, bool]:
-    """What joints captures, why it would not say, and whether the tree was sound.
+    """What joints captures, why it would not say, and whether the source was whole.
 
     `--foreign=admit` because their CLI does not filter on a predicate it cannot
     run either, and a differential whose two sides are answering different
@@ -173,26 +175,78 @@ def ours_of(case: Case) -> tuple[list[Hit], str, bool]:
 
     The third answer is the one that keeps this tool honest. A query run over a
     forest our parser gave up on is a correct answer to the wrong tree, and every
-    capture it misses would otherwise be filed against the matcher. `sound` rides
-    the `--json` object for exactly this.
+    capture it misses would otherwise be filed against the matcher. Acceptance,
+    structural soundness and absence of repairs are separate JSON evidence.
     """
     got = cli([str(BIN), "query", str(GRAMMARS / f"{case.lang}.json"), str(case.scm),
                str(case.source), "--json", "--foreign=admit"], ROOT)
     body = got.stdout.strip()
     if not body:
-        return [], gripe(got.stderr), True
+        return [], gripe(got.stderr) or "no query answer", False
     try:
         doc = json.loads(body.splitlines()[0])
     except json.JSONDecodeError as bad:
-        return [], f"unreadable answer: {bad}", True
+        return [], f"unreadable answer: {bad}", False
     hits = [Hit(c["name"], c["start"], c["end"])
             for m in doc["matches"] for c in m["captures"]]
-    return hits, "", bool(doc.get("sound", True))
+    return hits, "", confident(doc)
+
+
+def confident(doc: dict) -> bool:
+    """Only explicit evidence of an accepted, sound, unrepaired source counts."""
+    return doc.get("accepted") is True and doc.get("sound") is True and all(
+        type(doc.get(key)) is int and doc[key] == 0
+        for key in ("mends", "skipped", "supplied")
+    )
+
+
+def check() -> int:
+    """Exercise the JSON reader and the blame assigned to differing captures."""
+    from unittest.mock import patch
+
+    case = Case("json", Path("query.scm"), Path("source.json"))
+    # sole: `accepted` is a boolean in the query verb's JSON, not a parse
+    # stderr verdict; this fixture guards that explicit evidence contract.
+    whole = {"accepted": True, "sound": True, "mends": 0, "skipped": 0,
+             "supplied": 0, "matches": [{"captures": [{"name": "n", "start": 0, "end": 1}]}]}
+    variants = [
+        ("whole source", whole, True),
+        ("sound partial forest", {**whole, "accepted": False}, False),
+        ("accepted unsound tree", {**whole, "sound": False}, False),
+        ("accepted repair", {**whole, "mends": 1}, False),
+        ("accepted skipped bytes", {**whole, "skipped": 1}, False),
+        ("accepted supply", {**whole, "supplied": 1}, False),
+        ("missing acceptance", {k: v for k, v in whole.items() if k != "accepted"}, False),
+        ("missing repair evidence", {k: v for k, v in whole.items() if k != "mends"}, False),
+        ("truthy nonboolean", {**whole, "accepted": "true"}, False),
+    ]
+    for label, doc, want in variants:
+        answer = subprocess.CompletedProcess([], 0, json.dumps(doc) + "\n", "")
+        with patch(__name__ + ".cli", return_value=answer), \
+                patch(__name__ + ".theirs_of", return_value=([Hit("n", 0, 2)], "")):
+            _, why, trusted = ours_of(case)
+            if why or trusted != want:
+                raise AssertionError(f"{label}: confidence {trusted}, wanted {want}: {why}")
+            verdict = compare(case, Path("oracle"))
+            if verdict.kind != ("differ" if want else "unparsed"):
+                raise AssertionError(f"{label}: blamed {verdict.kind}")
+    # Matching captures retain the differential's existing agreement semantics.
+    answer = subprocess.CompletedProcess([], 0, json.dumps({**whole, "accepted": False}), "")
+    with patch(__name__ + ".cli", return_value=answer), \
+            patch(__name__ + ".theirs_of", return_value=([Hit("n", 0, 1)], "")):
+        if compare(case, Path("oracle")).kind != "agree":
+            raise AssertionError("equal captures stopped agreeing")
+    with patch(__name__ + ".cli", return_value=subprocess.CompletedProcess([], 0, "", "")):
+        _, why, trusted = ours_of(case)
+        if not why or trusted:
+            raise AssertionError("an absent answer was trusted")
+    print("glance: whole source trusted; partial, unsound, repaired and missing evidence kept out of matcher blame")
+    return 0
 
 
 def compare(case: Case, lang: Path) -> Verdict:
     theirs, why_theirs = theirs_of(case, lang)
-    ours, why_ours, sound = ours_of(case)
+    ours, why_ours, trusted = ours_of(case)
 
     # A refusal on either side is the whole answer; there is nothing to diff.
     # Both refusing is agreement, and it is the commonest honest outcome on a
@@ -210,12 +264,13 @@ def compare(case: Case, lang: Path) -> Verdict:
         kind = "agree" if ours == theirs else "sequence"
         return Verdict(case, kind, len(ours), len(theirs), [])
 
-    # Agreeing over a forest would be luck, so soundness is only asked about
+    # Agreeing over a forest would be luck, so confidence is only asked about
     # once the answers already differ. It says whose problem this is: not the
     # matcher's, and not fixable here.
-    if not sound:
+    if not trusted:
         return Verdict(case, "unparsed", len(ours), len(theirs),
-                       ["our parse did not accept this file; the query ran over a forest"])
+                       ["our parse was partial, repaired, unsound, or lacked evidence; "
+                        "the query ran over that tree"])
 
     detail = []
     for hit, n in (yours - mine).items():
@@ -263,6 +318,8 @@ def main(argv: list[str]) -> int:
     if "--help" in argv or "-h" in argv:
         print(__doc__)
         return 0
+    if "--check" in argv:
+        return check()
     verbose = "--verbose" in argv
     as_json = "--json" in argv
     only = None

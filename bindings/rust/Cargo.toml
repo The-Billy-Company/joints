@@ -19,7 +19,9 @@ license = "Apache-2.0"
 # not, in that order, because crates.io shows it in search results where there
 # is no room for a caveat further down. A reader deciding whether to depend on
 # this needs the second sentence more than the first.
-description = "Incremental parsing built on composable stack effects - a tree-sitter alternative that packs every language into one mmap-able file. Reserved at 0.0.0: the engine is Zig and the Rust binding is not written yet."
+description = "Experimental safe Rust binding to libjnt: parsing, repair confidence, tree traversal, and in-process queries. Requires a separately built native library."
+links = "jnt"
+build = "build.rs"
 readme = "README.md"
 homepage = "https://github.com/The-Billy-Company"
 authors = [ "The Billy Company" ]
@@ -39,18 +41,13 @@ keywords = [ "parser", "parsing", "incremental", "tree-sitter", "cst" ]
 categories = [ "parsing", "text-processing", "development-tools" ]
 # Apache-2.0 section 4 wants the license text travelling with the copy, so the
 # files ship rather than resting on the SPDX identifier alone.
-include = [ "/src", "/README.md", "/LICENSE", "/NOTICE" ]
+include = [ "/src", "/build.rs", "/tests", "/README.md", "/LICENSE", "/NOTICE" ]
 
 [lib]
-# Nothing to configure, but the section is here as the marker for whoever wires
-# the real binding: the package is `joints`, so the library Cargo derives is
-# already `joints` and callers already type `use joints::…`.
+path = "src/lib.rs"
 
 [lints.rust]
 missing_docs = "deny"
-# Trivially satisfied while the crate is documentation only, and load-bearing
-# from the first `extern "C"` block onward. Set now so it is never a diff that
-# has to argue for itself later.
 unsafe_op_in_unsafe_fn = "deny"
 
 [lints.clippy]

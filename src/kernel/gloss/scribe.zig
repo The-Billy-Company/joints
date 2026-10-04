@@ -154,6 +154,9 @@ pub const Error = error{
     /// the tree that was parsed from it. Refused at `open` rather than mid
     /// stream, so a caller cannot get half an answer.
     QuerySourceShort,
+    /// A regex could not be prepared or evaluated. Neither absence nor a
+    /// negative predicate may turn an engine refusal into a successful match.
+    QueryRegexFailure,
 } || std.mem.Allocator.Error;
 
 /// Open a run of one program over one tree.
@@ -172,15 +175,13 @@ pub fn open(gpa: std.mem.Allocator, p: stencil.Program, a: Ask) Error!Cursor {
         const pr = p.predicateAt(@intCast(i));
         if (!pr.op.core()) continue;
         wants_text = true;
-        if (pr.op != .match and pr.op != .not_match or pr.args.len < 2) continue;
-        // Proved compilable when the query was pressed, so a refusal here is a
-        // resource fault rather than a bad pattern; either way the predicate
-        // has no regex and reads as unconstrained below.
+        if (pr.op != .match and pr.op != .not_match) continue;
+        if (pr.args.len != 2) return Error.QueryRegexFailure;
         const src = switch (p.argAt(pr.args.off + 1)) {
             .text => |t| t,
-            .capture => continue,
+            .capture => return Error.QueryRegexFailure,
         };
-        c.rx[i] = irregex.Pattern.compile(gpa, src) catch continue;
+        c.rx[i] = irregex.Pattern.compile(gpa, src) catch |err| return regexError(err);
     }
     // A capture's text comes out of `src`, so a mismatched pair is a caller
     // error and not a match that happens to fail. Checked against the roots,
@@ -227,19 +228,6 @@ pub const Cursor = struct {
     kin: []const u32 = &.{},
     ka: usize = 0,
     oa: usize = 0,
-
-    /// The candidate being asked, held across calls because one pattern at one
-    /// node can have more than one answer and each is its own match.
-    pat: ?u32 = null,
-    /// Where the next assignment of `pat` may begin, and where the one being
-    /// built began and ended. All three are child positions of `here`. See
-    /// `take`.
-    from: usize = 0,
-    head: usize = 0,
-    edge: usize = 0,
-    /// How many frames deep the child matcher is. Only the outermost chain
-    /// completing is a whole assignment; see `take`.
-    deep: u32 = 0,
 
     /// Matches found but not yet due, ascending in `(at, pattern)`. Short: it
     /// holds only what the walk has passed the root of and not yet the start
@@ -293,28 +281,9 @@ pub const Cursor = struct {
             c.kin = c.sieve.at(c.a.q.nodes[ref].kind);
             c.ka = 0;
             c.oa = 0;
-            c.pat = null;
-            while (true) {
-                if (c.pat == null) {
-                    c.pat = c.candidate() orelse break;
-                    c.from = 0;
-                }
-                const i = c.pat.?;
-                const pat = c.p.patternAt(i);
+            while (c.candidate()) |i| {
                 c.found.clearRetainingCapacity();
-                c.head = 0;
-                c.edge = 0;
-                if (!try c.root(pat, ref)) {
-                    c.pat = null;
-                    continue;
-                }
-                // The next assignment starts past this one, whether or not this
-                // one survives its predicates. The `+ 1` is what guarantees the
-                // ask terminates when the first step consumed nothing at all -
-                // a `*` or `?` that took zero.
-                c.from = @max(c.edge, c.head + 1);
-                if (!try c.holds(pat)) continue;
-                try c.place(i, ref);
+                try c.root(i, ref);
             }
         }
         // Walked out, so the frontier can no longer beat anything: what is left
@@ -410,34 +379,29 @@ pub const Cursor = struct {
     /// A top-level group is the one root that is not a node matcher: it is a run
     /// of siblings and needs a parent to be a run *in*, so it is tried against
     /// each node's child list rather than against the node.
-    fn root(c: *Cursor, pat: stencil.Pattern, ref: Ref) Error!bool {
+    fn root(c: *Cursor, pattern: u32, ref: Ref) Error!void {
+        const pat = c.p.patternAt(pattern);
         const s = c.p.stepAt(pat.root);
-        const mark = c.found.items.len;
-        const held = if (s.op != .group) try c.step(pat.root, ref) else held: {
+        const after: After = .{ .done = .{ .pattern = pattern, .ref = ref } };
+        if (s.op != .group) {
+            _ = try c.step(pat.root, ref, &after, false);
+        } else {
             const f: Frame = .{ .steps = s.kids, .si = 0, .ki = 0 };
-            c.deep += 1;
-            defer c.deep -= 1;
-            break :held try c.at(c.a.q.children(ref), f, false);
-        };
-        // A root that opened no frame at all - `(identifier) @x` - has exactly
-        // one assignment and no `take` to gate it, so the ask for a second is
-        // answered here rather than by running the same search again.
-        if (held and c.head >= c.from) return true;
-        c.found.shrinkRetainingCapacity(mark);
-        return false;
+            _ = try c.at(c.a.q.children(ref), f, false, &after);
+        }
     }
 
     /// One step against one node, with the captures it bound rolled back when
     /// it does not hold. Every failing path in `attempt` returns through here,
     /// which is why none of them has to unwind anything itself.
-    fn step(c: *Cursor, sid: u32, ref: Ref) Error!bool {
+    fn step(c: *Cursor, sid: u32, ref: Ref, after: *const After, first: bool) Error!bool {
         const mark = c.found.items.len;
-        if (try c.attempt(sid, ref)) return true;
+        if (try c.attempt(sid, ref, after, first)) return true;
         c.found.shrinkRetainingCapacity(mark);
         return false;
     }
 
-    fn attempt(c: *Cursor, sid: u32, ref: Ref) Error!bool {
+    fn attempt(c: *Cursor, sid: u32, ref: Ref, after: *const After, first: bool) Error!bool {
         const s = c.p.stepAt(sid);
         // A field prefix is written at the position and constrains whatever
         // stands there, so it is asked before the shape is.
@@ -454,7 +418,7 @@ pub const Cursor = struct {
             .choice => {
                 try c.bind(s, ref);
                 for (0..s.kids.len) |i| {
-                    if (try c.step(c.idAt(s.kids, @intCast(i)), ref)) return true;
+                    if (try c.step(c.idAt(s.kids, @intCast(i)), ref, after, first)) return true;
                 }
                 return false;
             },
@@ -475,14 +439,12 @@ pub const Cursor = struct {
                 // every failing path, including the two below.
                 try c.bind(s, ref);
                 if (s.kids.len != 0 or s.closed()) {
-                    const f: Frame = .{ .steps = s.kids, .si = 0, .ki = 0 };
-                    c.deep += 1;
-                    defer c.deep -= 1;
-                    if (!try c.at(c.a.q.children(ref), f, s.closed())) return false;
+                    const f: Frame = .{ .steps = s.kids, .si = 0, .ki = 0, .greedy = first };
+                    return c.at(c.a.q.children(ref), f, s.closed(), after);
                 }
             },
         }
-        return true;
+        return c.proceed(after);
     }
 
     /// Is this node one of the things the step names?
@@ -490,19 +452,18 @@ pub const Cursor = struct {
     /// A rename is the name the tree WEARS and the only name a query can reach
     /// it by: `alias($.identifier, $.type_identifier)` leaves the symbol as
     /// `identifier`, and `(identifier)` must not match the node, because the
-    /// node is called `type_identifier`. So a renamed node is answered out of
-    /// the step's alias slot and never out of its symbol set.
+    /// node is called `type_identifier`. A pinned step therefore answers a
+    /// renamed node only from its alias slot. `(_)` instead asks namedness,
+    /// which the alias supplies, and a bare supertype asks the reduced symbol.
     fn fits(c: *const Cursor, s: stencil.Step, ref: Ref) Error!bool {
         const k = c.a.q.nodes[ref].kind;
-        if (k.renamed) return s.alias != none and s.alias == k.index;
-        if (s.kinds.len != 0) {
+        if (s.pinned()) {
+            if (k.renamed) return s.alias != none and s.alias == k.index;
             for (0..s.kinds.len) |i| {
                 if (c.idAt(s.kinds, @intCast(i)) == k.index) return true;
             }
             return false;
         }
-        // A spelling only a rename answers to, met by a node wearing no rename.
-        if (s.alias != none) return false;
         if (s.category != none) {
             // A bare supertype. Membership is over the symbol the parse
             // REDUCED, because a rename is a name rather than a structure -
@@ -561,26 +522,51 @@ pub const Cursor = struct {
         /// and dropped with the one that does not, so it can never report a
         /// position from a branch that was abandoned.
         head: ?usize = null,
+        /// A quantified occurrence commits its first complete assignment,
+        /// including choices inside groups and nested nodes. Otherwise a group
+        /// that already consumed its longest run emits shorter alternatives too.
+        greedy: bool = false,
         up: ?*const Frame = null,
     };
 
-    fn at(c: *Cursor, kids: []const Ref, f: Frame, closed: bool) Error!bool {
+    /// A child's choices are only complete when its parent's remaining steps
+    /// hold too. Keeping that continuation lets a second method inside one impl
+    /// return to the same body field, rather than advancing past the body itself.
+    const After = union(enum) {
+        done: struct { pattern: u32, ref: Ref },
+        more: struct { kids: []const Ref, frame: Frame, closed: bool, next: *const After },
+    };
+
+    fn proceed(c: *Cursor, after: *const After) Error!bool {
+        switch (after.*) {
+            .done => |d| {
+                if (try c.holds(c.p.patternAt(d.pattern))) try c.place(d.pattern, d.ref);
+                // A filtered assignment still existed, so a greedy quantifier
+                // must not shorten its run just to make the predicate hold.
+                return true;
+            },
+            .more => |m| return c.at(m.kids, m.frame, m.closed, m.next),
+        }
+    }
+
+    fn at(c: *Cursor, kids: []const Ref, f: Frame, closed: bool, after: *const After) Error!bool {
         if (f.si == f.steps.len) {
             const u = f.up orelse {
                 if (!c.tail(kids, f.ki, closed)) return false;
-                return c.take(f.head orelse f.ki, f.ki);
+                return c.proceed(after);
             };
             var back = u.*;
             back.ki = f.ki;
             back.seen = true;
             back.pin = false;
             back.head = f.head;
-            return c.at(kids, back, closed);
+            return c.at(kids, back, closed, after);
         }
 
         const sid = c.idAt(f.steps, f.si);
         const s = c.p.stepAt(sid);
         const mark = c.found.items.len;
+        var matched = false;
         // An anchor says "immediately after what came before", so it needs a
         // before. A leading `.` has one - the parent's own start, which is what
         // makes `(class_body . (method_definition))` mean FIRST named child. An
@@ -590,6 +576,7 @@ pub const Cursor = struct {
         // That is the shape every `tags.scm` opens with, and upstream puts no
         // constraint on it either.
         const pin = f.pin or (s.anchored() and (f.si == 0 or f.head != null));
+        const first = f.greedy or s.quantifier == .star or s.quantifier == .plus;
 
         // Move one: consume one more occurrence. Only `*` and `+` may be asked
         // twice, and the try comes BEFORE the one below because a quantifier
@@ -609,22 +596,26 @@ pub const Cursor = struct {
                     .ki = f.ki,
                     .pin = pin,
                     .head = f.head,
+                    .greedy = first,
                     .up = &here,
                 };
-                if (try c.at(kids, sub, closed)) return true;
+                matched = try c.at(kids, sub, closed, after);
                 c.found.shrinkRetainingCapacity(mark);
             } else {
                 var p = f.ki;
                 while (p < kids.len) : (p += 1) {
-                    if (try c.step(sid, kids[p])) {
-                        var on = f;
-                        on.ki = p + 1;
-                        on.seen = true;
-                        on.pin = false;
-                        if (on.head == null) on.head = p;
-                        if (try c.at(kids, on, closed)) return true;
-                        c.found.shrinkRetainingCapacity(mark);
-                    }
+                    var on = f;
+                    on.ki = p + 1;
+                    on.seen = true;
+                    on.pin = false;
+                    if (on.head == null) on.head = p;
+                    const then: After = .{ .more = .{ .kids = kids, .frame = on, .closed = closed, .next = after } };
+                    const held = try c.step(sid, kids[p], &then, first);
+                    c.found.shrinkRetainingCapacity(mark);
+                    // Plain steps enumerate their sibling alternatives; a
+                    // repeated step keeps the first successful greedy run.
+                    if (held and first) return true;
+                    matched = matched or held;
                     // An anchored step may step over an anonymous token and may
                     // not step over a node a pattern could have named. See the
                     // header.
@@ -632,6 +623,7 @@ pub const Cursor = struct {
                 }
             }
         }
+        if (matched) return true;
         // Move two: this step has had what it needs, so go on to the next. True
         // at zero occurrences for `?` and `*`, and after one for anything. The
         // pin rides along rather than being re-read, so an anchor written on a
@@ -640,44 +632,10 @@ pub const Cursor = struct {
             var on = f;
             on.si += 1;
             on.seen = false;
-            if (try c.at(kids, on, closed)) return true;
+            if (try c.at(kids, on, closed, after)) return true;
             c.found.shrinkRetainingCapacity(mark);
         }
         return false;
-    }
-
-    /// A complete assignment of a pattern's children - and whether to take it.
-    ///
-    /// The search is a decision procedure: it stops at the first yes, which is
-    /// the right answer to "does this pattern hold here" and the wrong one to
-    /// "what does it hold as". One `declaration_list` holding three
-    /// `function_item`s satisfies `(declaration_list (function_item) @m)` three
-    /// times and owes three matches, which is how every `tags.scm` in the
-    /// corpus counts methods and what the incumbent answers.
-    ///
-    /// So the way to ask for a SECOND yes is to make the same search walk past
-    /// the one already reported. Rejecting HERE rather than at the root is what
-    /// makes it a resumption and not a rerun-and-hope - the `false` lands in
-    /// the sibling loop that made the last choice, which goes round again from
-    /// exactly there and finds the next assignment in the same order.
-    ///
-    /// **What separates two assignments is where they START, not how they
-    /// differ.** A quantifier is greedy and stays greedy: `(comment)+ @doc` over
-    /// a block of three binds all three once, and the two shorter runs inside it
-    /// are not three matches. So an assignment must begin at or after the end of
-    /// the one before, which is the same thing as saying matches of one pattern
-    /// do not overlap - and it is why the doc-comment run every `tags.scm` is
-    /// built on comes out once here and once upstream.
-    ///
-    /// Only the outermost frame chain completing is a whole assignment. A frame
-    /// opened for a grandchild is one decision inside one, and gating it would
-    /// judge an interior choice as if it were a match.
-    fn take(c: *Cursor, head: usize, edge: usize) bool {
-        if (c.deep != 1) return true;
-        if (head < c.from) return false;
-        c.head = head;
-        c.edge = edge;
-        return true;
     }
 
     /// A trailing `.` inside a parent: nothing a pattern could name is left.
@@ -740,11 +698,8 @@ pub const Cursor = struct {
                 break :blk hit == (pr.op == .any_of);
             },
             .match, .not_match => blk: {
-                if (c.rx[id] == null) break :blk true;
-                // The pattern compiled when the query was pressed, so a failure
-                // here is the engine's scratch and not the file's regex; an
-                // answer of "no match" is the one that cannot invent a hit.
-                const hit = c.rx[id].?.isMatch(subject) catch false;
+                if (c.rx[id] == null) return Error.QueryRegexFailure;
+                const hit = c.rx[id].?.isMatch(subject) catch |err| return regexError(err);
                 break :blk hit == (pr.op == .match);
             },
             .opaque_meta => unreachable,
@@ -767,6 +722,10 @@ pub const Cursor = struct {
         };
     }
 };
+
+fn regexError(err: anyerror) Error {
+    return if (err == error.OutOfMemory) error.OutOfMemory else Error.QueryRegexFailure;
+}
 
 /// Which patterns can root at which kind.
 ///

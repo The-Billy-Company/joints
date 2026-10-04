@@ -97,4 +97,5 @@ test {
     _ = @import("kernel/gloss/rubric_test.zig");
     _ = @import("kernel/gloss/gloss_test.zig");
     _ = @import("kernel/gloss/scribe_test.zig");
+    _ = @import("kernel/gloss/alias_query_test.zig");
 }

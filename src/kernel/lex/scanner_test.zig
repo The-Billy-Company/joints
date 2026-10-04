@@ -9,7 +9,38 @@ const t = std.testing;
 const scanner = @import("scanner.zig");
 const outside = @import("outside.zig");
 const marrow = @import("hand/marrow.zig");
+const fence = @import("hand/fence.zig");
 const press = @import("../../press/press.zig");
+
+test "scanner: a hash before a Python interpolation is literal content" {
+    const admits = [_]bool{true} ** fence.tags;
+    const short = "f\"#{x}\"";
+    const python = fence.open(.python, short, 0, admits).?;
+    try t.expectEqual(@as(u32, 1), fence.read(&python.span, short, python.len).body);
+    try t.expectEqual(.none, fence.read(&python.span, short, python.len + 1));
+
+    const long = "f\"prefix #{x}\"";
+    const prefixed = fence.open(.python, long, 0, admits).?;
+    try t.expectEqual(@as(u32, 8), fence.read(&prefixed.span, long, prefixed.len).body);
+
+    const ruby_source = "\"#{x}\"";
+    const ruby = fence.open(.ruby, ruby_source, 0, admits).?;
+    try t.expectEqual(.none, fence.read(&ruby.span, ruby_source, ruby.len));
+}
+
+test "scanner: a raw format backslash leaves the following brace to formatting" {
+    const admits = [_]bool{true} ** fence.tags;
+    for ([_][]const u8{ "rf\"\\{{\"", "rf\"\\}}\"", "rf\"\\{x}\"" }) |source| {
+        const opened = fence.open(.python, source, 0, admits).?;
+        try t.expectEqual(@as(u32, 1), fence.read(&opened.span, source, opened.len).body);
+    }
+    const ordinary = "r\"\\{\"";
+    const raw = fence.open(.python, ordinary, 0, admits).?;
+    try t.expectEqual(@as(u32, 2), fence.read(&raw.span, ordinary, raw.len).body);
+    const quoted = "rf\"\\\"{x}\"";
+    const escaped = fence.open(.python, quoted, 0, admits).?;
+    try t.expectEqual(@as(u32, 2), fence.read(&escaped.span, quoted, escaped.len).body);
+}
 
 const Fixture = struct {
     gr: press.Grammar,
@@ -624,9 +655,9 @@ const layout_grammar =
     \\   {"type":"SYMBOL","name":"_dedent"},{"type":"SYMBOL","name":"name"},
     \\   {"type":"STRING","value":")"}]}},
     \\ "name":{"type":"PATTERN","value":"[a-z]+"}},
-    \\ "extras":[{"type":"PATTERN","value":"[ \\t\\n]"}],
+    \\ "extras":[{"type":"PATTERN","value":"[ \\t\\n]"},{"type":"SYMBOL","name":"comment"}],
     \\ "externals":[{"type":"SYMBOL","name":"_newline"},{"type":"SYMBOL","name":"_indent"},
-    \\   {"type":"SYMBOL","name":"_dedent"}]}
+    \\   {"type":"SYMBOL","name":"_dedent"},{"type":"SYMBOL","name":"comment"}]}
 ;
 
 /// Every symbol admitted, which is the permissive state the offside rule is
@@ -735,6 +766,57 @@ test "scanner: what the state will take decides which layout token fires" {
     defer opening.deinit(t.allocator);
     f.sc.rewind();
     try expectStep(&f, source, 1, &opening, "_indent", 0);
+}
+
+test "scanner: a trailing comment leaves its newline to the offside hand" {
+    // The external scanner refuses layout before a trailing comment. Once the
+    // slate skips that comment, its line ending still ends the statement; the
+    // fact an extra has moved the cursor cannot withhold the hand's next ask.
+    // Annotated class fields exposed the missing lexer admission.
+    var f = try Fixture.init(layout_grammar);
+    defer f.deinit();
+    try expectWalk(&f, "a # note\nb", &.{ "name", "_newline", "name", "_newline" });
+    try expectWalk(&f, "a\n  b # note\n  c # note\nd", &.{
+        "name", "_indent", "_newline", "name", "_newline",
+        "name", "_dedent", "_newline", "name", "_newline",
+    });
+    // EOF ends a comment as well as a line, and still closes the block.
+    try expectWalk(&f, "a\n  b # note", &.{
+        "name", "_indent", "_newline", "name", "_dedent", "_newline",
+    });
+}
+
+test "scanner: a block's trailing comment defers its dedent until the comment passes" {
+    // Upstream delays a dedent across a comment indented with its block. The
+    // comment has to remain a node, then the hand is asked again at its end.
+    var f = try Fixture.init(layout_grammar);
+    defer f.deinit();
+    try expectWalk(&f, "a\n  b\n  # note\nc", &.{
+        "name",    "_indent",  "_newline", "name",     "_newline",
+        "_dedent", "_newline", "name",     "_newline",
+    });
+}
+
+test "scanner: keeping a trailing comment preserves its node and the statement end" {
+    var f = try Fixture.init(layout_grammar);
+    defer f.deinit();
+    var e = try everything(&f);
+    defer e.deinit(t.allocator);
+    var keep: std.ArrayList(scanner.Token) = .empty;
+    defer keep.deinit(t.allocator);
+    const source = "a # note\nb";
+    _ = try f.sc.nextKeeping(t.allocator, source, 0, &e, &keep);
+    const end = try f.sc.nextKeeping(t.allocator, source, 1, &e, &keep);
+    const newline = switch (end) {
+        .token => |tok| tok,
+        else => return error.ExpectedAToken,
+    };
+    try t.expectEqualStrings("_newline", f.gr.nameOf(newline.symbol));
+    try t.expectEqual(@as(u32, 8), newline.start);
+    try t.expectEqual(@as(u32, 0), newline.len);
+    try t.expectEqual(@as(usize, 1), keep.items.len);
+    try t.expectEqualStrings("comment", f.gr.nameOf(keep.items[0].symbol));
+    try t.expectEqualStrings("# note", source[keep.items[0].start..keep.items[0].end()]);
 }
 
 test "scanner: an unclosed bracket suspends the offside rule" {
@@ -1152,7 +1234,7 @@ const seats = [_]struct { troupe: []const u8, grammars: []const []const u8 }{
     // seats all twelve where php's seats four of six, and the roster pin below is
     // where that difference is stated.
     .{ .troupe = "marrow/latex_verbatim#_trivia_raw_env_verbatim", .grammars = &.{"latex"} },
-    .{ .troupe = "caesura/ecma#_automatic_semicolon", .grammars = &.{ "javascript", "typescript" } },
+    .{ .troupe = "caesura/ecma#_automatic_semicolon", .grammars = &.{ "javascript", "typescript", "tsx" } },
     // Three rows share the `.caesura` kind and two of them share an anchor:
     // javascript, kotlin, php and scala all declare `_automatic_semicolon`, so
     // the kin is doing all the work here. `_template_chars` is ecma's,
@@ -1345,9 +1427,9 @@ test "scanner: every troupe seats exactly the grammars its convention names" {
     for (missing.items) |m| std.debug.print("\nstopped seating: {s}", .{m});
     try t.expectEqual(@as(usize, 0), wrong.items.len);
     try t.expectEqual(@as(usize, 0), missing.items.len);
-    // The population is the thirty pinned grammars; a shrunken one would make
-    // every absence look like a pass.
-    try t.expectEqual(@as(usize, 30), files);
+    // The pinned grammars include the separate TSX consumer dialect. A
+    // shrunken population would make every absence look like a pass.
+    try t.expectEqual(@as(usize, 31), files);
 }
 
 /// Every terminal a row claims, in the order the row spells them.

@@ -193,13 +193,30 @@ jobs:
       # ReleaseFast, because the sweep below runs the installed binary and rung
       # 1 is 13 seconds of real work in release and minutes in debug.
       - run: zig build
-      # Only now, and only for the sweep. The eleven grammars the dossier
-      # measures over are pinned rather than committed, since `upstream/` holds
-      # clones kept for study rather than sources this package vendors.
+      - name: Python parses and queries through the installed shared library
+        run: PYTHONPATH=bindings/python python3 -m unittest discover -s bindings/python/tests
+      - name: Rust safely parses and queries through the installed native archive
+        env:
+          JOINTS_LIB_DIR: ${{ github.workspace }}/joints/zig-out/lib
+        run: |
+          cargo fmt --manifest-path bindings/rust/Cargo.toml --check
+          cargo check --manifest-path bindings/rust/Cargo.toml
+          cargo clippy --manifest-path bindings/rust/Cargo.toml --all-targets -- -D warnings
+          cargo test --manifest-path bindings/rust/Cargo.toml
+          cargo doc --manifest-path bindings/rust/Cargo.toml --no-deps
+      # Only now, and only for the sweeps. Grammars and held-out source files
+      # are pinned rather than committed, since `upstream/` holds material kept
+      # for study rather than sources this package vendors.
       - name: fetch the pinned grammars
         run: python3 tool/grammars.py fetch
       - name: verify the bytes on disk against the manifest
         run: python3 tool/grammars.py verify
+      # The structural and wall gates also read the nineteen held-out sources.
+      # A contributor's warm checkout already had them; a CI checkout does not.
+      - name: fetch the held-out sources from their pinned commits
+        run: python3 tool/breadth.py fetch
+      - name: verify the held-out sources against their hashes
+        run: python3 tool/breadth.py verify
       # Is what came back a TREE. Every byte column on the board is a union
       # over spans, and a union is silent about parentage: `built` is the union
       # of the ROOT spans, so on any file one root covers whole it IS the file

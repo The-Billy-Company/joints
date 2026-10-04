@@ -465,7 +465,7 @@ pub fn read(span: *const Span, bytes: []const u8, at: u32) Read {
         if (i + 1 < bytes.len and bytes[i + 1] == bytes[i]) return .{ .escape = 2 };
         return .none;
     }
-    if (span.interpolates and std.mem.startsWith(u8, bytes[i..], "#{")) return .none;
+    if (span.dialect == .ruby and span.interpolates and std.mem.startsWith(u8, bytes[i..], "#{")) return .none;
     while (i < bytes.len) {
         if (shuts(span, bytes, mark, i)) break;
         const c = bytes[i];
@@ -474,13 +474,18 @@ pub fn read(span: *const Span, bytes: []const u8, at: u32) Read {
             // other span hands the escape to the grammar's own terminal, which
             // is immediate and so wins the offset back.
             if (span.raw) {
-                i += if (i + 1 < bytes.len) 2 else 1;
+                // Raw Python format strings retain the backslash, but it does
+                // not quote a format brace. Leave that brace for the next move,
+                // including either half of a doubled literal brace.
+                const format_brace = span.format and i + 1 < bytes.len and
+                    (bytes[i + 1] == '{' or bytes[i + 1] == '}');
+                i += if (i + 1 < bytes.len and !format_brace) 2 else 1;
                 continue;
             }
             break;
         }
         if (span.format and (c == '{' or c == '}')) break;
-        if (span.interpolates and std.mem.startsWith(u8, bytes[i..], "#{")) break;
+        if (span.dialect == .ruby and span.interpolates and std.mem.startsWith(u8, bytes[i..], "#{")) break;
         if (span.space_ends and std.ascii.isWhitespace(c)) break;
         if (c == '\n' and !span.triple and span.dialect == .python) break;
         if (span.nest_open != 0) {

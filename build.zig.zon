@@ -22,6 +22,10 @@
         "build.zig",
         "build.zig.zon",
         "src",
+        // The build embeds these scanner books and installs the C ABI header.
+        // They are build inputs even though neither directory contains Zig.
+        "customary",
+        "include",
         // The committed grammar fixture the test module embeds. Without it the
         // published tarball ships tests that cannot build.
         "test",

@@ -195,7 +195,7 @@ pub fn run(
     defer parser.deinit();
     const gr = parser.grammar();
 
-        // Both failures are `2` here and that is not the drift it looks like:
+    // Both failures are `2` here and that is not the drift it looks like:
     // this verb was asked for a tree, so a grammar with nothing to lex is
     // a tree it could not attempt rather than one it built and refused.
     // `intake.Unlexable` carries the whole argument.
@@ -492,6 +492,19 @@ fn machine(
     try jstring(w, gr.name);
     try w.writeAll(",\"path\":");
     try jstring(w, path);
+    try evidence(w, q, found);
+    try w.writeAll(",\"tree\":[");
+    for (q.roots, 0..) |r, i| {
+        if (i > 0) try w.writeByte(',');
+        try limb(q, w, r, show);
+    }
+    try w.writeAll("]}\n");
+}
+
+/// The stop, repairs and structural survey shared by machine parse and query
+/// answers. A reached start symbol and a sound tree are separate claims.
+pub fn evidence(w: *std.Io.Writer, q: *const quire.Quire, found: quire.Quire.Survey) !void {
+    const gr = q.gr;
     try w.writeAll(",\"stop\":");
     switch (q.stop) {
         .accepted => try w.writeAll("{\"kind\":\"accepted\"}"),
@@ -521,12 +534,6 @@ fn machine(
     try w.print("],\"survey\":{{\"walked\":{d},\"held\":{d},\"sound\":{},\"loose\":{d},\"disorder\":{d},\"torn\":{d}}}", .{
         found.walked, found.held, found.sound(), found.loose, found.disorder, found.torn,
     });
-    try w.writeAll(",\"tree\":[");
-    for (q.roots, 0..) |r, i| {
-        if (i > 0) try w.writeByte(',');
-        try limb(q, w, r, show);
-    }
-    try w.writeAll("]}\n");
 }
 
 /// One node of the JSON tree. Same skip rule as the s-expression - under

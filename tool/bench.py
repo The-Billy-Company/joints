@@ -55,10 +55,11 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 from amend import ROW
+from breadth import source_of
 from differential import LIB, TS, WORK as ORACLE, oracle_home, oracle_ready
 from grammars import load
 from rung1 import pairs
-from stamp import Stamp, behind, outcome, take
+from stamp import BOOK, Stamp, ask, behind, outcome, take
 
 ROOT = Path(__file__).resolve().parent.parent
 GRAMMARS = ROOT / "upstream" / "grammars"
@@ -150,21 +151,13 @@ CROSSING = 0.10
 # one ledger program in eleven languages, and there is no ledger program to
 # write in markdown, yaml or html.
 #
-# This table is the only place joints' interpreter-over-data meets tree-sitter's
+# These cases are where joints' interpreter-over-data meets tree-sitter's
 # hand-written C head to head. Every grammar in the committed throughput
 # baseline - c, cpp, go, java, javascript, json, python, rust, typescript - is
 # one where *neither* side runs an external scanner at all, so the case the
 # customaries exist for was the one case this bench could not see.
-STATEFUL = {
-    "elixir": "router.ex",
-    "haskell": "Shared.hs",
-    "html": "viewer.html",
-    "kotlin": "Maps.kt",
-    "markdown": "README.md",
-    "scala": "Option.scala",
-    "swift": "Chunked.swift",
-    "yaml": "ci.yml",
-}
+# The books define which scanners we transcribe; breadth owns their source pins.
+STATEFUL = {book.stem: source_of(book.stem).name for book in BOOK.glob("*.json")}
 BOARD = ROOT / "upstream" / "sources"
 
 
@@ -768,9 +761,8 @@ def within(name: str, inp: Input) -> tuple[int, str, str]:
     kind = INSIDE.get(name)
     if not kind:
         return 0, "", f"no stateful region is declared for {name}"
-    got = say([str(BIN), "parse", str(folio_for(name)), str(inp.path), "--ranges", "--all"],
-              ROOT)
-    spans = [(int(m["a"]), int(m["b"])) for line in got.stdout.splitlines()
+    got = ask(BIN, folio_for(name), inp.path, tree=True)
+    spans = [(int(m["a"]), int(m["b"])) for line in got.tree.splitlines()
              if (m := RANGE.match(line)) and m["kind"] == kind]
     if not spans:
         return 0, "", f"no {kind} node in {inp.path.name}"

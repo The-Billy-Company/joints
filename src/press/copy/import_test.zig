@@ -30,6 +30,28 @@ test "a rule whose body is one atom becomes a terminal, not a nonterminal" {
     try testing.expect(gr.isTerminal(0));
 }
 
+test "a rule-level syntactic rank keeps the anonymous token beneath its named rule" {
+    // Python's pass_statement is prec.left(0, 'pass'). Its generated parser
+    // reduces the named statement from anon_sym_pass rather than lexing a
+    // named pass_statement token. The rank belongs to that reduction.
+    const src =
+        \\{"name":"t","rules":{
+        \\ "doc":{"type":"SYMBOL","name":"statement"},
+        \\ "statement":{"type":"PREC_LEFT","value":0,
+        \\   "content":{"type":"STRING","value":"pass"}}}}
+    ;
+    var gr = try treeSitter(testing.allocator, src);
+    defer gr.deinit();
+    const statement = symbolNamed(&gr, "statement");
+    try testing.expect(!gr.isTerminal(statement));
+    const production = onlyProduction(&gr, "statement");
+    try testing.expectEqual(@as(usize, 1), production.rhs.len);
+    try testing.expectEqualStrings("pass", gr.nameOf(production.rhs[0]));
+    try testing.expectEqual(g.Shape.anonymous, gr.shapeOf(production.rhs[0]));
+    try testing.expectEqual(g.Prec{ .level = 0 }, production.steps[0].prec);
+    try testing.expectEqual(g.Assoc.left, production.steps[0].assoc);
+}
+
 test "repeat is a left-recursive auxiliary and the emptiness lives in the host" {
     const src =
         \\{"name":"t","rules":{

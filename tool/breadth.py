@@ -98,47 +98,46 @@ flags:
 # One real file per language, from a real project. Chosen for being something
 # somebody shipped rather than for being convenient: a Pandoc module, the
 # Prometheus CI config, the Kotlin standard library, PDF.js's viewer page. The
-# hash is the authority - these are branch refs, so upstream can move under
-# them, and a moved file has to announce itself rather than silently become a
-# different measurement.
+# commit makes every URL reproducible from a clean checkout; the hash refuses
+# bytes that differ from the source the measurement used.
 SOURCES: dict[str, tuple[str, str, str]] = {
-    "css": ("necolas/normalize.css/master/normalize.css", "normalize.css",
+    "css": ("necolas/normalize.css/fc091cce1534909334c1911709a39c22d406977b/normalize.css", "normalize.css",
         "580818700724d42d7fcc4979b0197971fca1c6d2e0286769237a0ac897df5512"),  # 6138 bytes
-    "elixir": ("phoenixframework/phoenix/main/lib/phoenix/router.ex", "router.ex",
+    "elixir": ("phoenixframework/phoenix/24c52d8a4eaedd2399a9cb92a01fa00776e6f69a/lib/phoenix/router.ex", "router.ex",
         "046564dae97dbd0ba58eb78e630fb226a2c8360a86b933dd9604e998c68b17bd"),  # 46089 bytes
-    "embedded-template": ("discourse/discourse/main/app/views/layouts/application.html.erb", "application.html.erb",
+    "embedded-template": ("discourse/discourse/f5cd83cab6392b7e54c7714a51290d8fae28fa9d/app/views/layouts/application.html.erb", "application.html.erb",
         "c481f3977efa5fdb6badbbdb6acb8e4b9aaab1ebbe1a00e608882f3fb85fd095"),  # 6006 bytes
-    "haskell": ("jgm/pandoc/main/src/Text/Pandoc/Shared.hs", "Shared.hs",
+    "haskell": ("jgm/pandoc/9d138e2d33433e4aca9edafe027c34d40cf9929e/src/Text/Pandoc/Shared.hs", "Shared.hs",
         "538874e0f17895a81d5a479d2a52b134777e2ef0eb6988657070862dfacb6600"),  # 34240 bytes
-    "html": ("mozilla/pdf.js/master/web/viewer.html", "viewer.html",
+    "html": ("mozilla/pdf.js/b4d028132bfb16daf5a5beeac19c23b43b4e0bf8/web/viewer.html", "viewer.html",
         "52791712cc2185d4dbfcbd4321648ed3f719a531399568d479c05a09fcbcbdd7"),  # 72288 bytes
-    "julia": ("JuliaLang/julia/master/base/set.jl", "set.jl",
+    "julia": ("JuliaLang/julia/8ddf7d8f73eb3bc1f53bda70d55f318e7ed6f92e/base/set.jl", "set.jl",
         "4585eafb53f1ecef7559d7fa0e00e12d6932ac363ee2f9b0c682637bb29cf8e3"),  # 27360 bytes
-    "kotlin": ("JetBrains/kotlin/master/libraries/stdlib/src/kotlin/collections/Maps.kt", "Maps.kt",
+    "kotlin": ("JetBrains/kotlin/6c9645e577752cc3f6c94794702b82907b2a6e4a/libraries/stdlib/src/kotlin/collections/Maps.kt", "Maps.kt",
         "773f15240e05d648172b2953dd64f3345327fc2b1c76e8d73e67b569905a07b9"),  # 35815 bytes
-    "latex": ("latex3/latex2e/develop/base/doc/ltnews01.tex", "ltnews01.tex",
+    "latex": ("latex3/latex2e/2cdbff62d8da4886006978e8cfd805d128d44b4f/base/doc/ltnews01.tex", "ltnews01.tex",
         "54179c456281cdc625d4205a15e8dd52e61e5b8c6325350fc823c58ccaf56962"),  # 5246 bytes
-    "lua": ("neovim/neovim/master/runtime/lua/vim/uri.lua", "uri.lua",
+    "lua": ("neovim/neovim/6195624a3f96abc22a508866d6bdd5ffbee16150/runtime/lua/vim/uri.lua", "uri.lua",
         "093810743028bfbdd24349ca28621a55db4804f255056fd617207af29b2d702b"),  # 3707 bytes
-    "markdown": ("rust-lang/rust/master/README.md", "README.md",
+    "markdown": ("rust-lang/rust/f0f849d96ff7c1ea57eca1de63a966e8f832baf5/README.md", "README.md",
         "b3f6ef2fef88b98cb9ec013a5c86213095e53e40eb228679574e4d06517f33c8"),  # 3304 bytes
-    "ocaml": ("ocaml/ocaml/trunk/stdlib/list.ml", "list.ml",
+    "ocaml": ("ocaml/ocaml/d68b0bca2dda49b646a6872d80a087ddabf530bd/stdlib/list.ml", "list.ml",
         "3703bdaf69c532b535c3de70cafdc50cb6c4a31c6cb8ded0454b41f8178cc982"),  # 16878 bytes
-    "php": ("laravel/framework/master/src/Illuminate/Support/Str.php", "Str.php",
+    "php": ("laravel/framework/d15b8f31ff6bd3072d3280cd49d2252205c11111/src/Illuminate/Support/Str.php", "Str.php",
         "ff74f29c097d584b9f5c98193704f10afbeccb53c22d8ffeaf311f9633ec6630"),  # 67845 bytes
-    "scala": ("scala/scala/2.13.x/src/library/scala/Option.scala", "Option.scala",
+    "scala": ("scala/scala/341e0626862f552cba52e971aae59ccd255a22c6/src/library/scala/Option.scala", "Option.scala",
         "2d64050477836528db8ddfd16582f33e90c78f94b4240c82bf3eab35a763ebcf"),  # 20107 bytes
-    "sql": ("postgres/postgres/master/src/test/regress/sql/case.sql", "case.sql",
+    "sql": ("postgres/postgres/5b8728cd7f9d3d93b6ff9b48887084fdf0a46e4f/src/test/regress/sql/case.sql", "case.sql",
         "1979a7667d5632a0c7d5a164533f604688d9eecac98521749e0d332e6f82482b"),  # 6390 bytes
-    "swift": ("apple/swift-algorithms/main/Sources/Algorithms/Chunked.swift", "Chunked.swift",
+    "swift": ("apple/swift-algorithms/0aa3733a77d162738267e54748f6f3fea7068b88/Sources/Algorithms/Chunked.swift", "Chunked.swift",
         "fb06bdb5febbcea03182b8116291c48daf3299c64f54f639905bdeb869b2d054"),  # 28468 bytes
-    "toml": ("BurntSushi/ripgrep/master/Cargo.toml", "Cargo.toml",
+    "toml": ("BurntSushi/ripgrep/8372866810a1f2a647d11d7780984d4402a5c1e9/Cargo.toml", "Cargo.toml",
         "2f95013e611a48735f349ff98fd1e9513676bc7145d0be9af29c585ffce5e4fe"),  # 3544 bytes
-    "verilog": ("YosysHQ/picorv32/main/picorv32.v", "picorv32.v",
+    "verilog": ("YosysHQ/picorv32/de92ce54e8a3f24f2adc6b5d04de35e4edb873e5/picorv32.v", "picorv32.v",
         "0836050971b3c6cdd28ac3b1e5719a67fb645161912bef1e472e63995ceb0622"),  # 94657 bytes
-    "yaml": ("prometheus/prometheus/main/.github/workflows/ci.yml", "ci.yml",
+    "yaml": ("prometheus/prometheus/dcfcaeea6d1f3f0efc6096d1b5214c0c188ece46/.github/workflows/ci.yml", "ci.yml",
         "f61b4ff89aa1a1a95272562c067e150b5ae528c255877a2e5d30b0b932e28c38"),  # 18935 bytes
-    "zig": ("ziglang/zig/master/lib/std/ascii.zig", "ascii.zig",
+    "zig": ("ziglang/zig/5a38dd28dc6eb7fe1acb7bb94710ab1a99a13565/lib/std/ascii.zig", "ascii.zig",
         "da69803dffc9571f0c4f7ea452317433883c206aec5299788649c2623eda9452"),  # 16125 bytes
 }
 

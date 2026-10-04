@@ -222,6 +222,28 @@ test "quire: the full json tree keeps its anonymous nodes, spelled as themselves
     try expectTree(f, "[]", .all, "(document (array \"[\" \"]\"))");
 }
 
+test "quire: rule wrappers keep their token children and lexical wrappers stay leaves" {
+    // Independently generated tree-sitter parser: plain literals and token()
+    // are named leaves, while syntactic rank, alias and field wrappers reduce
+    // a named rule above the child they describe.
+    const src =
+        \\{"name":"t","rules":{"doc":{"type":"SEQ","members":[
+        \\ {"type":"SYMBOL","name":"plain"},{"type":"SYMBOL","name":"ranked"},
+        \\ {"type":"SYMBOL","name":"lexical"},{"type":"SYMBOL","name":"renamed"},
+        \\ {"type":"SYMBOL","name":"fielded"}]},
+        \\ "plain":{"type":"STRING","value":"plain"},
+        \\ "ranked":{"type":"PREC_LEFT","value":0,"content":{"type":"STRING","value":"ranked"}},
+        \\ "lexical":{"type":"TOKEN","content":{"type":"PREC","value":1,"content":{"type":"STRING","value":"lexical"}}},
+        \\ "renamed":{"type":"ALIAS","named":true,"value":"new_name","content":{"type":"STRING","value":"renamed"}},
+        \\ "fielded":{"type":"FIELD","name":"value","content":{"type":"STRING","value":"fielded"}}}
+    ++ spaces ++ "}";
+    var f = try Fixture.init(t.allocator, src);
+    defer f.deinit();
+    try expectTree(f, "plain ranked lexical renamed fielded", .all,
+        \\(doc (plain) (ranked "ranked") (lexical) (renamed (new_name)) (fielded value: "fielded"))
+    );
+}
+
 test "quire: an escape sequence is its own node, spliced in beside the text" {
     var f = try Fixture.init(t.allocator, json_src);
     defer f.deinit();
@@ -259,6 +281,36 @@ test "quire: a node spans its own tokens and no further" {
     try t.expectEqualStrings("string_content", q.name(content));
 }
 
+test "quire: a hidden zero-width layout token anchors an aliased body" {
+    // The external indent is a real token at the end of `begin:`, before
+    // the newline and spaces the scanner skips. It contributes no child,
+    // but its enclosing alias starts at that boundary. A nullable rule is
+    // different: it contributes neither a token nor an earlier edge.
+    const src =
+        \\{"name":"t","rules":{
+        \\ "doc":{"type":"SEQ","members":[{"type":"STRING","value":"begin:"},
+        \\  {"type":"ALIAS","named":true,"value":"block","content":{"type":"SYMBOL","name":"_body"}}]},
+        \\ "_body":{"type":"SEQ","members":[{"type":"SYMBOL","name":"_indent"},
+        \\  {"type":"SYMBOL","name":"item"},{"type":"SYMBOL","name":"_dedent"}]},
+        \\ "item":{"type":"SEQ","members":[{"type":"SYMBOL","name":"name"},{"type":"SYMBOL","name":"_newline"}]},
+        \\ "name":{"type":"PATTERN","value":"[a-z]+"}},
+        \\ "extras":[{"type":"PATTERN","value":"[ \\t\\n]"}],
+        \\ "externals":[{"type":"SYMBOL","name":"_newline"},{"type":"SYMBOL","name":"_indent"},
+        \\  {"type":"SYMBOL","name":"_dedent"}]}
+    ;
+    var f = try Fixture.init(t.allocator, src);
+    defer f.deinit();
+    var q = try f.parse("begin:\n  x\n");
+    defer q.deinit();
+    try t.expectEqual(quire.Stop.accepted, q.stop);
+    try t.expect((try q.survey(t.allocator)).sound());
+    const block = q.children(q.root().?)[1];
+    try t.expectEqualStrings("block", q.name(block));
+    try t.expectEqual(@as(u32, 6), q.nodes[block].start);
+    try t.expectEqual(@as(u32, 10), q.nodes[block].end());
+    try expectTree(f, "begin:\n  x\n", .all, "(doc \"begin:\" (block (item (name))))");
+}
+
 test "quire: a parse that stops early keeps its prefix and says where it stopped" {
     var f = try Fixture.init(t.allocator, json_src);
     defer f.deinit();
@@ -285,7 +337,119 @@ test "quire: a parse that stops early keeps its prefix and says where it stopped
     try t.expectEqual(@as(u32, 3), bad.stop.unexpected.at);
 }
 
+test "quire: authored reduction forks prove layout admission on the actual stack" {
+    // The merged row after [] offers a newline through two reductions. In
+    // parentheses neither can shift it, so it must stay whitespace. After
+    // 'a' only the first can shift; after 'b' only the rival can. Rule names
+    // are changed below to ensure this is a table-and-stack proof.
+    const src =
+        \\{"name":"fork_admission","rules":{
+        \\ "doc":{"type":"CHOICE","members":[
+        \\  {"type":"SEQ","members":[{"type":"STRING","value":"("},
+        \\   {"type":"CHOICE","members":[{"type":"SYMBOL","name":"first"},{"type":"SYMBOL","name":"second"}]},
+        \\   {"type":"STRING","value":")"}]},
+        \\  {"type":"SEQ","members":[{"type":"STRING","value":"a"},{"type":"SYMBOL","name":"first"},{"type":"SYMBOL","name":"_newline"}]},
+        \\  {"type":"SEQ","members":[{"type":"STRING","value":"a"},{"type":"SYMBOL","name":"second"},{"type":"STRING","value":"!"}]},
+        \\  {"type":"SEQ","members":[{"type":"STRING","value":"b"},{"type":"SYMBOL","name":"first"},{"type":"STRING","value":"!"}]},
+        \\  {"type":"SEQ","members":[{"type":"STRING","value":"b"},{"type":"SYMBOL","name":"second"},{"type":"SYMBOL","name":"_newline"}]}]},
+        \\ "first":{"type":"SEQ","members":[{"type":"SYMBOL","name":"_open"},{"type":"SYMBOL","name":"_close"}]},
+        \\ "second":{"type":"SEQ","members":[{"type":"SYMBOL","name":"_open"},{"type":"SYMBOL","name":"_close"}]},
+        \\ "_open":{"type":"STRING","value":"["},"_close":{"type":"STRING","value":"]"}},
+        \\ "conflicts":[["first","second"]],
+        \\ "externals":[{"type":"SYMBOL","name":"_newline"},{"type":"SYMBOL","name":"_indent"},{"type":"SYMBOL","name":"_dedent"}],
+        \\ "extras":[{"type":"PATTERN","value":"\\s"}]}
+    ;
+    const renamed = try std.mem.replaceOwned(u8, t.allocator, src, "first", "cedar");
+    defer t.allocator.free(renamed);
+    const renamed_both = try std.mem.replaceOwned(u8, t.allocator, renamed, "second", "oak");
+    defer t.allocator.free(renamed_both);
+    const renamed_grammar = try std.mem.replaceOwned(u8, t.allocator, renamed_both, "fork_admission", "unrelated_stack");
+    defer t.allocator.free(renamed_grammar);
+    for ([_][]const u8{ src, renamed_grammar }, [_][]const u8{ "first", "cedar" }, [_][]const u8{ "second", "oak" }) |grammar, first, second| {
+        var f = try Fixture.init(t.allocator, grammar);
+        defer f.deinit();
+        try t.expect(f.gather.forks.count() > 0);
+        // Alternate stack contexts revisit the same reduced row and exercise
+        // the depth evidence of the memo, rather than just one cold offer.
+        for ([_][]const u8{ "a[]\n", "([]\n)", "b[]\n", "([]\n)", "a[]\n", "b[]\n" }) |bytes| {
+            var q = try f.parse(bytes);
+            defer q.deinit();
+            try t.expectEqual(quire.Stop.accepted, q.stop);
+            try t.expectEqual(@as(u32, 0), q.mends);
+            try t.expectEqual(@as(usize, 1), q.roots.len);
+            try t.expect((try q.survey(t.allocator)).sound());
+            const children = q.children(q.root().?);
+            const name = q.name(children[1]);
+            if (bytes[0] == 'a') {
+                try t.expectEqualStrings(first, name);
+            } else if (bytes[0] == 'b') {
+                try t.expectEqualStrings(second, name);
+            } else {
+                try t.expect(std.mem.eql(u8, name, first) or std.mem.eql(u8, name, second));
+                try t.expectEqualStrings("[]", bytes[q.nodes[children[1]].start..q.nodes[children[1]].end()]);
+            }
+        }
+        var refused = try f.parse("([]!\n)");
+        defer refused.deinit();
+        try t.expect(std.meta.activeTag(refused.stop) != .accepted);
+    }
+}
+
 // ── the recipe's hard cases, on grammars small enough to read ──
+
+test "quire: lexer admission follows deep unit reductions before offering layout" {
+    // Both alternatives can begin with the same terminal. Outside parentheses
+    // the layout token belongs to the document; inside, the actual stack must
+    // reduce all 48 named units before proving that layout cannot be read.
+    // Admitting on the shorter repair-lookahead budget incorrectly emits a
+    // newline halfway through this proof and splits the valid document.
+    var grammar: std.ArrayList(u8) = .empty;
+    defer grammar.deinit(t.allocator);
+    try grammar.appendSlice(t.allocator,
+        \\{"name":"deep_admission","rules":{"doc":{"type":"CHOICE","members":[
+        \\ {"type":"SEQ","members":[{"type":"STRING","value":"("},{"type":"SYMBOL","name":"unit0"},{"type":"STRING","value":")"}]},
+        \\ {"type":"SEQ","members":[{"type":"SYMBOL","name":"unit0"},{"type":"SYMBOL","name":"_newline"}]}
+        \\ ]},
+    );
+    for (0..48) |i| {
+        const rule = if (i == 47)
+            try std.fmt.allocPrint(t.allocator, "\"unit{d}\":{{\"type\":\"STRING\",\"value\":\"v\"}}", .{i})
+        else
+            try std.fmt.allocPrint(t.allocator, "\"unit{d}\":{{\"type\":\"SYMBOL\",\"name\":\"unit{d}\"}},", .{ i, i + 1 });
+        defer t.allocator.free(rule);
+        try grammar.appendSlice(t.allocator, rule);
+    }
+    try grammar.appendSlice(t.allocator,
+        \\},"externals":[{"type":"SYMBOL","name":"_newline"},{"type":"SYMBOL","name":"_indent"},{"type":"SYMBOL","name":"_dedent"}],
+        \\ "extras":[{"type":"PATTERN","value":"\\s"}]}
+    );
+    const renamed = try std.mem.replaceOwned(u8, t.allocator, grammar.items, "unit", "sprout");
+    defer t.allocator.free(renamed);
+    for ([_][]const u8{ grammar.items, renamed }) |src| {
+        const f = try Fixture.init(t.allocator, src);
+        defer f.deinit();
+        // Reuse the lexer memo while alternating the two stack contexts.
+        for ([_][]const u8{ "v\n", "(v\n)", "v\n", "(v\n)" }) |source| {
+            var q = try f.parse(source);
+            defer q.deinit();
+            try t.expectEqual(.accepted, std.meta.activeTag(q.stop));
+            try t.expectEqual(@as(u32, 0), q.mends);
+            try t.expectEqual(@as(usize, 1), q.roots.len);
+            try t.expect((try q.survey(t.allocator)).sound());
+            var node = q.roots[0];
+            var units: usize = 0;
+            while (q.children(node).len > 0) {
+                node = q.children(node)[if (units == 0 and source[0] == '(') @as(usize, 1) else 0];
+                units += 1;
+            }
+            try t.expectEqual(@as(usize, 48), units);
+            try t.expectEqualStrings("v", source[q.nodes[node].start..q.nodes[node].end()]);
+        }
+        var refused = try f.parse("(v!\n)");
+        defer refused.deinit();
+        try t.expect(std.meta.activeTag(refused.stop) != .accepted);
+    }
+}
 
 test "quire: an alias renames the child at the site that renamed it, and only there" {
     // The same symbol, reached twice, wearing two names - C's

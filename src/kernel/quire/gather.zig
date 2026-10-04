@@ -464,13 +464,8 @@ const skeins = 512;
 const fuse = 3;
 const whole = 4;
 
-/// How far a lookahead walk may follow the table before it stops guessing:
-/// pretend-perches it may stack up, and steps it may take doing it.
-///
-/// Hoisted out of `shiftable`, where they were two locals, because there are
-/// now two walks over the same table and a second copy of a bound is a third
-/// bound - which is the shape a sibling lane is auditing the whole tree for.
-/// Same values, same reason, one home beside the other fuses.
+/// The overlay capacity shared by the lookahead walks, and the step bound
+/// for supplied-token guesses. Lexer admission has its own bound below.
 ///
 /// **What a walk does when it runs out is not shared, and must not be.** A
 /// production that consumes nothing can push forever, so both walks stop; but
@@ -479,19 +474,20 @@ const whole = 4;
 /// could have shifted is a wrong tree - so it answers yes. `follows` is asking
 /// whether to write a token the author did not, where a yes on a walk that gave
 /// up is a node over text nobody wrote - so it answers no. Two questions, two
-/// safe defaults, one budget.
+/// safe defaults, separate step budgets.
 ///
-/// **These two are in series and neither had ever been swept.** `climb` bounds
-/// the pretend-perches and `chase` bounds the steps, and a step is what stacks
-/// a perch, so `chase` under `climb` makes `climb` unreachable and the pair has
+/// **The two repair bounds are in series.** `climb` bounds the pretend-perches
+/// and `chase` bounds the steps. Each step can stack a perch, so `chase` under
+/// `climb` makes `climb` unreachable and the pair has
 /// one effective bound. That is `crowd`/`skeins`' wiring, and the danger runs
 /// the other way here: **running out is an answer, not a pause.** `shiftable`
 /// answers yes when it gives up, so a *wider* budget is a stricter walk - it
 /// has more chances to reach one of the three `return false` arms before the
 /// permissive exit. Raising one of these is not obviously safe.
 ///
-/// Swept jointly, seven arms on one tree against one frozen oracle, scored on
-/// square without verilog: 1/2 loses **143,879** - php, scala, kotlin, swift,
+/// The earlier deterministic lookahead was swept jointly, seven arms on one
+/// tree against one frozen oracle, scored on square without verilog:
+/// 1/2 loses **143,879** - php, scala, kotlin, swift,
 /// typescript and julia all collapse - 2/8 loses 23,878, and 4/16, 8/32, 32/32,
 /// 8/128 and 32/128 are byte-identical at 309,356 on all thirty grammars. So
 /// the answer saturates at 4/16, 8/32 is one doubling of margin above the knee,
@@ -499,6 +495,13 @@ const whole = 4;
 /// what these are for; the numbers are now measured rather than inherited.
 const climb = 8;
 const chase = 32;
+/// Lexer admission must be able to discharge long pending reductions before
+/// offering a layout token: otherwise a parenthesized expression can receive
+/// a newline that none of its readings can shift. Supplied-token guesses keep
+/// their smaller `chase` bound and their conservative default. Admission has
+/// its own bounded proof budget; running out still admits rather than denying
+/// a terminal without a complete proof.
+const admission_chase = 256;
 
 /// One lookahead walk over the table, standing on a real stack it never
 /// touches.
@@ -551,7 +554,7 @@ const Ahead = struct {
         /// `climb` overlay full - more folds stacked than the walk can stand
         /// on. A budget.
         climbed,
-        /// `chase` steps taken without reaching a shift. A budget.
+        /// The caller's step budget spent without reaching a shift.
         chased,
     };
 
@@ -575,31 +578,110 @@ const Ahead = struct {
             const here = a.state();
             if (a.x.forking) if (a.x.forks.at(here, sym).len != 0) return a.gave(.forked);
             const act = a.x.t.at(here, sym);
-            switch (act.kind) {
-                .err => return .stops,
-                .shift => return .{ .reads = act.value },
-                .accept => return .done,
-                .reduce => {
-                    const p = a.x.gr.productions[act.value];
-                    var n = p.rhs.len;
-                    const virtual = @min(a.ups, n);
-                    a.ups -= virtual;
-                    n -= virtual;
-                    if (n > 0) {
-                        if (a.x.deep(a.base) < n) {
-                            a.bottom = true;
-                            return .stops;
-                        }
-                        for (0..n) |_| a.base = a.x.below(a.base);
-                        a.fell += @intCast(n);
-                    }
-                    const under = a.state();
-                    const to = a.x.landing(under, p.lhs) orelse return .stops;
-                    if (!a.push(to)) return a.gave(.climbed);
+            if (a.move(act)) |answer| return answer;
+        }
+        return a.gave(.chased);
+    }
+
+    /// Whether any reading of this terminal can reach a shift or acceptance.
+    /// Lexer admission is existential, so an authored fork is explored rather
+    /// than admitted merely for being a fork. `take` remains conservative for
+    /// supplied-token guesses, which need one concrete continuation.
+    ///
+    /// Every branch has its own overlay, but all branches spend one budget.
+    /// `spent` accounts for a prefix already walked by `flock`; recursion and
+    /// reduction probes share the remaining `admission_chase` steps.
+    /// Exhaustion is an explicit `unsure`, never a proof that the terminal
+    /// cannot be read.
+    fn takeAdmission(a: *Ahead, sym: press.Symbol, spent: u32) Step {
+        var left: u32 = admission_chase - @min(spent, admission_chase);
+        return a.admit(sym, &left);
+    }
+
+    fn admit(a: *Ahead, sym: press.Symbol, left: *u32) Step {
+        if (left.* == 0) return a.gave(.chased);
+        left.* -= 1;
+        const here = a.state();
+        const act = a.x.t.at(here, sym);
+        const forks = if (a.x.forking) a.x.forks.at(here, sym) else &.{};
+
+        // A direct witness need not spend the budget of a competing fold.
+        // Check every immediate reading before chasing any reductions.
+        switch (act.kind) {
+            .shift => return .{ .reads = act.value },
+            .accept => return .done,
+            .err, .reduce => {},
+        }
+        for (forks) |fork| switch (fork.other.kind) {
+            .shift => return .{ .reads = fork.other.value },
+            .accept => return .done,
+            .err, .reduce => {},
+        };
+
+        const seed = a.*;
+        var hazy: Hazy = .clear;
+        for (0..forks.len + 1) |i| {
+            if (i != 0) {
+                if (left.* == 0) {
+                    hazy = .chased;
+                    break;
+                }
+                left.* -= 1;
+            }
+            var branch = seed;
+            const option = if (i == 0) act else forks[i - 1].other;
+            const answer = if (branch.move(option)) |result| result else branch.admit(sym, left);
+
+            // Even a losing branch can have read deeper than the winner.
+            // Keep the whole proof's stack evidence for the lexer memo.
+            a.fell = @max(a.fell, branch.fell);
+            a.bottom = a.bottom or branch.bottom;
+            switch (answer) {
+                .reads, .done => {
+                    const fell = a.fell;
+                    const bottom = a.bottom;
+                    a.* = branch;
+                    a.fell = fell;
+                    a.bottom = bottom;
+                    return answer;
+                },
+                .stops => {},
+                .unsure => if (hazy == .clear) {
+                    hazy = branch.hazy;
                 },
             }
         }
-        return a.gave(.chased);
+        return if (hazy == .clear) .stops else a.gave(hazy);
+    }
+
+    /// One table action. A successful reduction continues the lookahead;
+    /// every other result is its answer. Shared with the conservative walk so
+    /// both questions use the same stack and goto rules.
+    fn move(a: *Ahead, act: press.Action) ?Step {
+        switch (act.kind) {
+            .err => return .stops,
+            .shift => return .{ .reads = act.value },
+            .accept => return .done,
+            .reduce => {
+                const p = a.x.gr.productions[act.value];
+                var n = p.rhs.len;
+                const virtual = @min(a.ups, n);
+                a.ups -= virtual;
+                n -= virtual;
+                if (n > 0) {
+                    if (a.x.deep(a.base) < n) {
+                        a.bottom = true;
+                        return .stops;
+                    }
+                    for (0..n) |_| a.base = a.x.below(a.base);
+                    a.fell += @intCast(n);
+                }
+                const under = a.state();
+                const to = a.x.landing(under, p.lhs) orelse return .stops;
+                if (!a.push(to)) return a.gave(.climbed);
+                return null;
+            },
+        }
     }
 
     /// Record why this walk is about to decline, and decline.
@@ -654,6 +736,162 @@ const Ahead = struct {
         return true;
     }
 };
+
+test "lexer admission keeps losing fork depth and refuses only a complete proof" {
+    const t = std.testing;
+    // One terminal and three reductions at state 2. The selected reduction
+    // reads two real perches and stops, the first alternate runs out of stack,
+    // and the second alternate reads one perch and reaches a shift. The memo
+    // must retain the losing readings' deeper and bottom evidence.
+    const productions = [_]press.Production{
+        .{ .lhs = 1, .rhs = &.{ 0, 0 }, .steps = &.{ .{}, .{} } },
+        .{ .lhs = 2, .rhs = &.{ 0, 0, 0 }, .steps = &.{ .{}, .{}, .{} } },
+        .{ .lhs = 3, .rhs = &.{0}, .steps = &.{.{}} },
+    };
+    const states = [_]press.State{
+        .{ .kernel = &.{}, .edges = &.{.{ .symbol = 1, .target = 3 }}, .complete = &.{} },
+        .{ .kernel = &.{}, .edges = &.{.{ .symbol = 3, .target = 4 }}, .complete = &.{} },
+        .{ .kernel = &.{}, .edges = &.{}, .complete = &.{} },
+        .{ .kernel = &.{}, .edges = &.{}, .complete = &.{} },
+        .{ .kernel = &.{}, .edges = &.{}, .complete = &.{} },
+    };
+    var actions = [_]press.Action{ .err, .err, .reduce(0), .err, .shift(5) };
+    var perches: [3]Perch = undefined;
+    for (&perches, 0..) |*perch, i| perch.* = .{
+        .state = @intCast(i),
+        .own = 0,
+        .owns = 0,
+        .lead = 0,
+        .leads = 0,
+        .start = 0,
+        .end = 0,
+    };
+    var stands = [_]Stand{
+        .{ .down = 0, .depth = 0 },
+        .{ .down = 0, .depth = 1 },
+        .{ .down = 1, .depth = 2 },
+    };
+    const lands = try t.allocator.alloc(Gather.Land, Gather.landings);
+    defer t.allocator.free(lands);
+    @memset(lands, .{});
+
+    // Ahead reads only these parts; the fixture neither builds trees nor lexes.
+    var gr: press.Grammar = undefined;
+    gr.productions = &productions;
+    var c: press.Collection = undefined;
+    c.states = &states;
+    var table: press.Tables = undefined;
+    table.width = 1;
+    table.action = &actions;
+    var x: Gather = undefined;
+    x.gr = &gr;
+    x.c = &c;
+    x.t = &table;
+    x.forking = true;
+    x.forks = .{
+        .width = 1,
+        .marked = &.{1 << 2},
+        .splits = &.{
+            .{ .cell = 2, .other = .reduce(1) },
+            .{ .cell = 2, .other = .reduce(2) },
+        },
+    };
+    x.perches = .{ .items = &perches, .capacity = perches.len };
+    x.stand = .{ .items = &stands, .capacity = stands.len };
+    x.lands = lands;
+
+    var a: Ahead = .on(&x, 2);
+    const read = a.takeAdmission(0, 0);
+    try t.expect(read == .reads);
+    try t.expectEqual(@as(u32, 5), read.reads);
+    try t.expectEqual(@as(u32, 1), a.base);
+    try t.expectEqual(@as(u32, 2), a.fell);
+    try t.expect(a.bottom);
+
+    // Insertion still declines at the authored fork without choosing a path.
+    a = .on(&x, 2);
+    try t.expect(a.take(0) == .unsure);
+    try t.expectEqual(Ahead.Hazy.forked, a.hazy);
+
+    actions[4] = .err;
+    a = .on(&x, 2);
+    try t.expect(a.takeAdmission(0, 0) == .stops);
+    try t.expectEqual(@as(u32, 2), a.fell);
+    try t.expect(a.bottom);
+
+    // A shared prefix that spent the budget leaves an explicit uncertainty.
+    a = .on(&x, 2);
+    try t.expect(a.takeAdmission(0, admission_chase - 1) == .unsure);
+    try t.expectEqual(Ahead.Hazy.chased, a.hazy);
+    try t.expectEqual(@as(u32, 2), a.fell);
+    try t.expect(!a.bottom);
+}
+
+test "lexer admission discharges long deterministic folds with its own budget" {
+    const t = std.testing;
+    // Each fold replaces two symbols with one. After the first fold there is
+    // one overlay state, so every further fold descends one real perch. State
+    // 1 folds again; reaching the ground lands in state 2 and answers exactly.
+    const productions = [_]press.Production{
+        .{ .lhs = 1, .rhs = &.{ 0, 0 }, .steps = &.{ .{}, .{} } },
+    };
+    const states = [_]press.State{
+        .{ .kernel = &.{}, .edges = &.{.{ .symbol = 1, .target = 2 }}, .complete = &.{} },
+        .{ .kernel = &.{}, .edges = &.{.{ .symbol = 1, .target = 1 }}, .complete = &.{} },
+        .{ .kernel = &.{}, .edges = &.{}, .complete = &.{} },
+    };
+    var actions = [_]press.Action{ .err, .reduce(0), .err };
+    var perches: [admission_chase + 3]Perch = undefined;
+    for (&perches, 0..) |*perch, i| perch.* = .{
+        .state = if (i == 0) 0 else 1,
+        .own = 0,
+        .owns = 0,
+        .lead = 0,
+        .leads = 0,
+        .start = 0,
+        .end = 0,
+    };
+    const lands = try t.allocator.alloc(Gather.Land, Gather.landings);
+    defer t.allocator.free(lands);
+    @memset(lands, .{});
+    var gr: press.Grammar = undefined;
+    gr.productions = &productions;
+    var c: press.Collection = undefined;
+    c.states = &states;
+    var table: press.Tables = undefined;
+    table.width = 1;
+    table.action = &actions;
+    var x: Gather = undefined;
+    x.gr = &gr;
+    x.c = &c;
+    x.t = &table;
+    x.forking = false;
+    x.perches = .{ .items = &perches, .capacity = perches.len };
+    x.lands = lands;
+
+    var a: Ahead = .on(&x, 64);
+    try t.expect(a.takeAdmission(0, 0) == .stops);
+    try t.expectEqual(@as(u32, 64), a.fell);
+    try t.expect(!a.bottom);
+    a = .on(&x, 64);
+    try t.expect(a.take(0) == .unsure);
+    try t.expectEqual(Ahead.Hazy.chased, a.hazy);
+
+    actions[2] = .shift(3);
+    a = .on(&x, 64);
+    const read = a.takeAdmission(0, 0);
+    try t.expect(read == .reads);
+    try t.expectEqual(@as(u32, 3), read.reads);
+    try t.expectEqual(@as(u32, 64), a.fell);
+
+    // More folds than the admission budget remain an explicit uncertainty.
+    actions[2] = .err;
+    a = .on(&x, admission_chase + 2);
+    try t.expect(a.takeAdmission(0, 0) == .unsure);
+    try t.expectEqual(Ahead.Hazy.chased, a.hazy);
+    try t.expectEqual(@as(u32, admission_chase + 1), a.fell);
+    try t.expect(!a.bottom);
+}
 
 /// The first offset past `at` worth trying again from, when nothing lexed
 /// there at all. One byte, unless `at` is inside a word, in which case the
@@ -1459,8 +1697,7 @@ pub const Gather = struct {
     ///      rather than resolved, because a ranking rule is a different claim
     ///      than this one and wants its own evidence.
     ///
-    /// No constant is introduced. The two bounds are `climb` and `chase`, which
-    /// `shiftable` was already spending on every token of every parse.
+    /// Supply retains the `climb` and `chase` repair-lookahead bounds.
     ///
     /// ## Where it is asked from
     ///
@@ -2405,9 +2642,9 @@ pub const Gather = struct {
     /// for, preclassified so the hot loops branch on bits instead of
     /// re-deriving the classification per token.
     ///
-    /// `sure` is an admission that needs no lookahead walk - a shift, an
-    /// accept, or a cell the author declared a fork, which `Ahead.take`
-    /// answers `unsure` without stepping and `shiftable` therefore admits.
+    /// `sure` is an admission that needs no lookahead walk: a shift or an
+    /// accept in the selected action or an authored alternative. Reduction
+    /// forks still have to reach a shift on the stack that is asking.
     /// The walk answers live in each `Record`'s `yes` mask rather than here,
     /// because one state is asked from several stack contexts and a bit on
     /// the shared card can only remember one of them. (`holds` used to
@@ -2491,12 +2728,16 @@ pub const Gather = struct {
         var cards: std.ArrayList(Card) = .empty;
         defer cards.deinit(x.gpa);
         for (0..x.gr.terminal_count) |sym| {
-            const forked = x.forking and x.forks.at(state, @intCast(sym)).len != 0;
+            const splits = if (x.forking) x.forks.at(state, @intCast(sym)) else &.{};
             const kind = x.t.at(state, @intCast(sym)).kind;
-            if (kind == .err and !forked) continue;
+            if (kind == .err and splits.len == 0) continue;
+            var sure = kind == .shift or kind == .accept;
+            for (splits) |split| {
+                if (split.other.kind == .shift or split.other.kind == .accept) sure = true;
+            }
             try cards.append(x.gpa, .{
                 .sym = @intCast(sym),
-                .sure = forked or kind != .reduce,
+                .sure = sure,
             });
         }
         slate.cards = try cards.toOwnedSlice(x.gpa);
@@ -2560,8 +2801,8 @@ pub const Gather = struct {
     /// and paid once per distinct fold path rather than once per card, since
     /// every card whose walk begins with the same reduce replays the same
     /// pops and the same goto. `flock` shares those prefixes; the per-card
-    /// answers are the ones `Ahead.take` computes alone, by the determinism
-    /// of the table (same reads, same order, per card).
+    /// answers are the ones `Ahead.takeAdmission` computes alone, by the
+    /// determinism of the table (same reads, same order, per card).
     fn record(x: *Gather, s: *Slate, top: u32) *Record {
         // The context to overwrite: an empty way first, else the stalest.
         var r = &s.records[0];
@@ -2596,9 +2837,9 @@ pub const Gather = struct {
         return r;
     }
 
-    /// `record`'s escape hatch: one `Ahead.take` per unsure card, no sharing,
-    /// every unsure card past the mask admitted - the same "cannot say, so
-    /// admit" as a walk past `climb`.
+    /// `record`'s escape hatch: one `Ahead.takeAdmission` per unsure card, no
+    /// sharing, every unsure card past the mask admitted - the same "cannot
+    /// say, so admit" as a walk past `climb`.
     fn lone_record(x: *Gather, s: *Slate, r: *Record, top: u32) *Record {
         var fell: u32 = 0;
         var bottomed = false;
@@ -2607,7 +2848,7 @@ pub const Gather = struct {
             if (card.sure) continue;
             defer u += 1;
             var a: Ahead = .on(x, top);
-            const yes = switch (a.take(card.sym)) {
+            const yes = switch (a.takeAdmission(card.sym, 0)) {
                 .stops => false,
                 .reads, .done, .unsure => true,
             };
@@ -2640,13 +2881,13 @@ pub const Gather = struct {
     }
 
     /// Walk every card in `pending` from the context `a`, together. At each
-    /// level the cards that resolve (err, shift, accept, fork) take their
+    /// level the cards that resolve (err, shift, accept) take their
     /// answer, and the rest are grouped by the reduce they all force - one
     /// group performs its pops and its goto once, then descends as one flock.
     /// Each card sees exactly the table cells its lone walk would have seen,
-    /// in the same order, so the answers are `Ahead.take`'s answers; only the
-    /// duplicated stack descents are gone. `steps` is the same budget as
-    /// `take`'s loop: a card still unresolved after `chase` classifications
+    /// in the same order, so the answers are `Ahead.takeAdmission`'s answers;
+    /// only the duplicated stack descents are gone. `steps` shares its
+    /// budget: a card still unresolved after `admission_chase` classifications
     /// is `chased`, which admits.
     fn flock(
         x: *const Gather,
@@ -2658,7 +2899,7 @@ pub const Gather = struct {
         bottomed: *bool,
         yes: *std.StaticBitSet(yes_width),
     ) void {
-        if (steps >= chase) {
+        if (steps >= admission_chase) {
             for (pending) |pc| yes.set(pc >> 16);
             return;
         }
@@ -2667,7 +2908,16 @@ pub const Gather = struct {
         for (pending) |pc| {
             const sym = s.cards[pc & 0xFFFF].sym;
             if (x.forking and x.forks.at(here, sym).len != 0) {
-                yes.set(pc >> 16);
+                // An authored ambiguity permits choices, not this terminal
+                // on every stack. The fork walk shares this same prefix and
+                // records the deepest evidence from its alternatives.
+                var branch = a.*;
+                if (switch (branch.takeAdmission(sym, steps)) {
+                    .stops => false,
+                    .reads, .done, .unsure => true,
+                }) yes.set(pc >> 16);
+                fell.* = @max(fell.*, branch.fell);
+                bottomed.* = bottomed.* or branch.bottom;
                 continue;
             }
             switch (x.t.at(here, sym).kind) {
@@ -2850,22 +3100,19 @@ pub const Gather = struct {
     /// Whether this reading could ever shift `sym`, following the folds the
     /// table names for it down the stack it is standing on.
     ///
-    /// The walk is the deterministic prefix of what `absorb` would do, with
-    /// nothing minted: folds are forced moves, so replaying them costs a few
-    /// table reads and answers exactly. Where the table forks the walk takes
-    /// the table's own action, which is the reading a refusal is reported
-    /// from anyway.
+    /// The walk reads the table and its authored alternatives with nothing
+    /// minted. Any branch reaching a shift makes the terminal possible; when
+    /// every branch stops, no reading of this stack can consume it.
     ///
     /// It gives up rather than guessing. A production that consumes nothing
-    /// can push forever, so past `climb` pretend-perches or `chase` steps the
-    /// answer is yes: admitting a terminal the parse then refuses is the old
-    /// behaviour, and losing one it could have shifted would be a wrong tree.
+    /// can push forever, so past `climb` pretend-perches or `admission_chase`
+    /// steps the answer is yes: a spent budget cannot prove the terminal
+    /// impossible, and losing one it could shift would be a wrong tree.
     fn shiftable(x: *const Gather, top: u32, sym: press.Symbol) bool {
         var a: Ahead = .on(x, top);
-        // A fork is a yes without looking: one branch reaching a shift is
-        // enough to make the terminal real. So is a walk that gave up - see
-        // `climb`.
-        return switch (a.take(sym)) {
+        // A spent proof budget remains conservative; a declared reduction
+        // fork alone is not evidence that this stack can shift the token.
+        return switch (a.takeAdmission(sym, 0)) {
             .stops => false,
             .reads, .done, .unsure => true,
         };
@@ -3860,12 +4107,14 @@ pub const Gather = struct {
         // letting it set the start would pull the node back over the
         // whitespace in front of the first real one.
         //
-        // Unless it is a **terminal** that consumed nothing and has a node
-        // anyway - a supplied one, or a visible zero-width one the scanner
-        // handed back. That is a different animal from a nullable child: an
+        // Unless it is a **terminal** that consumed nothing - a supplied one,
+        // or a zero-width one the scanner handed back. A hidden layout token
+        // contributes an edge too: an alias around an indented body starts at
+        // the indent's boundary, before the whitespace ahead of its first
+        // visible child. That is a different animal from a nullable child: an
         // absence derived nothing and the span rule is right to ignore it, but
-        // a zero-width token is a place the parse stood and a node a reader
-        // can hold, and a node the span does not reach is a child outside its
+        // a zero-width token is a place the parse stood. A visible one outside
+        // the span is a child outside its
         // parent - the `loose` half of what `--sound` counts, and a real one:
         // supplying a `{` in front of a file's last `}` built the compound
         // statement `[41, 42)` around a `{` at `[40, 40)` until this clause
@@ -3880,7 +4129,7 @@ pub const Gather = struct {
         var end = x.at;
         var seen = false;
         for (p.rhs, mine) |sym, *f| {
-            if (f.start == f.end and !(f.owns > 0 and sym < x.gr.terminal_count)) continue;
+            if (f.start == f.end and sym >= x.gr.terminal_count) continue;
             // `end` starts at `x.at`, which is ahead of every child, so the
             // first one assigns and the rest may only widen. Folding that into
             // one `@max` costs 3,561 `square` corpus-wide, because it is the

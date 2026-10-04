@@ -46,7 +46,7 @@
 # `upstream/grammars/companion/<name>/<path>`, one tree per grammar, so that
 # collision is impossible by construction rather than avoided by ordering.
 #
-# Two sets live here now, and `set` is what tells them apart.
+# The measurement and consumer sets are distinct, and `set` tells them apart.
 #
 # `dossier` is the eleven. Every measurement this repo quotes - the sweep, the
 # differential, the reach numbers, the folio sizes in TESTING.md - runs over
@@ -69,6 +69,9 @@
 # `load()` defaults to `dossier` for exactly that reason, so widening this file
 # cannot widen what an existing sweep measures.
 #
+# `consumer` holds additional dialects required by native hosts. They are
+# fetched and verified with the other pins without changing either corpus.
+#
 # Schema: one [[grammar]] table per language, every field required but `note`,
 # `fixture` and `set`.
 #
@@ -84,7 +87,7 @@
 #           hashes it against `sha256` and fails naming both paths on a drift.
 #           Only for a grammar something in the build graph has to reach without
 #           a fetch - one, today.
-#   set     which of the two above; absent means `dossier`.
+#   set     which set above; absent means `dossier`.
 
 [[grammar]]
 name = "bash"
@@ -200,6 +203,32 @@ note = "one repo holds typescript and tsx; this is the typescript dialect"
   size = 10097
   note = "10,097 bytes where php's file at this same path is 18,018"
 
+
+# ---------------------------------------------------------------------------
+# Native consumer dialects, outside the measurement corpora.
+
+[[grammar]]
+name = "tsx"
+repo = "tree-sitter/tree-sitter-typescript"
+commit = "75b3874edb2dc714fb1fd77a32013d0f8699989f"
+path = "tsx/src/grammar.json"
+sha256 = "f98a7830b67be266c9e9effb673a5fc154ad6aa26f87f7c6d4a9191e09d8b357"
+size = 281578
+date = "2025-01-30"
+set = "consumer"
+note = "the TSX dialect at the same commit as typescript; native hosts select it separately"
+
+  [[grammar.companion]]
+  path = "tsx/src/scanner.c"
+  sha256 = "d563cd30b2f39718c9ae4292795c5ce03a2ad01954ba3a86ef84c2781a736673"
+  size = 538
+  note = "the TSX shim over the shared header below"
+
+  [[grammar.companion]]
+  path = "common/scanner.h"
+  sha256 = "da66ef2bd14a3f7ea743e25ba068c6c9aae2c3509db200ff80c4a0e6116e564c"
+  size = 10097
+  note = "the same scanner header as the pinned typescript dialect"
 
 # ---------------------------------------------------------------------------
 # The held-out set. Chosen before any of it was pressed; see the note above.

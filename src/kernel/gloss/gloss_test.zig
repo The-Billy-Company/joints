@@ -18,6 +18,16 @@ const press = @import("../../press/press.zig");
 
 const gpa = std.testing.allocator;
 
+test "sift: regex memory failure preserves the allocation error" {
+    var fail = std.testing.FailingAllocator.init(gpa, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sift.read(fail.allocator(), .{
+        .name = "match?",
+        .args = &.{ .{ .capture = "x" }, .{ .text = "^a$" } },
+        .at = 0,
+    }));
+    try std.testing.expect(fail.has_induced_failure);
+}
+
 /// The one symbol a step names, asserting on the way past that it names exactly
 /// one. A step carries a SET of symbols, because a spelling can be several; in
 /// this fixture every spelling asked about below is one, and saying so is a
@@ -302,9 +312,9 @@ test "sift: the policy is a closed core and an open tail" {
     for (core) |name| try std.testing.expect(!sift.directive(name));
 
     const carried = [_][]const u8{
-        "set!",          "strip!",     "offset!",    "select-adjacent!",
-        "set-adjacent!", "lua-match?", "is-not?",    "has-ancestor?",
-        "not-kind-eq?",  "contains?",  "any-eq?",    "vim-match?",
+        "set!",          "strip!",     "offset!", "select-adjacent!",
+        "set-adjacent!", "lua-match?", "is-not?", "has-ancestor?",
+        "not-kind-eq?",  "contains?",  "any-eq?", "vim-match?",
     };
     for (carried) |name| {
         const got = try sift.read(gpa, .{ .name = name, .args = &.{}, .at = 0 });

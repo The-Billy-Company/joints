@@ -74,9 +74,10 @@ Six answers, and the first one is no.
 - **To take the argument rather than the code** – [`research/`](research/README.md),
   where each dossier separates what is claimed from what the world already knew
   from what would prove it wrong.
-- **For a Python or Rust package** – not yet. Both names are reserved at
-  `0.0.0` and export nothing, because a stub returning plausible values is worse
-  than an empty one.
+- **For Python and Rust** – experimental interfaces over a separately built
+  `libjnt`; see [`bindings/python/`](bindings/python/README.md) and
+  [`bindings/rust/`](bindings/rust/README.md). Strict parsing rejects partial
+  and repaired trees. Queries and traversal run in process.
 
 The dividing line is whether you want a parser or an argument about parsers.
 Today this repository is much better at the second, and it says so in numbers
@@ -143,11 +144,8 @@ There is a parser, and most of the machinery the design asked for is under it.
   delete-and-supply repair at every refusal, the incremental weave, the folio
   and the codex that packs many into one, the query engine, the CLI, and
   `libjnt`. [Layout](#layout) is the directory-by-directory version.
-- **Reachable from a C host** – parsing, editing, and the whole node
-  neighborhood. See [The C ABI](#the-c-abi).
-- **Built but not reachable from a C host** – the query engine. `joints query`
-  drives it and `libjnt` has no `jnt_query_*`, which is exactly where an editor
-  would reach for it. This is the largest thing missing.
+- **Reachable from a C host** – parsing, editing, queries, repair provenance,
+  and the whole node neighborhood. See [The C ABI](#the-c-abi).
 - **Proven but not wired** – the tropical semiring the repair walks under.
   `mend` ships four author-facing policies rather than taking the semiring as
   the parameter it should be.
@@ -349,7 +347,7 @@ gloss answers questions, and the result settles from quire into vellum.
 
 ## The C ABI
 
-`libjnt` is 47 exports behind [`include/jnt.h`](include/jnt.h), symbols prefixed
+`libjnt` is 62 exports behind [`include/jnt.h`](include/jnt.h), symbols prefixed
 `jnt_`, matching irregex's `libirgx` and `irgx_`.
 
 There are two doors on the same tree. `jnt_parse` answers *what is this file*,
@@ -373,6 +371,18 @@ A weave hands back a *borrowed* tree that it owns and refreshes in place, so
 makes every host that stores the pointer wrong in a way that only shows up under
 fast typing, which is exactly when nobody is looking at their allocator.
 
+`jnt_query_compile` and `jnt_query_exec` reach the existing query compiler and
+matcher in process. Results carry pattern indices, capture names, and node refs;
+the query owns its compiled metadata and results borrow the query and tree.
+Text predicates receive the original parsed bytes, and unsupported filters have
+an explicit refuse/admit/deny policy. Syntax or execution refusals use the same
+status and error channel as parsing.
+
+`jnt_tree_scar*` exposes the parser’s actual deletion spans and supplied
+terminals. A strict consumer checks accepted, sound, one root, and zero scars:
+a repaired parse can still accept and be sound, so those flags alone do not
+prove that the source was read without repair.
+
 Nothing aborts. Every entry returns a status, so a malformed file, a wrong
 language or a host that miscounted an edit span can never terminate the process,
 and `jnt_last_error()` holds the sentence the CLI would have printed. The rest
@@ -395,7 +405,7 @@ customary/         one book per grammar: the scanner-as-data, embedded at build
 test/grammar/      the one grammar committed, so the test build needs no network
 charter.zone       the zoning import topology, judged against the real @import graph
 include/           jnt.h, the normative statement of the C ABI
-bindings/          the reserved Python and Rust packages
+bindings/          experimental Python and Rust packages over libjnt
 src/press/         the compiler: grammar.json in, LR(0) → LALR → resolved out
 src/folio/         the artifact: write, map, verify, slice - and the codex
 src/kernel/grain/  the vectorized structural pass: lines and indents
@@ -408,7 +418,7 @@ src/kernel/weave/  a file held open: spine and quire maintained across an edit
 src/kernel/vellum/ the tree settled into balanced parentheses
 src/kernel/gloss/  the query engine
 src/surface/face/  the CLI: grammar · lex · state · survey · parse · amend · query · mint
-src/surface/abi/   libjnt: the parse door, the edit door, and one node vocabulary
+src/surface/abi/   libjnt: parsing, editing, queries, repairs, and one node vocabulary
 ```
 
 Two directories landed one band higher than the plan guessed, for the same
