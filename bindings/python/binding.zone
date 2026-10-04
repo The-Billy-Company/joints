@@ -1,11 +1,8 @@
 // joints-python — import topology of the Python binding.
 //
-// There is no binding yet. `joints/__init__.py` is a docstring and a version:
-// the wheel exists to hold the name on PyPI while the engine is still Zig
-// only, and it deliberately imports nothing, because there is nothing to
-// import. The contract is here so that stays true by accident of nobody
-// noticing — the first real module lands against a stated shape rather than
-// inventing one.
+// The native ABI declarations sit below the owned Python handles, which sit
+// below the public exports. The external test harness reads that public
+// surface; product modules never read the tests or import up this stack.
 //
 // Named `joints-python` because the Zig package next door already answers to
 // `joints` in `charter.zone`. One tree, two contracts, two names.
@@ -18,15 +15,18 @@ package joints-python {
     language python
 }
 
-// One tier, because there is one file.
+// Low to high, following the native declarations, owners, and public surface.
 zones {
-    // The reserved surface. When the binding is written it will grow a
-    // runtime tier below this one and tests above it, and this zone becomes
-    // the facade it is currently only pretending to be.
-    binding  joints/**
+    native   joints/_native.py
+    runtime  joints/_api.py
+    binding  joints/__init__.py
+    tests    tests/**
 }
 
-// Structural laws. Nothing imports anything, so the ceiling is zero and the
-// day it has to move is the day this file gets rewritten properly.
+// Product imports stay in their own directory. The separate test harness
+// exercises the installed public door through one explicitly ratified edge.
 limit  reach to 0 hops
 forbid cycles across directories
+
+variance reach tests/test_binding.py -> joints/__init__.py
+    because "The external binding harness exercises public exports from its sibling tests directory, outside the wheel. Retire this edge when the harness is colocated at the binding root without entering the published package."
