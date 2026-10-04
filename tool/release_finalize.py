@@ -13,6 +13,8 @@ import urllib.request
 from pathlib import Path
 
 REPOSITORY = "The-Billy-Company/joints"
+NOT_FOUND = object()
+MAX_RELEASE_PAGES = 20
 
 
 def require(condition, message):
@@ -48,12 +50,7 @@ def assert_context(args):
     )
 
 
-def release(tag):
-    endpoint = (
-        f"https://api.github.com/repos/{REPOSITORY}/releases/tags/"
-        + urllib.parse.quote(tag, safe="")
-    )
-
+def release_json(endpoint, *, allow_missing=False):
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, request, response, code, message, headers, url):
             raise RuntimeError("unexpected release API redirect")
@@ -71,9 +68,55 @@ def release(tag):
         ) as response:
             return json.load(response)
     except urllib.error.HTTPError as error:
-        if error.code == 404:
-            return None
+        if error.code == 404 and allow_missing:
+            return NOT_FOUND
         raise RuntimeError(f"release API refused lookup: HTTP {error.code}") from error
+
+
+def release_record(record):
+    require(
+        isinstance(record, dict)
+        and type(record.get("id")) is int
+        and record["id"] > 0
+        and record.get("url")
+        == f"https://api.github.com/repos/{REPOSITORY}/releases/{record['id']}"
+        and isinstance(record.get("tag_name"), str)
+        and bool(record["tag_name"])
+        and type(record.get("draft")) is bool
+        and isinstance(record.get("assets"), list),
+        "malformed release API record",
+    )
+
+
+def release(tag):
+    base = f"https://api.github.com/repos/{REPOSITORY}/releases"
+    record = release_json(
+        base + "/tags/" + urllib.parse.quote(tag, safe=""), allow_missing=True
+    )
+    if record is not NOT_FOUND:
+        release_record(record)
+        require(record["tag_name"] == tag, "wrong release tag")
+        return record
+    match = None
+    seen = set()
+    # Drafts can be absent from the tag endpoint. Scan through an empty page
+    # before choosing a match, including after short pages or a matching draft.
+    for page in range(1, MAX_RELEASE_PAGES + 1):
+        records = release_json(f"{base}?per_page=100&page={page}")
+        require(
+            isinstance(records, list) and len(records) <= 100,
+            "malformed release API page",
+        )
+        if not records:
+            return match
+        for record in records:
+            release_record(record)
+            require(record["id"] not in seen, "duplicate release API record")
+            seen.add(record["id"])
+            if record["tag_name"] == tag:
+                require(match is None, "ambiguous matching releases")
+                match = record
+    raise RuntimeError("release API pagination bound reached before complete inventory")
 
 
 def assets(record):

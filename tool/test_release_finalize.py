@@ -1,11 +1,13 @@
 """Offline controls for immutable release assets and finalization order."""
 
 import argparse
+import io
 import json
 import os
 import sys
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
 from unittest.mock import patch
 
@@ -309,12 +311,21 @@ class FinalizationControls(unittest.TestCase):
             files[checksum.name] = checksum
             return None
 
-        def lookup(tag):
+        def lookup(request, **kwargs):
+            if "/tags/" in request.full_url:
+                raise urllib.error.HTTPError(
+                    request.full_url, 404, "Not Found", {}, None
+                )
+            if request.full_url.endswith("page=2"):
+                return io.BytesIO(b"[]")
             mutations = [command[1] for command in commands()]
-            if "create" not in mutations:
-                return None
-            return {
-                "tag_name": tag,
+            if not resume and "create" not in mutations:
+                return io.BytesIO(b"[]")
+            record = {
+                "id": 402814282,
+                "url": f"https://api.github.com/repos/{finalizer.REPOSITORY}/releases/402814282",
+                "tag_name": args.tag,
+                "draft": True,
                 "assets": [
                     {
                         "name": name,
@@ -327,6 +338,7 @@ class FinalizationControls(unittest.TestCase):
                 if "upload" in mutations
                 else [],
             }
+            return io.BytesIO(json.dumps([record]).encode())
 
         def output(command, **kwargs):
             if command[0] == "git":
@@ -334,20 +346,134 @@ class FinalizationControls(unittest.TestCase):
             index = int(command[-1].rsplit("/", 1)[1])
             return list(files.values())[index].read_bytes()
 
+        for resume in (False, True):
+            command_log.unlink(missing_ok=True)
+            with (
+                self.subTest(existing_draft=resume),
+                patch.dict(
+                    os.environ,
+                    {
+                        "GITHUB_REPOSITORY": finalizer.REPOSITORY,
+                        "GH_TOKEN": "fixture-token",
+                    },
+                ),
+                patch.object(finalizer.subprocess, "check_output", side_effect=output),
+                patch.object(finalizer.subprocess, "run", side_effect=execute),
+                patch.object(finalizer.urllib.request, "build_opener") as opener,
+                patch.object(finalizer, "assert_context") as context,
+            ):
+                opener.return_value.open.side_effect = lookup
+                finalizer.finalize(args)
+            expected = ["upload", "edit"] if resume else ["create", "upload", "edit"]
+            self.assertEqual([command[1] for command in commands()], expected)
+            self.assertEqual(context.call_count, 3 if resume else 4)
+            if not resume:
+                self.assertIn("--draft", commands()[0])
+            self.assertIn("--draft=false", commands()[-1])
+
+
+class ReleaseLookupControls(unittest.TestCase):
+    @staticmethod
+    def record(identity=1, tag="v0.1.0", *, draft=True):
+        return {
+            "id": identity,
+            "url": f"https://api.github.com/repos/{finalizer.REPOSITORY}/releases/{identity}",
+            "tag_name": tag,
+            "draft": draft,
+            "assets": [],
+        }
+
+    def lookup(self, responses):
+        def opened(request, **kwargs):
+            self.assertEqual(
+                request.get_header("Authorization"), "Bearer fixture-token"
+            )
+            self.assertTrue(
+                request.full_url.startswith(
+                    f"https://api.github.com/repos/{finalizer.REPOSITORY}/releases"
+                )
+            )
+            self.assertEqual(kwargs["timeout"], 30)
+            response = next(responses)
+            if isinstance(response, int):
+                raise urllib.error.HTTPError(
+                    request.full_url, response, "fixture", {}, None
+                )
+            return io.BytesIO(json.dumps(response).encode())
+
         with (
-            patch.dict(os.environ, {"GITHUB_REPOSITORY": finalizer.REPOSITORY}),
-            patch.object(finalizer.subprocess, "check_output", side_effect=output),
-            patch.object(finalizer.subprocess, "run", side_effect=execute),
-            patch.object(finalizer, "release", side_effect=lookup),
-            patch.object(finalizer, "assert_context") as context,
+            patch.dict(os.environ, {"GH_TOKEN": "fixture-token"}),
+            patch.object(finalizer.urllib.request, "build_opener") as factory,
         ):
-            finalizer.finalize(args)
-        self.assertEqual(
-            [command[1] for command in commands()], ["create", "upload", "edit"]
-        )
-        self.assertEqual(context.call_count, 4)
-        self.assertIn("--draft", commands()[0])
-        self.assertIn("--draft=false", commands()[2])
+            factory.return_value.open.side_effect = opened
+            result = finalizer.release("v0.1.0")
+            return result, factory
+
+    def test_tag_404_resolves_unique_existing_draft_across_short_pages(self):
+        draft = self.record(402814282)
+        other = self.record(2, "v0.0.0", draft=False)
+        result, factory = self.lookup(iter([404, [other], [draft], []]))
+        self.assertEqual(result, draft)
+        self.assertEqual(factory.return_value.open.call_count, 4)
+
+    def test_clean_empty_inventory_is_absent(self):
+        result, factory = self.lookup(iter([404, []]))
+        self.assertIsNone(result)
+        self.assertEqual(factory.return_value.open.call_count, 2)
+
+    def test_tag_success_does_not_list_releases(self):
+        published = self.record(draft=False)
+        result, factory = self.lookup(iter([published]))
+        self.assertEqual(result, published)
+        self.assertEqual(factory.return_value.open.call_count, 1)
+
+    def test_duplicate_matching_drafts_and_repeated_page_records_refuse(self):
+        draft = self.record()
+        for duplicate in (draft, self.record(2)):
+            with (
+                self.subTest(duplicate=duplicate),
+                self.assertRaisesRegex(RuntimeError, "duplicate|ambiguous"),
+            ):
+                self.lookup(iter([404, [draft], [duplicate], []]))
+
+    def test_malformed_responses_and_other_http_errors_refuse(self):
+        draft = self.record()
+        for responses in (
+            [None],
+            [403],
+            [429],
+            [500],
+            [404, 404],
+            [404, 500],
+            [404, [draft], 500],
+            [404, [draft], {}],
+            [404, {}],
+            [404, [None]],
+            [404, [draft | {"id": True}]],
+            [404, [draft | {"draft": "true"}]],
+            [404, [draft | {"assets": {}}]],
+            [404, [draft] * 101],
+            [404, [draft | {"url": "https://example.org/1"}]],
+            [draft | {"tag_name": "v0.0.0"}],
+        ):
+            with self.subTest(responses=responses), self.assertRaises(RuntimeError):
+                self.lookup(iter(responses))
+
+    def test_incomplete_bounded_inventory_refuses_even_after_matching_draft(self):
+        draft = self.record()
+        with (
+            patch.object(finalizer, "MAX_RELEASE_PAGES", 1),
+            self.assertRaisesRegex(RuntimeError, "pagination bound"),
+        ):
+            self.lookup(iter([404, [draft]]))
+
+    def test_release_requests_refuse_redirects(self):
+        _, factory = self.lookup(iter([404, []]))
+        handler = factory.call_args.args[0]
+        with self.assertRaisesRegex(RuntimeError, "redirect"):
+            handler().redirect_request(
+                None, None, 302, "fixture", {}, "https://example.org"
+            )
 
 
 if __name__ == "__main__":
