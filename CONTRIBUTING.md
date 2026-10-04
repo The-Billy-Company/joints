@@ -282,6 +282,13 @@ release finalization. Credentials are short lived and no registry upload runs
 from a developer machine. See
 [the shared release contract](https://github.com/The-Billy-Company/.github/blob/main/RELEASING.md).
 
+If publication stops after tagging, preserve that signed tag. Rerun failed jobs
+when the automation is unchanged. After an automation repair on main, dispatch
+`release.yml` with `release_tag` and the original tag run's `artifact_run`.
+The retry requires green release checks for both the tagged source and current
+automation. It validates the original run, artifact digests, and source ledgers,
+then repeats installed-package checks and publishes the same tested bytes.
+
 ## What CI will run
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml), on Linux and macOS, in

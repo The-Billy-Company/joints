@@ -5,14 +5,25 @@ name: release
 on:
   push:
     tags: ["v*"]
-  # Dispatch builds and verifies without credentials or registry writes.
+  # Empty inputs build without publishing. Recovery reuses an existing tag's
+  # tested artifacts through this main workflow, without moving the tag.
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing signed tag to finish publishing (empty is a dry run)
+        type: string
+        default: ""
+      artifact_run:
+        description: Original tag-triggered release run holding its tested artifacts
+        type: string
+        default: ""
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.release_tag || github.ref_name }}
   cancel-in-progress: false
 
 defaults:
@@ -30,34 +41,62 @@ jobs:
     timeout-minutes: 75
     outputs:
       version: ${{ fromJSON(steps.version.outputs.result).version }}
+      tag: ${{ steps.context.outputs.tag }}
+      source_sha: ${{ steps.context.outputs.source_sha }}
+      artifact_run: ${{ steps.context.outputs.artifact_run }}
+      publish: ${{ steps.context.outputs.publish }}
     steps:
+      - &control-checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: control
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - id: context
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          ARTIFACT_RUN: ${{ inputs.artifact_run }}
+        run: >-
+          python3 control/tool/publisher.py release-context
+          --release-tag "$RELEASE_TAG" --artifact-run "$ARTIFACT_RUN"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          path: joints
+          ref: ${{ steps.context.outputs.source_sha }}
           persist-credentials: false
       - id: version
         uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
         with:
           command: version
-          args: --root .
-      - if: startsWith(github.ref, 'refs/tags/v')
+          args: --root joints
+      - if: steps.context.outputs.publish == 'true'
         uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
         with:
           command: version
-          args: --root . --tag ${{ github.ref_name }}
+          args: --root joints --tag ${{ steps.context.outputs.tag }}
       - uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
         with:
           command: changelog
           args: >-
-            --root . --require-fragments-empty
+            --root joints --require-fragments-empty
             --version ${{ fromJSON(steps.version.outputs.result).version }}
-      - name: The publisher readiness helper still refuses invalid claims
-        run: python3 tool/publisher.py --selftest
-      - if: startsWith(github.ref, 'refs/tags/v')
+      - run: |
+          python3 control/tool/publisher.py --selftest
+          python3 -O -m unittest discover -s control/tool -p test_release_finalize.py
+      - if: steps.context.outputs.publish == 'true'
         uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
         with:
           command: tag-ancestor
-          args: ${{ github.repository }} ${{ github.sha }} --branch main
-      - if: startsWith(github.ref, 'refs/tags/v')
+          args: ${{ github.repository }} ${{ steps.context.outputs.source_sha }} --branch main
+      - if: steps.context.outputs.publish == 'true'
+        uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
+        with:
+          command: ci-status
+          args: >-
+            ${{ github.repository }} ${{ steps.context.outputs.source_sha }}
+            --check-name release-ready --timeout-seconds 3600 --interval-seconds 30
+      - if: steps.context.outputs.publish == 'true'
         uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
         with:
           command: ci-status
@@ -66,6 +105,7 @@ jobs:
             --check-name release-ready --timeout-seconds 3600 --interval-seconds 30
 
   native:
+    if: needs.preflight.outputs.artifact_run == github.run_id
     name: native (${{ matrix.target }})
     needs: preflight
     runs-on: ${{ matrix.runner }}
@@ -82,9 +122,11 @@ jobs:
     env:
       VERSION: ${{ needs.preflight.outputs.version }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - &source-checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           path: joints
+          ref: ${{ needs.preflight.outputs.source_sha }}
           persist-credentials: false
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -109,6 +151,7 @@ jobs:
           if-no-files-found: error
 
   packages:
+    if: needs.preflight.outputs.artifact_run == github.run_id
     needs: [preflight, native]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -118,12 +161,12 @@ jobs:
     env:
       VERSION: ${{ needs.preflight.outputs.version }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - *source-checkout
+      - &linux-native-in-source
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          path: joints
-          persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
+          run-id: ${{ needs.preflight.outputs.artifact_run }}
+          github-token: ${{ github.token }}
           name: native-linux-x86_64
           path: joints/dist/native
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
@@ -148,6 +191,10 @@ jobs:
           if-no-files-found: error
 
   smoke:
+    if: >-
+      !cancelled() && needs.preflight.result == 'success' &&
+      (needs.native.result == 'success' || needs.native.result == 'skipped') &&
+      (needs.packages.result == 'success' || needs.packages.result == 'skipped')
     name: installed packages (${{ matrix.target }})
     needs: [preflight, native, packages]
     runs-on: ${{ matrix.runner }}
@@ -164,18 +211,34 @@ jobs:
     env:
       VERSION: ${{ needs.preflight.outputs.version }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - *control-checkout
+      - *source-checkout
+      - &packages-in-source
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          path: joints
-          persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
+          run-id: ${{ needs.preflight.outputs.artifact_run }}
+          github-token: ${{ github.token }}
           name: packages
           path: joints/dist
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - &target-native-in-source
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
+          run-id: ${{ needs.preflight.outputs.artifact_run }}
+          github-token: ${{ github.token }}
           name: native-${{ matrix.target }}
           path: joints/dist/native
+      - name: Verify authenticated original artifacts and source ledgers
+        if: needs.preflight.outputs.publish == 'true'
+        working-directory: ${{ github.workspace }}
+        env: &release-context
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.preflight.outputs.tag }}
+          SOURCE_SHA: ${{ needs.preflight.outputs.source_sha }}
+          ARTIFACT_RUN: ${{ needs.preflight.outputs.artifact_run }}
+        run: >-
+          python3 control/tool/publisher.py verify-artifacts --release-tag "$TAG"
+          --source-sha "$SOURCE_SHA" --artifact-run "$ARTIFACT_RUN"
+          --artifact-root joints/dist --source-root joints --native-target ${{ matrix.target }}
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: false
@@ -192,7 +255,8 @@ jobs:
           --python "$(uv python find 3.12)" --rust-toolchain "$RUST_VERSION"
 
   registry-probes:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      !cancelled() && needs.preflight.outputs.publish == 'true' && needs.preflight.result == 'success' && needs.smoke.result == 'success'
     needs: [preflight, smoke]
     runs-on: ubuntu-24.04
     outputs:
@@ -201,13 +265,23 @@ jobs:
     env:
       VERSION: ${{ needs.preflight.outputs.version }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - *control-checkout
+      - *source-checkout
+      - &packages-in-workspace
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
+          run-id: ${{ needs.preflight.outputs.artifact_run }}
+          github-token: ${{ github.token }}
           name: packages
           path: dist
+      - name: Verify authenticated original artifacts and source ledgers
+        if: needs.preflight.outputs.publish == 'true'
+        working-directory: ${{ github.workspace }}
+        env: *release-context
+        run: >-
+          python3 control/tool/publisher.py verify-artifacts --release-tag "$TAG"
+          --source-sha "$SOURCE_SHA" --artifact-run "$ARTIFACT_RUN"
+          --artifact-root dist --source-root joints
       - id: pypi
         uses: The-Billy-Company/.github/actions/package-release@502a1f45885f40d64c4a6bde0a742bf2df09c91e
         with:
@@ -221,14 +295,17 @@ jobs:
       # A present version is only a successful retry when the public index and
       # downloaded bytes agree with every artifact this build tested.
       - name: Refuse versions that already publish different bytes
-        run: python3 tool/release/artifacts.py probe --version "$VERSION" --packages dist
+        run: python3 joints/tool/release/artifacts.py probe --version "$VERSION" --packages dist
 
   auth-crates:
-    if: startsWith(github.ref, 'refs/tags/v') && needs.registry-probes.outputs.crates == 'absent'
-    needs: registry-probes
+    if: >-
+      !cancelled() && needs.preflight.outputs.publish == 'true' && needs.preflight.result == 'success' && needs.registry-probes.result == 'success' && needs.registry-probes.outputs.crates == 'absent'
+    needs: [preflight, registry-probes]
     runs-on: ubuntu-24.04
     environment: crates-io
     permissions:
+      contents: read
+      actions: read
       id-token: write
     steps:
       # The action's post step revokes this readiness token. Publishers obtain
@@ -239,40 +316,49 @@ jobs:
     # The crates identity is checked first: PyPI may create a pending project
     # during minting. Readiness never uploads a version and burns its token.
     if: >-
-      !cancelled() && startsWith(github.ref, 'refs/tags/v') &&
-      needs.registry-probes.result == 'success' &&
+      !cancelled() && needs.preflight.outputs.publish == 'true' &&
+      needs.preflight.result == 'success' && needs.registry-probes.result == 'success' &&
       (needs.auth-crates.result == 'success' || needs.auth-crates.result == 'skipped') &&
       needs.registry-probes.outputs.pypi == 'absent'
-    needs: [registry-probes, auth-crates]
+    needs: [preflight, registry-probes, auth-crates]
     runs-on: ubuntu-24.04
     environment: pypi
     permissions:
       contents: read
+      actions: read
       id-token: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
+      - *control-checkout
+      - *source-checkout
       - name: Mint and burn a PyPI credential without uploading
-        run: python3 tool/publisher.py pypi-readiness
+        env: *release-context
+        run: |
+          python3 control/tool/publisher.py assert-context --release-tag "$TAG" --source-sha "$SOURCE_SHA" --artifact-run "$ARTIFACT_RUN"
+          python3 control/tool/publisher.py pypi-readiness --source-root joints --release-tag "$TAG" --source-sha "$SOURCE_SHA"
 
   publish-python:
     if: >-
-      !cancelled() && startsWith(github.ref, 'refs/tags/v') &&
-      needs.registry-probes.result == 'success' &&
+      !cancelled() && needs.preflight.outputs.publish == 'true' &&
+      needs.preflight.result == 'success' && needs.registry-probes.result == 'success' &&
       (needs.auth-crates.result == 'success' || needs.auth-crates.result == 'skipped') &&
       (needs.auth-pypi.result == 'success' || needs.auth-pypi.result == 'skipped')
-    needs: [registry-probes, auth-crates, auth-pypi]
+    needs: [preflight, registry-probes, auth-crates, auth-pypi]
     runs-on: ubuntu-24.04
     environment: pypi
     permissions:
       contents: read
+      actions: read
       id-token: write
     steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: packages
-          path: dist
+      - *control-checkout
+      - *source-checkout
+      - *packages-in-workspace
+      - name: Verify original source and payload bytes immediately before upload
+        env: *release-context
+        run: >-
+          python3 control/tool/publisher.py verify-artifacts --release-tag "$TAG"
+          --source-sha "$SOURCE_SHA" --artifact-run "$ARTIFACT_RUN"
+          --artifact-root dist --source-root joints
       - if: needs.registry-probes.outputs.pypi == 'absent'
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
@@ -280,8 +366,8 @@ jobs:
 
   publish-rust:
     if: >-
-      !cancelled() && startsWith(github.ref, 'refs/tags/v') &&
-      needs.registry-probes.result == 'success' &&
+      !cancelled() && needs.preflight.outputs.publish == 'true' &&
+      needs.preflight.result == 'success' && needs.registry-probes.result == 'success' &&
       (needs.auth-crates.result == 'success' || needs.auth-crates.result == 'skipped') &&
       (needs.auth-pypi.result == 'success' || needs.auth-pypi.result == 'skipped')
     needs: [preflight, registry-probes, auth-crates, auth-pypi]
@@ -289,28 +375,27 @@ jobs:
     environment: crates-io
     permissions:
       contents: read
+      actions: read
       id-token: write
     env:
       VERSION: ${{ needs.preflight.outputs.version }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          path: joints
-          persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: packages
-          path: joints/dist
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: native-linux-x86_64
-          path: joints/dist/native
+      - *control-checkout
+      - *source-checkout
+      - *packages-in-source
+      - *linux-native-in-source
       - if: needs.registry-probes.outputs.crates == 'absent'
         name: Install the declared Rust floor
         run: rustup toolchain install "$RUST_VERSION" --profile minimal
       - if: needs.registry-probes.outputs.crates == 'absent'
         id: auth
         uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+      - name: Verify original source and payload bytes immediately before upload
+        env: *release-context
+        run: >-
+          python3 control/tool/publisher.py verify-artifacts --release-tag "$TAG"
+          --source-sha "$SOURCE_SHA" --artifact-run "$ARTIFACT_RUN"
+          --artifact-root joints/dist --source-root joints --native-target linux-x86_64
       - if: needs.registry-probes.outputs.crates == 'absent'
         name: Publish only the crate bytes the build verified
         working-directory: joints
@@ -323,7 +408,8 @@ jobs:
 
   public-index:
     name: public index (${{ matrix.target }})
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      !cancelled() && needs.preflight.outputs.publish == 'true' && needs.preflight.result == 'success' && needs.publish-python.result == 'success' && needs.publish-rust.result == 'success'
     needs: [preflight, publish-python, publish-rust]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
@@ -339,18 +425,18 @@ jobs:
     env:
       VERSION: ${{ needs.preflight.outputs.version }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          path: joints
-          persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: packages
-          path: joints/dist
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: native-${{ matrix.target }}
-          path: joints/dist/native
+      - *control-checkout
+      - *source-checkout
+      - *packages-in-source
+      - *target-native-in-source
+      - name: Verify authenticated original artifacts and source ledgers
+        if: needs.preflight.outputs.publish == 'true'
+        working-directory: ${{ github.workspace }}
+        env: *release-context
+        run: >-
+          python3 control/tool/publisher.py verify-artifacts --release-tag "$TAG"
+          --source-sha "$SOURCE_SHA" --artifact-run "$ARTIFACT_RUN"
+          --artifact-root joints/dist --source-root joints --native-target ${{ matrix.target }}
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: false
@@ -367,23 +453,28 @@ jobs:
           --python "$(uv python find 3.12)" --rust-toolchain "$RUST_VERSION"
 
   github-release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      !cancelled() && needs.preflight.outputs.publish == 'true' && needs.preflight.result == 'success' && needs.public-index.result == 'success'
     needs: [preflight, public-index]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      actions: read
     env:
       VERSION: ${{ needs.preflight.outputs.version }}
+      TAG: ${{ needs.preflight.outputs.tag }}
+      SOURCE_SHA: ${{ needs.preflight.outputs.source_sha }}
+      ARTIFACT_RUN: ${{ needs.preflight.outputs.artifact_run }}
+      GITHUB_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
+      - *control-checkout
+      - *source-checkout
+      - *packages-in-workspace
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: packages
-          path: dist
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
+          run-id: ${{ needs.preflight.outputs.artifact_run }}
+          github-token: ${{ github.token }}
           pattern: native-*
           path: dist/native
           merge-multiple: true
@@ -391,85 +482,12 @@ jobs:
         with:
           command: notes
           args: >-
-            --root . --version ${{ env.VERSION }} --out ${{ runner.temp }}/release-notes.md
+            --root joints --version ${{ env.VERSION }} --out ${{ runner.temp }}/release-notes.md
             --repo ${{ github.repository }}
-      - name: Finalize the experimental release after both public channels pass
+      - name: Attach verified original assets and finalize their curated release
         env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
           NOTES: ${{ runner.temp }}/release-notes.md
-        run: |
-          set -euo pipefail
-          python3 tool/release/artifacts.py checksums --packages dist --native-directory dist/native
-          python3 - <<'PY'
-          import hashlib, json, os, pathlib, subprocess, urllib.error, urllib.parse, urllib.request
-
-          repo, tag = os.environ["GITHUB_REPOSITORY"], os.environ["TAG"]
-          endpoint = f"https://api.github.com/repos/{repo}/releases/tags/{urllib.parse.quote(tag, safe='')}"
-
-          class NoRedirect(urllib.request.HTTPRedirectHandler):
-              def redirect_request(self, request, response, code, message, headers, url):
-                  raise RuntimeError("unexpected release API redirect")
-
-          def release():
-              request = urllib.request.Request(endpoint, headers={
-                  "Accept": "application/vnd.github+json",
-                  "Authorization": "Bearer " + os.environ["GH_TOKEN"],
-              })
-              try:
-                  with urllib.request.build_opener(NoRedirect).open(request, timeout=30) as response:
-                      return json.load(response)
-              except urllib.error.HTTPError as error:
-                  if error.code == 404:
-                      return None
-                  raise RuntimeError(f"release API refused lookup: HTTP {error.code}") from error
-
-          def gh(*args):
-              subprocess.run(["gh", *args], check=True)
-
-          existing = release()
-          if existing is None:
-              gh("release", "create", tag, "--verify-tag", "--draft", "--prerelease",
-                 "--title", f"Joints {os.environ['VERSION']} (experimental)",
-                 "--notes-file", os.environ["NOTES"])
-              existing = release()
-          if existing is None or existing["tag_name"] != tag:
-              raise RuntimeError("release did not resolve to the requested tag")
-          files = sorted(pathlib.Path("dist/native").glob("*.tar.gz"))
-          files += sorted(pathlib.Path("dist/python").iterdir())
-          files += sorted(pathlib.Path("dist/rust").iterdir())
-          files += [pathlib.Path("dist/packages.json"), pathlib.Path("dist/SHA256SUMS")]
-          expected = {path.name: path for path in files}
-          if len(expected) != len(files):
-              raise RuntimeError("release asset filenames collide")
-          assets = {asset["name"]: asset for asset in existing["assets"]}
-          if set(assets) - set(expected):
-              raise RuntimeError("release already has unexpected assets")
-          # gh handles redirects when downloading from the asset API. Never
-          # replace an existing asset: a retry must prove its actual bytes.
-          for name, asset in assets.items():
-              data = subprocess.check_output([
-                  "gh", "api", "-H", "Accept: application/octet-stream",
-                  f"repos/{repo}/releases/assets/{asset['id']}",
-              ])
-              if hashlib.sha256(data).digest() != hashlib.sha256(expected[name].read_bytes()).digest():
-                  raise RuntimeError(f"published release asset differs: {name}")
-          missing = [str(path) for name, path in expected.items() if name not in assets]
-          if missing:
-              gh("release", "upload", tag, *missing)
-          attached = release()
-          if attached is None or {asset["name"] for asset in attached["assets"]} != set(expected):
-              raise RuntimeError("uploaded release asset inventory differs")
-          for asset in attached["assets"]:
-              path = expected[asset["name"]]
-              if asset["state"] != "uploaded" or asset["size"] != path.stat().st_size:
-                  raise RuntimeError(f"release asset upload is incomplete: {path.name}")
-              data = subprocess.check_output([
-                  "gh", "api", "-H", "Accept: application/octet-stream",
-                  f"repos/{repo}/releases/assets/{asset['id']}",
-              ])
-              if hashlib.sha256(data).digest() != hashlib.sha256(path.read_bytes()).digest():
-                  raise RuntimeError(f"uploaded release asset differs: {path.name}")
-          gh("release", "edit", tag, "--notes-file", os.environ["NOTES"],
-             "--prerelease", "--draft=false")
-          PY
+        run: >-
+          python3 control/tool/release_finalize.py --tag "$TAG" --source-sha "$SOURCE_SHA"
+          --artifact-run "$ARTIFACT_RUN" --version "$VERSION" --source-root joints
+          --packages dist --native-directory dist/native --notes "$NOTES"

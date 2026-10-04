@@ -23,64 +23,23 @@ import os
 from pathlib import Path
 import re
 import sys
-import tempfile
 import time
-import tomllib
 import urllib.error
 import urllib.parse
 import urllib.request
 
-REPOSITORY = "The-Billy-Company/joints"
+sys.path.insert(0, str(Path(__file__).with_suffix("")))
+import context  # noqa: E402
+import controls  # noqa: E402
+import artifacts  # noqa: E402
+import artifact_controls  # noqa: E402
+
+ReadinessError = context.ContextError
+REPOSITORY = context.REPOSITORY
 ISSUER = "https://token.actions.githubusercontent.com"
 INDEX = "https://pypi.org"
 AUTH = "https://upload.pypi.org"
-TAG = re.compile(r"refs/tags/v(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\Z")
 TOKEN = re.compile(r"pypi-[A-Za-z0-9_-]{16,}={0,2}\Z")
-
-
-class ReadinessError(Exception):
-    """A deliberately credential-free explanation of a failed readiness gate."""
-
-
-def declared_context(root: Path, environ: dict[str, str]) -> tuple[str, str, str]:
-    """Require the authorized repository, a version tag and all four mirrors."""
-    if environ.get("GITHUB_REPOSITORY") != REPOSITORY:
-        raise ReadinessError("publishing repository does not match joints")
-    ref = environ.get("GITHUB_REF", "")
-    tagged = TAG.fullmatch(ref)
-    if tagged is None:
-        raise ReadinessError("PyPI readiness requires a version tag")
-    version = tagged.group(1)
-    sha = environ.get("GITHUB_SHA", "")
-    if re.fullmatch(r"[0-9a-f]{40}", sha) is None:
-        raise ReadinessError("publishing commit is missing or malformed")
-    try:
-        python = tomllib.loads((root / "bindings/python/pyproject.toml").read_text())
-        rust = tomllib.loads((root / "bindings/rust/Cargo.toml").read_text())
-        zig = re.search(
-            r'\.version\s*=\s*"([^"]+)"', (root / "build.zig.zon").read_text()
-        )
-        binding = re.search(
-            r'^__version__\s*=\s*"([^"]+)"',
-            (root / "bindings/python/joints/__init__.py").read_text(),
-            re.MULTILINE,
-        )
-        names = (python["project"]["name"], rust["package"]["name"])
-        mirrors = (
-            python["project"]["version"],
-            rust["package"]["version"],
-            zig.group(1) if zig else None,
-            binding.group(1) if binding else None,
-        )
-    except (OSError, KeyError, TypeError, tomllib.TOMLDecodeError):
-        raise ReadinessError(
-            "could not read the publishing package declarations"
-        ) from None
-    if names != ("joints", "joints"):
-        raise ReadinessError("publishing package names do not match joints")
-    if any(value != version for value in mirrors):
-        raise ReadinessError("publishing tag and version mirrors disagree")
-    return ref, sha, version
 
 
 def live_transport(request: urllib.request.Request) -> tuple[int, bytes]:
@@ -144,12 +103,15 @@ def check_claims(jwt: str, ref: str, sha: str, now: int) -> None:
         "ref": ref,
         "sha": sha,
         "environment": "pypi",
-        "sub": f"repo:{REPOSITORY}:environment:pypi",
+        "repository_owner_id": context.OWNER_ID,
+        "repository_id": context.REPOSITORY_ID,
+        "sub": context.SUBJECT,
         "workflow_ref": f"{REPOSITORY}/.github/workflows/release.yml@{ref}",
     }
-    if any(claims.get(key) != value for key, value in expected.items()):
+    mismatches = [key for key, value in expected.items() if claims.get(key) != value]
+    if mismatches:
         raise ReadinessError(
-            "GitHub publishing identity claims do not match this release"
+            "GitHub publishing identity mismatch: " + ", ".join(mismatches)
         )
     job_ref = claims.get("job_workflow_ref")
     if job_ref is not None and job_ref != expected["workflow_ref"]:
@@ -168,10 +130,16 @@ def check_claims(jwt: str, ref: str, sha: str, now: int) -> None:
 
 
 def pypi_readiness(
-    root: Path, environ: dict[str, str], transport=live_transport, now=None
+    root: Path,
+    environ: dict[str, str],
+    transport=live_transport,
+    now=None,
+    *,
+    release_tag=None,
+    source_sha=None,
 ) -> str:
     """Mint and burn a credential; never upload, persist or return that credential."""
-    ref, sha, version = declared_context(root, environ)
+    ref, sha, version = context.source(root, environ, release_tag, source_sha)
     identity_url = environ.get("ACTIONS_ID_TOKEN_REQUEST_URL", "")
     request_token = environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
     try:
@@ -247,216 +215,89 @@ def pypi_readiness(
     return f"PyPI OIDC readiness passed for joints {version}; credential burn accepted"
 
 
-def selftest() -> int:
-    """Exercise the real gate with fixed adverse remote responses, without credentials."""
-    current = 2_000_000_000
-    sha = "a" * 40
-    ref = "refs/tags/v0.1.0"
-    claims = {
-        "iss": ISSUER,
-        "aud": "pypi",
-        "repository": REPOSITORY,
-        "ref": ref,
-        "sha": sha,
-        "environment": "pypi",
-        "sub": f"repo:{REPOSITORY}:environment:pypi",
-        "workflow_ref": f"{REPOSITORY}/.github/workflows/release.yml@{ref}",
-        "iat": current - 10,
-        "nbf": current - 10,
-        "exp": current + 300,
-    }
-    environ = {
-        "GITHUB_REPOSITORY": REPOSITORY,
-        "GITHUB_REF": ref,
-        "GITHUB_SHA": sha,
-        "ACTIONS_ID_TOKEN_REQUEST_URL": "https://run.actions.githubusercontent.com/id?api-version=2",
-        "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "offline-test-only",
-    }
-
-    def jwt_for(values):
-        encoded = (
-            base64.urlsafe_b64encode(json.dumps(values).encode()).decode().rstrip("=")
-        )
-        return "offline." + encoded + ".not-a-signature"
-
-    class Exchange:
-        def __init__(
-            self, *, identity=None, audience=None, mint=None, fail=None, burn_status=202
-        ):
-            self.identity = jwt_for(claims) if identity is None else identity
-            self.audience = {"audience": "pypi"} if audience is None else audience
-            self.mint = (
-                {
-                    "success": True,
-                    "token": "pypi-offline_test_credential",
-                    "expires": current + 900,
-                }
-                if mint is None
-                else mint
-            )
-            self.fail = fail
-            self.burn_status = burn_status
-            self.seen = []
-
-        def __call__(self, request):
-            path = urllib.parse.urlsplit(request.full_url).path
-            self.seen.append(path)
-            if path == self.fail:
-                return 503, b"untrusted secret-containing body"
-            if path == "/_/oidc/audience":
-                value = self.audience
-            elif path == "/id":
-                value = {"value": self.identity}
-            elif path == "/_/oidc/mint-token":
-                value = self.mint
-            elif path == "/_/oidc/burn-token":
-                return self.burn_status, b""
-            else:
-                raise AssertionError(
-                    "the readiness gate attempted an unexpected endpoint"
-                )
-            return 200, value if isinstance(value, bytes) else json.dumps(
-                value
-            ).encode()
-
-    count = 0
-    with tempfile.TemporaryDirectory(prefix="joints-publisher-controls-") as directory:
-        root = Path(directory)
-        (root / "bindings/python/joints").mkdir(parents=True)
-        (root / "bindings/rust").mkdir(parents=True)
-        (root / "build.zig.zon").write_text('.{ .version = "0.1.0" }')
-        (root / "bindings/python/pyproject.toml").write_text(
-            '[project]\nname = "joints"\nversion = "0.1.0"\n'
-        )
-        (root / "bindings/rust/Cargo.toml").write_text(
-            '[package]\nname = "joints"\nversion = "0.1.0"\n'
-        )
-        (root / "bindings/python/joints/__init__.py").write_text(
-            '__version__ = "0.1.0"\n'
-        )
-        good = Exchange()
-        pypi_readiness(root, environ, good, current)
-        if good.seen != [
-            "/_/oidc/audience",
-            "/id",
-            "/_/oidc/mint-token",
-            "/_/oidc/burn-token",
-        ]:
-            raise AssertionError("the positive control did not exchange and burn")
-        count += 1
-
-        def refuses(exchange, env=None, *, burns=False):
-            nonlocal count
-            try:
-                pypi_readiness(root, environ if env is None else env, exchange, current)
-            except ReadinessError as error:
-                if "offline_test_credential" in str(
-                    error
-                ) or "secret-containing" in str(error):
-                    raise AssertionError(
-                        "a refusal exposed a credential or remote body"
-                    ) from None
-                if burns and "/_/oidc/burn-token" not in exchange.seen:
-                    raise AssertionError(
-                        "a refused temporary credential was not burned"
-                    )
-                count += 1
-            else:
-                raise AssertionError("an adverse publishing control was accepted")
-
-        refuses(Exchange(), {**environ, "GITHUB_REF": "refs/heads/main"})
-        refuses(Exchange(), {**environ, "GITHUB_REPOSITORY": "someone/else"})
-        refuses(Exchange(), {**environ, "GITHUB_SHA": "missing"})
-        refuses(Exchange(), {**environ, "ACTIONS_ID_TOKEN_REQUEST_TOKEN": ""})
-        refuses(
-            Exchange(),
-            {**environ, "ACTIONS_ID_TOKEN_REQUEST_URL": "https://attacker.example/id"},
-        )
-        refuses(
-            Exchange(),
-            {
-                **environ,
-                "ACTIONS_ID_TOKEN_REQUEST_URL": "http://run.actions.githubusercontent.com/id",
-            },
-        )
-        refuses(
-            Exchange(),
-            {
-                **environ,
-                "ACTIONS_ID_TOKEN_REQUEST_URL": "https://run.actions.githubusercontent.com:not-a-port/id",
-            },
-        )
-        for path in ("/_/oidc/audience", "/id", "/_/oidc/mint-token"):
-            refuses(Exchange(fail=path))
-        refuses(Exchange(audience={"audience": "testpypi"}))
-        refuses(Exchange(audience=b"not JSON"))
-        refuses(Exchange(identity="malformed"))
-        for key, value in (
-            ("iss", "https://attacker.example"),
-            ("aud", "testpypi"),
-            ("repository", "someone/else"),
-            ("ref", "refs/heads/main"),
-            ("sha", "b" * 40),
-            ("environment", "production"),
-            ("workflow_ref", f"{REPOSITORY}/.github/workflows/another.yml@{ref}"),
-            ("job_workflow_ref", f"someone/else/.github/workflows/reusable.yml@{ref}"),
-            ("exp", current),
-            ("nbf", current + 1),
-            ("iat", True),
-        ):
-            refuses(Exchange(identity=jwt_for({**claims, key: value})))
-        refuses(Exchange(mint=b"not JSON"))
-        refuses(Exchange(mint={"success": True, "expires": current + 900}))
-        refuses(
-            Exchange(
-                mint={"success": True, "token": "wrong-token", "expires": current + 900}
-            )
-        )
-        refuses(
-            Exchange(
-                mint={
-                    "success": False,
-                    "token": "pypi-offline_test_credential",
-                    "expires": current + 900,
-                }
-            ),
-            burns=True,
-        )
-        refuses(
-            Exchange(
-                mint={
-                    "success": True,
-                    "token": "pypi-offline_test_credential",
-                    "expires": current,
-                }
-            ),
-            burns=True,
-        )
-        refuses(Exchange(burn_status=503), burns=True)
-        (root / "bindings/rust/Cargo.toml").write_text(
-            '[package]\nname = "joints"\nversion = "0.0.0"\n'
-        )
-        refuses(Exchange())
-        (root / "bindings/rust/Cargo.toml").write_text(
-            '[package]\nname = "someone-else"\nversion = "0.1.0"\n'
-        )
-        refuses(Exchange())
-    print(f"publisher: {count} offline identity/exchange/refusal controls passed")
-    return 0
-
-
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("command", choices=["pypi-readiness"], nargs="?")
+    parser.add_argument(
+        "command",
+        choices=[
+            "pypi-readiness",
+            "release-context",
+            "assert-context",
+            "verify-artifacts",
+        ],
+        nargs="?",
+    )
+    parser.add_argument("--source-root", type=Path)
+    parser.add_argument("--release-tag", default="")
+    parser.add_argument("--source-sha", default="")
+    parser.add_argument("--artifact-run", default="")
+    parser.add_argument("--artifact-root", type=Path)
+    parser.add_argument(
+        "--native-target", choices=["linux-x86_64", "macos-arm64", "all"]
+    )
     parser.add_argument("--selftest", action="store_true")
     args = parser.parse_args(argv)
     try:
         if args.selftest:
-            return selftest()
+            controls.selftest(sys.modules[__name__])
+            artifact_controls.selftest(sys.modules[__name__])
+            return 0
         if args.command is None:
             parser.error("choose pypi-readiness or --selftest")
         root = Path(__file__).resolve().parent.parent
-        print(pypi_readiness(root, dict(os.environ)))
+        environ = dict(os.environ)
+        if args.command == "pypi-readiness":
+            print(
+                pypi_readiness(
+                    args.source_root or root,
+                    environ,
+                    release_tag=args.release_tag or None,
+                    source_sha=args.source_sha or None,
+                )
+            )
+        else:
+            token = environ.get("GITHUB_TOKEN", "")
+
+            def api(path):
+                return request_json(
+                    f"https://api.github.com/repos/{REPOSITORY}/{path}",
+                    "release context lookup",
+                    live_transport,
+                    headers={"Authorization": f"Bearer {token}"} if token else {},
+                )
+
+            if args.command == "release-context":
+                result = context.release_context(
+                    root, environ, args.release_tag, args.artifact_run, api
+                )
+                context.emit(result, environ.get("GITHUB_OUTPUT"))
+            elif args.command == "verify-artifacts":
+                if args.artifact_root is None or args.source_root is None:
+                    parser.error(
+                        "artifact proof requires --artifact-root and --source-root"
+                    )
+                result = artifacts.verify(
+                    args.artifact_root,
+                    args.source_root,
+                    environ,
+                    args.release_tag,
+                    args.source_sha,
+                    args.artifact_run,
+                    api,
+                    token,
+                    args.native_target,
+                )
+                print(json.dumps(result, sort_keys=True))
+            else:
+                result = context.assert_context(
+                    root,
+                    environ,
+                    args.release_tag,
+                    args.source_sha,
+                    args.artifact_run,
+                    api,
+                )
+                print(json.dumps(result, sort_keys=True))
         return 0
     except ReadinessError as error:
         print(f"publisher: {error}", file=sys.stderr)

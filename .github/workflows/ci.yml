@@ -346,6 +346,7 @@ jobs:
         run: |
           python3 tool/publisher.py --selftest
           python3 -m unittest discover -s tool/release -p 'test_*.py'
+          python3 -O -m unittest discover -s tool -p test_release_finalize.py
 
   package-checks:
     name: packaged bindings (${{ matrix.target }})
