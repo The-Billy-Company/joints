@@ -14,5 +14,5 @@ crate-type = ["cdylib", "staticlib"]
 [dependencies]
 joints-engine = { path = ".." }
 
-[lints.rust]
-unsafe_op_in_unsafe_fn = "deny"
+[lints]
+workspace = true

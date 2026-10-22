@@ -1,4 +1,6 @@
 //! Exercise the public process boundary, including evidence and failure exits.
+#![forbid(unsafe_code)]
+
 use std::{
     fs,
     io::Write,

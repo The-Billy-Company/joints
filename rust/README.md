@@ -54,11 +54,32 @@ From the repository root:
 
 ```sh
 mise exec zig@0.16.0 python@3.12.15 -- python3 tool/rust.py test --irgx-abi-family=irgx-abi2-108-munch-image1 --locked --workspace
-mise exec zig@0.16.0 python@3.12.15 -- python3 tool/rust.py clippy --irgx-abi-family=irgx-abi2-108-munch-image1 --locked --workspace --all-targets -- -D warnings
+mise exec zig@0.16.0 python@3.12.15 -- python3 tool/rust.py clippy --irgx-abi-family=irgx-abi2-108-munch-image1 --locked --workspace --all-targets --all-features -- -D warnings
 mise exec python@3.12.15 -- python3 tool/rust.py fmt -p joints-engine -p joints-ffi --check
 mise exec zig@0.16.0 python@3.12.15 -- python3 tool/rust.py build --irgx-abi-family=irgx-abi2-108-munch-image1 --locked --release --workspace
 rust/target/release/joints-rs parse test/grammar/json.json research/joinery/corpus/ledger.json --all --json --mend=none --no-supply
 ```
+
+The workspace shares a deny-by-default compiler and Clippy policy across the
+engine, CLI, ABI adapter, tests, and build scripts. It checks future compatibility,
+explicit lifetimes, internal visibility, FFI type correctness, numeric conversions,
+pointer conversions, shared ownership, and unsafe-block safety explanations.
+The engine and CLI forbid unsafe code; the ABI crate contains the foreign-memory
+operations. The standalone crate in `bindings/rust` carries its own matching
+policy so the checks also apply after packaging. Keep checks compatible with
+both Rust 1.85 and the qualification toolchain.
+
+Run Clippy with `--all-targets --all-features` to include the optional lexer
+instrumentation and every test. A few intentional exceptions are scoped to the
+specific item and explain the reason, including rounded CLI display percentages.
+The working Image1 corpus trial stays explicitly ignored because it requires
+the pinned private `.local` grammar profiles and a fresh absolute
+`JOINTS_IMAGE_WORKING_OUTPUT` directory. Once those inputs exist, select
+`actual_working_precedence_zero_images_preserve_parser_questions` with
+`--features munch-image -- --ignored --exact`, using its full module path
+`lexer::working_image_trial::actual_working_precedence_zero_images_preserve_parser_questions`.
+Strict Python checks cover the public bindings and the native archive proof
+tools; see [the tooling instructions](../tool/README.md#static-typing-for-the-rust-archive-proof).
 
 The validation host's selected macOS 27 SDK cannot link with its installed
 linker. Local checks used the installed macOS 26.5 SDK by prefixing Cargo
@@ -75,8 +96,10 @@ mise exec python@3.12.15 -- python3 -B tool/rust_qualify.py \
 ```
 
 Use a new output directory for every attempt. The recorder runs formatting,
-all-target checks, default tests on Rust 1.96/1.85, Clippy and a release build,
-and retains named results, logs and source/native/dependency hashes. Ignored
+all-target/all-feature checks and Clippy on Rust 1.96/1.85, default tests on both,
+and a release build. It retains named results, logs and source/native/dependency
+hashes. Both selected toolchains need Clippy; the primary also needs rustfmt.
+Ignored
 working-corpus witnesses, actual consumers and installed-package checks remain
 separate explicit gates. `tool/rust_bundle.py` can form a delivery bundle only
 from a positive unchanged report; it preserves the raw static archive and

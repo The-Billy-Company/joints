@@ -68,7 +68,9 @@ impl ImageOperation {
         }
     }
     pub(crate) fn reader_limits(&self, mut limits: ArtifactLimits) -> ArtifactLimits {
-        limits.work = limits.work.min(self.budget.work_left() as usize);
+        limits.work = limits
+            .work
+            .min(usize::try_from(self.budget.work_left()).unwrap_or(usize::MAX));
         limits
     }
     pub(crate) fn charge_allocation(&mut self, bytes: usize) -> Result<(), ArtifactError> {
@@ -143,7 +145,7 @@ impl ImageOperation {
         let spent = before
             .checked_sub(self.budget.work_left())
             .ok_or(ArtifactError::Invalid("image work grew"))?;
-        reader.charge(spent as usize)?;
+        reader.charge(usize::try_from(spent).map_err(|_| ArtifactError::Length)?)?;
         reader.image_checkpoint = reader.work;
         result
     }
@@ -233,7 +235,7 @@ mod tests {
             .unwrap();
         let mut framed = Vec::new();
         framed.extend(1u32.to_le_bytes());
-        framed.extend((image.as_bytes().len() as u32).to_le_bytes());
+        framed.extend(u32::try_from(image.as_bytes().len()).unwrap().to_le_bytes());
         framed.extend(image.as_bytes());
         // count=2 visits, frame length+take=2 visits: none remain for loading.
         let limits = ArtifactLimits {

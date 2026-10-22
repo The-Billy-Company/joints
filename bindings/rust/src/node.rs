@@ -50,7 +50,7 @@ impl<'tree> Node<'tree> {
         let span = self.byte_range();
         self.tree
             .source()
-            .get(span.start as usize..span.end as usize)
+            .get(usize::try_from(span.start).ok()?..usize::try_from(span.end).ok()?)
     }
 
     /// Position of the first byte, absent for a span beyond the source.
@@ -82,8 +82,8 @@ impl<'tree> Node<'tree> {
     /// Child `index`, absent past the end.
     pub fn child(self, index: u32) -> Option<Self> {
         // SAFETY: the native accessor bounds-checks the child index.
-        self.tree
-            .node(unsafe { ffi::jnt_node_kid(self.tree.raw.as_ptr(), self.id, index) })
+        let id = unsafe { ffi::jnt_node_kid(self.tree.raw.as_ptr(), self.id, index) };
+        self.tree.node(id)
     }
 
     /// All children in source order, including anonymous nodes.
@@ -114,36 +114,36 @@ impl<'tree> Node<'tree> {
     /// Parent node; roots in a partial forest have none.
     pub fn parent(self) -> Option<Self> {
         // SAFETY: native neighbourhood lookups bounds-check validated refs.
-        self.tree
-            .node(unsafe { ffi::jnt_node_parent(self.tree.raw.as_ptr(), self.id) })
+        let id = unsafe { ffi::jnt_node_parent(self.tree.raw.as_ptr(), self.id) };
+        self.tree.node(id)
     }
 
     /// Next sibling, including anonymous nodes.
     pub fn next_sibling(self) -> Option<Self> {
         // SAFETY: native neighbourhood lookups bounds-check validated refs.
-        self.tree
-            .node(unsafe { ffi::jnt_node_next(self.tree.raw.as_ptr(), self.id) })
+        let id = unsafe { ffi::jnt_node_next(self.tree.raw.as_ptr(), self.id) };
+        self.tree.node(id)
     }
 
     /// Previous sibling, including anonymous nodes.
     pub fn previous_sibling(self) -> Option<Self> {
         // SAFETY: native neighbourhood lookups bounds-check validated refs.
-        self.tree
-            .node(unsafe { ffi::jnt_node_prev(self.tree.raw.as_ptr(), self.id) })
+        let id = unsafe { ffi::jnt_node_prev(self.tree.raw.as_ptr(), self.id) };
+        self.tree.node(id)
     }
 
     /// Next named sibling, including comments.
     pub fn next_named_sibling(self) -> Option<Self> {
         // SAFETY: native neighbourhood lookups bounds-check validated refs.
-        self.tree
-            .node(unsafe { ffi::jnt_node_next_named(self.tree.raw.as_ptr(), self.id) })
+        let id = unsafe { ffi::jnt_node_next_named(self.tree.raw.as_ptr(), self.id) };
+        self.tree.node(id)
     }
 
     /// Previous named sibling, including comments.
     pub fn previous_named_sibling(self) -> Option<Self> {
         // SAFETY: native neighbourhood lookups bounds-check validated refs.
-        self.tree
-            .node(unsafe { ffi::jnt_node_prev_named(self.tree.raw.as_ptr(), self.id) })
+        let id = unsafe { ffi::jnt_node_prev_named(self.tree.raw.as_ptr(), self.id) };
+        self.tree.node(id)
     }
 
     /// Parent hops to a root; every root has depth zero.

@@ -1,5 +1,7 @@
 //! Independent witnesses from the pinned, unsealed working corpus.
 
+#![forbid(unsafe_code)]
+
 use joints_engine::{CompiledGrammar, Node, TreeSnapshot};
 use sha2::{Digest, Sha256};
 use std::{fs, path::Path};
@@ -10,8 +12,11 @@ fn pinned(path: &str, expected: &str) -> Vec<u8> {
     assert_eq!(
         Sha256::digest(&bytes)
             .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect::<String>(),
+            .fold(String::new(), |mut text, byte| {
+                use std::fmt::Write as _;
+                write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+                text
+            }),
         expected,
         "{path}"
     );
@@ -54,8 +59,11 @@ fn syntax_digest(tree: &TreeSnapshot) -> String {
     }
     hash.finalize()
         .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect::<String>()
+        .fold(String::new(), |mut text, byte| {
+            use std::fmt::Write as _;
+            write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+            text
+        })
 }
 
 #[test]

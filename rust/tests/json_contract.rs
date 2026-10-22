@@ -1,4 +1,6 @@
 //! Compare the native engine with frozen outputs from the pinned Zig executable.
+#![forbid(unsafe_code)]
+
 use std::{fs, path::PathBuf, sync::Arc};
 
 use joints_engine::{
@@ -73,7 +75,8 @@ fn every_frozen_no_recovery_case_matches_the_reference() {
         );
         assert_eq!(
             tree.survey().walked,
-            expected["survey"]["walked"].as_u64().unwrap() as usize,
+            usize::try_from(expected["survey"]["walked"].as_u64().unwrap())
+                .expect("fixture count fits usize"),
             "{id}: surveyed nodes"
         );
         assert_eq!(tree.source(), source, "{id}: original bytes");

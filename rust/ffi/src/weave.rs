@@ -20,9 +20,12 @@ pub struct JntCost {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn jnt_weave_new(parser: *mut JntParser, out: *mut *mut JntWeave) -> i32 {
     status_boundary!({
+        // SAFETY: the C caller provides aligned writable output storage; output rejects NULL.
         unsafe { output(out)? };
         let p = parser_handle(parser as usize)?;
         let token = insert_weave(parser as usize, p)?;
+        // SAFETY: output validated out above; the caller retains its writable storage for this
+        // call.
         unsafe { out.write(token as *mut JntWeave) };
         Ok(())
     })
@@ -44,6 +47,7 @@ pub unsafe extern "C" fn jnt_weave_warp(
 ) -> i32 {
     status_boundary!({
         let w = weave_handle(weave as usize)?;
+        // SAFETY: the C caller keeps len input bytes readable and immutable for this call.
         let source = unsafe { input(text, len)? };
         let mut state = lock(&w.state)?;
         let mut slot = w
@@ -79,6 +83,7 @@ pub unsafe extern "C" fn jnt_weave_amend(
 ) -> i32 {
     status_boundary!({
         let w = weave_handle(weave as usize)?;
+        // SAFETY: the C caller keeps len input bytes readable and immutable for this call.
         let source = unsafe { input(insert, len)? };
         let span = ByteSpan::new(from as usize, to as usize)
             .ok_or_else(|| invalid("reversed edit span"))?;
@@ -176,6 +181,7 @@ pub unsafe extern "C" fn jnt_weave_cost(weave: *const JntWeave, out: *mut JntCos
                 }
             }
         };
+        // SAFETY: out is non-NULL and the C caller provides aligned writable output storage.
         unsafe { out.write(cost) };
         Ok(())
     })

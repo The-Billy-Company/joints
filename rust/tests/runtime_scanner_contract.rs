@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use joints_engine::{CompiledGrammar, Node};
 use serde_json::json;
 
@@ -72,7 +74,7 @@ fn raw_delimiter_memory_preserves_empty_and_escaped_quote_content() {
     let grammar = CompiledGrammar::compile(&serde_json::to_vec(&grammar).unwrap()).unwrap();
     let mut session = grammar.session();
     for (source, content) in [
-        (b"r\"\"" as &[u8], b"" as &[u8]),
+        (b"r\"\"".as_slice(), b"".as_slice()),
         (b"r#\"x\\\"y\"#", b"x\\\"y"),
     ] {
         let tree = session.parse(source).unwrap();
@@ -109,7 +111,7 @@ fn rule_extras_reduce_nested_recipes_fields_and_aliases_outside_structural_moves
         .collect();
     assert_eq!(comments.len(), 3);
     assert!(tree.survey().is_sound());
-    for (comment, text) in comments.iter().zip([b"(a)" as &[u8], b"b", b"c"]) {
+    for (comment, text) in comments.iter().zip([b"(a)".as_slice(), b"b", b"c"]) {
         assert!(comment.is_extra());
         let body = comment.child_by_field("body").unwrap();
         assert_eq!(body.name(), "comment_text");
@@ -156,7 +158,7 @@ fn rule_extra_scanner_context_reads_nested_rust_comment_bodies() {
     assert!(comments.iter().all(|n| n.is_extra()));
     assert_eq!(
         comments[0].children().map(|n| n.text()).collect::<Vec<_>>(),
-        vec![b"/*" as &[u8], b"*/"]
+        vec![b"/*".as_slice(), b"*/"]
     );
 }
 

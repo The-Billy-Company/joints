@@ -1,0 +1,13 @@
+[tool.mypy]
+python_version = "3.12"
+files = ["tool/rust_archive.py", "tool/rust_static_boundary.py", "tool/rust_boundary_types.py"]
+mypy_path = "tool"
+strict = true
+warn_unreachable = true
+disallow_any_unimported = true
+disallow_any_expr = true
+disallow_any_explicit = true
+disallow_any_decorated = true
+strict_bytes = true
+extra_checks = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]

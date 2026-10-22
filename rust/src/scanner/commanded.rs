@@ -461,10 +461,10 @@ mod tests {
     }
     #[test]
     fn keyword_boundaries_and_limits_are_explicit() {
-        for word in [b"where" as &[u8], b"in", b"_hole", b"r2"] {
+        for word in [b"where".as_slice(), b"in", b"_hole", b"r2"] {
             assert!(keyworded(word));
         }
-        for word in [b"" as &[u8], b"->", b"2nd", b"'a"] {
+        for word in [b"".as_slice(), b"->", b"2nd", b"'a"] {
             assert!(!keyworded(word));
         }
         assert!(!whole_word(b"where'", 0, b"where"));

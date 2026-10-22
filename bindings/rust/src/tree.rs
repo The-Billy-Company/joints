@@ -89,7 +89,7 @@ pub struct Tree<'parser> {
 
 impl<'parser> Tree<'parser> {
     pub(crate) fn parse(parser: &'parser Parser<'parser>, source: &[u8]) -> Result<Self> {
-        if source.len() > u32::MAX as usize {
+        if u32::try_from(source.len()).is_err() {
             return Err(Error::new(
                 ErrorKind::Invalid,
                 "source exceeds native 32-bit byte offsets",
@@ -216,7 +216,7 @@ impl<'parser> Tree<'parser> {
 
     /// The deepest node covering the given byte range, if any root covers it.
     pub fn covering(&self, span: Range<u32>) -> Option<Node<'_>> {
-        if span.start > span.end || span.end as usize > self.source.len() {
+        if span.start > span.end || usize::try_from(span.end).ok()? > self.source.len() {
             return None;
         }
         // SAFETY: the native lookup bounds-checks a range on this live tree.
@@ -225,14 +225,14 @@ impl<'parser> Tree<'parser> {
 
     /// Convert a byte offset to a zero-based row and byte column.
     pub fn point_at(&self, offset: u32) -> Option<Point> {
-        let offset = offset as usize;
+        let offset = usize::try_from(offset).ok()?;
         if offset > self.source.len() {
             return None;
         }
         let row = self.lines.partition_point(|start| *start <= offset) - 1;
         Some(Point {
-            row: row as u32,
-            column: (offset - self.lines[row]) as u32,
+            row: u32::try_from(row).ok()?,
+            column: u32::try_from(offset - self.lines[row]).ok()?,
         })
     }
 

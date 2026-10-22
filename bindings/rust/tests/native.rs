@@ -22,7 +22,7 @@ fn traverses_fields_neighbours_original_bytes_and_byte_points() {
     assert!(tree.repairs().unwrap().is_empty());
     let root = tree.root(0).unwrap();
     assert_eq!(root.kind(), b"document");
-    assert_eq!(root.byte_range(), 0..source.len() as u32);
+    assert_eq!(root.byte_range(), 0..u32::try_from(source.len()).unwrap());
     assert!(root.parent().is_none());
     let object = root.named_children().next().unwrap();
     let pairs: Vec<_> = object.named_children().collect();
@@ -48,7 +48,10 @@ fn traverses_fields_neighbours_original_bytes_and_byte_points() {
         tree.covering(std::ops::Range { start: 9, end: 4 })
             .is_none()
     );
-    assert!(tree.point_at(source.len() as u32 + 1).is_none());
+    assert!(
+        tree.point_at(u32::try_from(source.len()).unwrap() + 1)
+            .is_none()
+    );
     assert!(tree.sexp(false).unwrap().starts_with(b"(document"));
     assert!(tree.sexp(true).unwrap().starts_with(b"(document"));
 }
@@ -65,7 +68,10 @@ fn strict_refusal_retains_evidence_and_partial_mode_keeps_repairs() {
     let confidence = tree.confidence();
     let repairs = tree.repairs().unwrap();
     assert!(!repairs.is_empty());
-    assert_eq!(repairs.len() as u32, confidence.mends + confidence.supplied);
+    assert_eq!(
+        u32::try_from(repairs.len()).unwrap(),
+        confidence.mends + confidence.supplied
+    );
     assert_eq!(
         repairs
             .iter()
@@ -82,7 +88,7 @@ fn strict_refusal_retains_evidence_and_partial_mode_keeps_repairs() {
         } else {
             assert!(repair.span.start < repair.span.end);
             assert!(repair.word.is_none());
-            assert!(repair.span.end as usize <= source.len());
+            assert!(usize::try_from(repair.span.end).unwrap() <= source.len());
         }
     }
     let truncated = parser.parse_partial(b"{").unwrap();

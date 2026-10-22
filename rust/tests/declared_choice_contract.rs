@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use joints_engine::{
     ByteSpan, CompiledGrammar, Document, DocumentError, DocumentOptions, Error, ForeignPolicy,
     Node, ParseLimits, Query, Resource, Reuse, TreeSnapshot,
@@ -109,8 +111,11 @@ fn assert_choices(cases: Vec<Value>, expected: &[&str]) {
         assert_eq!(
             Sha256::digest(bytes)
                 .iter()
-                .map(|byte| format!("{byte:02x}"))
-                .collect::<String>(),
+                .fold(String::new(), |mut text, byte| {
+                    use std::fmt::Write as _;
+                    write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+                    text
+                }),
             case["oracle"]["grammar_sha256"].as_str().unwrap()
         );
         let grammar = CompiledGrammar::compile(bytes).unwrap();
@@ -156,7 +161,7 @@ fn repeated_grammar() -> Arc<CompiledGrammar> {
 fn resumed_generic_call_selection_and_measurement_equal_a_cold_document() {
     let grammar = repeated_grammar();
     let source = format!("{}f(\"b\");", "f(\"a\");\n".repeat(48));
-    let mut document = Document::new(grammar.clone(), source.as_bytes()).unwrap();
+    let mut document = Document::new(Arc::clone(&grammar), source.as_bytes()).unwrap();
     let previous = Arc::clone(document.snapshot());
     let at = source.len() - "f(\"b\");".len() + 1;
     document
@@ -222,8 +227,11 @@ fn real_typescript_generic_calls_keep_their_function_types_and_arguments() {
     assert_eq!(
         Sha256::digest(bytes)
             .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect::<String>(),
+            .fold(String::new(), |mut text, byte| {
+                use std::fmt::Write as _;
+                write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+                text
+            }),
         "99dc4b95424dff47c89acb50d5d3f25b081b07eaff43994b7881dccd4186b214"
     );
     let grammar = CompiledGrammar::compile(bytes).unwrap();
@@ -234,7 +242,7 @@ fn real_typescript_generic_calls_keep_their_function_types_and_arguments() {
     ] {
         let tree = grammar.session().parse(source.as_bytes()).unwrap();
         let query = Query::compile(
-            grammar.clone(),
+            Arc::clone(&grammar),
             b"(call_expression function: (_) @function arguments: (arguments) @args)",
         )
         .unwrap();

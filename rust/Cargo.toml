@@ -2,6 +2,45 @@
 members = [".", "ffi"]
 resolver = "3"
 
+# Every workspace target, including build scripts and tests, inherits this
+# policy. Keep the engine's stronger unsafe-code ban local to its crate.
+[workspace.lints.rust]
+warnings = { level = "deny", priority = -1 }
+future_incompatible = { level = "deny", priority = -1 }
+rust_2018_idioms = { level = "deny", priority = -1 }
+unsafe_code = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+improper_ctypes = "deny"
+improper_ctypes_definitions = "deny"
+unused_lifetimes = "deny"
+unused_qualifications = "deny"
+trivial_casts = "deny"
+trivial_numeric_casts = "deny"
+unreachable_pub = "deny"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+cast_possible_truncation = "deny"
+cast_possible_wrap = "deny"
+cast_precision_loss = "deny"
+cast_sign_loss = "deny"
+cast_lossless = "deny"
+checked_conversions = "deny"
+cast_ptr_alignment = "deny"
+fn_to_numeric_cast_any = "deny"
+ptr_as_ptr = "deny"
+ref_as_ptr = "deny"
+as_ptr_cast_mut = "deny"
+transmute_ptr_to_ref = "deny"
+missing_safety_doc = "deny"
+undocumented_unsafe_blocks = "deny"
+clone_on_ref_ptr = "deny"
+implicit_clone = "deny"
+ref_option_ref = "deny"
+rc_mutex = "deny"
+redundant_type_annotations = "deny"
+unneeded_field_pattern = "deny"
+
 [package]
 name = "joints-engine"
 version = "0.0.0"
@@ -31,8 +70,8 @@ sha2 = { version = "=0.11.0", default-features = false }
 [dev-dependencies]
 pcre2 = "0.2.11"
 
-[lints.rust]
-unsafe_code = "forbid"
+[lints]
+workspace = true
 
 [profile.release]
 lto = "thin"

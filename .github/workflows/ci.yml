@@ -206,10 +206,10 @@ jobs:
           JOINTS_LIB_DIR: ${{ github.workspace }}/joints/zig-out/lib
         run: |
           cargo fmt --manifest-path bindings/rust/Cargo.toml --check
-          cargo check --manifest-path bindings/rust/Cargo.toml
-          cargo clippy --manifest-path bindings/rust/Cargo.toml --all-targets -- -D warnings
-          cargo test --manifest-path bindings/rust/Cargo.toml
-          cargo doc --manifest-path bindings/rust/Cargo.toml --no-deps
+          cargo check --manifest-path bindings/rust/Cargo.toml --locked --all-targets --all-features
+          cargo clippy --manifest-path bindings/rust/Cargo.toml --locked --all-targets --all-features -- -D warnings
+          cargo test --manifest-path bindings/rust/Cargo.toml --locked --all-features
+          cargo doc --manifest-path bindings/rust/Cargo.toml --locked --all-features --no-deps
       # Only now, and only for the sweeps. Grammars and held-out source files
       # are pinned rather than committed, since `upstream/` holds material kept
       # for study rather than sources this package vendors.
@@ -327,6 +327,24 @@ jobs:
       - name: every test file runs, and no production file names one
         run: python3 tool/roll.py
 
+  typing:
+    name: strict Python typing
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Install the pinned type checker
+        run: python -m pip install -r requirements-typing.txt
+      - name: Check native archive tooling and proof schemas
+        run: python -m mypy --config-file pyproject.toml
+      - name: Check Python bindings and their tests
+        working-directory: bindings/python
+        run: python -m mypy --config-file pyproject.toml
+
   release-contract:
     name: release contract
     runs-on: ubuntu-24.04
@@ -423,7 +441,7 @@ jobs:
   release-ready:
     name: release-ready
     if: always()
-    needs: [grammars, record, press, topology, release-contract, package-checks]
+    needs: [grammars, record, press, topology, typing, release-contract, package-checks]
     runs-on: ubuntu-24.04
     steps:
       - name: Every required job succeeded on this commit

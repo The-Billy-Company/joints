@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use joints_engine::{CompileOptions, CompiledGrammar, ScannerBinding};
 use serde_json::json;
 

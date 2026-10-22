@@ -49,7 +49,7 @@ struct Lead {
     broken: bool,
 }
 impl Cohorts {
-    pub fn bind(g: &Automaton) -> Self {
+    pub(super) fn bind(g: &Automaton) -> Self {
         let external = |name| g.external_by_name(name);
         let quotes = match (
             external("string_start"),
@@ -87,7 +87,7 @@ impl Cohorts {
         });
         Self { quotes, offside }
     }
-    pub fn claims(&self, s: SymbolId) -> bool {
+    pub(super) fn claims(&self, s: SymbolId) -> bool {
         self.quotes
             .as_ref()
             .is_some_and(|q| [q.open, q.body, q.close, q.escape].contains(&s))
@@ -97,7 +97,7 @@ impl Cohorts {
                 .is_some_and(|q| [q.indent, q.dedent, q.newline].contains(&s))
     }
     #[allow(clippy::too_many_arguments)]
-    pub fn step(
+    pub(super) fn step(
         &self,
         o: &mut ScannerState,
         source: &[u8],

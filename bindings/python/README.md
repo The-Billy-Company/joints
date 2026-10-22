@@ -48,6 +48,20 @@ Run the native integration checks after building:
 PYTHONPATH=bindings/python python3 -m unittest discover -s bindings/python/tests
 ```
 
+The package ships inline types through its `py.typed` marker. Its pinned mypy
+configuration checks the entire interface, native ABI declarations, and integration
+tests in strict mode, with additional bans on explicit and inferred `Any` values,
+untyped imports, and decorators that erase types. Context managers retain their
+concrete handle type; optional nodes and strings require narrowing before use.
+`ForeignPolicy` restricts query policies to `"refuse"`, `"admit"`, or `"deny"`.
+Run the same checks locally with Python 3.12 or newer:
+
+```sh
+cd bindings/python
+python3 -m pip install -e '.[dev]'
+python3 -m mypy
+```
+
 The Python wheel and sdist contain the interface; no native library or grammar
 bank is bundled. Install the package and download the matching native archive
 from [Joints releases](https://github.com/The-Billy-Company/joints/releases):

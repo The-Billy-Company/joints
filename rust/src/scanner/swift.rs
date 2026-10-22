@@ -56,7 +56,7 @@ pub(super) struct Swift {
 }
 
 impl Swift {
-    pub fn bind(grammar: &Automaton) -> Option<Self> {
+    pub(super) fn bind(grammar: &Automaton) -> Option<Self> {
         if !COHORT
             .iter()
             .all(|name| grammar.external_by_name(name).is_some())
@@ -87,7 +87,7 @@ impl Swift {
         })
     }
 
-    pub fn claims(&self, symbol: SymbolId) -> bool {
+    pub(super) fn claims(&self, symbol: SymbolId) -> bool {
         self.hash == Some(symbol)
             || self
                 .directives
@@ -95,11 +95,11 @@ impl Swift {
                 .any(|directive| directive.symbol == Some(symbol))
     }
 
-    pub fn controls(&self, symbol: SymbolId) -> bool {
+    pub(super) fn controls(&self, symbol: SymbolId) -> bool {
         self.controls.contains(&symbol)
     }
 
-    pub fn remove_claimed(&mut self, claimed: &[SymbolId]) {
+    pub(super) fn remove_claimed(&mut self, claimed: &[SymbolId]) {
         for symbol in std::iter::once(&mut self.hash).chain(
             self.directives
                 .iter_mut()
@@ -111,7 +111,7 @@ impl Swift {
         }
     }
 
-    pub fn step(
+    pub(super) fn step(
         &self,
         state: &ScannerState,
         source: &[u8],

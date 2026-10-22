@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use joints_engine::{CompileOptions, CompiledGrammar, Error, LexError, ScannerError};
 
 const GRAMMAR: &[u8] = br#"{

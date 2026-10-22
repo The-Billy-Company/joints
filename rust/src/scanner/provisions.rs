@@ -200,11 +200,10 @@ impl Provisions {
             {
                 continue;
             }
-            let declaration_order = grammar
-                .symbol(symbol)
-                .lexis
-                .as_ref()
-                .map_or(symbol.index() as u32, |lexis| lexis.declaration_order);
+            let declaration_order = grammar.symbol(symbol).lexis.as_ref().map_or_else(
+                || u32::try_from(symbol.index()).expect("symbol IDs store u32"),
+                |lexis| lexis.declaration_order,
+            );
             bound.push(Bound {
                 symbol,
                 spelling,

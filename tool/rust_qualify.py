@@ -152,7 +152,7 @@ def command(argv, cwd, env, out, label, timeout, report, report_path):
 
 def selected_toolchain(version, primary=False):
     result = {"version": version}
-    names = ("cargo", "rustc", "rustdoc") + (("rustfmt", "cargo-fmt", "cargo-clippy", "clippy-driver") if primary else ())
+    names = ("cargo", "rustc", "rustdoc", "cargo-clippy", "clippy-driver") + (("rustfmt", "cargo-fmt") if primary else ())
     for tool in names:
         path = Path(subprocess.run(["rustup", "which", "--toolchain", version, tool],
                                   check=True, capture_output=True, text=True).stdout.strip()).resolve(strict=True)
@@ -297,10 +297,10 @@ def run(args):
         check()
         jobs = [(0, "fmt", format_arguments(metadata_value))]
         for index, _ in enumerate(toolchains):
-            jobs.extend([(index, "check", ["check", "--workspace", "--all-targets"]),
-                         (index, "test", ["test", "--workspace", "--", "--color=never", "--test-threads=1"])])
-        jobs.extend([(0, "clippy", ["clippy", "--workspace", "--all-targets", "--", "-D", "warnings"]),
-                     (0, "release", ["build", "--workspace", "--release"])])
+            jobs.extend([(index, "check", ["check", "--workspace", "--all-targets", "--all-features"]),
+                         (index, "test", ["test", "--workspace", "--", "--color=never", "--test-threads=1"]),
+                         (index, "clippy", ["clippy", "--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"])])
+        jobs.append((0, "release", ["build", "--workspace", "--release"]))
         for index, kind, cargo_args in jobs:
             check()
             toolchain = toolchains[index]

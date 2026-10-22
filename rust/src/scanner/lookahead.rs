@@ -289,7 +289,7 @@ fn ecma(
         b'+' => byte(s, i + 1) == b'+',
         b'-' => byte(s, i + 1) == b'-',
         b'!' => byte(s, i + 1) != b'=',
-        b'i' => ![(b"in" as &[u8]), b"instanceof"]
+        b'i' => ![(b"in".as_slice()), b"instanceof"]
             .iter()
             .any(|w| prefix(s, i, w) && !byte(s, i + w.len()).is_ascii_alphabetic()),
         _ => true,
@@ -418,7 +418,7 @@ fn continues(s: &[u8], at: usize, work: &mut usize) -> Result<bool, ScannerError
         }
         return settled(s, at + n, work);
     }
-    for w in [b"when" as &[u8], b"and", b"or", b"in"] {
+    for w in [b"when".as_slice(), b"and", b"or", b"in"] {
         if let Some(end) = word(s, at, w) {
             return settled(s, end, work);
         }
@@ -726,7 +726,7 @@ mod tests {
     #[test]
     fn ecma_context_and_comments_decide_a_break() {
         for (source, binary, expected) in [
-            (b"\n(x)" as &[u8], true, false),
+            (b"\n(x)".as_slice(), true, false),
             (b"\n(x)", false, true),
             (b"\n/* c */ + 1", true, false),
             (b"\n++x", true, true),
@@ -761,7 +761,7 @@ mod tests {
     #[test]
     fn toml_quote_runs_and_line_ending_have_exact_extents() {
         for (source, slot, end) in [
-            (b"\"" as &[u8], 1, 1),
+            (b"\"".as_slice(), 1, 1),
             (b"\"\"", 1, 2),
             (b"\"\"\"", 2, 3),
             (b"\"\"\"\"", 1, 1),

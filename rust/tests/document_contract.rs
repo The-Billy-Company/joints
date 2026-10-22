@@ -1,4 +1,6 @@
 //! Every published edit is checked against an independent cold session.
+#![forbid(unsafe_code)]
+
 use std::sync::Arc;
 
 use joints_engine::{
@@ -25,11 +27,14 @@ struct NodeImage {
 fn point(source: &[u8], at: usize) -> Point {
     let prefix = &source[..at];
     Point {
-        row: prefix.iter().filter(|&&b| b == b'\n').count() as u32,
-        column: prefix
-            .iter()
-            .rposition(|&b| b == b'\n')
-            .map_or(at, |last| at - last - 1) as u32,
+        row: u32::try_from(prefix.iter().filter(|&&b| b == b'\n').count()).unwrap(),
+        column: u32::try_from(
+            prefix
+                .iter()
+                .rposition(|&b| b == b'\n')
+                .map_or(at, |last| at - last - 1),
+        )
+        .unwrap(),
     }
 }
 
@@ -447,10 +452,13 @@ fn deterministic_edit_stream_checks_every_intermediate_forest_and_byte_position(
             0 => 0,
             1 => len / 2,
             2 => len,
-            _ => state as usize % (len + 1),
+            _ => {
+                usize::try_from(state & (usize::MAX as u64)).expect("PRNG low bits fit usize")
+                    % (len + 1)
+            }
         };
-        let over = (at + ((state >> 17) as usize % 4)).min(len);
-        let replacement = insertions[(state >> 33) as usize % insertions.len()];
+        let over = (at + usize::try_from((state >> 17) % 4).unwrap()).min(len);
+        let replacement = insertions[usize::try_from(state >> 33).unwrap() % insertions.len()];
         edit(&mut document, &grammar, options, at, over, replacement);
     }
 }
@@ -544,16 +552,20 @@ fn same_length_line_edits_rebuild_book_indexes_and_zero_width_memory() {
         .enumerate()
     {
         edit(&mut document, &grammar, options, at, at + 1, replacement);
-        if step < 2 {
-            assert!(matches!(document.cost().reuse, Reuse::Prefix { bytes, .. } if bytes > 0));
-            assert!(document.snapshot().confidence().is_strict());
-        } else if step == 2 {
-            // A CR is a break but not a LF line start. This changes the book's
-            // scalar-header lookahead, and the diagnostic tree remains exact.
-            assert!(!document.snapshot().confidence().is_strict());
-        } else {
-            assert_eq!(document.cost().reuse, Reuse::Cold);
-            assert!(document.snapshot().confidence().is_strict());
+        match step.cmp(&2) {
+            std::cmp::Ordering::Less => {
+                assert!(matches!(document.cost().reuse, Reuse::Prefix { bytes, .. } if bytes > 0));
+                assert!(document.snapshot().confidence().is_strict());
+            }
+            std::cmp::Ordering::Equal => {
+                // A CR is a break but not a LF line start. This changes the book's
+                // scalar-header lookahead, and the diagnostic tree remains exact.
+                assert!(!document.snapshot().confidence().is_strict());
+            }
+            std::cmp::Ordering::Greater => {
+                assert_eq!(document.cost().reuse, Reuse::Cold);
+                assert!(document.snapshot().confidence().is_strict());
+            }
         }
     }
 }

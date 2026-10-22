@@ -16,6 +16,7 @@ a generic object-file rewriter. rust_archive.py remains payload preserving.
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from functools import wraps
 import json
 import os
@@ -25,8 +26,15 @@ import shutil
 import struct
 import subprocess
 import tempfile
+from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast
+
+if TYPE_CHECKING:
+    import rust_boundary_types as bt
 
 import rust_archive
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 SCHEMA = 1
 
@@ -36,7 +44,7 @@ SCHEMA = 1
 JNT_ABI2 = 'jnt-abi2'
 IRGX_ABI2 = 'irgx-abi2-105'
 IRGX_MUNCH_IMAGE1 = 'irgx-abi2-108-munch-image1'
-_IRGX_EXPORTS = (
+_IRGX_EXPORTS: tuple[str, ...] = (
     'irgx_abi_version',
     'irgx_cancel_free',
     'irgx_cancel_new',
@@ -151,17 +159,21 @@ _IRGX_IMAGE1_EXPORTS = tuple(sorted(_IRGX_EXPORTS + (
 )))
 
 
-def _family(abi_family):
+def _family(abi_family: str) -> str:
     _require(abi_family in (JNT_ABI2, IRGX_ABI2, IRGX_MUNCH_IMAGE1), 'unsupported static C ABI family')
     return 'jnt_' if abi_family == JNT_ABI2 else 'irgx_'
 
 
-def _family_exports(exports, target, abi_family):
+def _valid_export(name: object) -> bool:
+    return isinstance(name, str) and re.fullmatch(r'[_a-zA-Z][_a-zA-Z0-9]*', name) is not None
+
+
+def _family_exports(exports: Iterable[str], target: str, abi_family: str) -> str:
     stem = _family(abi_family)
     _require(target in ('linux-x86_64', 'macos-arm64'), 'unsupported static boundary target')
     prefix = '_' if target == 'macos-arm64' else ''
     values = tuple(exports)
-    _require(len(values) <= 4096 and all(isinstance(n, str) and re.fullmatch(r'[_a-zA-Z][_a-zA-Z0-9]*', n) for n in values),
+    _require(len(values) <= 4096 and all(_valid_export(n) for n in values),
              'malformed declared export')
     _require(len(values) == len(set(values)), 'duplicate declared export')
     values = tuple(sorted(values))
@@ -174,14 +186,14 @@ def _family_exports(exports, target, abi_family):
     return prefix + stem
 
 
-def _family_fields(abi_family):
+def _family_fields(abi_family: str) -> bt.FamilyFields:
     # Historical JNT receipts/facts must retain their exact representation.
     return {} if abi_family == JNT_ABI2 else {'abi_family': abi_family}
 
 
-def _checked_decode(function):
+def _checked_decode(function: Callable[P, R]) -> Callable[P, R]:
     @wraps(function)
-    def checked(*args, **kwargs):
+    def checked(*args: P.args, **kwargs: P.kwargs) -> R:
         try:
             return function(*args, **kwargs)
         except (struct.error, UnicodeError, IndexError, KeyError, OverflowError) as error:
@@ -189,12 +201,12 @@ def _checked_decode(function):
     return checked
 
 
-def _require(ok, message):
+def _require(ok: object, message: str) -> None:
     if not ok:
         raise ValueError(message)
 
 
-def _digest(path):
+def _digest(path: str | Path) -> str:
     h = hashlib.sha256()
     with Path(path).open('rb') as stream:
         for part in iter(lambda: stream.read(1 << 20), b''):
@@ -202,25 +214,28 @@ def _digest(path):
     return h.hexdigest()
 
 
-def _encoded(value):
+def _encoded(value: object) -> bytes:
     return (json.dumps(value, indent=2, sort_keys=True, ensure_ascii=True) + '\n').encode()
 
 
-def _command(argv, *, cwd, env, logs, records):
+def _command(argv: Sequence[str | Path], *, cwd: Path, env: Mapping[str, str],
+             logs: Path, records: list[bt.CommandProof]) -> subprocess.CompletedProcess[bytes]:
     logs.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(list(map(str, argv)), cwd=cwd, env=env, capture_output=True)
     number = str(len(records)).zfill(3)
-    row = {'argv': list(map(str, argv)), 'cwd': str(cwd), 'exit': result.returncode}
-    for channel in ('stdout', 'stderr'):
+    channels: dict[str, bt.FileProof] = {}
+    for channel, data in (('stdout', result.stdout), ('stderr', result.stderr)):
         path = logs / (number + '.' + channel)
-        path.write_bytes(getattr(result, channel))
-        row[channel] = {'path': str(path), 'sha256': _digest(path)}
-    records.append(row)
+        path.write_bytes(data)
+        channels[channel] = {'path': str(path), 'sha256': _digest(path)}
+    records.append({'argv': list(map(str, argv)), 'cwd': str(cwd),
+                    'exit': result.returncode, 'stdout': channels['stdout'],
+                    'stderr': channels['stderr']})
     _require(result.returncode == 0, 'static boundary tool refused: ' + str(argv[0]))
     return result
 
 
-def _tool_environment():
+def _tool_environment() -> dict[str, str]:
     env = os.environ.copy()
     for key in ('LD_PRELOAD', 'LD_LIBRARY_PATH', 'DYLD_INSERT_LIBRARIES',
                 'DYLD_LIBRARY_PATH', 'LLVM_PROFILE_FILE'):
@@ -231,29 +246,31 @@ def _tool_environment():
 
 class ElfBudget:
 
-    def __init__(self):
+    def __init__(self) -> None:
         (self.sections, self.symbols, self.relocations, self.name_bytes) = (0, 0, 0, 0)
 
-    def add(self, key, count, limit):
-        total = getattr(self, key) + count
+    def add(self, key: Literal["sections", "symbols", "relocations", "name_bytes"],
+            count: int, limit: int) -> None:
+        total = cast(int, getattr(self, key)) + count
         _require(total <= limit, 'ELF proof resource limit: ' + key)
         setattr(self, key, total)
 
 class ElfObject:
 
-    def __init__(self, data, budget=None):
+    def __init__(self, data: bt.Buffer, budget: ElfBudget | None = None) -> None:
         _require(len(data) <= 256 << 20 and len(data) >= 64, 'ELF object byte extent')
         _require(bytes(data[:6]) == b'\x7fELF\x02\x01', 'not ELF64 little endian')
         self.data = data
-        (self.budget, self.string_tables, self.string_cache) = (budget or ElfBudget(), {}, {})
+        self.budget = budget or ElfBudget()
+        self.string_tables: dict[int, bytes] = {}
+        self.string_cache: dict[tuple[int, int], str] = {}
         budget = self.budget
-        self.header = struct.unpack_from('<16sHHIQQQIHHHHHH', data)
-        _require(self.header[1:3] == (1, 62), 'not an x86-64 relocatable object')
+        self.header = cast("bt.ElfHeader", struct.unpack_from('<16sHHIQQQIHHHHHH', data))
+        _require((self.header[1], self.header[2]) == (1, 62), 'not an x86-64 relocatable object')
         (start, width, count, names) = (self.header[6], self.header[11], self.header[12], self.header[13])
         _require(width == 64 and 0 < count < 65280 and (names < count) and (start + width * count <= len(data)), 'ELF section table outside object')
-        if budget:
-            budget.add('sections', count, 400000)
-        self.sections = [struct.unpack_from('<IIQQQQIIQQ', data, start + i * width) for i in range(count)]
+        budget.add('sections', count, 400000)
+        self.sections = [cast("bt.ElfSection", struct.unpack_from('<IIQQQQIIQQ', data, start + i * width)) for i in range(count)]
         for section in self.sections:
             _require(section[1] == 8 or section[4] + section[5] <= len(data), 'ELF section outside object')
         self.names = [self.string(names, s[0]) for s in self.sections]
@@ -263,34 +280,32 @@ class ElfObject:
         symbols = self.sections[self.table]
         _require(symbols[9] == 24 and symbols[5] % 24 == 0 and (symbols[6] < count) and (self.sections[symbols[6]][1] == 3), 'invalid ELF symbol table')
         number = symbols[5] // 24
-        if budget:
-            budget.add('symbols', number, 2000000)
+        budget.add('symbols', number, 2000000)
         body = self.payload(self.table)
-        self.symbols = []
+        self.symbols: list[bt.ElfSymbol] = []
         for at in range(0, symbols[5], 24):
-            (name, info, other, index, value, size) = struct.unpack_from('<IBBHQQ', body, at)
+            (name, info, other, index, value, size) = cast("tuple[int, int, int, int, int, int]", struct.unpack_from('<IBBHQQ', body, at))
             _require(index < count or index >= 65280, 'ELF symbol section index outside table')
             _require(index != 65535, 'extended ELF symbol indices unsupported')
             self.symbols.append((self.string(symbols[6], name), info, other, index, value, size))
-        self.references = []
-        self.groups = []
-        self.address_significance = []
-        self.address_significance_tables = []
+        self.references: list[tuple[int, int, int, int | None, str]] = []
+        self.groups: list[tuple[int, str, tuple[int, ...]]] = []
+        self.address_significance: list[tuple[int, int, str]] = []
+        self.address_significance_tables: list[tuple[int, bool]] = []
         for (i, section) in enumerate(self.sections):
             if section[1] in (4, 9):
                 width = 24 if section[1] == 4 else 16
                 _require(section[9] == width and section[5] % width == 0 and (section[6] == self.table), 'invalid ELF relocation table')
-                if budget:
-                    budget.add('relocations', section[5] // width, 4000000)
+                budget.add('relocations', section[5] // width, 4000000)
                 for at in range(0, section[5], width):
-                    (offset, info) = struct.unpack_from('<QQ', self.payload(i), at)
+                    (offset, info) = cast("tuple[int, int]", struct.unpack_from('<QQ', self.payload(i), at))
                     (symbol, kind) = (info >> 32, info & 4294967295)
                     _require(symbol < number, 'ELF relocation symbol outside table')
-                    addend = struct.unpack_from('<q', self.payload(i), at + 16)[0] if width == 24 else None
+                    addend = cast("tuple[int]", struct.unpack_from('<q', self.payload(i), at + 16))[0] if width == 24 else None
                     self.references.append((i, offset, kind, addend, self.symbols[symbol][0]))
             elif section[1] == 17:
                 _require(section[6] == self.table and section[7] < number and (section[5] >= 4) and (section[5] % 4 == 0), 'invalid ELF COMDAT group')
-                members = struct.unpack_from('<' + 'I' * (section[5] // 4), self.payload(i))
+                members = cast("tuple[int, ...]", struct.unpack_from('<' + 'I' * (section[5] // 4), self.payload(i)))
                 _require(all((0 < member < count for member in members[1:])), 'ELF group section outside table')
                 self.groups.append((i, self.symbols[section[7]][0], members))
             elif self.names[i] == '.llvm_addrsig':
@@ -311,7 +326,7 @@ class ElfObject:
                         (value, shift) = (0, 0)
                 _require(shift == 0, 'truncated LLVM address-significance index')
 
-    def string(self, table, offset):
+    def string(self, table: int, offset: int) -> str:
         key = (table, offset)
         if key in self.string_cache:
             return self.string_cache[key]
@@ -326,23 +341,24 @@ class ElfObject:
         self.string_cache[key] = value
         return value
 
-    def payload(self, index):
+    def payload(self, index: int) -> memoryview:
         section = self.sections[index]
         return memoryview(self.data)[section[4]:section[4] + section[5]] if section[1] != 8 else memoryview(b'')
 
-def compare_elf(before, after, mapping, *, removed=()):
+def compare_elf(before: bt.Buffer, after: bt.Buffer, mapping: Mapping[str, str],
+                *, removed: Sequence[str] = ()) -> bt.ElfProof:
     (a, b) = (ElfObject(before, ElfBudget()), ElfObject(after, ElfBudget()))
     deleted = {i for (i, name) in enumerate(a.names) if name in removed}
     for i in deleted:
         _require(a.names[i] in ('.llvmbc', '.llvmcmd') and a.sections[i][1] == 1 and (a.sections[i][2] & 2 == 0), 'cannot remove allocated/nonmetadata ELF payload')
 
-    def string_roles(elf):
+    def string_roles(elf: ElfObject) -> tuple[dict[str, int], set[int]]:
         roles = {'sections': elf.header[13], 'symbols': elf.sections[elf.table][6]}
         indices = set(roles.values())
         _require({i for (i, section) in enumerate(elf.sections) if section[1] == 3} == indices, 'orphan/additional ELF string table')
         for index in indices:
             section = elf.sections[index]
-            _require(index > 0 and section[1:4] == (3, 0, 0) and (section[6:10] == (0, 0, 1, 0)), 'ELF linkage string-table attributes changed')
+            _require(index > 0 and (section[1], section[2], section[3]) == (3, 0, 0) and ((section[6], section[7], section[8], section[9]) == (0, 0, 1, 0)), 'ELF linkage string-table attributes changed')
             payload = elf.payload(index)
             _require(len(payload) > 0 and payload[0] == payload[-1] == 0, 'ELF linkage string-table encoding invalid')
             _require(not any((symbol[3] == index for symbol in elf.symbols)), 'ELF symbol points into linkage string table')
@@ -383,14 +399,14 @@ def compare_elf(before, after, mapping, *, removed=()):
     _require(header_a == header_b, 'ELF nonlayout header changed')
     _require(len(a.symbols) == len(b.symbols), 'ELF symbol count changed')
 
-    def adjusted(symbol):
+    def adjusted(symbol: bt.ElfSymbol) -> bt.ElfSymbol:
         (name, info, other, section, value, size) = symbol
         if 0 < section < 65280:
             _require(section not in deleted, 'ELF symbol depends on removed metadata')
             section = positions[section]
         return (mapping.get(name, name), info, other, section, value, size)
-    for (old, new) in zip(a.symbols, b.symbols):
-        _require(adjusted(old) == new, 'ELF symbol/index/attribute changed beyond mapping')
+    for (old_symbol, new_symbol) in zip(a.symbols, b.symbols):
+        _require(adjusted(old_symbol) == new_symbol, 'ELF symbol/index/attribute changed beyond mapping')
     section_hash = hashlib.sha256()
     for i in retained:
         j = positions[i]
@@ -408,7 +424,7 @@ def compare_elf(before, after, mapping, *, removed=()):
             left[7] = positions[old[7]]
         _require(left == right, 'ELF section attributes changed')
         if old[1] == 17:
-            values = struct.unpack_from('<' + 'I' * (old[5] // 4), a.payload(i))
+            values = cast("tuple[int, ...]", struct.unpack_from('<' + 'I' * (old[5] // 4), a.payload(i)))
             _require(all((index not in deleted for index in values[1:])), 'ELF group depends on removed metadata')
             expected = struct.pack('<' + 'I' * len(values), values[0], *(positions[index] for index in values[1:]))
             _require(expected == b.payload(j), 'ELF COMDAT membership changed')
@@ -427,41 +443,42 @@ def compare_elf(before, after, mapping, *, removed=()):
 
 class MachBudget:
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.sections = 0
         self.symbols = 0
         self.relocations = 0
         self.names = 0
 
-    def add(self, key, n, limit):
-        value = getattr(self, key) + n
+    def add(self, key: Literal["sections", "symbols", "relocations", "names"],
+            n: int, limit: int) -> None:
+        value = cast(int, getattr(self, key)) + n
         _require(value <= limit, 'Mach-O proof resource limit: ' + key)
         setattr(self, key, value)
 
 class MachObject:
 
-    def __init__(self, data, budget=None):
+    def __init__(self, data: bt.Buffer, budget: MachBudget | None = None) -> None:
         self.data = data
         self.budget = budget or MachBudget()
         b = self.budget
         _require(32 <= len(data) <= 256 << 20, 'Mach-O object extent')
-        self.header = struct.unpack_from('<IiiIIIII', data)
+        self.header = cast("bt.MachHeader", struct.unpack_from('<IiiIIIII', data))
         h = self.header
         _require(h[0] == 4277009103 and h[1] == 16777228 and (h[3] == 1), 'not ARM64 Mach-O object')
         _require(h[4] <= 65536 and h[5] <= len(data) - 32, 'Mach-O load-command extent')
-        self.commands = []
-        self.sections = []
-        self.symtab = None
-        self.dysymtab = None
-        self.linkedit = []
+        self.commands: list[bt.MachCommand] = []
+        self.sections: list[bt.MachSection] = []
+        self.symtab: tuple[int, int, int, int] | None = None
+        self.dysymtab: tuple[int, ...] | None = None
+        self.linkedit: list[bt.MachCommand] = []
         pos = 32
         for _ in range(h[4]):
-            (tag, size) = struct.unpack_from('<II', data, pos)
+            (tag, size) = cast("tuple[int, int]", struct.unpack_from('<II', data, pos))
             _require(size >= 8 and size % 8 == 0 and (pos + size <= 32 + h[5]), 'Mach-O command outside table')
-            row = {'tag': tag, 'size': size, 'raw': bytes(data[pos:pos + size])}
+            row: bt.MachCommand = {'tag': tag, 'size': size, 'raw': bytes(data[pos:pos + size])}
             if tag == 25:
                 _require(size >= 72, 'short Mach-O segment')
-                segment = struct.unpack_from('<II16sQQQQiiII', data, pos)
+                segment = cast("bt.MachSegment", struct.unpack_from('<II16sQQQQiiII', data, pos))
                 n = segment[-2]
                 _require(size == 72 + 80 * n, 'Mach-O segment section table extent')
                 b.add('sections', n, 400000)
@@ -469,15 +486,15 @@ class MachObject:
                 row['segment'] = segment
                 row['sections'] = []
                 for i in range(n):
-                    s = struct.unpack_from('<16s16sQQIIIIIIII', data, pos + 72 + 80 * i)
-                    (name, seg) = (v.rstrip(b'\x00').decode('ascii') for v in s[:2])
+                    s = cast("bt.MachSectionRow", struct.unpack_from('<16s16sQQIIIIIIII', data, pos + 72 + 80 * i))
+                    (name, seg) = (v.rstrip(b'\x00').decode('ascii') for v in (s[0], s[1]))
                     kind = s[8] & 255
                     _require(s[5] <= 63 and (kind in (1, 12, 18) or s[4] + s[3] <= len(data)), 'Mach-O section extent/alignment')
                     _require(s[6] + 8 * s[7] <= len(data), 'Mach-O relocations outside object')
                     b.add('relocations', s[7], 4000000)
-                    sec = {'row': s, 'name': name, 'segment': seg, 'key': (seg, name), 'ordinal': len(self.sections) + 1, 'payload': bytes(data[s[4]:s[4] + s[3]]) if kind not in (1, 12, 18) else b'', 'relocations': []}
+                    sec: bt.MachSection = {'row': s, 'name': name, 'segment': seg, 'key': (seg, name), 'ordinal': len(self.sections) + 1, 'payload': bytes(data[s[4]:s[4] + s[3]]) if kind not in (1, 12, 18) else b'', 'relocations': []}
                     for j in range(s[7]):
-                        (address, info) = struct.unpack_from('<II', data, s[6] + 8 * j)
+                        (address, info) = cast("tuple[int, int]", struct.unpack_from('<II', data, s[6] + 8 * j))
                         _require(address < 2147483648 and address < s[3], 'Mach-O scattered/outside-section relocation')
                         symbol = info & 16777215
                         external = info >> 27 & 1
@@ -488,32 +505,34 @@ class MachObject:
                     row['sections'].append(sec)
             elif tag == 2:
                 _require(size == 24 and self.symtab is None, 'invalid/duplicate Mach-O symtab')
-                self.symtab = struct.unpack_from('<IIII', data, pos + 8)
+                self.symtab = cast("tuple[int, int, int, int]", struct.unpack_from('<IIII', data, pos + 8))
             elif tag == 11:
                 _require(size == 80 and self.dysymtab is None, 'invalid/duplicate Mach-O dysymtab')
-                self.dysymtab = struct.unpack_from('<18I', data, pos + 8)
+                self.dysymtab = cast("tuple[int, ...]", struct.unpack_from('<18I', data, pos + 8))
             elif tag in (41, 46):
                 _require(size == 16, 'Mach-O linkedit command size')
-                (off, n) = struct.unpack_from('<II', data, pos + 8)
+                (off, n) = cast("tuple[int, int]", struct.unpack_from('<II', data, pos + 8))
                 _require(off + n <= len(data), 'Mach-O linkedit payload outside object')
                 _require(tag != 41 or n == 0, 'nonempty data-in-code requires semantic file-range proof')
                 row['payload'] = bytes(data[off:off + n])
                 self.linkedit.append(row)
             elif tag == 50:
-                _require(size >= 24 and size == 24 + 8 * struct.unpack_from('<I', data, pos + 20)[0], 'Mach-O build-version size')
+                _require(size >= 24 and size == 24 + 8 * cast("tuple[int]", struct.unpack_from('<I', data, pos + 20))[0], 'Mach-O build-version size')
             else:
                 raise ValueError('unsupported Mach-O object load command')
             self.commands.append(row)
             pos += size
-        _require(pos == 32 + h[5] and self.symtab is not None and (self.dysymtab is not None), 'Mach-O command coverage/symbol roles')
+        _require(pos == 32 + h[5], 'Mach-O command coverage/symbol roles')
+        if self.symtab is None or self.dysymtab is None:
+            raise ValueError('Mach-O command coverage/symbol roles')
         _require(sum((c['tag'] == 25 for c in self.commands)) == 1, 'multiple Mach-O segments require separate membership proof')
         (so, count, st, n) = self.symtab
         _require(so + 16 * count <= len(data) and st + n <= len(data), 'Mach-O symbols/strings outside object')
         b.add('symbols', count, 2000000)
         strings = bytes(data[st:st + n])
-        self.symbols = []
+        self.symbols: list[bt.MachSymbol] = []
         for i in range(count):
-            (at, t, se, de, v) = struct.unpack_from('<IBBHQ', data, so + 16 * i)
+            (at, t, se, de, v) = cast("tuple[int, int, int, int, int]", struct.unpack_from('<IBBHQ', data, so + 16 * i))
             _require(at < len(strings), 'Mach-O symbol string outside table')
             end = strings.find(b'\x00', at, min(len(strings), at + 65536))
             _require(end >= 0, 'Mach-O unterminated symbol')
@@ -542,10 +561,11 @@ class MachObject:
                 else:
                     _require(t & 1 and t & 14 == 0 and (v == 0), 'non-import in Mach-O undefined window')
 
-    def section(self, ordinal):
+    def section(self, ordinal: int) -> bt.MachSection:
         return self.sections[ordinal - 1]
 
-def compare_macho(before, after, mapping, remove=False):
+def compare_macho(before: bt.Buffer, after: bt.Buffer, mapping: Mapping[str, str],
+                  remove: bool = False) -> bt.MachProof:
     (a, b) = (MachObject(before), MachObject(after))
     deleted = {s['ordinal'] for s in a.sections if remove and s['key'] in (('__LLVM', '__bitcode'), ('__LLVM', '__cmdline'))}
     for index in deleted:
@@ -554,7 +574,7 @@ def compare_macho(before, after, mapping, remove=False):
     _require(all((s['segment'] != '__LLVM' or s['ordinal'] in deleted for s in a.sections)) if remove else True, 'unapproved LLVM metadata')
     kept = [s for s in a.sections if s['ordinal'] not in deleted]
     _require([s['key'] for s in kept] == [s['key'] for s in b.sections], 'Mach-O runtime section identity/order changed')
-    secmap = {old['ordinal']: new['ordinal'] for (old, new) in zip(kept, b.sections)}
+    secmap = {old_section['ordinal']: new_section['ordinal'] for (old_section, new_section) in zip(kept, b.sections)}
     gone = set()
     for (i, (name, t, se, de, v)) in enumerate(a.symbols):
         if se in deleted:
@@ -566,26 +586,26 @@ def compare_macho(before, after, mapping, remove=False):
     symmap = {old: new for (new, old) in enumerate(retained)}
     for (old, new) in symmap.items():
         (name, t, se, de, v) = a.symbols[old]
-        expected = (mapping.get(name, name), t, secmap[se] if se else 0, de, v)
-        _require(expected == b.symbols[new], 'Mach-O symbol name/attribute/address changed')
-    runtime = []
-    for (old, new) in zip(kept, b.sections):
-        (x, y) = (list(old['row']), list(new['row']))
+        expected_symbol = (mapping.get(name, name), t, secmap[se] if se else 0, de, v)
+        _require(expected_symbol == b.symbols[new], 'Mach-O symbol name/attribute/address changed')
+    runtime: list[bt.RuntimeSection] = []
+    for (old_section, new_section) in zip(kept, b.sections):
+        (x, y) = (list(old_section['row']), list(new_section['row']))
         for row in (x, y):
             row[4] = row[6] = 0
         _require(x == y, 'Mach-O runtime section virtual address/role/alignment changed')
-        _require(old['payload'] == new['payload'], 'Mach-O runtime/code/data/EH payload changed')
-        expected = []
-        for (address, attrs, index) in old['relocations']:
+        _require(old_section['payload'] == new_section['payload'], 'Mach-O runtime/code/data/EH payload changed')
+        expected_relocations: list[bt.Relocation] = []
+        for (address, attrs, index) in old_section['relocations']:
             if attrs >> 3 & 1:
                 _require(index in symmap, 'runtime relocation references removed metadata symbol')
                 index = symmap[index]
             elif attrs >> 4 != 10 and index:
                 _require(index in secmap, 'runtime relocation references removed metadata section')
                 index = secmap[index]
-            expected.append((address, attrs, index))
-        _require(expected == new['relocations'], 'Mach-O relocation semantic target/attributes/order changed')
-        runtime.append({'section': old['key'], 'address': old['row'][2], 'bytes': old['row'][3], 'payload_sha256': hashlib.sha256(old['payload']).hexdigest(), 'relocations': len(expected)})
+            expected_relocations.append((address, attrs, index))
+        _require(expected_relocations == new_section['relocations'], 'Mach-O relocation semantic target/attributes/order changed')
+        runtime.append({'section': old_section['key'], 'address': old_section['row'][2], 'bytes': old_section['row'][3], 'payload_sha256': hashlib.sha256(old_section['payload']).hexdigest(), 'relocations': len(expected_relocations)})
     (ah, bh) = (list(a.header), list(b.header))
     ah[5] = bh[5] = 0
     _require(ah == bh and b.header[5] == a.header[5] - 80 * len(deleted), 'Mach-O nonlayout header changed')
@@ -601,17 +621,18 @@ def compare_macho(before, after, mapping, remove=False):
         elif tag == 2:
             pass
         elif tag == 11:
-            expected = []
+            expected_windows: list[int] = []
+            assert a.dysymtab is not None and b.dysymtab is not None
             for (start, n) in zip(a.dysymtab[0:6:2], a.dysymtab[1:6:2]):
-                expected.extend((sum((i < start for i in retained)), sum((start <= i < start + n for i in retained))))
-            _require(tuple(expected) == b.dysymtab[:6] and a.dysymtab[6:] == b.dysymtab[6:], 'Mach-O dysymtab roles changed')
+                expected_windows.extend((sum((i < start for i in retained)), sum((start <= i < start + n for i in retained))))
+            _require(tuple(expected_windows) == b.dysymtab[:6] and a.dysymtab[6:] == b.dysymtab[6:], 'Mach-O dysymtab roles changed')
         elif tag in (41, 46):
             _require(left['payload'] == right['payload'], 'Mach-O linkedit semantic payload changed')
         else:
             _require(left['raw'] == right['raw'], 'Mach-O version/load-command payload changed')
     return {'sections': len(a.sections), 'surviving_sections': len(kept), 'symbols': len(a.symbols), 'surviving_symbols': len(retained), 'removed_local_metadata_symbols': len(gone), 'runtime': runtime, 'relocations': sum((len(s['relocations']) for s in kept))}
 
-def elf_index(path):
+def elf_index(path: Path) -> bt.Index:
     archive = rust_archive.read_archive(path)
     data = archive.data
     member_ends = {m.end: i for (i, m) in enumerate(archive.members)}
@@ -638,36 +659,37 @@ def elf_index(path):
             _require(start <= archive.members[i].start < end, 'armap object payload mismatch')
             headers[position] = i
         position = end + (size & 1)
-    _require(table is not None and len(headers) == len(archive.members), 'missing GNU armap/object index')
+    if table is None or len(headers) != len(archive.members):
+        raise ValueError('missing GNU armap/object index')
     (width, payload) = table
     _require(len(payload) >= width, 'truncated armap count')
     count = int.from_bytes(payload[:width], 'big')
     _require(count <= 2000000 and width * (count + 1) <= len(payload) <= 128 << 20, 'armap resource/offset extent')
     at = width * (count + 1)
-    rows = []
-    by_name = {}
+    rows: list[tuple[str, int]] = []
+    by_name: dict[str, list[int]] = {}
     for i in range(count):
         offset = int.from_bytes(payload[width * (i + 1):width * (i + 2)], 'big')
         _require(offset in headers, 'armap references non-object header')
         end = payload.find(b'\x00', at, min(len(payload), at + 65536))
         _require(end >= 0, 'unterminated armap symbol')
-        name = payload[at:end].decode('ascii')
-        _require(name, 'empty armap symbol')
+        symbol_name = payload[at:end].decode('ascii')
+        _require(symbol_name, 'empty armap symbol')
         at = end + 1
         member = headers[offset]
-        rows.append((name, member))
-        by_name.setdefault(name, []).append(member)
+        rows.append((symbol_name, member))
+        by_name.setdefault(symbol_name, []).append(member)
     _require(len(payload) - at <= 7 and (not any(payload[at:])), 'unexpected armap trailing bytes')
     return {'entries': rows, 'member_selection': by_name, 'member_selection_sha256': hashlib.sha256(_encoded(by_name)).hexdigest(), 'archive_sha256': _digest(path)}
 
-def compare_elf_index(before, after, mapping):
+def compare_elf_index(before: Path, after: Path, mapping: Mapping[str, str]) -> bt.IndexProof:
     (a, b) = (elf_index(before), elf_index(after))
     _require([(mapping.get(name, name), member) for (name, member) in a['entries']] == b['entries'], 'archive symbol-index complete entry order changed beyond namespace')
     expected = {mapping.get(name, name): members for (name, members) in a['member_selection'].items()}
     _require(len(expected) == len(a['member_selection']) and expected == b['member_selection'], 'archive symbol-index/member-selection changed beyond namespace')
     return {'before': a, 'after': b}
 
-def macho_index(path):
+def macho_index(path: Path) -> bt.MachIndex:
     a = rust_archive.read_archive(path)
     data = a.data
     ends = {m.end: i for (i, m) in enumerate(a.members)}
@@ -701,7 +723,8 @@ def macho_index(path):
             _require(body <= a.members[i].start < end, 'BSD object payload mismatch')
             headers[pos] = i
         pos = end + (size & 1)
-    _require(table is not None and len(headers) == len(a.members), 'missing BSD TOC/object index')
+    if table is None or len(headers) != len(a.members):
+        raise ValueError('missing BSD TOC/object index')
     (name, payload) = table
     _require(len(payload) >= 8, 'truncated BSD TOC')
     n = int.from_bytes(payload[:4], 'little')
@@ -710,8 +733,8 @@ def macho_index(path):
     length = int.from_bytes(payload[4 + n:8 + n], 'little')
     strings = payload[8 + n:8 + n + length]
     _require(8 + n + length <= len(payload) and len(payload) - (8 + n + length) <= 7 and (not any(payload[8 + n + length:])), 'BSD TOC strings/trailing extent')
-    rows = []
-    by = {}
+    rows: list[tuple[str, int]] = []
+    by: dict[str, list[int]] = {}
     for i in range(count):
         at = int.from_bytes(payload[4 + 8 * i:8 + 8 * i], 'little')
         offset = int.from_bytes(payload[8 + 8 * i:12 + 8 * i], 'little')
@@ -728,12 +751,15 @@ def macho_index(path):
         _require([n for (n, _) in rows] == sorted((n for (n, _) in rows)), 'invalid SORTED BSD TOC')
     return {'kind': name.decode(), 'sorted': sorted_toc, 'entries': rows, 'member_selection': by, 'archive_sha256': _digest(path), 'member_selection_sha256': hashlib.sha256(_encoded(by)).hexdigest()}
 
-def compare_macho_index(before, after, mapping):
+def _index_entry_name(row: tuple[str, int]) -> str:
+    return row[0]
+
+def compare_macho_index(before: Path, after: Path, mapping: Mapping[str, str]) -> bt.MachIndexProof:
     (a, b) = (macho_index(before), macho_index(after))
     _require(a['kind'] == b['kind'], 'BSD TOC kind changed')
     expected = [(mapping.get(name, name), member) for (name, member) in a['entries']]
     if a['sorted']:
-        expected = sorted(expected, key=lambda row: row[0])
+        expected.sort(key=_index_entry_name)
     _require(expected == b['entries'], 'BSD TOC row/member selection changed beyond namespace/sort')
     by = {mapping.get(name, name): members for (name, members) in a['member_selection'].items()}
     _require(len(by) == len(a['member_selection']) and by == b['member_selection'], 'BSD TOC duplicate member priority changed')
@@ -741,13 +767,14 @@ def compare_macho_index(before, after, mapping):
 
 ELF_SPECIAL = {'_GLOBAL_OFFSET_TABLE_', '__ehdr_start', '__dso_handle', '__TMC_END__', '_DYNAMIC', '_init', '_fini', '__bss_start', '_end', '_edata', '__data_start', 'data_start', '__init_array_start', '__init_array_end', '__fini_array_start', '__fini_array_end', '__preinit_array_start', '__preinit_array_end', '__executable_start'}
 
-def _plan_elf(path, exports, *, abi_family=JNT_ABI2):
+def _plan_elf(path: Path, exports: Sequence[str], *, abi_family: str = JNT_ABI2
+              ) -> tuple[rust_archive.Archive, list[ElfObject], bt.Policy]:
     public_prefix = _family_exports(exports, 'linux-x86_64', abi_family)
     archive = rust_archive.read_archive(path)
     budget = ElfBudget()
-    elves = []
-    defined = {}
-    undefined = set()
+    elves: list[ElfObject] = []
+    defined: dict[str, list[tuple[str, bt.ElfSymbol]]] = {}
+    undefined: set[str] = set()
     names = set()
     exports = tuple(sorted(exports))
     _require(len(set(exports)) == len(exports), 'duplicate declared export')
@@ -775,24 +802,32 @@ def _plan_elf(path, exports, *, abi_family=JNT_ABI2):
     prefix = '__' + _family(abi_family).removesuffix('_') + '_opaque_elf_' + _digest(path) + '_'
     mapping = {name: prefix + name for name in sorted(set(defined) - set(exports))}
     _require(not set(mapping.values()) & names, 'opaque namespace collision')
-    return (archive, elves, {**_family_fields(abi_family), 'before_sha256': _digest(path), 'prefix': prefix, 'mapping': mapping, 'c_exports': list(exports), 'unresolved_imports': sorted(undefined - set(defined)), 'defined_names': len(defined), 'global_weak_definitions': sum((len(x) for x in defined.values()))})
+    policy: bt.Policy = {'before_sha256': _digest(path), 'prefix': prefix, 'mapping': mapping, 'c_exports': list(exports), 'unresolved_imports': sorted(undefined - set(defined)), 'defined_names': len(defined), 'global_weak_definitions': sum((len(x) for x in defined.values()))}
+    if abi_family != JNT_ABI2:
+        policy['abi_family'] = abi_family
+    return (archive, elves, policy)
 
-def _transform_elf(original, output, logs, exports, objcopy, expected_plan=None, *, abi_family=JNT_ABI2):
+def _transform_elf(original: Path, output: Path, logs: Path, exports: Sequence[str],
+                   objcopy: Path, expected_plan: Mapping[str, object] | None = None,
+                   *, abi_family: str = JNT_ABI2) -> bt.Transform:
     _require(not output.exists(), 'opaque derivative exists')
     (source, inventory, policy) = _plan_elf(original, exports, abi_family=abi_family)
     if expected_plan is not None:
-        for (left, right) in (('before_sha256', 'before_archive_sha256'), ('mapping', 'mapping'), ('c_exports', 'declared_exports'), ('unresolved_imports', 'unresolved_imports')):
-            _require(policy[left] == expected_plan[right], 'frozen inventory/map mismatch')
+        _require(policy['before_sha256'] == expected_plan['before_archive_sha256']
+                 and policy['mapping'] == expected_plan['mapping']
+                 and policy['c_exports'] == expected_plan['declared_exports']
+                 and policy['unresolved_imports'] == expected_plan['unresolved_imports'],
+                 'frozen inventory/map mismatch')
     output.parent.mkdir(parents=True, exist_ok=True)
     logs.mkdir(parents=True, exist_ok=True)
     mapfile = logs.parent / 'mapping.txt'
     _require(not mapfile.exists(), 'mapping file exists')
     mapfile.write_text(''.join((a + ' ' + b + '\n' for (a, b) in policy['mapping'].items())))
-    records = []
+    records: list[bt.CommandProof] = []
     env = _tool_environment()
     version = _command([str(objcopy), '--version'], cwd=logs.parent, env=env, logs=logs, records=records).stdout.decode()
     mapping = policy['mapping']
-    removed = []
+    removed: list[bt.ElfRemoval] = []
     for (member, elf) in zip(source.members, inventory):
         for (i, name) in enumerate(elf.names):
             if name in ('.llvm.lto', '.llvm_bc', '__bitcode') or name.startswith('.gnu.lto_'):
@@ -803,7 +838,7 @@ def _transform_elf(original, output, logs, exports, objcopy, expected_plan=None,
                 removed.append({'member': member.name.decode(), 'section': name, 'index': i, 'bytes': section[5], 'flags': section[2], 'sha256': hashlib.sha256(elf.payload(i)).hexdigest()})
     machine_path = output.with_suffix('.machine-code.a')
     machine = source
-    removal_proofs = []
+    removal_proofs: list[bt.ElfMemberProof] = []
     if removed:
         _require(not machine_path.exists(), 'machine-code intermediate exists')
         _command([str(objcopy), '--remove-section=.llvmbc', '--remove-section=.llvmcmd', str(original), str(machine_path)], cwd=logs.parent, env=env, logs=logs, records=records)
@@ -820,34 +855,42 @@ def _transform_elf(original, output, logs, exports, objcopy, expected_plan=None,
     index_proof = compare_elf_index(original, output, mapping)
     after = rust_archive.read_archive(output)
     _require([m.name for m in source.members] == [m.name for m in after.members], 'namespace changed member order')
-    proofs = []
-    after_defined = set()
-    after_undefined = set()
-    after_names = set()
+    proofs: list[bt.ElfMemberProof] = []
+    after_defined: set[str] = set()
+    after_undefined: set[str] = set()
+    after_names: set[str] = set()
     for (old, new) in zip(machine.members, after.members):
         proof = compare_elf(machine.payload(old), after.payload(new), mapping)
         elf = ElfObject(after.payload(new), ElfBudget())
         after_names.update((s[0] for s in elf.symbols))
-        for (name, info, other, section, value, size) in elf.symbols:
+        for (name, info, other, symbol_section, value, size) in elf.symbols:
             if info >> 4 in (1, 2):
-                (after_defined if section else after_undefined).add(name)
+                (after_defined if symbol_section else after_undefined).add(name)
         proofs.append({'member': old.name.decode(), 'before_sha256': hashlib.sha256(machine.payload(old)).hexdigest(), 'after_sha256': hashlib.sha256(after.payload(new)).hexdigest(), **proof})
     _require(not set(mapping) & after_names, 'old private definition/reference remains')
     _require(after_defined == set(exports) | set(mapping.values()), 'public/private defined-symbol closure changed')
     imports = sorted(after_undefined - after_defined)
     _require(imports == policy['unresolved_imports'], 'unresolved system-import closure changed')
     _require(_digest(original) == policy['before_sha256'], 'original archive changed')
-    return {'schema': 1, 'kind': 'opaque-C-static-boundary', 'machine_code_only': True, **policy, 'after_sha256': _digest(output), 'unresolved_imports_sha256': hashlib.sha256(_encoded(imports)).hexdigest(), 'mapping_file_sha256': _digest(mapfile), 'tool': {'path': str(objcopy), 'sha256': _digest(objcopy), 'version': version}, 'archive_index': index_proof, 'commands': records, 'removed_sections': removed, 'metadata_removal_members': removal_proofs, 'members': proofs, 'machine_archive_sha256': _digest(machine_path), 'proof_sources': {'rust_static_boundary.py': _digest(Path(__file__))}}
+    result: bt.Transform = {'schema': 1, 'kind': 'opaque-C-static-boundary', 'machine_code_only': True, 'before_sha256': policy['before_sha256'], 'prefix': policy['prefix'], 'mapping': policy['mapping'], 'c_exports': policy['c_exports'], 'unresolved_imports': policy['unresolved_imports'], 'defined_names': policy['defined_names'], 'after_sha256': _digest(output), 'unresolved_imports_sha256': hashlib.sha256(_encoded(imports)).hexdigest(), 'mapping_file_sha256': _digest(mapfile), 'tool': {'path': str(objcopy), 'sha256': _digest(objcopy), 'version': version}, 'archive_index': index_proof, 'commands': records, 'removed_sections': removed, 'metadata_removal_members': removal_proofs, 'members': proofs, 'machine_archive_sha256': _digest(machine_path), 'proof_sources': {'rust_static_boundary.py': _digest(Path(__file__))}}
+    if abi_family != JNT_ABI2:
+        result['abi_family'] = abi_family
+    if 'global_weak_definitions' in policy:
+        result['global_weak_definitions'] = policy['global_weak_definitions']
+    if 'global_definitions' in policy:
+        result['global_definitions'] = policy['global_definitions']
+    return result
 
 MACHO_SPECIAL = {'___dso_handle', '__mh_execute_header', '__mh_dylib_header', 'dyld_stub_binder'}
 
-def _plan_macho(path, exports, *, abi_family=JNT_ABI2):
+def _plan_macho(path: Path, exports: Sequence[str], *, abi_family: str = JNT_ABI2
+                ) -> tuple[rust_archive.Archive, list[MachObject], bt.Policy]:
     public_prefix = _family_exports(exports, 'macos-arm64', abi_family)
     a = rust_archive.read_archive(path)
     b = MachBudget()
-    objects = []
-    defined = {}
-    undefined = set()
+    objects: list[MachObject] = []
+    defined: dict[str, list[tuple[str, bt.MachSymbol, bt.SectionKey]]] = {}
+    undefined: set[str] = set()
     names = set()
     for member in a.members:
         obj = MachObject(a.payload(member), b)
@@ -873,11 +916,16 @@ def _plan_macho(path, exports, *, abi_family=JNT_ABI2):
     prefix = '__' + _family(abi_family).removesuffix('_') + '_opaque_macho_' + _digest(path) + '_'
     mapping = {name: prefix + name for name in sorted(set(defined) - set(exports))}
     _require(not set(mapping.values()) & names, 'Mac opaque namespace collision')
-    return (a, objects, {**_family_fields(abi_family), 'before_sha256': _digest(path), 'prefix': prefix, 'mapping': mapping, 'c_exports': list(exports), 'defined_names': len(defined), 'global_definitions': sum((len(x) for x in defined.values())), 'unresolved_imports': sorted(undefined - set(defined))})
+    policy: bt.Policy = {'before_sha256': _digest(path), 'prefix': prefix, 'mapping': mapping, 'c_exports': list(exports), 'defined_names': len(defined), 'global_definitions': sum((len(x) for x in defined.values())), 'unresolved_imports': sorted(undefined - set(defined))}
+    if abi_family != JNT_ABI2:
+        policy['abi_family'] = abi_family
+    return (a, objects, policy)
 
-def _restore_macho_index(renamed, output, indexer, *, logs, records):
+def _restore_macho_index(renamed: Path, output: Path, indexer: Path | None, *,
+                         logs: Path, records: list[bt.CommandProof]) -> bt.IndexRestoration:
     """Restore a sorted BSD TOC without changing any object or its position."""
-    _require(indexer is not None, 'sorted Mac archive needs an explicit Apple libtool indexer')
+    if indexer is None:
+        raise ValueError('sorted Mac archive needs an explicit Apple libtool indexer')
     indexer = Path(indexer).resolve(strict=True)
     _require(indexer.is_file(), 'explicit regular Apple libtool required')
     before = _digest(indexer)
@@ -900,21 +948,26 @@ def _restore_macho_index(renamed, output, indexer, *, logs, records):
             'exact_member_payloads': True}
 
 
-def _transform_macho(original, output, logs, exports, objcopy, expected_plan=None, *, abi_family=JNT_ABI2, indexer=None):
+def _transform_macho(original: Path, output: Path, logs: Path, exports: Sequence[str],
+                     objcopy: Path, expected_plan: Mapping[str, object] | None = None, *,
+                     abi_family: str = JNT_ABI2, indexer: Path | None = None) -> bt.Transform:
     _require(not output.exists(), 'Mac derivative exists')
     (source, objects, policy) = _plan_macho(original, exports, abi_family=abi_family)
     if expected_plan is not None:
-        for (left, right) in (('before_sha256', 'archive_sha256'), ('mapping', 'mapping'), ('c_exports', 'declared_exports'), ('unresolved_imports', 'unresolved_imports')):
-            _require(policy[left] == expected_plan[right], 'frozen Mac inventory/map mismatch')
+        _require(policy['before_sha256'] == expected_plan['archive_sha256']
+                 and policy['mapping'] == expected_plan['mapping']
+                 and policy['c_exports'] == expected_plan['declared_exports']
+                 and policy['unresolved_imports'] == expected_plan['unresolved_imports'],
+                 'frozen Mac inventory/map mismatch')
     output.parent.mkdir(parents=True, exist_ok=True)
     logs.mkdir(parents=True, exist_ok=True)
     mapfile = logs.parent / 'mapping.txt'
     _require(not mapfile.exists(), 'Mac mapping exists')
     mapfile.write_text(''.join((a + ' ' + b + '\n' for (a, b) in policy['mapping'].items())))
-    records = []
+    records: list[bt.CommandProof] = []
     env = _tool_environment()
     version = _command([str(objcopy), '--version'], cwd=logs.parent, env=env, logs=logs, records=records).stdout.decode()
-    removed = []
+    removed: list[bt.MachRemoval] = []
     for (member, obj) in zip(source.members, objects):
         for s in obj.sections:
             if s['segment'] == '__LLVM':
@@ -922,7 +975,7 @@ def _transform_macho(original, output, logs, exports, objcopy, expected_plan=Non
                 removed.append({'member': member.name.decode(), 'section': s['key'], 'bytes': s['row'][3], 'payload_sha256': hashlib.sha256(s['payload']).hexdigest()})
     machine_path = original
     machine = source
-    removed_members = []
+    removed_members: list[bt.MachMemberProof] = []
     if removed:
         machine_path = output.with_suffix('.machine-code.a')
         _require(not machine_path.exists(), 'Mac intermediate exists')
@@ -943,9 +996,9 @@ def _transform_macho(original, output, logs, exports, objcopy, expected_plan=Non
     after = rust_archive.read_archive(output)
     _require([m.name for m in source.members] == [m.name for m in after.members], 'Mac opaque member order changed')
     toc = compare_macho_index(original, output, policy['mapping'])
-    proofs = []
-    defined = set()
-    undefined = set()
+    proofs: list[bt.MachMemberProof] = []
+    defined: set[str] = set()
+    undefined: set[str] = set()
     names = set()
     for (old, new) in zip(machine.members, after.members):
         proof = compare_macho(machine.payload(old), after.payload(new), policy['mapping'])
@@ -958,16 +1011,24 @@ def _transform_macho(original, output, logs, exports, objcopy, expected_plan=Non
     _require(defined == set(exports) | set(policy['mapping'].values()), 'Mac global definition closure changed')
     _require(sorted(undefined - defined) == policy['unresolved_imports'], 'Mac unresolved system imports changed')
     _require(_digest(original) == policy['before_sha256'], 'Mac original archive changed')
-    return {'schema': 1, 'kind': 'opaque-Mach-O-native-only-C-static-boundary', **policy, 'after_sha256': _digest(output), 'tool': {'path': str(objcopy), 'sha256': _digest(objcopy), 'version': version}, 'commands': records, 'removed_sections': removed, 'metadata_removal_members': removed_members, 'members': proofs, 'archive_index': toc, 'mapping_file_sha256': _digest(mapfile), 'machine_archive_sha256': _digest(machine_path), 'proof_sources': {'rust_static_boundary.py': _digest(Path(__file__))}, **({'index_restoration': restored} if restored else {})}
+    result: bt.Transform = {'schema': 1, 'kind': 'opaque-Mach-O-native-only-C-static-boundary', 'before_sha256': policy['before_sha256'], 'prefix': policy['prefix'], 'mapping': policy['mapping'], 'c_exports': policy['c_exports'], 'unresolved_imports': policy['unresolved_imports'], 'defined_names': policy['defined_names'], 'after_sha256': _digest(output), 'tool': {'path': str(objcopy), 'sha256': _digest(objcopy), 'version': version}, 'commands': records, 'removed_sections': removed, 'metadata_removal_members': removed_members, 'members': proofs, 'archive_index': toc, 'mapping_file_sha256': _digest(mapfile), 'machine_archive_sha256': _digest(machine_path), 'proof_sources': {'rust_static_boundary.py': _digest(Path(__file__))}}
+    if abi_family != JNT_ABI2:
+        result['abi_family'] = abi_family
+    if 'global_weak_definitions' in policy:
+        result['global_weak_definitions'] = policy['global_weak_definitions']
+    if 'global_definitions' in policy:
+        result['global_definitions'] = policy['global_definitions']
+    if restored is not None:
+        result['index_restoration'] = restored
+    return result
 
-
-def declared_exports(header: Path, target: str, *, abi_family=JNT_ABI2) -> tuple[str, ...]:
+def declared_exports(header: Path, target: str, *, abi_family: str = JNT_ABI2) -> tuple[str, ...]:
     """Derive a closed family roster from its packaged authoritative header."""
     stem = _family(abi_family)
     _require(header.stat().st_size <= 1 << 20, 'C header exceeds byte limit')
     text = header.read_text()
     text = re.sub(r'/\*.*?\*/|//[^\n]*', '', text, flags=re.S)
-    names = re.findall(r'\b(' + re.escape(stem) + r'[a-zA-Z0-9_]+)\s*\(', text)
+    names: list[str] = re.findall(r'\b(' + re.escape(stem) + r'[a-zA-Z0-9_]+)\s*\(', text)
     if abi_family == JNT_ABI2:
         _require(len(names) == len(set(names)) == 62, 'ABI2 C declaration roster differs')
     elif abi_family == IRGX_ABI2:
@@ -981,20 +1042,32 @@ def declared_exports(header: Path, target: str, *, abi_family=JNT_ABI2) -> tuple
     return tuple(sorted(prefix + name for name in names))
 
 
-def _facts(original: Path, derivative: Path, target: str, exports, *, abi_family=JNT_ABI2) -> dict:
+def _facts(original: Path, derivative: Path, target: str, exports: Sequence[str],
+           *, abi_family: str = JNT_ABI2) -> bt.Facts:
     """Recompute the proof from bytes, including references and archive lookup."""
     _require(target in ('linux-x86_64', 'macos-arm64'), 'unsupported static boundary target')
     is_elf = target == 'linux-x86_64'
-    source, objects, policy = (_plan_elf if is_elf else _plan_macho)(original, exports, abi_family=abi_family)
+    objects: Sequence[ElfObject | MachObject]
+    if is_elf:
+        source, elf_objects, policy = _plan_elf(original, exports, abi_family=abi_family)
+        objects = elf_objects
+    else:
+        source, mach_objects, policy = _plan_macho(original, exports, abi_family=abi_family)
+        objects = mach_objects
     after = rust_archive.read_archive(derivative)
     _require([m.name for m in source.members] == [m.name for m in after.members],
              'static boundary archive member order changed')
     mapping = policy['mapping']
-    members, removed = [], []
-    defined, undefined, names = set(), set(), set()
-    budget = ElfBudget() if is_elf else MachBudget()
+    members: list[bt.MemberProof] = []
+    removed: list[bt.RemovedSection] = []
+    defined: set[str] = set()
+    undefined: set[str] = set()
+    names: set[str] = set()
+    elf_budget = ElfBudget()
+    mach_budget = MachBudget()
     for old, new, before in zip(source.members, after.members, objects):
-        if is_elf:
+        proof: bt.ElfProof | bt.MachProof
+        if isinstance(before, ElfObject):
             for i, name in enumerate(before.names):
                 _require(name not in ('.llvm.lto', '.llvm_bc', '__bitcode')
                          and not name.startswith('.gnu.lto_'), 'unapproved embedded LTO payload')
@@ -1006,23 +1079,24 @@ def _facts(original: Path, derivative: Path, target: str, exports, *, abi_family
                                     'payload_sha256': hashlib.sha256(before.payload(i)).hexdigest()})
             proof = compare_elf(source.payload(old), after.payload(new), mapping,
                                 removed=('.llvmbc', '.llvmcmd'))
-            obj = ElfObject(after.payload(new), budget)
+            elf = ElfObject(after.payload(new), elf_budget)
             _require(not any(n in ('.llvmbc', '.llvmcmd', '.llvm.lto', '.llvm_bc', '__bitcode')
-                             or n.startswith('.gnu.lto_') for n in obj.names), 'embedded LTO payload remains')
-            for name, info, _, section, _, _ in obj.symbols:
+                             or n.startswith('.gnu.lto_') for n in elf.names), 'embedded LTO payload remains')
+            for name, info, _, symbol_section, _, _ in elf.symbols:
                 names.add(name)
                 if info >> 4 in (1, 2):
-                    (defined if section else undefined).add(name)
+                    (defined if symbol_section else undefined).add(name)
         else:
-            for section in before.sections:
-                if section['segment'] == '__LLVM':
-                    _require(section['name'] in ('__bitcode', '__cmdline'), 'unapproved Mach-O compiler metadata')
-                    removed.append({'member': old.name.decode(), 'section': section['key'],
-                                    'payload_sha256': hashlib.sha256(section['payload']).hexdigest()})
+            assert isinstance(before, MachObject)
+            for mach_section in before.sections:
+                if mach_section['segment'] == '__LLVM':
+                    _require(mach_section['name'] in ('__bitcode', '__cmdline'), 'unapproved Mach-O compiler metadata')
+                    removed.append({'member': old.name.decode(), 'section': mach_section['key'],
+                                    'payload_sha256': hashlib.sha256(mach_section['payload']).hexdigest()})
             proof = compare_macho(source.payload(old), after.payload(new), mapping, remove=True)
-            obj = MachObject(after.payload(new), budget)
+            obj = MachObject(after.payload(new), mach_budget)
             _require(not any(s['segment'] == '__LLVM' for s in obj.sections), 'Mach-O compiler metadata remains')
-            for name, kind, section, _, value in obj.symbols:
+            for name, kind, symbol_section, _, value in obj.symbols:
                 names.add(name)
                 if not kind & 0xe0 and kind & 1:
                     (undefined if kind & 14 == 0 and value == 0 else defined).add(name)
@@ -1034,14 +1108,20 @@ def _facts(original: Path, derivative: Path, target: str, exports, *, abi_family
     _require(sorted(undefined - defined) == policy['unresolved_imports'], 'unresolved system imports changed')
     index = (compare_elf_index if is_elf else compare_macho_index)(original, derivative, mapping)
     _require(_digest(original) == policy['before_sha256'], 'original archive changed during proof')
-    return {'schema': SCHEMA, 'kind': 'opaque-native-only-C-static-boundary', 'target': target,
-            **policy, 'after_sha256': _digest(derivative), 'members': members,
+    result: bt.Facts = {'schema': SCHEMA, 'kind': 'opaque-native-only-C-static-boundary', 'target': target,
+            'before_sha256': policy['before_sha256'], 'prefix': policy['prefix'], 'mapping': policy['mapping'], 'c_exports': policy['c_exports'], 'unresolved_imports': policy['unresolved_imports'], 'defined_names': policy['defined_names'], 'after_sha256': _digest(derivative), 'members': members,
             'removed_sections': removed, 'archive_index': index}
-
+    if abi_family != JNT_ABI2:
+        result['abi_family'] = abi_family
+    if 'global_weak_definitions' in policy:
+        result['global_weak_definitions'] = policy['global_weak_definitions']
+    if 'global_definitions' in policy:
+        result['global_definitions'] = policy['global_definitions']
+    return result
 
 @_checked_decode
-def verify_archive(original: Path, derivative: Path, receipt: dict, *, target: str, exports,
-                   abi_family=JNT_ABI2) -> dict:
+def verify_archive(original: Path, derivative: Path, receipt: Mapping[str, object], *,
+                   target: str, exports: Sequence[str], abi_family: str = JNT_ABI2) -> bt.Facts:
     """Verify an extracted derivative without executing an object tool or client."""
     _require(receipt.get('schema') == SCHEMA and receipt.get('target') == target
              and receipt.get('kind') == 'opaque-native-only-C-static-boundary'
@@ -1055,8 +1135,9 @@ def verify_archive(original: Path, derivative: Path, receipt: dict, *, target: s
 
 
 @_checked_decode
-def transform_archive(original: Path, output: Path, *, target: str, exports,
-                      objcopy: Path, work: Path, abi_family=JNT_ABI2, indexer=None) -> dict:
+def transform_archive(original: Path, output: Path, *, target: str, exports: Sequence[str],
+                      objcopy: Path, work: Path, abi_family: str = JNT_ABI2,
+                      indexer: Path | None = None) -> bt.Receipt:
     """Create an atomic derivative and retain every tool command and proof input.
 
     The caller packages ``work`` beside the immutable input. The selected LLVM
@@ -1072,17 +1153,21 @@ def transform_archive(original: Path, output: Path, *, target: str, exports,
     staged = work / 'derivative.a'
     before, helper, tool = _digest(original), _digest(Path(__file__)), _digest(objcopy)
     parser = _digest(Path(rust_archive.__file__)) if abi_family in (IRGX_ABI2, IRGX_MUNCH_IMAGE1) else None
-    options = {'abi_family': abi_family}
-    if target == 'macos-arm64': options['indexer'] = indexer
-    transform = (_transform_elf if target == 'linux-x86_64' else _transform_macho)(
-        original, staged, work / 'commands', exports, objcopy, **options)
+    if target == 'linux-x86_64':
+        transform = _transform_elf(original, staged, work / 'commands', exports, objcopy,
+                                   abi_family=abi_family)
+    else:
+        transform = _transform_macho(original, staged, work / 'commands', exports, objcopy,
+                                     abi_family=abi_family, indexer=indexer)
     _require('LLVM' in transform['tool']['version'], 'LLVM objcopy required')
     _require(transform['tool']['sha256'] == tool == _digest(objcopy), 'static boundary tool changed')
     facts = _facts(original, staged, target, exports, abi_family=abi_family)
-    receipt = {**_family_fields(abi_family), 'schema': SCHEMA, 'kind': 'opaque-native-only-C-static-boundary', 'target': target,
+    receipt: bt.Receipt = {'schema': SCHEMA, 'kind': 'opaque-native-only-C-static-boundary', 'target': target,
                'machine_code_only': True, 'before_sha256': before, 'after_sha256': _digest(staged),
                'helper_sha256': helper, 'transform': transform, 'facts': facts}
-    if abi_family in (IRGX_ABI2, IRGX_MUNCH_IMAGE1):
+    if abi_family != JNT_ABI2:
+        receipt['abi_family'] = abi_family
+    if parser is not None:
         receipt['parser_sha256'] = parser
         _require(parser == _digest(Path(rust_archive.__file__)), 'static boundary parser source drift')
     _require(before == _digest(original) and helper == _digest(Path(__file__)), 'static boundary source drift')

@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use joints_engine::{CompiledGrammar, Node, Recovery, RepairKind, Stop, Supply};
 use serde_json::{Value, json};
 use std::{fs, path::PathBuf};
@@ -56,22 +58,25 @@ fn all_twenty_five_frozen_cases_preserve_trees_repairs_and_first_stops() {
         assert_eq!(stop, reference_stop, "{id}: first stop");
         assert_eq!(
             tree.mends(),
-            expected["mends"].as_u64().unwrap() as usize,
+            usize::try_from(expected["mends"].as_u64().unwrap()).expect("fixture count fits usize"),
             "{id}: deletions"
         );
         assert_eq!(
             tree.skipped(),
-            expected["skipped"].as_u64().unwrap() as usize,
+            usize::try_from(expected["skipped"].as_u64().unwrap())
+                .expect("fixture count fits usize"),
             "{id}: skipped bytes"
         );
         assert_eq!(
             tree.supplied(),
-            expected["supplied"].as_u64().unwrap() as usize,
+            usize::try_from(expected["supplied"].as_u64().unwrap())
+                .expect("fixture count fits usize"),
             "{id}: supplies"
         );
         assert_eq!(
             tree.spurned(),
-            expected["spurned"].as_u64().unwrap() as usize,
+            usize::try_from(expected["spurned"].as_u64().unwrap())
+                .expect("fixture count fits usize"),
             "{id}: ambiguity"
         );
         assert_eq!(
@@ -81,7 +86,8 @@ fn all_twenty_five_frozen_cases_preserve_trees_repairs_and_first_stops() {
         );
         assert_eq!(
             tree.survey().walked,
-            expected["survey"]["walked"].as_u64().unwrap() as usize,
+            usize::try_from(expected["survey"]["walked"].as_u64().unwrap())
+                .expect("fixture count fits usize"),
             "{id}: published nodes"
         );
         assert_eq!(

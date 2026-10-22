@@ -1,8 +1,11 @@
 //! The pinned working grammar has thirteen independent call/type choices here.
 //! Their late selector must remain available until the closing argument lists.
+#![forbid(unsafe_code)]
+
 use joints_engine::{CompiledGrammar, Error, Node, ParseLimits, ParseSession, Resource};
 use serde_json::json;
 use sha2::{Digest, Sha256};
+use std::sync::Arc;
 
 fn fingerprint(root: Node<'_>) -> String {
     let mut pending = vec![(root, 0)];
@@ -20,8 +23,11 @@ fn fingerprint(root: Node<'_>) -> String {
     }
     Sha256::digest(serde_json::to_vec(&ledger).unwrap())
         .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect::<String>()
+        .fold(String::new(), |mut text, byte| {
+            use std::fmt::Write as _;
+            write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+            text
+        })
 }
 
 #[test]
@@ -30,8 +36,11 @@ fn deep_calls_keep_late_selector_rivals_with_an_explicit_lower_limit_control() {
     assert_eq!(
         Sha256::digest(grammar)
             .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect::<String>(),
+            .fold(String::new(), |mut text, byte| {
+                use std::fmt::Write as _;
+                write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+                text
+            }),
         "0dcc665aa521a1b73a200be13b4e376780cca037d764a165f12864babfe28000"
     );
     let grammar = CompiledGrammar::compile(grammar).unwrap();
@@ -56,7 +65,7 @@ fn deep_calls_keep_late_selector_rivals_with_an_explicit_lower_limit_control() {
             close.repeat(12)
         );
         let mut limited = ParseSession::with_limits(
-            grammar.clone(),
+            Arc::clone(&grammar),
             ParseLimits {
                 heads: 512,
                 ..ParseLimits::default()

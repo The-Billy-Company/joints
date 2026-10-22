@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use joints_engine::{ByteSpan, CompiledGrammar, Document};
 use serde_json::json;
 use std::{sync::Arc, time::Instant};

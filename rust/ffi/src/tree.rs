@@ -23,8 +23,8 @@ fn stop(s: Stop) -> i32 {
 fn snapshot(t: *const JntTree) -> Result<Arc<Version>> {
     version(tree_handle(t as usize)?.as_ref())
 }
-fn node_id(n: Option<Node<'_>>) -> u32 {
-    n.map_or(JNT_NONE, |n| n.index() as u32)
+fn node_id(n: Option<Node<'_>>) -> Result<u32> {
+    n.map_or(Ok(JNT_NONE), |n| count(n.index()))
 }
 #[doc = "C ABI entry.\n\n# Safety\nForeign pointers must satisfy include/jnt.h; opaque handles are checked tokens."]
 #[unsafe(no_mangle)]
@@ -35,8 +35,10 @@ pub unsafe extern "C" fn jnt_parse(
     out: *mut *mut JntTree,
 ) -> i32 {
     status_boundary!({
+        // SAFETY: the C caller provides aligned writable output storage; output rejects NULL.
         unsafe { output(out)? };
         let p = parser_handle(parser as usize)?;
+        // SAFETY: the C caller keeps len input bytes readable and immutable for this call.
         let bytes = unsafe { input(text, len)? };
         let tree = lock(&p.session)?
             .parse_partial(bytes)
@@ -47,6 +49,8 @@ pub unsafe extern "C" fn jnt_parse(
             borrowed: false,
             version: RwLock::new(Some(Version::new(Arc::new(tree)))),
         })))?;
+        // SAFETY: output validated out above; the caller retains its writable storage for this
+        // call.
         unsafe { out.write(token as *mut JntTree) };
         Ok(())
     })
@@ -68,10 +72,10 @@ pub unsafe extern "C" fn jnt_tree_stop(tree: *const JntTree) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn jnt_tree_stop_at(tree: *const JntTree) -> u32 {
     boundary!(0, {
-        Ok(match snapshot(tree)?.tree.stop() {
-            Stop::Stray { at } | Stop::Unexpected { at, .. } => at as u32,
-            _ => 0,
-        })
+        match snapshot(tree)?.tree.stop() {
+            Stop::Stray { at } | Stop::Unexpected { at, .. } => count(at),
+            _ => Ok(0),
+        }
     })
 }
 #[doc = "C ABI entry.\n\n# Safety\nForeign pointers must satisfy include/jnt.h; opaque handles are checked tokens."]
@@ -81,8 +85,12 @@ pub unsafe extern "C" fn jnt_tree_stop_word(
     len: *mut usize,
 ) -> *const c_char {
     boundary!(ptr::null(), {
+        // SAFETY: the C caller supplies a writable len pointer or NULL; no byte view is
+        // returned.
         unsafe { view(None, len) };
         let v = snapshot(tree)?;
+        // SAFETY: len is writable or NULL by the C contract; the registered owner retains these
+        // bytes.
         Ok(unsafe { view(v.tree.stop_symbol().map(str::as_bytes), len) })
     })
 }
@@ -129,14 +137,15 @@ pub unsafe extern "C" fn jnt_tree_scar(tree: *const JntTree, i: u32, out: *mut J
         let supplied = matches!(r.kind, RepairKind::Supplied { .. });
         let felled = matches!(r.kind, RepairKind::Deleted { felled: true });
         let scar = JntScar {
-            at: r.span.start() as u32,
-            over: r.span.end() as u32,
+            at: count(r.span.start())?,
+            over: count(r.span.end())?,
             supplied: u32::from(supplied),
             heads: count(r.heads)?,
             shifted: count(r.shifted)?,
             felled: u32::from(felled),
             stop: stop(r.context),
         };
+        // SAFETY: out is non-NULL and the C caller provides aligned writable output storage.
         unsafe { out.write(scar) };
         Ok(())
     })
@@ -149,6 +158,8 @@ pub unsafe extern "C" fn jnt_tree_scar_word(
     len: *mut usize,
 ) -> *const c_char {
     boundary!(ptr::null(), {
+        // SAFETY: the C caller supplies a writable len pointer or NULL; no byte view is
+        // returned.
         unsafe { view(None, len) };
         let v = snapshot(tree)?;
         let word = v
@@ -156,6 +167,8 @@ pub unsafe extern "C" fn jnt_tree_scar_word(
             .repairs()
             .get(i as usize)
             .and_then(|r| v.tree.repair_symbol(r));
+        // SAFETY: len is writable or NULL by the C contract; the registered owner retains these
+        // bytes.
         Ok(unsafe { view(word.map(str::as_bytes), len) })
     })
 }
@@ -168,7 +181,7 @@ pub unsafe extern "C" fn jnt_tree_roots(tree: *const JntTree) -> u32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn jnt_tree_root(tree: *const JntTree, i: u32) -> u32 {
     boundary!(JNT_NONE, {
-        Ok(node_id(snapshot(tree)?.tree.roots().nth(i as usize)))
+        node_id(snapshot(tree)?.tree.roots().nth(i as usize))
     })
 }
 #[doc = "C ABI entry.\n\n# Safety\nForeign pointers must satisfy include/jnt.h; opaque handles are checked tokens."]
@@ -179,8 +192,12 @@ pub unsafe extern "C" fn jnt_node_name(
     len: *mut usize,
 ) -> *const c_char {
     boundary!(ptr::null(), {
+        // SAFETY: the C caller supplies a writable len pointer or NULL; no byte view is
+        // returned.
         unsafe { view(None, len) };
         let v = snapshot(tree)?;
+        // SAFETY: len is writable or NULL by the C contract; the registered owner retains these
+        // bytes.
         Ok(unsafe {
             view(
                 v.tree.node_at(id as usize).map(|n| n.name().as_bytes()),
@@ -197,8 +214,12 @@ pub unsafe extern "C" fn jnt_node_field(
     len: *mut usize,
 ) -> *const c_char {
     boundary!(ptr::null(), {
+        // SAFETY: the C caller supplies a writable len pointer or NULL; no byte view is
+        // returned.
         unsafe { view(None, len) };
         let v = snapshot(tree)?;
+        // SAFETY: len is writable or NULL by the C contract; the registered owner retains these
+        // bytes.
         Ok(unsafe {
             view(
                 v.tree
@@ -226,20 +247,20 @@ pub unsafe extern "C" fn jnt_node_named(tree: *const JntTree, id: u32) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn jnt_node_start(tree: *const JntTree, id: u32) -> u32 {
     boundary!(0, {
-        Ok(snapshot(tree)?
+        snapshot(tree)?
             .tree
             .node_at(id as usize)
-            .map_or(0, |n| n.span().start() as u32))
+            .map_or(Ok(0), |n| count(n.span().start()))
     })
 }
 #[doc = "C ABI entry.\n\n# Safety\nForeign pointers must satisfy include/jnt.h; opaque handles are checked tokens."]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn jnt_node_end(tree: *const JntTree, id: u32) -> u32 {
     boundary!(0, {
-        Ok(snapshot(tree)?
+        snapshot(tree)?
             .tree
             .node_at(id as usize)
-            .map_or(0, |n| n.span().end() as u32))
+            .map_or(Ok(0), |n| count(n.span().end()))
     })
 }
 #[doc = "C ABI entry.\n\n# Safety\nForeign pointers must satisfy include/jnt.h; opaque handles are checked tokens."]
@@ -258,72 +279,72 @@ pub unsafe extern "C" fn jnt_node_kids(tree: *const JntTree, id: u32) -> u32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn jnt_node_kid(tree: *const JntTree, id: u32, i: u32) -> u32 {
     boundary!(JNT_NONE, {
-        Ok(node_id(
+        node_id(
             snapshot(tree)?
                 .tree
                 .node_at(id as usize)
                 .and_then(|n| n.children().nth(i as usize)),
-        ))
+        )
     })
 }
 #[doc = "C ABI entry.\n\n# Safety\nForeign pointers must satisfy include/jnt.h; opaque handles are checked tokens."]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn jnt_node_parent(tree: *const JntTree, id: u32) -> u32 {
     boundary!(JNT_NONE, {
-        Ok(node_id(
+        node_id(
             snapshot(tree)?
                 .tree
                 .node_at(id as usize)
                 .and_then(Node::parent),
-        ))
+        )
     })
 }
 #[doc = "C ABI entry.\n\n# Safety\nForeign pointers must satisfy include/jnt.h; opaque handles are checked tokens."]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn jnt_node_next(tree: *const JntTree, id: u32) -> u32 {
     boundary!(JNT_NONE, {
-        Ok(node_id(
+        node_id(
             snapshot(tree)?
                 .tree
                 .node_at(id as usize)
                 .and_then(Node::next_sibling),
-        ))
+        )
     })
 }
 #[doc = "C ABI entry.\n\n# Safety\nForeign pointers must satisfy include/jnt.h; opaque handles are checked tokens."]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn jnt_node_prev(tree: *const JntTree, id: u32) -> u32 {
     boundary!(JNT_NONE, {
-        Ok(node_id(
+        node_id(
             snapshot(tree)?
                 .tree
                 .node_at(id as usize)
                 .and_then(Node::prev_sibling),
-        ))
+        )
     })
 }
 #[doc = "C ABI entry.\n\n# Safety\nForeign pointers must satisfy include/jnt.h; opaque handles are checked tokens."]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn jnt_node_next_named(tree: *const JntTree, id: u32) -> u32 {
     boundary!(JNT_NONE, {
-        Ok(node_id(
+        node_id(
             snapshot(tree)?
                 .tree
                 .node_at(id as usize)
                 .and_then(Node::next_named_sibling),
-        ))
+        )
     })
 }
 #[doc = "C ABI entry.\n\n# Safety\nForeign pointers must satisfy include/jnt.h; opaque handles are checked tokens."]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn jnt_node_prev_named(tree: *const JntTree, id: u32) -> u32 {
     boundary!(JNT_NONE, {
-        Ok(node_id(
+        node_id(
             snapshot(tree)?
                 .tree
                 .node_at(id as usize)
                 .and_then(Node::prev_named_sibling),
-        ))
+        )
     })
 }
 #[doc = "C ABI entry.\n\n# Safety\nForeign pointers must satisfy include/jnt.h; opaque handles are checked tokens."]
@@ -335,13 +356,14 @@ pub unsafe extern "C" fn jnt_node_by_field(
     len: usize,
 ) -> u32 {
     boundary!(JNT_NONE, {
+        // SAFETY: the C caller keeps len input bytes readable and immutable for this call.
         let bytes = unsafe { input(field, len)? };
         let v = snapshot(tree)?;
         let n = v.tree.node_at(id as usize).and_then(|n| {
             n.children()
                 .find(|c| !c.is_extra() && c.field().is_some_and(|f| f.as_bytes() == bytes))
         });
-        Ok(node_id(n))
+        node_id(n)
     })
 }
 #[doc = "C ABI entry.\n\n# Safety\nForeign pointers must satisfy include/jnt.h; opaque handles are checked tokens."]
@@ -361,9 +383,7 @@ pub unsafe extern "C" fn jnt_node_depth(tree: *const JntTree, id: u32) -> u32 {
 pub unsafe extern "C" fn jnt_node_covering(tree: *const JntTree, from: u32, to: u32) -> u32 {
     boundary!(JNT_NONE, {
         let v = snapshot(tree)?;
-        Ok(node_id(
-            ByteSpan::new(from as usize, to as usize).and_then(|s| v.tree.covering(s)),
-        ))
+        node_id(ByteSpan::new(from as usize, to as usize).and_then(|s| v.tree.covering(s)))
     })
 }
 #[doc = "C ABI entry.\n\n# Safety\nForeign pointers must satisfy include/jnt.h; opaque handles are checked tokens."]
@@ -409,7 +429,7 @@ fn quote(out: &mut RenderBuffer, name: &str) -> Result<()> {
                 let h = b"0123456789abcdef";
                 append(
                     out,
-                    &[b'\\', b'x', h[(b >> 4) as usize], h[(b & 15) as usize]],
+                    &[b'\\', b'x', h[usize::from(b >> 4)], h[usize::from(b & 15)]],
                 )?
             }
             _ => append(out, &[b])?,
@@ -482,6 +502,8 @@ pub unsafe extern "C" fn jnt_tree_sexp(
     len: *mut usize,
 ) -> *const c_char {
     boundary!(ptr::null(), {
+        // SAFETY: the C caller supplies a writable len pointer or NULL; no byte view is
+        // returned.
         unsafe { view(None, len) };
         let v = snapshot(tree)?;
         let mut renders = lock(&v.renders)?;
@@ -490,6 +512,8 @@ pub unsafe extern "C" fn jnt_tree_sexp(
             *slot = Some(render(&v.tree, all != 0)?)
         }
         let b = slot.as_ref().expect("render initialized");
+        // SAFETY: len is writable or NULL by the C contract; the registered owner retains these
+        // bytes.
         Ok(unsafe { view(Some(&b[..b.len() - 1]), len) })
     })
 }

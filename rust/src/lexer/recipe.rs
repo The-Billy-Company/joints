@@ -85,7 +85,7 @@ fn vector<T, B: Budget>(
     budget: &mut B,
 ) -> Result<Vec<T>, B::Error> {
     let bytes = count
-        .checked_mul(std::mem::size_of::<T>())
+        .checked_mul(size_of::<T>())
         .ok_or_else(|| B::storage(what))?;
     budget.allocation(bytes)?;
     let mut result = Vec::new();

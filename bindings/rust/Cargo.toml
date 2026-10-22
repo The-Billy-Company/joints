@@ -42,8 +42,42 @@ include = [ "/src", "/build.rs", "/tests", "/README.md", "/LICENSE", "/NOTICE" ]
 path = "src/lib.rs"
 
 [lints.rust]
+# Keep the standalone package as strict as the native workspace. Group lints
+# run first so an individual, documented exception cannot weaken other checks.
+warnings = { level = "deny", priority = -1 }
+future_incompatible = { level = "deny", priority = -1 }
+rust_2018_idioms = { level = "deny", priority = -1 }
 missing_docs = "deny"
+elided_lifetimes_in_paths = "deny"
+improper_ctypes = "deny"
+improper_ctypes_definitions = "deny"
+trivial_casts = "deny"
+trivial_numeric_casts = "deny"
+unreachable_pub = "deny"
 unsafe_op_in_unsafe_fn = "deny"
+unused_lifetimes = "deny"
+unused_qualifications = "deny"
 
 [lints.clippy]
+all = { level = "deny", priority = -1 }
+as_ptr_cast_mut = "deny"
+cast_lossless = "deny"
+cast_possible_truncation = "deny"
+cast_possible_wrap = "deny"
+cast_precision_loss = "deny"
+cast_ptr_alignment = "deny"
+cast_sign_loss = "deny"
+checked_conversions = "deny"
+clone_on_ref_ptr = "deny"
+fn_to_numeric_cast_any = "deny"
+implicit_clone = "deny"
+missing_safety_doc = "deny"
+ptr_as_ptr = "deny"
+rc_buffer = "deny"
+rc_mutex = "deny"
+redundant_type_annotations = "deny"
+ref_as_ptr = "deny"
+ref_option_ref = "deny"
+transmute_ptr_to_ref = "deny"
 undocumented_unsafe_blocks = "deny"
+unneeded_field_pattern = "deny"

@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use joints_engine::{
     CompileOptions, CompiledGrammar, Error, ParseLimits, ParseSession, Recovery, Supply,
     effects::{Effect, EffectDescription, EffectError},

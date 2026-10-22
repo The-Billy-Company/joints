@@ -11,9 +11,12 @@ pub struct ByteSpan {
 
 impl ByteSpan {
     pub fn new(start: usize, end: usize) -> Option<Self> {
-        (start <= end && end <= u32::MAX as usize).then_some(Self {
-            start: start as u32,
-            end: end as u32,
+        if start > end {
+            return None;
+        }
+        Some(Self {
+            start: u32::try_from(start).ok()?,
+            end: u32::try_from(end).ok()?,
         })
     }
 
@@ -159,10 +162,8 @@ pub struct TreeSnapshot {
 impl TreeSnapshot {
     /// Resolve a bounds-checked arena position in this particular snapshot.
     pub fn node_at(&self, index: usize) -> Option<Node<'_>> {
-        (index < self.nodes.len()).then_some(Node {
-            tree: self,
-            id: NodeId(index as u32),
-        })
+        let id = NodeId(u32::try_from(index).ok()?);
+        (index < self.nodes.len()).then_some(Node { tree: self, id })
     }
 
     pub fn grammar(&self) -> &Arc<CompiledGrammar> {
@@ -355,8 +356,9 @@ impl TreeSnapshot {
             .partition_point(|&line| line <= at)
             .saturating_sub(1);
         Point {
-            row: row as u32,
-            column: (at - self.lines[row]) as u32,
+            row: u32::try_from(row).expect("rows bounded by validated source length"),
+            column: u32::try_from(at - self.lines[row])
+                .expect("column bounded by validated source length"),
         }
     }
 }

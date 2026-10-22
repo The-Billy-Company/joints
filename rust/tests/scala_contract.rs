@@ -1,5 +1,7 @@
 //! A pinned witness distinguishes signed literals from rule-shaped comment extras.
 
+#![forbid(unsafe_code)]
+
 use joints_engine::{CompiledGrammar, Node};
 use sha2::{Digest, Sha256};
 use std::{fs, path::Path};
@@ -12,8 +14,11 @@ fn trailing_rule_extra_keeps_the_signed_annotation_argument() {
     assert_eq!(
         Sha256::digest(&bytes)
             .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect::<String>(),
+            .fold(String::new(), |mut text, byte| {
+                use std::fmt::Write as _;
+                write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+                text
+            }),
         "0040c891e6f062e929a7c1b596a306c8a7661d9f868a6ccdd9963381482d3589"
     );
     let grammar = CompiledGrammar::compile(&bytes).unwrap();

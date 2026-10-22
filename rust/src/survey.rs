@@ -1531,7 +1531,7 @@ mod tests {
     }
     #[test]
     fn aggregate_refusal_retains_work_spent_validating_tokens() {
-        let g = crate::CompiledGrammar::compile(
+        let g = CompiledGrammar::compile(
             br#"{"rules":{"doc":{"type":"REPEAT1","content":{"type":"STRING","value":"x"}}}}"#,
         )
         .unwrap();

@@ -30,8 +30,15 @@ impl Bound {
         at.saturating_add(self.eaten.unwrap_or(0))
     }
 }
+// Scanner arithmetic saturates at the destination domain instead of wrapping.
+fn size_value(n: i64) -> usize {
+    usize::try_from(n.max(0)).unwrap_or(usize::MAX)
+}
+fn measure_value(n: usize) -> i64 {
+    i64::try_from(n).unwrap_or(i64::MAX)
+}
 fn u32_value(n: i64) -> u32 {
-    n.clamp(0, u32::MAX as i64) as u32
+    u32::try_from(n.max(0)).unwrap_or(u32::MAX)
 }
 #[derive(Debug)]
 pub(super) struct SourceIndex {
@@ -107,7 +114,7 @@ impl SourceIndex {
             lead: line.lead,
             blank: line.blank,
             lull: index > 0 && self.lines[index - 1].blank,
-            column: at.saturating_sub(line.start).min(u32::MAX as usize) as u32,
+            column: u32::try_from(at.saturating_sub(line.start)).unwrap_or(u32::MAX),
             eof: at >= self.len,
             broke: false,
         }
@@ -140,25 +147,24 @@ fn group<'a>(b: &Bound, source: &'a [u8], n: usize) -> &'a [u8] {
 fn eval(e: &Expr, o: &ScannerState, f: Facts, b: &Bound, source: &[u8]) -> i64 {
     match e {
         Expr::Num(n) => *n,
-        Expr::Lead => b.lead.unwrap_or(f.lead) as i64,
-        Expr::Column => f.column as i64,
-        Expr::Width => b.eaten.unwrap_or(0) as i64,
-        Expr::Cursor => b.cursor as i64,
-        Expr::FrameWidth => o.frames.last().map_or(0, |x| x.width) as i64,
-        Expr::Frames => o.frames.len() as i64,
-        Expr::Marks => o.marks.len() as i64,
-        Expr::MarkCount => o.marks.last().map_or(0, |x| x.count) as i64,
-        Expr::Pass(i) => b.ran.map_or(0, |r| r[*i]) as i64,
-        Expr::Span(i) => group(b, source, *i).len() as i64,
+        Expr::Lead => i64::from(b.lead.unwrap_or(f.lead)),
+        Expr::Column => i64::from(f.column),
+        Expr::Width => measure_value(b.eaten.unwrap_or(0)),
+        Expr::Cursor => measure_value(b.cursor),
+        Expr::FrameWidth => i64::from(o.frames.last().map_or(0, |x| x.width)),
+        Expr::Frames => measure_value(o.frames.len()),
+        Expr::Marks => measure_value(o.marks.len()),
+        Expr::MarkCount => i64::from(o.marks.last().map_or(0, |x| x.count)),
+        Expr::Pass(i) => measure_value(b.ran.map_or(0, |r| r[*i])),
+        Expr::Span(i) => measure_value(group(b, source, *i).len()),
         Expr::Number(i) => b.figures.get(*i).copied().unwrap_or(0),
-        Expr::Reg(i) => o.registers[*i] as i64,
+        Expr::Reg(i) => i64::from(o.registers[*i]),
         Expr::FrameAt(i) => {
             let i = eval(i, o, f, b, source);
-            if i < 0 {
-                0
-            } else {
-                o.frames.get(i as usize).map_or(0, |x| x.width) as i64
-            }
+            usize::try_from(i)
+                .ok()
+                .and_then(|i| o.frames.get(i))
+                .map_or(0, |x| i64::from(x.width))
         }
         Expr::Bin(op, a, c) => {
             let a = eval(a, o, f, b, source);
@@ -184,7 +190,7 @@ struct Ask<'a, 'b> {
 }
 impl Book {
     #[allow(clippy::too_many_arguments)]
-    pub fn step(
+    pub(super) fn step(
         &self,
         o: &mut ScannerState,
         source: &[u8],
@@ -205,7 +211,7 @@ impl Book {
                 source, self.tab, remaining,
             )?));
         }
-        let index = o.index.as_ref().expect("installed index").clone();
+        let index = std::sync::Arc::clone(o.index.as_ref().expect("installed index"));
         let mut a = Ask {
             book: self,
             source,
@@ -342,19 +348,18 @@ impl Ask<'_, '_> {
             }
             Test::Compare(m, cmp, e, index) => {
                 let n = match m {
-                    Measure::Lead => Some(b.lead.unwrap_or(f.lead) as i64),
-                    Measure::Frames => Some(o.frames.len() as i64),
-                    Measure::Marks => Some(o.marks.len() as i64),
-                    Measure::FrameWidth => o.frames.last().map(|t| t.width as i64),
-                    Measure::MarkCount => o.marks.last().map(|t| t.count as i64),
-                    Measure::Reg(i) => Some(o.registers[*i] as i64),
+                    Measure::Lead => Some(i64::from(b.lead.unwrap_or(f.lead))),
+                    Measure::Frames => Some(measure_value(o.frames.len())),
+                    Measure::Marks => Some(measure_value(o.marks.len())),
+                    Measure::FrameWidth => o.frames.last().map(|t| i64::from(t.width)),
+                    Measure::MarkCount => o.marks.last().map(|t| i64::from(t.count)),
+                    Measure::Reg(i) => Some(i64::from(o.registers[*i])),
                     Measure::FrameAt => index.as_ref().and_then(|e| {
                         let i = eval(e, o, f, b, self.source);
-                        if i < 0 {
-                            None
-                        } else {
-                            o.frames.get(i as usize).map(|t| t.width as i64)
-                        }
+                        usize::try_from(i)
+                            .ok()
+                            .and_then(|i| o.frames.get(i))
+                            .map(|t| i64::from(t.width))
                     }),
                 };
                 n.is_some_and(|n| cmp.holds(n, eval(e, o, f, b, self.source)))
@@ -376,8 +381,8 @@ impl Ask<'_, '_> {
                                             break;
                                         }
                                         charge(self.remaining)?;
-                                        number = (number * 10 + (byte - b'0') as i64)
-                                            .min(u16::MAX as i64);
+                                        number = (number * 10 + i64::from(byte - b'0'))
+                                            .min(i64::from(u16::MAX));
                                     }
                                 }
                                 b.figures.push(number);
@@ -417,21 +422,26 @@ impl Ask<'_, '_> {
                 let want = to
                     .as_ref()
                     .map_or(1 << 30, |e| eval(e, o, f, b, self.source));
-                let mut col = from.as_ref().map_or_else(
-                    || {
-                        b.lead
-                            .unwrap_or_else(|| self.book.budget.map_or(f.lead, |r| o.registers[r]))
-                            as i64
-                    },
-                    |e| eval(e, o, f, b, self.source),
-                );
+                let mut col =
+                    from.as_ref().map_or_else(
+                        || {
+                            i64::from(b.lead.unwrap_or_else(|| {
+                                self.book.budget.map_or(f.lead, |r| o.registers[r])
+                            }))
+                        },
+                        |e| eval(e, o, f, b, self.source),
+                    );
                 let mut off = b.cursor(at);
                 let begin = off;
                 while off < self.source.len() && col < want && (!one || off == begin) {
                     charge(self.remaining)?;
                     match self.source[off] {
-                        b' ' => col += 1,
-                        b'\t' => col += self.book.tab as i64 - col.rem_euclid(self.book.tab as i64),
+                        b' ' => col = col.saturating_add(1),
+                        b'\t' => {
+                            col = col.saturating_add(
+                                i64::from(self.book.tab) - col.rem_euclid(i64::from(self.book.tab)),
+                            )
+                        }
                         _ => break,
                     }
                     off += 1;
@@ -446,7 +456,7 @@ impl Ask<'_, '_> {
                 until,
                 compare,
             } => {
-                let start = eval(start, o, f, b, self.source).max(0) as usize;
+                let start = size_value(eval(start, o, f, b, self.source));
                 let (off, lead) = if *after {
                     let (off, col) =
                         soak(self.source, b.cursor(at), self.book.tab, 0, self.remaining)?;
@@ -456,12 +466,12 @@ impl Ask<'_, '_> {
                 };
                 let until = until
                     .as_ref()
-                    .map(|e| eval(e, o, f, b, self.source).max(0) as usize);
+                    .map(|e| size_value(eval(e, o, f, b, self.source)));
                 let ran = self.pass(o, off, start, lead, until, depth)?;
                 b.ran = Some(ran);
-                compare
-                    .as_ref()
-                    .is_none_or(|(c, e)| c.holds(ran[0] as i64, eval(e, o, f, b, self.source)))
+                compare.as_ref().is_none_or(|(c, e)| {
+                    c.holds(measure_value(ran[0]), eval(e, o, f, b, self.source))
+                })
             }
             Test::Kind {
                 stack,
@@ -472,11 +482,10 @@ impl Ask<'_, '_> {
                     Stack::Frames => {
                         if let Some(e) = index {
                             let i = eval(e, o, f, b, self.source);
-                            if i < 0 {
-                                None
-                            } else {
-                                o.frames.get(i as usize).map(|x| x.kind)
-                            }
+                            usize::try_from(i)
+                                .ok()
+                                .and_then(|i| o.frames.get(i))
+                                .map(|x| x.kind)
                         } else {
                             o.frames.last().map(|x| x.kind)
                         }
@@ -494,13 +503,9 @@ impl Ask<'_, '_> {
                 folded,
                 group: g,
             } => {
-                let saw = g.as_ref().map(|e| {
-                    group(
-                        b,
-                        self.source,
-                        eval(e, o, f, b, self.source).max(0) as usize,
-                    )
-                });
+                let saw = g
+                    .as_ref()
+                    .map(|e| group(b, self.source, size_value(eval(e, o, f, b, self.source))));
                 let same = |m: &Mark| {
                     let got = saw.or_else(|| self.source.get(at..at.saturating_add(m.tag.len())));
                     got.is_some_and(|got| {
@@ -525,7 +530,7 @@ impl Ask<'_, '_> {
             } => {
                 let (off, lead) = if let Some((off, lead)) = from {
                     (
-                        (eval(off, o, f, b, self.source).max(0) as usize).min(self.source.len()),
+                        (size_value(eval(off, o, f, b, self.source))).min(self.source.len()),
                         u32_value(eval(lead, o, f, b, self.source)),
                     )
                 } else {
@@ -602,7 +607,7 @@ impl Ask<'_, '_> {
                         self.classify(*c, *symbol, at, width_value)?
                     } else {
                         if let Some(e) = width {
-                            width_value = eval(e, o, f, b, self.source).max(0) as usize;
+                            width_value = size_value(eval(e, o, f, b, self.source));
                         }
                         *symbol
                     };
@@ -619,7 +624,7 @@ impl Ask<'_, '_> {
                 }
                 Action::Skip(e) => {
                     skip = skip
-                        .checked_add(eval(e, o, f, b, self.source).max(0) as usize)
+                        .checked_add(size_value(eval(e, o, f, b, self.source)))
                         .ok_or(ScannerError::Limit("token extent"))?
                 }
                 Action::PushFrame(width, kind) => {
@@ -627,7 +632,8 @@ impl Ask<'_, '_> {
                         return Err(ScannerError::Limit("frames"));
                     }
                     o.frames.push(Frame {
-                        width: u32_value(eval(width, o, f, b, self.source)).min(u16::MAX as u32),
+                        width: u32_value(eval(width, o, f, b, self.source))
+                            .min(u32::from(u16::MAX)),
                         kind: *kind,
                     });
                 }
@@ -646,7 +652,8 @@ impl Ask<'_, '_> {
                     }
                     o.marks.push(Mark {
                         kind: *kind,
-                        count: u32_value(eval(count, o, f, b, self.source)).min(u16::MAX as u32),
+                        count: u32_value(eval(count, o, f, b, self.source))
+                            .min(u32::from(u16::MAX)),
                         tag: tag.into(),
                     });
                 }

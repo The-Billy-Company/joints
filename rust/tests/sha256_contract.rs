@@ -1,4 +1,6 @@
 //! Independent SHA-256 byte contracts, separate from artifact envelope policy.
+#![forbid(unsafe_code)]
+
 use sha2::{Digest, Sha256};
 
 fn expected(hex: &str) -> [u8; 32] {
@@ -84,7 +86,9 @@ fn sha256_padding_multiblock_chunking_and_cloned_prefix_keep_independent_bytes()
             "7daca2095d0438260fa849183dfc67faa459fdf4936e1bc91eec6b281b27e4c2",
         ),
     ] {
-        let bytes: Vec<_> = (0..length).map(|i| i as u8).collect();
+        let bytes: Vec<_> = (0..length)
+            .map(|i| u8::try_from(i % 256).unwrap())
+            .collect();
         let want = expected(hex);
         assert_eq!(Sha256::digest(&bytes).as_slice(), want, "length={length}");
         for size in [1, 3, 7, 55, 64, 65, 257, 4096] {

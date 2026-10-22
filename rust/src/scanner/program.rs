@@ -30,7 +30,7 @@ pub(super) enum Phase {
     Ordered,
 }
 impl Phase {
-    pub const SWEEP: [Self; 7] = [
+    pub(super) const SWEEP: [Self; 7] = [
         Self::Inside,
         Self::Layout,
         Self::Commanded,
@@ -50,7 +50,7 @@ pub(super) enum Cmp {
     Ge,
 }
 impl Cmp {
-    pub fn holds(self, a: i64, b: i64) -> bool {
+    pub(super) fn holds(self, a: i64, b: i64) -> bool {
         match self {
             Self::Eq => a == b,
             Self::Ne => a != b,
@@ -220,7 +220,7 @@ fn reg(v: &Value) -> Result<usize, ScannerError> {
     if !(0..8).contains(&n) {
         return Err(bad("register outside 0..8"));
     }
-    Ok(n as usize)
+    usize::try_from(n).map_err(|_| bad("scanner index out of range"))
 }
 fn cmp(v: &Value) -> Result<Cmp, ScannerError> {
     Ok(match word(v)? {
@@ -291,7 +291,7 @@ fn capture(v: &Value) -> Result<usize, ScannerError> {
     if !(0..32).contains(&n) {
         return Err(bad("capture outside 0..32"));
     }
-    Ok(n as usize)
+    usize::try_from(n).map_err(|_| bad("scanner index out of range"))
 }
 
 struct Reader<'a> {
@@ -314,7 +314,7 @@ impl Reader<'_> {
     fn kind(&self, v: &Value) -> Result<u8, ScannerError> {
         if let Some(n) = v.as_i64() {
             return if (1..32).contains(&n) {
-                Ok(n as u8)
+                u8::try_from(n).map_err(|_| bad("kind outside 1..32"))
             } else {
                 Err(bad("kind outside 1..32"))
             };
@@ -329,7 +329,7 @@ impl Reader<'_> {
             "=" => Ok(1u32 << self.kind(v)?),
             "in" => array(v)?
                 .iter()
-                .try_fold(0, |bits, v| Ok(bits | 1u32 << self.kind(v)?)),
+                .try_fold(0, |bits, v| Ok(bits | (1u32 << self.kind(v)?))),
             _ => Err(bad("kind comparison must be = or in")),
         }
     }
@@ -630,7 +630,7 @@ impl Reader<'_> {
 }
 
 impl Book {
-    pub fn matches(source: &str, grammar: &Automaton) -> Result<bool, ScannerError> {
+    pub(super) fn matches(source: &str, grammar: &Automaton) -> Result<bool, ScannerError> {
         if source.len() > 1 << 20 {
             return Err(ScannerError::Limit("book bytes"));
         }
@@ -645,10 +645,10 @@ impl Book {
             .all(|v| word(v).is_ok_and(|s| grammar.external_by_name(s).is_some())))
     }
     #[cfg(test)]
-    pub fn compile(source: &str, grammar: &Automaton) -> Result<Self, ScannerError> {
+    pub(super) fn compile(source: &str, grammar: &Automaton) -> Result<Self, ScannerError> {
         Self::compile_with_limits(source, grammar, super::ProbeLimits::default())
     }
-    pub fn compile_with_limits(
+    pub(super) fn compile_with_limits(
         source: &str,
         grammar: &Automaton,
         limits: super::ProbeLimits,
@@ -725,7 +725,7 @@ impl Book {
             .map(|v| {
                 array(v)?
                     .iter()
-                    .try_fold(0, |bits, v| Ok::<_, ScannerError>(bits | 1 << r.kind(v)?))
+                    .try_fold(0, |bits, v| Ok::<_, ScannerError>(bits | (1 << r.kind(v)?)))
             })
             .transpose()?
             .unwrap_or(0);
@@ -763,7 +763,10 @@ impl Book {
                         if r.groups.len() == 32 {
                             return Err(ScannerError::Limit("rule groups"));
                         }
-                        r.groups.insert(n.into(), r.groups.len() as u32);
+                        r.groups.insert(
+                            n.into(),
+                            u32::try_from(r.groups.len()).expect("at most 32 rule groups"),
+                        );
                     }
                 }
             }
@@ -800,7 +803,7 @@ impl Book {
                 .get("groups")
                 .map(|v| {
                     array(v)?.iter().try_fold(0, |bits, v| {
-                        Ok::<_, ScannerError>(bits | 1 << r.groups[word(v)?])
+                        Ok::<_, ScannerError>(bits | (1 << r.groups[word(v)?]))
                     })
                 })
                 .transpose()?
@@ -847,7 +850,7 @@ impl Book {
             });
         }
         Ok(Self {
-            tab: tab as u32,
+            tab: u32::try_from(tab).map_err(|_| bad("tab width out of range"))?,
             budget: o.get("budget").map(reg).transpose()?,
             trivia,
             opaque,
@@ -856,7 +859,7 @@ impl Book {
             rules,
         })
     }
-    pub fn claims(&self, symbol: SymbolId) -> bool {
+    pub(super) fn claims(&self, symbol: SymbolId) -> bool {
         self.rules.iter().any(|r| r.reach.contains(&symbol))
     }
 }

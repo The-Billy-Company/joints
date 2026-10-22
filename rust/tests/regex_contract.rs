@@ -1,4 +1,6 @@
 //! Independent regex semantics where the pinned parser oracle disagrees.
+#![forbid(unsafe_code)]
+
 use joints_engine::CompiledGrammar;
 use serde_json::json;
 

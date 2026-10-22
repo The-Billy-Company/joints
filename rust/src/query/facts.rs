@@ -15,7 +15,7 @@ pub(super) struct Facts {
 }
 
 impl Facts {
-    pub fn new(graph: &Automaton, budget: &mut Budget) -> Result<Self, QueryError> {
+    pub(super) fn new(graph: &Automaton, budget: &mut Budget) -> Result<Self, QueryError> {
         budget.charge(graph.symbol_count() + graph.field_count())?;
         let mut names = BTreeMap::<(String, bool), Vec<SymbolId>>::new();
         let mut fields = BTreeMap::new();
@@ -116,7 +116,7 @@ impl Facts {
         })
     }
 
-    pub fn field(&self, name: &str, at: usize) -> Result<FieldId, QueryError> {
+    pub(super) fn field(&self, name: &str, at: usize) -> Result<FieldId, QueryError> {
         self.fields
             .get(name)
             .copied()
@@ -127,7 +127,7 @@ impl Facts {
             })
     }
 
-    pub fn kind(
+    pub(super) fn kind(
         &self,
         name: &str,
         named: bool,
@@ -189,7 +189,7 @@ impl Facts {
     /// Only definite impossibility is reported. Optional positions can choose
     /// zero, a choice is dead only when every arm is dead, and aliases contribute
     /// all their possible underlying structures. Extras can occur under any node.
-    pub fn dead(
+    pub(super) fn dead(
         &self,
         root: usize,
         steps: &[Step],

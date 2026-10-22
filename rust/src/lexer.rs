@@ -56,7 +56,7 @@ pub struct Lexeme {
     pub extra: bool,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Scan {
+pub(crate) enum Scan {
     Token(Lexeme),
     End,
     Stray { at: usize },
@@ -242,14 +242,14 @@ impl Choice {
 /// Each lexical precedence tier owns one immutable attributed slate. A worker
 /// leases native scratch through irgx's safe pool; no mutable handle is shared.
 #[derive(Debug)]
-pub struct Lexer {
+pub(crate) struct Lexer {
     tiers: Vec<Tier>,
     word: Option<SymbolId>,
     scan_transitions: usize,
 }
 impl Lexer {
     #[cfg(test)]
-    pub fn compile(grammar: &Automaton, limits: LexerLimits) -> Result<Self, LexError> {
+    pub(crate) fn compile(grammar: &Automaton, limits: LexerLimits) -> Result<Self, LexError> {
         Self::compile_with_program(grammar, None, limits)
     }
     pub(crate) fn compile_with_program(
@@ -367,7 +367,7 @@ impl Lexer {
         Ok(())
     }
     #[cfg(test)]
-    pub fn scan_at(
+    pub(crate) fn scan_at(
         &self,
         source: &[u8],
         at: usize,
@@ -512,7 +512,7 @@ impl Lexer {
                         let named = admitted.is_some_and(|set| set.contains(&entry.symbol));
                         (admitted.is_none() || entry.extra || named) && (!entry.immediate || fresh)
                     })
-                    .map(|(i, _)| i as u32),
+                    .map(|(i, _)| u32::try_from(i).expect("bounded lexer tier entries")),
             );
             if allow.is_empty() {
                 continue;

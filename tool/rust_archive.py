@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 from contextlib import contextmanager
+from collections.abc import Iterator
 from dataclasses import dataclass
 import fcntl
 import hashlib
@@ -22,12 +23,47 @@ import stat
 import subprocess
 import sys
 import tempfile
+from typing import TypedDict
 
 MAX_ARCHIVE_BYTES = 1 << 30
 MAX_MEMBERS = 100_000
 MAX_NAME_BYTES = 65_536
 INDEX_NAMES = {b"/", b"/SYM64/", b"__.SYMDEF", b"__.SYMDEF SORTED",
                b"__.SYMDEF_64", b"__.SYMDEF_64 SORTED"}
+
+
+class MemberProof(TypedDict):
+    position: int
+    original_name: str
+    original_name_hex: str
+    normalized_name: str
+    bytes: int
+    sha256: str
+
+
+class ArchiverProof(TypedDict):
+    path: str
+    sha256: str
+    version: str
+    command: list[str]
+
+
+class NormalizationProof(TypedDict):
+    schema: int
+    normalizer_sha256: str
+    path: str
+    input_sha256: str
+    output_sha256: str
+    changed: bool
+    member_count: int
+    members: list[MemberProof]
+    archiver: ArchiverProof
+
+
+class Arguments(argparse.Namespace):
+    archive: Path
+    zig: str
+    receipt: Path | None
 
 
 def sha(data: bytes | memoryview) -> str:
@@ -125,14 +161,14 @@ def read_archive(path: Path) -> Archive:
 
 
 @contextmanager
-def archive_lock(path: Path):
+def archive_lock(path: Path) -> Iterator[None]:
     # A stable sidecar inode serializes repeated atomic replacements as well.
     with path.with_name(f".{path.name}.normalize.lock").open("a") as stream:
         fcntl.flock(stream, fcntl.LOCK_EX)
         yield
 
 
-def normalize(path: Path, *, zig: str = "zig") -> dict:
+def normalize(path: Path, *, zig: str = "zig") -> NormalizationProof:
     """Atomically normalize current bytes; return the complete transformation proof.
 
     Concurrent producers must honor the same lock (the build helper already
@@ -170,7 +206,7 @@ def normalize(path: Path, *, zig: str = "zig") -> dict:
             output = read_archive(work / "normalized.a")
             if len(output.members) != len(original.members):
                 raise ValueError("archiver changed the object member count")
-            proof = []
+            proof: list[MemberProof] = []
             for i, (before, after) in enumerate(zip(original.members, output.members)):
                 if after.name != names[i].encode() or original.payload(before) != output.payload(after):
                     raise ValueError("archiver changed object bytes or order")
@@ -213,7 +249,7 @@ def main() -> int:
     parser.add_argument("archive", type=Path)
     parser.add_argument("--zig", default=os.environ.get("ZIG", "zig"))
     parser.add_argument("--receipt", type=Path)
-    args = parser.parse_args()
+    args = parser.parse_args(namespace=Arguments())
     try:
         if args.receipt and args.receipt.resolve() == args.archive.resolve():
             raise ValueError("receipt cannot replace its native archive")

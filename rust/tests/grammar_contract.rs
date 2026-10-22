@@ -1,5 +1,7 @@
 //! Small authored grammars pin semantics the JSON-only golden cannot exercise.
 
+#![forbid(unsafe_code)]
+
 use std::sync::Arc;
 
 use joints_engine::{

@@ -1,7 +1,11 @@
 //! ABI 2. Opaque addresses are registry keys and are never dereferenced.
 //! Foreign buffers obey jnt.h. Panics are caught; allocator aborts cannot be
 //! caught, so process-wide OOM is not promised to return JNT_NOMEM.
-#![deny(unsafe_op_in_unsafe_fn)]
+#![deny(unsafe_op_in_unsafe_fn, clippy::undocumented_unsafe_blocks)]
+#![allow(
+    unsafe_code,
+    reason = "This crate implements the C ABI; foreign memory operations require explicit blocks and safety explanations."
+)]
 use std::{
     ffi::{CStr, c_char},
     panic::{AssertUnwindSafe, catch_unwind},
@@ -107,26 +111,32 @@ unsafe fn input<'a>(data: *const c_char, len: usize) -> Result<&'a [u8]> {
     if len == 0 {
         return Ok(&[]);
     }
-    if data.is_null() || len > isize::MAX as usize {
+    if data.is_null() || isize::try_from(len).is_err() {
         return Err(invalid("NULL or oversized byte buffer"));
     }
+    // SAFETY: the caller guarantees one readable, immutable allocation for len bytes;
+    // the checks above reject NULL and lengths exceeding the slice limit.
     Ok(unsafe { std::slice::from_raw_parts(data.cast(), len) })
 }
 unsafe fn c_string<'a>(data: *const c_char) -> Result<&'a CStr> {
     if data.is_null() {
         return Err(invalid("NULL string"));
     }
+    // SAFETY: NULL was rejected; the caller guarantees a readable string including its NUL
+    // terminator.
     Ok(unsafe { CStr::from_ptr(data) })
 }
 unsafe fn output<T>(out: *mut *mut T) -> Result<()> {
     if out.is_null() {
         return Err(invalid("NULL output handle"));
     }
+    // SAFETY: NULL was rejected; the caller guarantees aligned writable handle storage.
     unsafe { out.write(ptr::null_mut()) };
     Ok(())
 }
 unsafe fn view(bytes: Option<&[u8]>, len: *mut usize) -> *const c_char {
     if !len.is_null() {
+        // SAFETY: len is non-NULL and the caller guarantees aligned writable usize storage.
         unsafe { len.write(bytes.map_or(0, <[u8]>::len)) };
     }
     bytes.map_or(ptr::null(), |b| b.as_ptr().cast())
@@ -152,7 +162,10 @@ pub extern "C" fn jnt_last_error() -> *const c_char {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn jnt_open(path: *const c_char, out: *mut *mut JntBank) -> i32 {
     status_boundary!({
+        // SAFETY: the C caller provides aligned writable output storage; output rejects NULL.
         unsafe { output(out)? };
+        // SAFETY: the C caller supplies a readable NUL-terminated string; c_string rejects
+        // NULL.
         let path = unsafe { c_string(path)? };
         #[cfg(unix)]
         let path = {
@@ -163,6 +176,8 @@ pub unsafe extern "C" fn jnt_open(path: *const c_char, out: *mut *mut JntBank) -
         let path = std::path::Path::new(path.to_str().map_err(|_| invalid("path is not UTF-8"))?);
         let bank = joints_engine::Bank::open(path).map_err(artifact_error)?;
         let token = insert(Handle::Bank(std::sync::Arc::new(BankData { bank })))?;
+        // SAFETY: output validated out above; the caller retains its writable storage for this
+        // call.
         unsafe { out.write(token as *mut JntBank) };
         Ok(())
     })
@@ -190,8 +205,12 @@ pub unsafe extern "C" fn jnt_bank_title(
     len: *mut usize,
 ) -> *const c_char {
     boundary!(ptr::null(), {
+        // SAFETY: the C caller supplies a writable len pointer or NULL; no byte view is
+        // returned.
         unsafe { view(None, len) };
         let b = bank_handle(bank as usize)?;
+        // SAFETY: len is writable or NULL by the C contract; the registered owner retains these
+        // bytes.
         Ok(unsafe { view(b.bank.languages().nth(i as usize).map(str::as_bytes), len) })
     })
 }
@@ -203,6 +222,7 @@ pub unsafe extern "C" fn jnt_parser_new(
     out: *mut *mut JntParser,
 ) -> i32 {
     status_boundary!({
+        // SAFETY: the C caller provides aligned writable output storage; output rejects NULL.
         unsafe { output(out)? };
         let b = bank_handle(bank as usize)?;
         let name = if language.is_null() {
@@ -217,6 +237,8 @@ pub unsafe extern "C" fn jnt_parser_new(
             }
             b.bank.languages().next().expect("one member")
         } else {
+            // SAFETY: the C caller supplies a readable NUL-terminated string; c_string rejects
+            // NULL.
             unsafe { c_string(language)? }
                 .to_str()
                 .map_err(|_| invalid("language is not UTF-8"))?
@@ -239,6 +261,8 @@ pub unsafe extern "C" fn jnt_parser_new(
             grammar,
             session: std::sync::Mutex::new(session),
         })))?;
+        // SAFETY: output validated out above; the caller retains its writable storage for this
+        // call.
         unsafe { out.write(token as *mut JntParser) };
         Ok(())
     })
@@ -258,8 +282,12 @@ pub unsafe extern "C" fn jnt_parser_language(
     len: *mut usize,
 ) -> *const c_char {
     boundary!(ptr::null(), {
+        // SAFETY: the C caller supplies a writable len pointer or NULL; no byte view is
+        // returned.
         unsafe { view(None, len) };
         let p = parser_handle(parser as usize)?;
+        // SAFETY: len is writable or NULL by the C contract; the registered owner retains these
+        // bytes.
         Ok(unsafe { view(Some(p.grammar.name().as_bytes()), len) })
     })
 }

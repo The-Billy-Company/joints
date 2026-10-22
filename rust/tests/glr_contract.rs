@@ -1,4 +1,7 @@
+#![forbid(unsafe_code)]
+
 use joints_engine::{CompiledGrammar, Error, Node, ParseLimits, ParseSession, Resource};
+use std::sync::Arc;
 
 fn named(node: Node<'_>) -> String {
     let children: Vec<_> = node
@@ -13,7 +16,7 @@ fn named(node: Node<'_>) -> String {
     }
 }
 
-fn alternatives() -> std::sync::Arc<CompiledGrammar> {
+fn alternatives() -> Arc<CompiledGrammar> {
     CompiledGrammar::compile(br#"{"name":"branch","rules":{
       "doc":{"type":"CHOICE","members":[
         {"type":"SEQ","members":[{"type":"SYMBOL","name":"a"},{"type":"STRING","value":"y"}]},
@@ -108,7 +111,7 @@ fn heads_lex_their_own_permission_subsets_and_can_advance_different_lengths() {
 fn reaching_a_head_limit_is_an_operational_error_even_if_one_branch_could_accept() {
     let grammar = alternatives();
     let mut session = ParseSession::with_limits(
-        grammar.clone(),
+        Arc::clone(&grammar),
         ParseLimits {
             heads: 1,
             ..ParseLimits::default()

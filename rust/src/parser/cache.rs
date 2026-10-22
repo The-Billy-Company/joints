@@ -104,9 +104,7 @@ pub(super) struct ParseCache {
     supply: Supply,
 }
 fn initial_buffer_allowance() -> usize {
-    4 * (std::mem::size_of::<Event>()
-        + std::mem::size_of::<Receipt>()
-        + std::mem::size_of::<Checkpoint>())
+    4 * (size_of::<Event>() + size_of::<Receipt>() + size_of::<Checkpoint>())
 }
 pub(super) struct Recording {
     events: Vec<Event>,
@@ -239,16 +237,8 @@ impl ParseSession {
                 usize::MAX
             } else {
                 self.drafts.iter().fold(
-                    self.drafts
-                        .capacity()
-                        .saturating_mul(std::mem::size_of::<Draft>()),
-                    |n, d| {
-                        n.saturating_add(
-                            d.children
-                                .capacity()
-                                .saturating_mul(std::mem::size_of::<Use>()),
-                        )
-                    },
+                    self.drafts.capacity().saturating_mul(size_of::<Draft>()),
+                    |n, d| n.saturating_add(d.children.capacity().saturating_mul(size_of::<Use>())),
                 )
             };
             if tree.confidence().is_strict()
@@ -425,10 +415,10 @@ impl ParseSession {
         }
         // A conservative upper bound for every owned entry/tag byte copied by
         // scanner snapshots, states, uses and receipt/vector headers.
-        let fixed = std::mem::size_of::<Event>()
-            .max(std::mem::size_of::<Receipt>())
-            .max(std::mem::size_of::<ProgramReceipt>())
-            .max(std::mem::size_of::<Checkpoint>());
+        let fixed = size_of::<Event>()
+            .max(size_of::<Receipt>())
+            .max(size_of::<ProgramReceipt>())
+            .max(size_of::<Checkpoint>());
         let bytes = work
             .saturating_add(1)
             .saturating_mul(128)
@@ -868,7 +858,7 @@ mod tests {
         let mut edited = old.as_bytes().to_vec();
         edited.splice(at..at, b"<T>".iter().copied());
         let edited: Arc<[u8]> = Arc::from(edited);
-        session.document_source = Some(edited.clone());
+        session.document_source = Some(Arc::clone(&edited));
         session.reset_run();
         let mut stats = ReuseStats::default();
         session

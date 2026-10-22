@@ -1,5 +1,7 @@
 //! TS0.26.11 XML/CST measured at both sides of an atomic token boundary.
 //! The exact upstream Make grammar also contains this lexical alias pattern.
+#![forbid(unsafe_code)]
+
 use joints_engine::{CompiledGrammar, ForeignPolicy, Query, QueryError};
 use std::{ops::Range, sync::Arc};
 

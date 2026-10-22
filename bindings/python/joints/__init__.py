@@ -8,6 +8,7 @@ checks cannot mistake recovery for understood source.
 from ._api import (
     Bank,
     Capture,
+    ForeignPolicy,
     JointsError,
     Match,
     Node,
@@ -26,6 +27,7 @@ __all__ = [
     "Node",
     "Query",
     "Capture",
+    "ForeignPolicy",
     "Match",
     "JointsError",
     "ParseError",

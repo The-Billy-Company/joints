@@ -20,7 +20,7 @@ pub(crate) struct Version {
     pub renders: Mutex<[Option<Vec<u8>>; 2]>,
 }
 impl Version {
-    pub fn new(tree: Arc<TreeSnapshot>) -> Arc<Self> {
+    pub(crate) fn new(tree: Arc<TreeSnapshot>) -> Arc<Self> {
         Arc::new(Self {
             tree,
             renders: Mutex::new([None, None]),

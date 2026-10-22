@@ -5,6 +5,21 @@ package; these exist so a fresh clone can get to the same numbers this
 repository's dossier quotes. They all follow the CLI's exit-code family: **0**
 ran, **1** a clean negative answer, **2** an error.
 
+## Static typing for the Rust archive proof
+
+From the repository root, install `requirements-typing.txt` into a Python 3.12+
+development environment and run `python -m mypy`. The root `pyproject.toml`
+checks `rust_archive.py`, `rust_static_boundary.py`, and their record/layout
+definitions in `rust_boundary_types.py` with strict checking, no dynamic `Any`
+expressions, and byte/string distinction. Binary `struct` results are typed at
+the decode boundary and retain their existing bounds and semantic validation.
+The type definitions are imported only for checking; shipped verifiers do not
+gain a runtime dependency.
+
+The Python binding has its own strict configuration under `bindings/python`.
+Other tooling and historical research scripts are outside this check's coverage.
+No Zig sources or build settings are changed by these Python checks.
+
 ## `grammars.py` - resolve and check the pinned grammars
 
 Every per-language measurement runs over eleven tree-sitter `grammar.json`

@@ -223,14 +223,16 @@ impl Build<'_> {
         let Kind::Branch(left, right) = &node.kind else {
             unreachable!("an interior leaf index is a branch")
         };
-        if at < left.len {
-            let (a, b) = self.split(Some(Arc::clone(left)), at)?;
-            Ok((a, self.join(b, Some(Arc::clone(right)))?))
-        } else if at == left.len {
-            Ok((Some(Arc::clone(left)), Some(Arc::clone(right))))
-        } else {
-            let (a, b) = self.split(Some(Arc::clone(right)), at - left.len)?;
-            Ok((self.join(Some(Arc::clone(left)), a)?, b))
+        match at.cmp(&left.len) {
+            std::cmp::Ordering::Less => {
+                let (a, b) = self.split(Some(Arc::clone(left)), at)?;
+                Ok((a, self.join(b, Some(Arc::clone(right)))?))
+            }
+            std::cmp::Ordering::Equal => Ok((Some(Arc::clone(left)), Some(Arc::clone(right)))),
+            std::cmp::Ordering::Greater => {
+                let (a, b) = self.split(Some(Arc::clone(right)), at - left.len)?;
+                Ok((self.join(Some(Arc::clone(left)), a)?, b))
+            }
         }
     }
 
@@ -632,7 +634,7 @@ mod tests {
         *seed ^= *seed << 13;
         *seed ^= *seed >> 7;
         *seed ^= *seed << 17;
-        *seed as usize
+        usize::try_from(*seed & (usize::MAX as u64)).expect("masked random value fits usize")
     }
 
     #[test]
@@ -962,7 +964,7 @@ mod tests {
             eprintln!(
                 "sequence {n} leaves: height {}, mean splice compositions {:.2}",
                 sequence.height(),
-                total as f64 / 100.0
+                f64::from(u32::try_from(total).expect("bounded composition total")) / 100.0
             );
             averages.push(total);
         }

@@ -32,7 +32,7 @@ pub(super) struct Permissions {
     doc: bool,
 }
 impl Rust {
-    pub fn bind(grammar: &Automaton) -> Option<Self> {
+    pub(super) fn bind(grammar: &Automaton) -> Option<Self> {
         // A spelling or grammar title cannot establish this scanner protocol.
         if grammar.external_ids().len() != COHORT.len() {
             return None;
@@ -49,18 +49,18 @@ impl Rust {
             sentinel: true,
         })
     }
-    pub fn remove_claimed(&mut self, claimed: &[SymbolId]) {
+    pub(super) fn remove_claimed(&mut self, claimed: &[SymbolId]) {
         self.float &= !claimed.contains(&self.ids[5]);
         self.doc &= !claimed.contains(&self.ids[9]);
         self.sentinel &= !claimed.contains(&self.ids[10]);
     }
-    pub fn claims(&self, symbol: SymbolId) -> bool {
+    pub(super) fn claims(&self, symbol: SymbolId) -> bool {
         (self.float && symbol == self.ids[5]) || (self.doc && symbol == self.ids[9])
     }
-    pub fn controls(&self, symbol: SymbolId) -> bool {
+    pub(super) fn controls(&self, symbol: SymbolId) -> bool {
         self.sentinel && symbol == self.ids[10]
     }
-    pub fn permissions(
+    pub(super) fn permissions(
         &self,
         wanted: &[SymbolId],
         remaining: &mut usize,
@@ -75,7 +75,7 @@ impl Rust {
             doc: self.doc && wanted.contains(&self.ids[9]),
         })
     }
-    pub fn step(
+    pub(super) fn step(
         &self,
         source: &[u8],
         at: usize,

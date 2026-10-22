@@ -252,8 +252,8 @@ impl EffectStore {
             (_, Repr::Identity) => return Ok(left),
             _ => {}
         }
-        let a = self.run(left)?.clone();
-        let b = self.run(right)?.clone();
+        let a = Arc::clone(self.run(left)?);
+        let b = Arc::clone(self.run(right)?);
         let mut ledger = a.ledger.clone();
         if let Some(deepest) = ledger.last_mut() {
             let Constraint::Finite(floors) = &deepest.states else {
@@ -359,7 +359,7 @@ impl EffectStore {
             let index =
                 u32::try_from(self.runs.len()).map_err(|_| EffectError::CapacityExceeded)?;
             let run = Arc::new(run);
-            self.interned.insert(run.clone(), index);
+            self.interned.insert(Arc::clone(&run), index);
             self.runs.push(run);
             index
         };
@@ -445,7 +445,7 @@ mod tests {
             };
             let (atom, nested) = (rule(&[x]), rule(&[lp, s, rp]));
             Self {
-                store: EffectStore::new(graph.clone()),
+                store: EffectStore::new(Arc::clone(&graph)),
                 graph,
                 lp,
                 rp,
@@ -825,7 +825,7 @@ mod tests {
     fn foreign_handles_and_invalid_grammar_ids_are_errors_even_beside_zero() {
         let mut f = Fixture::new();
         let effect = f.store.shift(f.graph.start_state(), f.x).unwrap();
-        let mut other = EffectStore::new(f.graph.clone());
+        let mut other = EffectStore::new(Arc::clone(&f.graph));
         assert_eq!(
             other.compose(Effect::ZERO, effect),
             Err(EffectError::ForeignStore)

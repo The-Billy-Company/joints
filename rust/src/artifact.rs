@@ -396,11 +396,11 @@ fn envelope<'a>(
         return Err(ArtifactError::Format);
     }
     let mut head = Reader::new(&bytes[8..HEADER], limits);
-    let found = head.number()? as u32;
+    let found = u32::try_from(head.number()?).map_err(|_| ArtifactError::Length)?;
     if found != VERSION {
         return Err(ArtifactError::Version { found });
     }
-    if head.number()? as u32 != SCHEMA {
+    if u32::try_from(head.number()?).map_err(|_| ArtifactError::Length)? != SCHEMA {
         return Err(ArtifactError::Schema);
     }
     let len = head.size()?;
@@ -919,7 +919,7 @@ mod tests {
         let (allocation, work) = measured_load(&bytes);
         assert!(allocation > 1 && work > 1);
         let exact = ArtifactLimits {
-            work: work as usize,
+            work: usize::try_from(work).unwrap(),
             image_allocation: allocation,
             ..ArtifactLimits::default()
         };
@@ -928,7 +928,7 @@ mod tests {
         assert_eq!(op.remaining(), (0, 0));
         for limits in [
             ArtifactLimits {
-                work: work as usize - 1,
+                work: usize::try_from(work).unwrap() - 1,
                 ..exact
             },
             ArtifactLimits {
@@ -949,7 +949,7 @@ mod tests {
         let bytes = two_tiers().artifact().unwrap();
         let (allocation, work) = measured_load(&bytes);
         let exact = ArtifactLimits {
-            work: 2 * work as usize,
+            work: 2 * usize::try_from(work).unwrap(),
             image_allocation: 2 * allocation,
             ..ArtifactLimits::default()
         };
@@ -996,7 +996,7 @@ mod tests {
         let work = initial.1 - left.1;
         let exact = ArtifactLimits {
             image_allocation: allocation,
-            work: work as usize,
+            work: usize::try_from(work).unwrap(),
             ..limits
         };
         let mut op = ImageOperation::new(exact);
@@ -1008,7 +1008,7 @@ mod tests {
                 ..exact
             },
             ArtifactLimits {
-                work: work as usize - 1,
+                work: usize::try_from(work).unwrap() - 1,
                 ..exact
             },
         ] {
@@ -1018,7 +1018,7 @@ mod tests {
         for retain in [false, true] {
             let limits = ArtifactLimits {
                 image_allocation: 2 * allocation - 1,
-                work: 2 * work as usize,
+                work: 2 * usize::try_from(work).unwrap(),
                 ..limits
             };
             let mut op = ImageOperation::new(limits);
@@ -1823,10 +1823,10 @@ mod tests {
                 }
             }
         }
-        let bytes = grammar.state_count() * std::mem::size_of::<Vec<crate::StateItem>>()
-            + kernels * std::mem::size_of::<crate::StateItem>()
-            + classes * std::mem::size_of::<(crate::StateItem, Vec<crate::ProductionId>)>()
-            + members * std::mem::size_of::<crate::ProductionId>();
+        let bytes = grammar.state_count() * size_of::<Vec<crate::StateItem>>()
+            + kernels * size_of::<crate::StateItem>()
+            + classes * size_of::<(crate::StateItem, Vec<crate::ProductionId>)>()
+            + members * size_of::<crate::ProductionId>();
         (kernels, classes, members, bytes)
     }
     #[test]
@@ -1854,8 +1854,11 @@ mod tests {
             assert_eq!(
                 Sha256::digest(&source)
                     .iter()
-                    .map(|byte| format!("{byte:02x}"))
-                    .collect::<String>(),
+                    .fold(String::new(), |mut text, byte| {
+                        use std::fmt::Write as _;
+                        write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+                        text
+                    }),
                 expected
             );
             let begin = std::time::Instant::now();

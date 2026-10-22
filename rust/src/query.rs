@@ -209,7 +209,7 @@ impl Query {
         budget.charge(source.len())?;
         let facts = facts::Facts::new(&grammar.automaton, &mut budget)?;
         let mut query = Self {
-            grammar: grammar.clone(),
+            grammar: Arc::clone(&grammar),
             source: source.to_vec(),
             steps: Vec::new(),
             patterns: Vec::new(),

@@ -2,6 +2,8 @@
 //! holdouts: each specimen's own named claims, rather than an acceptance rate,
 //! determine its result. Run with `--ignored --nocapture`.
 
+#![forbid(unsafe_code)]
+
 use joints_engine::{CompiledGrammar, Node, Recovery, RepairKind, Stop, Supply, TreeSnapshot};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -182,8 +184,11 @@ fn evidence(tree: &TreeSnapshot) -> Value {
 fn sha256(bytes: &[u8]) -> String {
     Sha256::digest(bytes)
         .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect::<String>()
+        .fold(String::new(), |mut text, byte| {
+            use std::fmt::Write as _;
+            write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+            text
+        })
 }
 fn relative(path: &str) -> &Path {
     let path = Path::new(path);
@@ -266,7 +271,7 @@ fn baseline(root: &Path, roster: &BTreeSet<String>) -> BTreeMap<String, (Value, 
         );
         for ((line, text), claim) in assertions.iter().zip(recorded) {
             assert_eq!(
-                claim["line"].as_u64().unwrap() as usize,
+                usize::try_from(claim["line"].as_u64().unwrap()).expect("fixture count fits usize"),
                 *line,
                 "{name}: claim line drift"
             );
@@ -542,7 +547,7 @@ fn pinned_go_ledger_retains_calls_comments_and_declarations() {
     assert_eq!(count("type_declaration"), 1);
     assert_eq!(count("raw_string_literal"), 1);
     for text in [
-        b"fmt.Print(banner)" as &[u8],
+        b"fmt.Print(banner)".as_slice(),
         b"fmt.Printf(\"total=%d\\n\", l.Total())",
         b"l.Total()",
     ] {

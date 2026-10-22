@@ -5,6 +5,8 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 fn error() -> String {
+    // SAFETY: the error channel is thread-local, NUL-terminated, and copied before another ABI
+    // call.
     unsafe { CStr::from_ptr(jnt_last_error()) }
         .to_string_lossy()
         .into_owned()
@@ -22,6 +24,8 @@ struct Fixture {
 }
 impl Fixture {
     fn new() -> Self {
+        // SAFETY: CString lives through jnt_open; output pointers address local storage and
+        // handles are closed by Fixture.
         unsafe {
             let mut bank = ptr::null_mut();
             assert_eq!(jnt_open(grammar().as_ptr(), &mut bank), 0, "{}", error());
@@ -36,6 +40,8 @@ impl Fixture {
         }
     }
     fn parse(&self, text: &[u8]) -> *mut JntTree {
+        // SAFETY: text stays readable for the call, tree points to local writable storage, and
+        // self owns the parser.
         unsafe {
             let mut tree = ptr::null_mut();
             assert_eq!(
@@ -49,6 +55,8 @@ impl Fixture {
         }
     }
     fn query(&self, text: &[u8]) -> *mut JntQuery {
+        // SAFETY: text stays readable for the call, q points to local writable storage, and
+        // self owns the parser.
         unsafe {
             let mut q = ptr::null_mut();
             assert_eq!(
@@ -63,6 +71,8 @@ impl Fixture {
 }
 impl Drop for Fixture {
     fn drop(&mut self) {
+        // SAFETY: all test-owned dependent handles are freed before this fixture closes its
+        // parser and bank.
         unsafe {
             jnt_parser_free(self.parser);
             assert_eq!(error(), "");
@@ -71,12 +81,16 @@ impl Drop for Fixture {
         }
     }
 }
-unsafe fn bytes<'a>(p: *const std::ffi::c_char, n: usize) -> &'a [u8] {
+unsafe fn bytes<'a>(p: *const c_char, n: usize) -> &'a [u8] {
     assert!(!p.is_null());
+    // SAFETY: the caller retains the native owner and guarantees n readable bytes
+    // for the returned borrow.
     unsafe { std::slice::from_raw_parts(p.cast(), n) }
 }
 #[test]
 fn versions_status_tls_and_opaque_handle_checks() {
+    // SAFETY: strings and outputs are valid; NULL is rejected and invented/wrong-kind opaque
+    // tokens are only registry keys.
     unsafe {
         assert_eq!(jnt_abi_version(), 2);
         assert_eq!(CStr::from_ptr(jnt_version()).to_bytes(), b"0.1.0");
@@ -106,6 +120,8 @@ fn versions_status_tls_and_opaque_handle_checks() {
 }
 #[test]
 fn owned_tree_nodes_navigation_and_cached_render() {
+    // SAFETY: fixtures retain owners, outputs are local storage, and native byte views are
+    // consumed before freeing their tree.
     unsafe {
         let f = Fixture::new();
         let mut source = Vec::from(b"{\"a\":[1,2]}".as_slice());
@@ -163,6 +179,8 @@ fn owned_tree_nodes_navigation_and_cached_render() {
 }
 #[test]
 fn indices_and_null_length_contracts() {
+    // SAFETY: outputs address local storage; NULL buffers are either empty or rejected before
+    // any read.
     unsafe {
         let f = Fixture::new();
         let mut len = 123;
@@ -187,6 +205,8 @@ fn indices_and_null_length_contracts() {
 }
 #[test]
 fn scars_are_real_and_checked() {
+    // SAFETY: the fixture retains the tree, output structs/lengths are writable locals, and
+    // NULL outputs are rejected.
     unsafe {
         let f = Fixture::new();
         let tree = f.parse(b"{\"a\" @ 2}");
@@ -221,6 +241,8 @@ fn scars_are_real_and_checked() {
 }
 #[test]
 fn query_results_own_arrays_preserve_order_and_check_exact_owner() {
+    // SAFETY: buffers remain live, outputs are writable locals, and result dependencies prevent
+    // premature owner removal.
     unsafe {
         let f = Fixture::new();
         let text = b"[1,22,3]";
@@ -298,6 +320,8 @@ fn query_results_own_arrays_preserve_order_and_check_exact_owner() {
 }
 #[test]
 fn foreign_refusal_is_eager_and_clean_empty_is_success() {
+    // SAFETY: C literals cover each stated length; outputs are writable locals and dependent
+    // handles are freed in order.
     unsafe {
         let f = Fixture::new();
         let tree = f.parse(b"1");
@@ -331,6 +355,8 @@ fn foreign_refusal_is_eager_and_clean_empty_is_success() {
 }
 #[test]
 fn lifecycle_rejects_stale_tokens_and_parent_free() {
+    // SAFETY: opaque tokens are never dereferenced; registry checks reject stale tokens and
+    // owners with dependents.
     unsafe {
         let f = Fixture::new();
         let tree = f.parse(b"1");
@@ -349,6 +375,8 @@ fn lifecycle_rejects_stale_tokens_and_parent_free() {
 }
 #[test]
 fn weave_borrowed_handle_survives_edits_and_warp_with_atomic_failures() {
+    // SAFETY: literal inputs and local outputs remain valid; byte views are consumed before
+    // successful weave mutations.
     unsafe {
         let f = Fixture::new();
         let mut weave = ptr::null_mut();
@@ -421,6 +449,8 @@ fn independent_workers_and_thread_local_errors() {
             std::thread::spawn(|| {
                 let f = Fixture::new();
                 for _ in 0..3 {
+                    // SAFETY: each thread owns its fixture and tree; NULL opaque handles are
+                    // rejected by the registry.
                     unsafe {
                         let t = f.parse(b"[1,2]");
                         assert_eq!(jnt_tree_sound(t), 1);
@@ -528,6 +558,8 @@ fn bank_dispatch_and_language_roster_fail_without_partial_handles() {
         NEXT.fetch_add(1, Ordering::Relaxed)
     ));
     let name = CString::new(path.to_str().unwrap()).unwrap();
+    // SAFETY: CString paths and C literals remain live for calls; handle/length outputs are
+    // writable local storage.
     unsafe {
         let mut b = ptr::dangling_mut::<JntBank>();
         assert_eq!(jnt_open(name.as_ptr(), &mut b), JNT_IO);
@@ -572,6 +604,8 @@ fn bank_dispatch_and_language_roster_fail_without_partial_handles() {
 fn operational_resource_failures_leave_weave_version_and_parser_outputs_atomic() {
     use joints_engine::{Document, DocumentOptions, ParseLimits, ParseSession};
     use std::sync::Arc;
+    // SAFETY: fixtures retain all owners; C literals cover lengths and output pointers address
+    // writable locals.
     unsafe {
         let f = Fixture::new();
         let p = parser_handle(f.parser as usize).unwrap();

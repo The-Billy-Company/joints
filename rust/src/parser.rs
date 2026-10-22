@@ -1764,7 +1764,9 @@ impl ParseSession {
             }
             self.charge(1)?;
             let draft = &self.drafts[node.draft];
-            let id = NodeId(nodes.len() as u32);
+            let id = NodeId(
+                u32::try_from(nodes.len()).map_err(|_| Error::LimitExceeded(Resource::Nodes))?,
+            );
             match slot {
                 Slot::Root(i) => roots[i] = id,
                 Slot::Child(i) => children[i] = id,
@@ -1871,7 +1873,7 @@ mod tests {
         );
         let budget = baseline.steps + count * 2;
         let mut limited = ParseSession::with_limits(
-            forked.clone(),
+            Arc::clone(&forked),
             ParseLimits {
                 steps: budget,
                 ..ParseLimits::default()

@@ -1,4 +1,6 @@
 //! Required ordinary empty tokens are real shifts, not repairs or scanner answers.
+#![forbid(unsafe_code)]
+
 use joints_engine::{
     ByteSpan, CompiledGrammar, Document, DocumentError, DocumentOptions, Error, ForeignPolicy,
     ParseLimits, ParseSession, Query, Resource, Reuse, TreeSnapshot,
@@ -67,15 +69,21 @@ fn independent_nullable_alias_field_eof_and_priority_trees_survive_artifacts() {
         assert_eq!(
             Sha256::digest(bytes)
                 .iter()
-                .map(|byte| format!("{byte:02x}"))
-                .collect::<String>(),
+                .fold(String::new(), |mut text, byte| {
+                    use std::fmt::Write as _;
+                    write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+                    text
+                }),
             case["oracle"]["grammar_sha256"]
         );
         assert_eq!(
             Sha256::digest(source)
                 .iter()
-                .map(|byte| format!("{byte:02x}"))
-                .collect::<String>(),
+                .fold(String::new(), |mut text, byte| {
+                    use std::fmt::Write as _;
+                    write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+                    text
+                }),
             case["oracle"]["source_sha256"]
         );
         let grammar = CompiledGrammar::compile(bytes).unwrap();
@@ -114,7 +122,7 @@ fn independent_nullable_alias_field_eof_and_priority_trees_survive_artifacts() {
                 } else {
                     b"(doc value: (content) @empty)"
                 };
-                let query = Query::compile(grammar.clone(), query_source).unwrap();
+                let query = Query::compile(Arc::clone(&grammar), query_source).unwrap();
                 assert!(query.dead_patterns().is_empty());
                 let found = query.execute(&tree, ForeignPolicy::Refuse).unwrap();
                 assert_eq!(found.len(), 1);
@@ -132,8 +140,11 @@ fn real_go_empty_raw_strings_keep_a_zero_span_content_leaf_and_move() {
     assert_eq!(
         Sha256::digest(bytes)
             .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect::<String>(),
+            .fold(String::new(), |mut text, byte| {
+                use std::fmt::Write as _;
+                write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+                text
+            }),
         "0dcc665aa521a1b73a200be13b4e376780cca037d764a165f12864babfe28000"
     );
     let grammar = CompiledGrammar::compile(bytes).unwrap();
@@ -215,7 +226,7 @@ fn zero_cycles_refuse_typed_work_node_and_stack_budgets() {
             Resource::Stack,
         ),
     ] {
-        let mut session = ParseSession::with_limits(grammar.clone(), limits);
+        let mut session = ParseSession::with_limits(Arc::clone(&grammar), limits);
         session.set_trace_enabled(true);
         assert!(
             matches!(session.parse(b"(!)"), Err(Error::LimitExceeded(resource)) if resource == wanted)
@@ -264,7 +275,7 @@ fn empty_positive_and_optional_eof_edits_equal_cold_parsing() {
         ("eof_optional", b"x", 1),
     ] {
         let grammar = compile(name);
-        let mut document = Document::new(grammar.clone(), source).unwrap();
+        let mut document = Document::new(Arc::clone(&grammar), source).unwrap();
         let previous = Arc::clone(document.snapshot());
         document
             .edit(ByteSpan::new(at, at).unwrap(), b"aaa")
@@ -272,7 +283,7 @@ fn empty_positive_and_optional_eof_edits_equal_cold_parsing() {
         let mut expected = source.to_vec();
         expected.splice(at..at, b"aaa".iter().copied());
         assert_eq!(document.source(), expected);
-        let cold = Document::new(grammar.clone(), document.source()).unwrap();
+        let cold = Document::new(Arc::clone(&grammar), document.source()).unwrap();
         assert_eq!(
             ledger(document.snapshot()),
             ledger(cold.snapshot()),
@@ -295,7 +306,7 @@ fn empty_positive_and_optional_eof_edits_equal_cold_parsing() {
     value["rules"]["item"] = item;
     let grammar = CompiledGrammar::compile(&serde_json::to_vec(&value).unwrap()).unwrap();
     let source = "()".repeat(80);
-    let mut document = Document::new(grammar.clone(), source.as_bytes()).unwrap();
+    let mut document = Document::new(Arc::clone(&grammar), source.as_bytes()).unwrap();
     let at = source.len() - 1;
     document
         .edit(ByteSpan::new(at, at).unwrap(), b"aaa")
@@ -353,8 +364,11 @@ fn zero_byte_source_preserves_the_independent_conservative_refusal() {
     assert_eq!(
         Sha256::digest(bytes)
             .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect::<String>(),
+            .fold(String::new(), |mut text, byte| {
+                use std::fmt::Write as _;
+                write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+                text
+            }),
         case["oracle"]["grammar_sha256"]
     );
     assert_eq!(case["source"], "");
@@ -365,8 +379,11 @@ fn zero_byte_source_preserves_the_independent_conservative_refusal() {
         assert_eq!(
             Sha256::digest(raw.as_bytes())
                 .iter()
-                .map(|byte| format!("{byte:02x}"))
-                .collect::<String>(),
+                .fold(String::new(), |mut text, byte| {
+                    use std::fmt::Write as _;
+                    write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+                    text
+                }),
             case["oracle"][format!("{key}_sha256")]
         );
         assert!(raw.contains("ERROR"));
@@ -388,7 +405,7 @@ fn an_empty_tokens_distant_lookahead_invalidates_later_checkpoints() {
       {"type":"REPEAT1","content":{"type":"CHOICE","members":[{"type":"STRING","value":"x"},{"type":"STRING","value":"z"}]}},
       {"type":"STRING","value":")"}]}},"extras":[]}"#).unwrap();
     let source = format!("({})", "x".repeat(80));
-    let mut document = Document::new(grammar.clone(), source.as_bytes()).unwrap();
+    let mut document = Document::new(Arc::clone(&grammar), source.as_bytes()).unwrap();
     let old = Arc::clone(document.snapshot());
     assert_eq!(
         old.root()

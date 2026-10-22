@@ -20,13 +20,8 @@ struct DocumentSlate {
 
 impl AdmissionSlate {
     fn retained_bytes(&self) -> Option<usize> {
-        let mut bytes =
-            std::mem::size_of::<Self>().checked_add(2 * std::mem::size_of::<usize>())?;
-        bytes = bytes.checked_add(
-            self.states
-                .capacity()
-                .checked_mul(std::mem::size_of::<StateId>())?,
-        )?;
+        let mut bytes = size_of::<Self>().checked_add(2 * size_of::<usize>())?;
+        bytes = bytes.checked_add(self.states.capacity().checked_mul(size_of::<StateId>())?)?;
         for ids in [
             &self.ordinary,
             &self.empty,
@@ -38,10 +33,7 @@ impl AdmissionSlate {
         .into_iter()
         .chain(self.document.iter().flat_map(|d| [&d.lexical, &d.wanted]))
         {
-            bytes = bytes.checked_add(
-                ids.capacity()
-                    .checked_mul(std::mem::size_of::<SymbolId>())?,
-            )?;
+            bytes = bytes.checked_add(ids.capacity().checked_mul(size_of::<SymbolId>())?)?;
         }
         Some(bytes)
     }
@@ -85,7 +77,8 @@ impl SlatePool {
         for state in states {
             hash = hash.rotate_left(5).wrapping_mul(0x517c_c1b7_2722_0a95) ^ state.index() as u64;
         }
-        (hash ^ (hash >> 32)) as usize % POOL_SLOTS
+        usize::try_from((hash ^ (hash >> 32)) % (POOL_SLOTS as u64))
+            .expect("bounded slate pool slot")
     }
 
     fn get(&self, slot: usize, states: &[StateId]) -> Option<&Arc<AdmissionSlate>> {
@@ -104,7 +97,7 @@ impl SlatePool {
             .and_then(Option::as_ref)
             .map_or(0, |entry| entry.bytes);
         let total = self.bytes.checked_sub(old)?.checked_add(bytes)?;
-        let directory = POOL_SLOTS.checked_mul(std::mem::size_of::<Option<RetainedSlate>>())?;
+        let directory = POOL_SLOTS.checked_mul(size_of::<Option<RetainedSlate>>())?;
         (total.checked_add(directory)? <= POOL_BYTES).then_some((bytes, total))
     }
 
@@ -500,7 +493,7 @@ mod tests {
             &slate
         ));
         let oversized = AdmissionSlate {
-            states: vec![StateId::from_index(0); POOL_BYTES / std::mem::size_of::<StateId>()],
+            states: vec![StateId::from_index(0); POOL_BYTES / size_of::<StateId>()],
             ordinary: vec![],
             empty: vec![],
             uncertain: vec![],
@@ -512,8 +505,7 @@ mod tests {
         };
         assert!(session.slates.retention(slot, &oversized).is_none());
         assert!(
-            session.slates.bytes
-                + session.slates.slots.len() * std::mem::size_of::<Option<RetainedSlate>>()
+            session.slates.bytes + session.slates.slots.len() * size_of::<Option<RetainedSlate>>()
                 <= POOL_BYTES
         );
         // No pooled handle may be published when the complete-key charge fails.
@@ -586,7 +578,7 @@ mod tests {
           "extras":[{"type":"PATTERN","value":"[ ]"}]}"#,
         )
         .unwrap();
-        for (source, strict) in [(b"ab!" as &[u8], true), (b"a b!", false), (b"a c!", true)] {
+        for (source, strict) in [(b"ab!".as_slice(), true), (b"a b!", false), (b"a c!", true)] {
             assert_eq!(compare_cached(&grammar, source), strict);
         }
         let mut value: Value = serde_json::from_slice(CONTEXT).unwrap();
@@ -733,7 +725,7 @@ mod tests {
         let grammar = CompiledGrammar::compile(&serde_json::to_vec(&json!({"name":"slate_raw","rules":{
             "doc":{"type":"SEQ","members":cohort.iter().map(|name|json!({"type":"SYMBOL","name":name})).collect::<Vec<_>>()}},
             "externals":cohort.iter().map(|name|json!({"type":"SYMBOL","name":name})).collect::<Vec<_>>()})).unwrap()).unwrap();
-        for source in [b"r\"\"" as &[u8], b"r#\"x\\\"y\"#"] {
+        for source in [b"r\"\"".as_slice(), b"r#\"x\\\"y\"#"] {
             assert!(compare_cached(&grammar, source));
         }
         let mut session = grammar.session();

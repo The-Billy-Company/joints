@@ -1,6 +1,9 @@
 //! Independently checked tree-sitter 0.26.11 alias/hidden-token distinctions.
+#![forbid(unsafe_code)]
+
 use joints_engine::{CompiledGrammar, ForeignPolicy, Node, Query};
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 fn view(node: Node<'_>) -> Value {
     json!({"name":node.name(),"named":node.is_named(),"field":node.field(),
@@ -68,7 +71,7 @@ fn hidden_literal_aliases_keep_their_child_through_tokens_fields_and_artifacts()
                     } else {
                         "\"x\" @literal"
                     };
-                    let query = Query::compile(graph.clone(), question.as_bytes()).unwrap();
+                    let query = Query::compile(Arc::clone(&graph), question.as_bytes()).unwrap();
                     assert!(query.dead_patterns().is_empty());
                     let matches = query.execute(&tree, ForeignPolicy::Refuse).unwrap();
                     assert_eq!(matches.len(), 1);
@@ -77,7 +80,7 @@ fn hidden_literal_aliases_keep_their_child_through_tokens_fields_and_artifacts()
                     assert!(matches[0].captures[0].node.field().is_none());
                     if named && field {
                         let wrong =
-                            Query::compile(graph.clone(), b"(renamed part: \"x\" @literal)")
+                            Query::compile(Arc::clone(&graph), b"(renamed part: \"x\" @literal)")
                                 .unwrap();
                         assert_eq!(
                             wrong.dead_patterns().len(),

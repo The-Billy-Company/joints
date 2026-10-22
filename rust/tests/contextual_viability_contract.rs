@@ -1,4 +1,6 @@
 //! Authored contextual-token regressions, with retained exact-F canonical images.
+#![forbid(unsafe_code)]
+
 use joints_engine::{
     ByteSpan, CompiledGrammar, Document, DocumentError, DocumentOptions, DocumentPolicy, Error,
     Node, ParseLimits, ParseSession, Recovery, Resource, Reuse, Stop, Supply, TreeSnapshot,
@@ -11,8 +13,11 @@ const FIXTURE: &[u8] = include_bytes!("fixtures/contextual-viability.json");
 fn digest(bytes: &[u8]) -> String {
     Sha256::digest(bytes)
         .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+        .fold(String::new(), |mut text, byte| {
+            use std::fmt::Write as _;
+            write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+            text
+        })
 }
 fn fixture() -> Value {
     assert_eq!(
@@ -222,7 +227,7 @@ fn actual_accepting_end_keeps_priority_over_an_optional_empty_token() {
         c["oracle"]["grammar_sha256"].as_str().unwrap(),
     );
     for grammar in [
-        g.clone(),
+        Arc::clone(&g),
         CompiledGrammar::from_artifact(&g.artifact().unwrap()).unwrap(),
     ] {
         let mut session = grammar.session();
@@ -356,7 +361,7 @@ fn a_limit_in_the_first_real_reduction_is_not_reclassified_as_token_impossibilit
     let source = c["source"].as_str().unwrap().as_bytes();
     // u +260q already mint261 real leaves; the next H reduction must allocate.
     let mut limited = ParseSession::with_limits(
-        grammar.clone(),
+        Arc::clone(&grammar),
         ParseLimits {
             nodes: 261,
             ..ParseLimits::default()
@@ -371,7 +376,7 @@ fn a_limit_in_the_first_real_reduction_is_not_reclassified_as_token_impossibilit
     assert!(limited.product(&mut grammar.effect_store()).is_err());
     // Speculative drafts are real resource consumption; selected266 is not a capacity promise.
     let mut enough = ParseSession::with_limits(
-        grammar.clone(),
+        Arc::clone(&grammar),
         ParseLimits {
             nodes: 1024,
             ..ParseLimits::default()
@@ -396,7 +401,7 @@ fn a_limit_in_the_first_real_reduction_is_not_reclassified_as_token_impossibilit
         options,
     )
     .unwrap();
-    let before = doc.snapshot().clone();
+    let before = Arc::clone(doc.snapshot());
     let product = doc.product().unwrap();
     let cost = doc.cost();
     assert!(matches!(
@@ -410,7 +415,7 @@ fn a_limit_in_the_first_real_reduction_is_not_reclassified_as_token_impossibilit
 }
 
 fn cold(document: &Document, grammar: &Arc<CompiledGrammar>, options: DocumentOptions) {
-    let mut session = ParseSession::with_limits(grammar.clone(), options.limits);
+    let mut session = ParseSession::with_limits(Arc::clone(grammar), options.limits);
     session.set_recovery(options.recovery);
     session.set_supply(options.supply);
     let tree = session.parse_partial(document.source()).unwrap();
@@ -428,7 +433,7 @@ fn edit(
     text: &[u8],
     strict: bool,
 ) {
-    let old = document.snapshot().clone();
+    let old = Arc::clone(document.snapshot());
     let old_image = image(&old);
     let mut expected = document.source()[..start].to_vec();
     expected.extend_from_slice(text);
@@ -476,7 +481,8 @@ fn contextual_and_nullable_edits_preserve_cold_products_and_published_versions()
             if !long {
                 bytes.push(b'r');
             }
-            let mut document = Document::with_options(grammar.clone(), &bytes, options).unwrap();
+            let mut document =
+                Document::with_options(Arc::clone(&grammar), &bytes, options).unwrap();
             assert!(document.snapshot().confidence().is_strict());
             cold(&document, &grammar, options);
             edit(&mut document, &grammar, options, 96, 97, b"v", true);
@@ -495,7 +501,7 @@ fn contextual_and_nullable_edits_preserve_cold_products_and_published_versions()
                 .unwrap()
                 .as_bytes(),
         );
-        let mut document = Document::with_options(grammar.clone(), &bytes, options).unwrap();
+        let mut document = Document::with_options(Arc::clone(&grammar), &bytes, options).unwrap();
         assert!(document.snapshot().confidence().is_strict());
         edit(&mut document, &grammar, options, 96, 97, b"v", true);
         let end = document.source().len();
@@ -524,7 +530,7 @@ fn dormant_unknown_reducers_cannot_run_on_frame_less_checkpoint_replay() {
             policy,
             ..DocumentOptions::default()
         };
-        let mut document = Document::with_options(grammar.clone(), &source, options).unwrap();
+        let mut document = Document::with_options(Arc::clone(&grammar), &source, options).unwrap();
         assert!(document.snapshot().confidence().is_strict());
         assert!(named(document.snapshot(), "W").is_empty());
         let end = document.source().len();

@@ -291,7 +291,7 @@ pub enum CompileError {
 
 /// All indexes address this immutable grammar. Parser sessions own their scratch.
 #[derive(Debug)]
-pub struct Automaton {
+pub(crate) struct Automaton {
     name: String,
     symbols: Vec<Symbol>,
     productions: Vec<Production>,
@@ -314,11 +314,11 @@ pub struct Automaton {
 
 impl Automaton {
     #[cfg(test)]
-    pub fn from_tree_sitter(bytes: &[u8]) -> Result<Self, CompileError> {
+    pub(crate) fn from_tree_sitter(bytes: &[u8]) -> Result<Self, CompileError> {
         Self::from_tree_sitter_with_limits(bytes, CompileLimits::default())
     }
 
-    pub fn from_tree_sitter_with_limits(
+    pub(crate) fn from_tree_sitter_with_limits(
         bytes: &[u8],
         limits: CompileLimits,
     ) -> Result<Self, CompileError> {
@@ -327,7 +327,7 @@ impl Automaton {
 
     /// Record real table passes. Optional growth bounds only passes after the
     /// first, without raising any absolute state or shared work/item ceiling.
-    pub fn from_tree_sitter_with_diagnostics(
+    pub(crate) fn from_tree_sitter_with_diagnostics(
         bytes: &[u8],
         limits: CompileLimits,
         growth: Option<u32>,
@@ -359,53 +359,53 @@ impl Automaton {
         }
     }
 
-    pub fn name(&self) -> &str {
+    pub(crate) fn name(&self) -> &str {
         &self.name
     }
-    pub fn symbol(&self, id: SymbolId) -> &Symbol {
+    pub(crate) fn symbol(&self, id: SymbolId) -> &Symbol {
         &self.symbols[id.index()]
     }
-    pub fn production(&self, id: ProductionId) -> &Production {
+    pub(crate) fn production(&self, id: ProductionId) -> &Production {
         &self.productions[id.index()]
     }
-    pub fn reduction(&self, id: ReductionId) -> &Reduction {
+    pub(crate) fn reduction(&self, id: ReductionId) -> &Reduction {
         &self.reductions[id.index()]
     }
-    pub fn reduction_count(&self) -> usize {
+    pub(crate) fn reduction_count(&self) -> usize {
         self.reductions.len()
     }
-    pub fn field_name(&self, id: FieldId) -> &str {
+    pub(crate) fn field_name(&self, id: FieldId) -> &str {
         &self.fields[id.index()]
     }
-    pub fn field_count(&self) -> usize {
+    pub(crate) fn field_count(&self) -> usize {
         self.fields.len()
     }
-    pub fn supertypes(&self) -> &[SymbolId] {
+    pub(crate) fn supertypes(&self) -> &[SymbolId] {
         &self.supertypes
     }
-    pub fn start_state(&self) -> StateId {
+    pub(crate) fn start_state(&self) -> StateId {
         StateId::from_index(0)
     }
-    pub fn start_symbol(&self) -> SymbolId {
+    pub(crate) fn start_symbol(&self) -> SymbolId {
         self.start
     }
-    pub fn symbol_count(&self) -> usize {
+    pub(crate) fn symbol_count(&self) -> usize {
         self.symbols.len()
     }
-    pub fn production_count(&self) -> usize {
+    pub(crate) fn production_count(&self) -> usize {
         self.productions.len()
     }
-    pub fn state_count(&self) -> usize {
+    pub(crate) fn state_count(&self) -> usize {
         self.tables.state_count()
     }
     /// Actual final construction kernels, with quotient representatives explicit.
-    pub fn state_items(&self, state: StateId) -> &[StateItem] {
+    pub(crate) fn state_items(&self, state: StateId) -> &[StateItem] {
         &self.kernels[state.index()]
     }
-    pub fn cursor_histories(&self, item: StateItem) -> Option<&[ProductionId]> {
+    pub(crate) fn cursor_histories(&self, item: StateItem) -> Option<&[ProductionId]> {
         self.cursor_histories.get(&item).map(Vec::as_slice)
     }
-    pub fn symbol_by_name(&self, name: &str) -> Option<SymbolId> {
+    pub(crate) fn symbol_by_name(&self, name: &str) -> Option<SymbolId> {
         self.names.get(name).copied().or_else(|| {
             self.symbols
                 .iter()
@@ -413,51 +413,51 @@ impl Automaton {
                 .map(SymbolId::from_index)
         })
     }
-    pub fn actions(&self, state: StateId, at: Lookahead) -> &[Action] {
+    pub(crate) fn actions(&self, state: StateId, at: Lookahead) -> &[Action] {
         self.tables.actions(state, at)
     }
-    pub fn transition(&self, state: StateId, symbol: SymbolId) -> Option<StateId> {
+    pub(crate) fn transition(&self, state: StateId, symbol: SymbolId) -> Option<StateId> {
         self.tables.transition(state, symbol)
     }
-    pub fn state_transitions(
+    pub(crate) fn state_transitions(
         &self,
         state: StateId,
     ) -> impl ExactSizeIterator<Item = (SymbolId, StateId)> + '_ {
         self.tables.state_transitions(state)
     }
-    pub fn action_row(
+    pub(crate) fn action_row(
         &self,
         state: StateId,
     ) -> impl ExactSizeIterator<Item = (Lookahead, &[Action])> + '_ {
         self.tables.action_row(state)
     }
-    pub fn row_admissions(&self, state: StateId) -> &[SymbolId] {
+    pub(crate) fn row_admissions(&self, state: StateId) -> &[SymbolId] {
         self.tables.row_admissions(state)
     }
-    pub fn lexical_rules(&self) -> impl Iterator<Item = (SymbolId, &Lexis)> {
+    pub(crate) fn lexical_rules(&self) -> impl Iterator<Item = (SymbolId, &Lexis)> {
         self.symbols
             .iter()
             .enumerate()
             .filter_map(|(i, s)| s.lexis.as_ref().map(|l| (SymbolId::from_index(i), l)))
     }
-    pub fn extras(&self) -> &[SymbolId] {
+    pub(crate) fn extras(&self) -> &[SymbolId] {
         &self.extras
     }
     /// Rule-shaped extras use the same production graph through independent
     /// entry kernels. Accept leaves the completed extra as one stack frame.
-    pub fn extra_entries(&self) -> &[(SymbolId, StateId)] {
+    pub(crate) fn extra_entries(&self) -> &[(SymbolId, StateId)] {
         &self.extra_entries
     }
-    pub fn word(&self) -> Option<SymbolId> {
+    pub(crate) fn word(&self) -> Option<SymbolId> {
         self.word
     }
-    pub fn external_ids(&self) -> &[SymbolId] {
+    pub(crate) fn external_ids(&self) -> &[SymbolId] {
         &self.externals
     }
-    pub fn external_by_name(&self, name: &str) -> Option<SymbolId> {
+    pub(crate) fn external_by_name(&self, name: &str) -> Option<SymbolId> {
         self.external_names.get(name).copied()
     }
-    pub fn terminal_by_name(&self, name: &str) -> Option<SymbolId> {
+    pub(crate) fn terminal_by_name(&self, name: &str) -> Option<SymbolId> {
         self.names
             .get(name)
             .copied()
@@ -473,10 +473,10 @@ impl Automaton {
                     .map(|(id, _)| id)
             })
     }
-    pub fn conflicts(&self) -> &[ConflictRecord] {
+    pub(crate) fn conflicts(&self) -> &[ConflictRecord] {
         &self.conflicts
     }
-    pub fn limitations(&self) -> &[CompileLimitation] {
+    pub(crate) fn limitations(&self) -> &[CompileLimitation] {
         &self.limitations
     }
 }
@@ -755,7 +755,7 @@ impl Automaton {
                     pattern,
                     immediate: r.flag()?,
                     precedence: r.signed()?,
-                    declaration_order: r.number()? as u32,
+                    declaration_order: u32::try_from(r.number()?).map_err(|_| E::Length)?,
                 })
             } else {
                 None
@@ -1963,7 +1963,8 @@ impl Builder {
                     pattern: Pattern::External,
                     immediate: false,
                     precedence: 0,
-                    declaration_order: out.symbols.len() as u32,
+                    declaration_order: u32::try_from(out.symbols.len())
+                        .map_err(|_| CompileError::Limit("symbols"))?,
                 };
                 let id = out.add_symbol(name.into(), out.authored_shape(name), Some(lx))?;
                 out.names.insert(name.into(), id);
@@ -2091,7 +2092,8 @@ impl Builder {
             pattern: a.pattern.clone(),
             immediate: a.immediate,
             precedence: a.precedence,
-            declaration_order: self.symbols.len() as u32,
+            declaration_order: u32::try_from(self.symbols.len())
+                .map_err(|_| CompileError::Limit("symbols"))?,
         };
         let id = self.add_symbol(name, shape, Some(lexis))?;
         if let Some(name) = named {
@@ -2112,7 +2114,8 @@ impl Builder {
             pattern: a.pattern.clone(),
             immediate: a.immediate,
             precedence: a.precedence,
-            declaration_order: self.symbols.len() as u32,
+            declaration_order: u32::try_from(self.symbols.len())
+                .map_err(|_| CompileError::Limit("symbols"))?,
         };
         let id = self.add_symbol(
             format!("$joints:separator:{}", self.separator_atoms.len()),
@@ -3729,7 +3732,7 @@ fn draws(
                     }
                     mine.push(Draw {
                         under,
-                        look: look.clone(),
+                        look: Arc::clone(look),
                     });
                 }
             }
@@ -4227,7 +4230,7 @@ fn lalr(gr: &Builder, states: &[StateItems], graph: &Graph) -> Result<LalrTables
     while let Some((s, i)) = queue.pop_front() {
         queued[s][i] = false;
         charge_work(&mut work, 1 + looks[s][i].len(), &gr.work, "lookahead work")?;
-        let source = looks[s][i].clone();
+        let source = Arc::clone(&looks[s][i]);
         let item = states[s][i];
         let p = &productions[item.production.index()];
         if let Some(step) = p.steps.get(item.dot) {
@@ -5525,8 +5528,11 @@ mod tests {
         assert_eq!(
             Sha256::digest(&bytes)
                 .iter()
-                .map(|byte| format!("{byte:02x}"))
-                .collect::<String>(),
+                .fold(String::new(), |mut text, byte| {
+                    use std::fmt::Write as _;
+                    write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+                    text
+                }),
             "04bbc228d1d1cd4977b73131338261d819227c2a236f015bb5835f049e22d300"
         );
         let start = std::time::Instant::now();

@@ -1,5 +1,8 @@
 //! Static numeric precedence resolves before dynamic ranking or declarations.
+#![forbid(unsafe_code)]
+
 use std::collections::BTreeSet;
+use std::sync::Arc;
 
 use joints_engine::{CompiledGrammar, ConflictClass, ForeignPolicy, Query, TreeSnapshot};
 use serde_json::{Value, json};
@@ -55,8 +58,11 @@ fn implicit_zero_and_explicit_static_ranks_match_independent_full_trees() {
             assert_eq!(
                 Sha256::digest(source)
                     .iter()
-                    .map(|byte| format!("{byte:02x}"))
-                    .collect::<String>(),
+                    .fold(String::new(), |mut text, byte| {
+                        use std::fmt::Write as _;
+                        write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+                        text
+                    }),
                 sample["source_sha256"].as_str().unwrap()
             );
             let accepted = sample["accepted"].as_bool().unwrap();
@@ -83,7 +89,7 @@ fn implicit_zero_and_explicit_static_ranks_match_independent_full_trees() {
                     );
                     if name == "recipe" {
                         let query =
-                            Query::compile(grammar.clone(), b"(parameter name: (param) @p)")
+                            Query::compile(Arc::clone(grammar), b"(parameter name: (param) @p)")
                                 .unwrap();
                         let found = query.execute(&tree, ForeignPolicy::Refuse).unwrap();
                         assert_eq!(found.len(), 1);

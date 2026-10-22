@@ -1,6 +1,8 @@
 //! Non-SYMBOL extras use the native separate-read lexical contract.
 //! TS0.26.11's prefix-separator closure can widen a colliding structural token;
 //! that inherited difference is pinned explicitly below, not normalized away.
+#![forbid(unsafe_code)]
+
 use joints_engine::{CompileError, CompiledGrammar, Error, ForeignPolicy, Query, QueryError};
 use serde_json::{Value, json};
 
@@ -55,10 +57,14 @@ fn atomic_literal_separators_are_invisible_and_keep_their_own_identity() {
             );
             assert!(graph.session().parse(b"y").is_err());
             assert!(matches!(
-                Query::compile(graph.clone(), b"(ignored_extra_name) @extra"),
+                Query::compile(
+                    std::sync::Arc::clone(&graph),
+                    b"(ignored_extra_name) @extra"
+                ),
                 Err(QueryError::UnknownName { .. })
             ));
-            let question = Query::compile(graph.clone(), b"(doc \"x\" @value)").unwrap();
+            let question =
+                Query::compile(std::sync::Arc::clone(&graph), b"(doc \"x\" @value)").unwrap();
             assert!(question.dead_patterns().is_empty());
             let tree = graph.session().parse(b"xxxy").unwrap();
             assert_eq!(

@@ -24,7 +24,7 @@ pub(super) struct Jsx {
 }
 
 impl Jsx {
-    pub fn bind(grammar: &Automaton) -> Option<Self> {
+    pub(super) fn bind(grammar: &Automaton) -> Option<Self> {
         if grammar.external_ids().len() != COHORT.len() {
             return None;
         }
@@ -39,15 +39,15 @@ impl Jsx {
         })
     }
 
-    pub fn remove_claimed(&mut self, claimed: &[SymbolId]) {
+    pub(super) fn remove_claimed(&mut self, claimed: &[SymbolId]) {
         self.enabled &= !claimed.contains(&self.text);
     }
 
-    pub fn claims(&self, symbol: SymbolId) -> bool {
+    pub(super) fn claims(&self, symbol: SymbolId) -> bool {
         self.enabled && symbol == self.text
     }
 
-    pub fn step(
+    pub(super) fn step(
         &self,
         source: &[u8],
         at: usize,

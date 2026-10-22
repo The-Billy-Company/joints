@@ -89,14 +89,14 @@ pub(super) struct Captures {
 }
 
 impl Captures {
-    pub fn group<'a>(&self, source: &'a [u8], group: usize) -> &'a [u8] {
+    pub(super) fn group<'a>(&self, source: &'a [u8], group: usize) -> &'a [u8] {
         self.slots
             .get(group)
             .and_then(Option::as_ref)
             .and_then(|range| source.get(range.clone()))
             .unwrap_or_default()
     }
-    pub fn width(&self) -> usize {
+    pub(super) fn width(&self) -> usize {
         self.slots
             .first()
             .and_then(Option::as_ref)
@@ -106,11 +106,11 @@ impl Captures {
 
 impl Probe {
     #[cfg(test)]
-    pub fn compile(pattern: &str, whole: bool) -> Result<Self, ScannerError> {
+    pub(super) fn compile(pattern: &str, whole: bool) -> Result<Self, ScannerError> {
         Self::compile_with_limits(pattern, whole, ProbeLimits::default())
     }
 
-    pub fn compile_with_limits(
+    pub(super) fn compile_with_limits(
         pattern: &str,
         whole: bool,
         limits: ProbeLimits,
@@ -142,7 +142,7 @@ impl Probe {
         Ok(Self { regex })
     }
 
-    pub fn capture(
+    pub(super) fn capture(
         &self,
         source: &[u8],
         at: usize,
@@ -408,7 +408,7 @@ mod limits_and_threads {
         let probe = std::sync::Arc::new(Probe::compile(r"(?<=!)([A-Za-z]+)-\1", false).unwrap());
         std::thread::scope(|scope| {
             for word in ["alpha", "beta", "gamma", "delta"] {
-                let probe = probe.clone();
+                let probe = std::sync::Arc::clone(&probe);
                 scope.spawn(move || {
                     let source = format!("!{word}-{word}").into_bytes();
                     for _ in 0..100 {

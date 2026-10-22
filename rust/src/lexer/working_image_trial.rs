@@ -15,7 +15,7 @@ const MAX_EVENTS: usize = 4096;
 const ALLOCATION: u64 = 256 << 20;
 const WORK: u64 = 128_000_000;
 const TRANSITIONS: usize = 1 << 20;
-const ROOT: &str = "/Users/griffinstrier/Billy-Company/joints";
+const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/..");
 type Trial<T> = Result<T, String>;
 
 #[derive(Clone, Serialize, Debug, PartialEq, Eq)]
@@ -168,6 +168,10 @@ pub(crate) fn lexical_after(
         });
     }
 }
+#[expect(
+    clippy::too_many_arguments,
+    reason = "The test observer records each native call input and both independent work budgets."
+)]
 pub(crate) fn native_before(
     slate: &Munch,
     source: &[u8],
@@ -286,8 +290,11 @@ fn require(condition: bool, label: &str) -> Trial<()> {
 fn digest(bytes: &[u8]) -> String {
     Sha256::digest(bytes)
         .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect()
+        .fold(String::new(), |mut text, b| {
+            use std::fmt::Write as _;
+            write!(text, "{b:02x}").expect("writing to a String cannot fail");
+            text
+        })
 }
 struct Case {
     name: &'static str,
@@ -827,6 +834,7 @@ fn panic_text(error: &(dyn std::any::Any + Send)) -> &str {
         .unwrap_or("non-string")
 }
 #[test]
+#[ignore = "explicit working-corpus Image1 trial; requires pinned .local inputs and JOINTS_IMAGE_WORKING_OUTPUT"]
 fn actual_working_precedence_zero_images_preserve_parser_questions() {
     let out = PathBuf::from(
         std::env::var_os("JOINTS_IMAGE_WORKING_OUTPUT").expect("explicit fresh output required"),

@@ -52,7 +52,7 @@ fn cohort(g: &Automaton, names: &[&str]) -> Option<Vec<SymbolId>> {
     names.iter().map(|s| g.external_by_name(s)).collect()
 }
 impl Bounded {
-    pub fn bind(g: &Automaton) -> Self {
+    pub(super) fn bind(g: &Automaton) -> Self {
         let mut rows = Vec::new();
         for (names, vein, body, close, open, hush) in [
             (
@@ -214,7 +214,7 @@ impl Bounded {
             });
         }
         let latex = [
-            ("_trivia_raw_fi", b"fi" as &[u8]),
+            ("_trivia_raw_fi", b"fi".as_slice()),
             ("_trivia_raw_env_comment", b"end{comment}"),
             ("_trivia_raw_env_verbatim", b"end{verbatim}"),
             ("_trivia_raw_env_listing", b"end{lstlisting}"),
@@ -252,12 +252,12 @@ impl Bounded {
         }
         Self { rows, families }
     }
-    pub fn remove_claimed(&mut self, claimed: &[SymbolId]) {
+    pub(super) fn remove_claimed(&mut self, claimed: &[SymbolId]) {
         self.rows.retain(|r| !claimed.contains(&r.body));
         self.families
             .retain(|f| !f.marks.iter().any(|m| claimed.contains(&m.symbol)));
     }
-    pub fn claims(&self, s: SymbolId) -> bool {
+    pub(super) fn claims(&self, s: SymbolId) -> bool {
         self.rows.iter().any(|r| {
             r.body == s || r.close == Some(s) || r.open == Some(s) || r.evidence.contains(&s)
         }) || self
@@ -265,7 +265,7 @@ impl Bounded {
             .iter()
             .any(|f| f.marks.iter().any(|m| m.symbol == s) || f.closes.iter().any(|x| x.1 == s))
     }
-    pub fn step(
+    pub(super) fn step(
         &self,
         source: &[u8],
         at: usize,

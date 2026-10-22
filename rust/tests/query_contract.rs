@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use std::sync::{Arc, OnceLock};
 
 use joints_engine::{
@@ -6,11 +8,9 @@ use joints_engine::{
 
 fn json() -> Arc<CompiledGrammar> {
     static GRAMMAR: OnceLock<Arc<CompiledGrammar>> = OnceLock::new();
-    GRAMMAR
-        .get_or_init(|| {
-            CompiledGrammar::compile(include_bytes!("../../test/grammar/json.json")).unwrap()
-        })
-        .clone()
+    Arc::clone(GRAMMAR.get_or_init(|| {
+        CompiledGrammar::compile(include_bytes!("../../test/grammar/json.json")).unwrap()
+    }))
 }
 
 fn captures(source: &[u8], query: &str) -> Vec<Vec<(String, Vec<u8>)>> {
@@ -50,7 +50,7 @@ fn texts(source: &[u8], query: &str) -> Vec<Vec<String>> {
 fn binding_queries_preserve_counts_names_order_predicates_and_empty_answers() {
     let grammar = json();
     let tree = grammar.session().parse(b"[1,2,3]").unwrap();
-    let query = Query::compile(grammar.clone(), b"(number) @n").unwrap();
+    let query = Query::compile(Arc::clone(&grammar), b"(number) @n").unwrap();
     assert_eq!(query.capture_names(), ["n"]);
     let matches = query.execute(&tree, ForeignPolicy::Refuse).unwrap();
     assert_eq!(matches.len(), 3);
@@ -105,13 +105,13 @@ fn wildcard_sort_literals_fields_and_supertype_membership_are_distinct() {
 fn absent_fields_and_dead_patterns_preserve_source_indices() {
     let grammar = json();
     assert!(matches!(
-        Query::compile(grammar.clone(), b"(pair !missing) @p"),
+        Query::compile(Arc::clone(&grammar), b"(pair !missing) @p"),
         Err(QueryError::UnknownName { sort: "field", .. })
     ));
     assert_eq!(texts(br#"{"a":1}"#, "(object !value) @o").len(), 1);
     assert!(texts(br#"{"a":1}"#, "(pair !value) @p").is_empty());
     let source = b"; first impossible\n(string key: (string_content)) @dead\n(number) @n";
-    let query = Query::compile(grammar.clone(), source).unwrap();
+    let query = Query::compile(Arc::clone(&grammar), source).unwrap();
     assert_eq!(query.pattern_count(), 2);
     assert_eq!(query.dead_patterns().len(), 1);
     assert_eq!(query.dead_patterns()[0].cause, DeadCause::FieldNotCarried);
@@ -236,7 +236,7 @@ fn directives_and_foreign_filters_are_eager_and_never_publish_partial_results() 
     let grammar = json();
     let tree = grammar.session().parse(b"[1,2]").unwrap();
     let source = b"(number) @plain\n((number) @n (#host-filter? @n))";
-    let query = Query::compile(grammar.clone(), source).unwrap();
+    let query = Query::compile(Arc::clone(&grammar), source).unwrap();
     assert!(matches!(
         query.execute(&tree, ForeignPolicy::Refuse),
         Err(QueryError::ForeignPredicate { .. })
@@ -244,7 +244,7 @@ fn directives_and_foreign_filters_are_eager_and_never_publish_partial_results() 
     assert_eq!(query.execute(&tree, ForeignPolicy::Admit).unwrap().len(), 4);
     assert_eq!(query.execute(&tree, ForeignPolicy::Deny).unwrap().len(), 2);
     let query = Query::compile(
-        grammar.clone(),
+        Arc::clone(&grammar),
         b"((number) @n (#set! injection.language \"json\"))",
     )
     .unwrap();
@@ -281,7 +281,7 @@ fn syntax_predicate_sort_and_pattern_local_capture_errors_are_compilation_errors
         "(array . . (number))",
     ] {
         assert!(
-            Query::compile(grammar.clone(), source.as_bytes()).is_err(),
+            Query::compile(Arc::clone(&grammar), source.as_bytes()).is_err(),
             "{source}"
         );
     }
@@ -294,11 +294,11 @@ fn syntax_predicate_sort_and_pattern_local_capture_errors_are_compilation_errors
         "((number) @n (#match? @n \"[\"))",
     ] {
         assert!(
-            Query::compile(grammar.clone(), source.as_bytes()).is_err(),
+            Query::compile(Arc::clone(&grammar), source.as_bytes()).is_err(),
             "{source}"
         );
     }
-    let query = Query::compile(grammar.clone(), b"(number) @n").unwrap();
+    let query = Query::compile(Arc::clone(&grammar), b"(number) @n").unwrap();
     let other = CompiledGrammar::compile(include_bytes!("../../test/grammar/json.json")).unwrap();
     let tree = other.session().parse(b"1").unwrap();
     assert!(matches!(
@@ -311,7 +311,7 @@ fn syntax_predicate_sort_and_pattern_local_capture_errors_are_compilation_errors
 fn all_search_and_regex_limits_fail_without_partial_publication() {
     let grammar = json();
     let tree = grammar.session().parse(b"[1,2,3]").unwrap();
-    let query = Query::compile(grammar.clone(), b"(number) @n").unwrap();
+    let query = Query::compile(Arc::clone(&grammar), b"(number) @n").unwrap();
     for limits in [
         QueryLimits {
             work: 1,
@@ -337,7 +337,7 @@ fn all_search_and_regex_limits_fail_without_partial_publication() {
     }
     assert!(matches!(
         Query::compile_with_limits(
-            grammar.clone(),
+            Arc::clone(&grammar),
             b"(number)",
             QueryLimits {
                 work: 0,
@@ -350,7 +350,7 @@ fn all_search_and_regex_limits_fail_without_partial_publication() {
     limits.regex.match_steps = 1;
     for name in ["match?", "not-match?"] {
         let query = Query::compile_with_limits(
-            grammar.clone(),
+            Arc::clone(&grammar),
             format!("((number) @n (#{name} @n \"(?:1+)+$\"))").as_bytes(),
             limits,
         )
@@ -377,7 +377,7 @@ fn aliases_sorts_hidden_fields_and_named_extra_anchors_are_generic() {
       "extras":[{"type":"PATTERN","value":"\\s"},{"type":"SYMBOL","name":"comment"}]}"##).unwrap();
     let tree = grammar.session().parse(b"a: #between\nb").unwrap();
     let run = |source: &[u8]| {
-        Query::compile(grammar.clone(), source)
+        Query::compile(Arc::clone(&grammar), source)
             .unwrap()
             .execute(&tree, ForeignPolicy::Refuse)
             .unwrap()
@@ -396,8 +396,11 @@ fn pinned_tree_sitter_matrix_has_45_exact_questions_and_four_named_contract_diff
     let hash = |bytes: &[u8]| {
         Sha256::digest(bytes)
             .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect::<String>()
+            .fold(String::new(), |mut text, byte| {
+                use std::fmt::Write as _;
+                write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+                text
+            })
     };
     let fixture: serde_json::Value =
         serde_json::from_slice(include_bytes!("fixtures/query-oracle.json")).unwrap();
@@ -429,7 +432,7 @@ fn pinned_tree_sitter_matrix_has_45_exact_questions_and_four_named_contract_diff
         let query_source = case["query"].as_str().unwrap().as_bytes();
         let tree = grammar.session().parse(source).unwrap();
         assert!(tree.confidence().is_strict(), "{}", case["case"]);
-        let query = Query::compile(grammar.clone(), query_source).unwrap();
+        let query = Query::compile(Arc::clone(&grammar), query_source).unwrap();
         let matches = query.execute(&tree, ForeignPolicy::Admit).unwrap();
         match_count += matches.len();
         let actual: Vec<_> = matches.iter().map(|m| {
@@ -461,7 +464,7 @@ fn dead_patterns_and_empty_predicate_candidates_consume_execution_work() {
     let grammar = json();
     let tree = grammar.session().parse(b"[1,2,3]").unwrap();
     let source = "(number key: (number)) ".repeat(256);
-    let query = Query::compile(grammar.clone(), source.as_bytes()).unwrap();
+    let query = Query::compile(Arc::clone(&grammar), source.as_bytes()).unwrap();
     assert_eq!(query.dead_patterns().len(), 256);
     assert!(
         query
@@ -482,7 +485,7 @@ fn dead_patterns_and_empty_predicate_candidates_consume_execution_work() {
     ));
     for name in ["any-of?", "not-any-of?"] {
         let source = format!("((number) @n (#{name} @n {}))", "\"\" ".repeat(256));
-        let query = Query::compile(grammar.clone(), source.as_bytes()).unwrap();
+        let query = Query::compile(Arc::clone(&grammar), source.as_bytes()).unwrap();
         assert!(query.execute(&tree, ForeignPolicy::Refuse).is_ok());
         assert!(matches!(
             query.execute_with_limits(
@@ -519,10 +522,10 @@ fn resolved_alias_sets_are_charged_before_every_owned_copy() {
         work: 20_000,
         ..QueryLimits::default()
     };
-    Query::compile_with_limits(grammar.clone(), b"(shared)", limits).unwrap();
+    Query::compile_with_limits(Arc::clone(&grammar), b"(shared)", limits).unwrap();
     let source = "(shared) ".repeat(200);
     assert!(matches!(
-        Query::compile_with_limits(grammar.clone(), source.as_bytes(), limits),
+        Query::compile_with_limits(Arc::clone(&grammar), source.as_bytes(), limits),
         Err(QueryError::Limit("work"))
     ));
     assert_eq!(
@@ -545,7 +548,7 @@ fn named_and_anonymous_aliases_share_spelling_without_sharing_sort_or_original_n
         ("(both) @x", b"a".as_slice(), true),
         ("\"both\" @x", b"b".as_slice(), false),
     ] {
-        let query = Query::compile(grammar.clone(), source.as_bytes()).unwrap();
+        let query = Query::compile(Arc::clone(&grammar), source.as_bytes()).unwrap();
         let matches = query.execute(&tree, ForeignPolicy::Refuse).unwrap();
         assert_eq!(matches.len(), 1, "{source}");
         assert_eq!(matches[0].captures[0].node.text(), text);
@@ -571,7 +574,7 @@ fn fixed_point_and_dead_checks_preserve_optional_choices_and_extra_children() {
         "(array (pair)* @p (number) @n)",
         "(array ((number) @n))",
     ] {
-        let query = Query::compile(grammar.clone(), source.as_bytes()).unwrap();
+        let query = Query::compile(Arc::clone(&grammar), source.as_bytes()).unwrap();
         assert!(query.dead_patterns().is_empty(), "{source}");
         assert!(
             !query
@@ -581,7 +584,7 @@ fn fixed_point_and_dead_checks_preserve_optional_choices_and_extra_children() {
             "{source}"
         );
     }
-    let query = Query::compile(grammar.clone(), b"(string (number))").unwrap();
+    let query = Query::compile(Arc::clone(&grammar), b"(string (number))").unwrap();
     assert_eq!(query.dead_patterns()[0].cause, DeadCause::ChildNotAdmitted);
     let query = Query::compile(
         grammar,
@@ -599,7 +602,7 @@ fn queries_read_retained_bytes_and_are_shareable_between_workers() {
     let grammar = json();
     let tree = grammar.session().parse("\"é\"".as_bytes()).unwrap();
     let query = Query::compile(
-        grammar.clone(),
+        Arc::clone(&grammar),
         br#"((string_content) @c (#match? @c "\\xC3\\xA9"))"#,
     )
     .unwrap();
@@ -618,8 +621,8 @@ fn queries_read_retained_bytes_and_are_shareable_between_workers() {
     let tree = Arc::new(tree);
     let workers: Vec<_> = (0..4)
         .map(|_| {
-            let query = query.clone();
-            let tree = tree.clone();
+            let query = Arc::clone(&query);
+            let tree = Arc::clone(&tree);
             std::thread::spawn(move || {
                 for _ in 0..16 {
                     assert_eq!(

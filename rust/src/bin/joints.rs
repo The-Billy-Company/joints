@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
     env, fs,
@@ -1064,14 +1066,12 @@ fn survey_command(args: &[String]) -> Result<u8> {
                         }
                         remaining = remaining.saturating_sub(cursor.work());
                     }
+                } else if whole.rejected_at().is_some() {
+                    chain_disagreed = true;
+                    println!("         whole-stream oracle rejected a selected prefix");
                 } else {
-                    if whole.rejected_at().is_some() {
-                        chain_disagreed = true;
-                        println!("         whole-stream oracle rejected a selected prefix");
-                    } else {
-                        chain_refused = true;
-                        println!("         whole-stream oracle refused: {whole:?}");
-                    }
+                    chain_refused = true;
+                    println!("         whole-stream oracle refused: {whole:?}");
                 }
             }
             let verdict = if chain_refused {
@@ -1137,6 +1137,10 @@ fn quantile(sorted: &[usize], percent: usize) -> usize {
         sorted[(sorted.len().saturating_mul(percent) / 100).min(sorted.len() - 1)]
     }
 }
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "Display percentages intentionally round large counters; the stored counts remain integers."
+)]
 fn percentage(n: usize, total: usize) -> f64 {
     if total == 0 {
         0.0

@@ -10,8 +10,10 @@ pub unsafe extern "C" fn jnt_query_compile(
     out: *mut *mut JntQuery,
 ) -> i32 {
     status_boundary!({
+        // SAFETY: the C caller provides aligned writable output storage; output rejects NULL.
         unsafe { output(out)? };
         let p = parser_handle(parser as usize)?;
+        // SAFETY: the C caller keeps len input bytes readable and immutable for this call.
         let source = unsafe { input(scm, len)? };
         let query =
             Query::compile(Arc::clone(&p.grammar), source).map_err(|e| fault(JNT_FORMAT, e))?;
@@ -20,6 +22,8 @@ pub unsafe extern "C" fn jnt_query_compile(
             _parser: p,
             query,
         })))?;
+        // SAFETY: output validated out above; the caller retains its writable storage for this
+        // call.
         unsafe { out.write(token as *mut JntQuery) };
         Ok(())
     })
@@ -54,8 +58,12 @@ pub unsafe extern "C" fn jnt_query_capture_name(
     len: *mut usize,
 ) -> *const c_char {
     boundary!(ptr::null(), {
+        // SAFETY: the C caller supplies a writable len pointer or NULL; no byte view is
+        // returned.
         unsafe { view(None, len) };
         let q = query_handle(query as usize)?;
+        // SAFETY: len is writable or NULL by the C contract; the registered owner retains these
+        // bytes.
         Ok(unsafe {
             view(
                 q.query
@@ -78,6 +86,7 @@ pub unsafe extern "C" fn jnt_query_exec(
     out: *mut *mut JntQueryResult,
 ) -> i32 {
     status_boundary!({
+        // SAFETY: the C caller provides aligned writable output storage; output rejects NULL.
         unsafe { output(out)? };
         let q = query_handle(query as usize)?;
         let t = tree_handle(tree as usize)?;
@@ -90,6 +99,7 @@ pub unsafe extern "C" fn jnt_query_exec(
             2 => ForeignPolicy::Deny,
             _ => return Err(invalid("unknown foreign predicate policy")),
         };
+        // SAFETY: the C caller keeps len input bytes readable and immutable for this call.
         let bytes = unsafe { input(text, len)? };
         let version_guard = t
             .version
@@ -130,6 +140,8 @@ pub unsafe extern "C" fn jnt_query_exec(
             _version: v,
             matches,
         })))?;
+        // SAFETY: output validated out above; the caller retains its writable storage for this
+        // call.
         unsafe { out.write(token as *mut JntQueryResult) };
         Ok(())
     })

@@ -1,5 +1,7 @@
 //! Small real-grammar regressions captured from the independent pinned oracle.
 
+#![forbid(unsafe_code)]
+
 use joints_engine::{CompiledGrammar, Node, Recovery, Supply, TreeSnapshot};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -10,8 +12,11 @@ const EVIDENCE: &str = include_str!("../../test/migration/ambiguity/real-cases.j
 fn digest(bytes: &[u8]) -> String {
     Sha256::digest(bytes)
         .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect::<String>()
+        .fold(String::new(), |mut text, byte| {
+            use std::fmt::Write as _;
+            write!(text, "{byte:02x}").expect("writing to a String cannot fail");
+            text
+        })
 }
 
 fn image(node: Node<'_>) -> Value {
@@ -146,7 +151,9 @@ fn real_grammar_ambiguities_preserve_all_independent_trees() {
                     Ok(tree) => {
                         let actual = tree_image(&tree);
                         let strict = tree.confidence().is_strict();
-                        let expected_nodes = case["oracle"]["nodes"].as_u64().unwrap() as usize;
+                        let expected_nodes =
+                            usize::try_from(case["oracle"]["nodes"].as_u64().unwrap())
+                                .expect("fixture count fits usize");
                         let nodes = tree.survey().walked;
                         let equal = actual == case["oracle"]["tree"];
                         result["strict"] = json!(strict);

@@ -1,5 +1,8 @@
+#![forbid(unsafe_code)]
+
 use joints_engine::{ByteSpan, CompileOptions, CompiledGrammar, Document, Node, ScannerBinding};
 use serde_json::json;
+use std::sync::Arc;
 
 const COHORT: [&str; 10] = [
     "_automatic_semicolon",
@@ -82,8 +85,8 @@ fn a_claimed_custom_jsx_terminal_never_falls_through_to_native_text() {
 #[test]
 fn document_edits_revalidate_stateless_text_and_keep_old_snapshot_bytes() {
     let grammar = CompiledGrammar::compile(&grammar()).unwrap();
-    let mut document = Document::new(grammar.clone(), b"<alpha>").unwrap();
-    let old = document.snapshot().clone();
+    let mut document = Document::new(Arc::clone(&grammar), b"<alpha>").unwrap();
+    let old = Arc::clone(document.snapshot());
     for replacement in [b"bravo".as_slice(), "éé".as_bytes(), b"after"] {
         let end = document.source().len() - 1;
         document
