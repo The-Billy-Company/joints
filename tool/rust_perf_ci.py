@@ -87,10 +87,18 @@ def run(root, out, baseline, chain, env, source_report, source_report_path):
             summary = json.loads((destination / "summary.json").read_text())
             qualify.require(summary.get("inputs_stable") is True and len(summary["operations"]) == 15,
                             "incomplete or changed public API diagnostic")
+            qualify.require(all(row[backend]["samples"] == 45 for row in summary["operations"]
+                                for backend in ("baseline", "candidate")),
+                            "public API diagnostic sample coverage differs")
             report["cases"].append({"name": name, "summary": str(destination / "summary.json"),
                                     "summary_sha256": qualify.digest(destination / "summary.json"),
                                     "all_meet_5x": summary["all_meet_5x"]})
             qualify.save(report_path, report)
+        qualify.require(all(qualify.digest(row["path"]) == row["sha256"] for row in report["binaries"].values())
+                        and qualify.digest(Path(env["IRGX_LIB_DIR"]) / "libirgx.a") == report["native_archive_sha256"]
+                        and qualify.digest(root / "tool/rust_perf.py") == report["recorder_sha256"],
+                        "diagnostic executable, native archive or recorder changed between cases")
+        require_same_benchmark(home / "rust/benches/runtime.rs", root / "rust/benches/runtime.rs")
         report.update(status="completed", **{"pass": True},
                       all_meet_5x=all(row["all_meet_5x"] for row in report["cases"]))
     except Exception as error:

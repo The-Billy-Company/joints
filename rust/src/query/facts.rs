@@ -267,14 +267,16 @@ impl Facts {
 }
 
 fn extend_relation<T: Ord + Copy>(sets: &mut [BTreeSet<T>], lhs: usize, rhs: usize) -> bool {
-    let (target, source) = if lhs < rhs {
-        let (left, right) = sets.split_at_mut(rhs);
-        (&mut left[lhs], &right[0])
-    } else if lhs > rhs {
-        let (left, right) = sets.split_at_mut(lhs);
-        (&mut right[0], &left[rhs])
-    } else {
-        return false;
+    let (target, source) = match lhs.cmp(&rhs) {
+        std::cmp::Ordering::Less => {
+            let (left, right) = sets.split_at_mut(rhs);
+            (&mut left[lhs], &right[0])
+        }
+        std::cmp::Ordering::Greater => {
+            let (left, right) = sets.split_at_mut(lhs);
+            (&mut right[0], &left[rhs])
+        }
+        std::cmp::Ordering::Equal => return false,
     };
     let mut changed = false;
     for &value in source {
