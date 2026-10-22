@@ -1,6 +1,7 @@
 """Offline source-CI admission controls; no builds, downloads or native calls."""
 import platform
 from pathlib import Path
+import hashlib
 import json
 import tempfile
 import unittest
@@ -17,19 +18,22 @@ class SourceCI(unittest.TestCase):
             log = root / "build.log";log.write_bytes(b"authored successful build")
             channel = {"path": str(log), "sha256": ci.qualify.digest(log)}
             argv = ["authored-command"]
-            command = {"argv": argv, "invocation_sha256": ci.hashlib.sha256(json.dumps(argv, separators=(",", ":")).encode()).hexdigest(),
+            command = {"argv": argv, "invocation_sha256": hashlib.sha256(json.dumps(argv, separators=(",", ":")).encode()).hexdigest(),
                        "exit": 0, "stdout": channel, "stderr": channel}
             value = {"pass": True, "python": {"version": list(ci.PYTHON_VERSION), "path": str(python),
                      "sha256": ci.qualify.digest(python)}, "commands": [command | {"label": label} for label in ci.PYTHON_BUILD_STEPS],
                      "source_url": ci.PYTHON_SOURCE_URL, "source_sha256": ci.PYTHON_SOURCE_SHA256,
                      "downloaded_source_sha256": ci.PYTHON_SOURCE_SHA256,
-                     "workflow_sha256": ci.qualify.digest(ci.ROOT / ".github/workflows/rust-engine.yml")}
+                     "workflow_sha256": ci.qualify.digest(ci.ROOT / ".github/workflows/rust-engine.yml"),
+                     "bootstrap_helper_sha256": ci.qualify.digest(ci.python_bootstrap.__file__)}
             receipt = root / "receipt.json"
             receipt.write_text(json.dumps(value))
             self.assertEqual(ci.checked_python_bootstrap(receipt, python)["receipt"], value)
             changed_invocation = value["commands"][0] | {"argv": ["changed-command"]}
             for changed, error in [
                 (value | {"source_sha256": "0" * 64}, "recipe differs"),
+                (value | {"bootstrap_helper_sha256": "0" * 64}, "recipe differs"),
+                (value | {"workflow_sha256": "0" * 64}, "recipe differs"),
                 (value | {"commands": value["commands"][:-1]}, "command roster differs"),
                 (value | {"commands": [changed_invocation, *value["commands"][1:]]}, "invocation changed"),
                 (value | {"commands": [value["commands"][0] | {"exit": 1}, *value["commands"][1:]]}, "command failed"),
@@ -73,9 +77,9 @@ class SourceCI(unittest.TestCase):
         self.assertIn("ref: " + ci.IRGX_REVISION, workflow)
         self.assertIn("version: " + ci.ZIG_VERSION, workflow)
         self.assertIn("python-version: '" + ".".join(map(str, ci.PYTHON_VERSION)) + "'", workflow)
-        self.assertIn(ci.PYTHON_SOURCE_URL, workflow)
-        self.assertIn(ci.PYTHON_SOURCE_SHA256, workflow)
-        self.assertIn("ENGINE_CI_PYTHON_BOOTSTRAP=", workflow)
+        self.assertIn("python3 -B tool/rust_python_bootstrap.py build", workflow)
+        self.assertIn("--workflow .github/workflows/rust-engine.yml", workflow)
+        self.assertIn("--receipt-environment ENGINE_CI_PYTHON_BOOTSTRAP", workflow)
         self.assertIn("for version in " + " ".join(ci.TOOLCHAINS), workflow)
         self.assertIn("contents: read", workflow)
         self.assertNotIn("pull_request_target", workflow)

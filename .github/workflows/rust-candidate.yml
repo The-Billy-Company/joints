@@ -37,15 +37,13 @@ jobs:
     env:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
-        with: {python-version: '3.12.15'}
       - name: Validate explicit helper and candidate inputs
         env:
           HELPER_REF: ${{ inputs.helper_ref }}
           CANDIDATE_URL: ${{ inputs[matrix.url] }}
           CANDIDATE_SHA256: ${{ inputs[matrix.sha] }}
         run: |
-          python - <<'PY'
+          python3 - <<'PY'
           import os, re, urllib.parse
           assert re.fullmatch('[0-9a-f]{40}', os.environ['HELPER_REF']), 'exact helper commit required'
           url = urllib.parse.urlsplit(os.environ['CANDIDATE_URL'])
@@ -56,6 +54,37 @@ jobs:
         with:
           ref: ${{ inputs.helper_ref }}
           persist-credentials: false
+      - name: Pin the shared Python source bootstrap
+        env:
+          HELPER_REF: ${{ inputs.helper_ref }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, os, pathlib, subprocess
+          assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == os.environ['HELPER_REF']
+          helper = pathlib.Path('tool/rust_python_bootstrap.py')
+          expected = 'b79012ecf1def4f60f4e747188454204abb5aeaeffc9e9aaa36b2fcae2f1061e'
+          assert helper.is_file() and not helper.is_symlink(), 'helper-present commit required'
+          assert hashlib.sha256(helper.read_bytes()).hexdigest() == expected, 'Python bootstrap helper differs'
+          PY
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        if: matrix.target == 'linux-x86_64'
+        with: {python-version: '3.12.15'}
+      # Use the same source-only security release recipe as Rust source CI;
+      # setup-python has no 3.12.15 package for the actual macOS 14 floor.
+      - name: Build the exact official Python on macOS 14
+        if: matrix.target == 'macos-arm64'
+        run: >-
+          python3 -B tool/rust_python_bootstrap.py build
+          --workflow .github/workflows/rust-candidate.yml
+          --output python-source-bootstrap
+          --work "$RUNNER_TEMP/joints-candidate-python-3.12.15"
+          --receipt-environment CANDIDATE_PYTHON_BOOTSTRAP
+      - name: Check the retained Python source bootstrap
+        if: matrix.target == 'macos-arm64'
+        run: >-
+          python -B tool/rust_python_bootstrap.py check
+          --workflow .github/workflows/rust-candidate.yml
+          --receipt "$CANDIDATE_PYTHON_BOOTSTRAP"
       - name: Pin the shipped verifier bootstrap
         env:
           HELPER_REF: ${{ inputs.helper_ref }}
@@ -131,6 +160,7 @@ jobs:
         with:
           name: local-candidate-${{ matrix.target }}-evidence
           path: |
+            python-source-bootstrap/
             bootstrap-tools.txt
             installed-check/report.json
             installed-check/logs

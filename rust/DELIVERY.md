@@ -67,7 +67,10 @@ their own checks.
 
 macOS builds the pinned official Python 3.12.15 source because that security
 release has no `setup-python` binary for the macOS 14 ARM64 image. The source
-hash, build commands, logs and resulting interpreter identity are retained.
+and installed workflows share `tool/rust_python_bootstrap.py`, retaining the
+source, helper and workflow hashes, eight build commands, logs and resulting
+interpreter identity. The installed workflow pins the helper before executing
+it and checks the receipt with that exact interpreter.
 After correctness checks, the workflow separately compares the unchanged
 15-workload benchmark with starting Rust commit `9881c96` on four cases.
 It retains raw samples and p95 results without treating those diagnostics as
@@ -362,11 +365,13 @@ No workflow is dispatched by editing this file or by an ordinary push.
 
 Keep the workflow's three verifier SHA-256 pins synchronized when changing
 `tool/rust_delivery.py`, `tool/rust_archive.py`, or
-`tool/rust_static_boundary.py`. Before preparing a helper commit, run the
-offline delivery controls with Python 3.12 or newer:
+`tool/rust_static_boundary.py`. Its separate Python bootstrap pin must match
+`tool/rust_python_bootstrap.py`. Before preparing a helper commit, run the
+offline delivery and bootstrap controls with Python 3.12 or newer:
 
 ```sh
 python3.12 -B -m unittest discover -s tool -p test_rust_delivery.py
+python3.12 -B -m unittest discover -s tool -p test_rust_python_bootstrap.py
 ```
 
 The controls check those exact workflow pins as well as package and input

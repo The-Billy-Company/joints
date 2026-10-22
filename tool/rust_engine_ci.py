@@ -7,7 +7,6 @@ selection and command/test accounting reuse the existing qualification tools.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -21,15 +20,16 @@ import grammars
 import rust
 import rust_qualify as qualify
 import rust_perf_ci
+import rust_python_bootstrap as python_bootstrap
 
 ROOT = Path(__file__).resolve().parents[1]
-IRGX_REVISION = "0e74778b48dd99d2162f9a3af79027d1d1ee977d"
+IRGX_REVISION = "bf19d6b6d4d2417cf5a2c8c92f2613e739a5c02f"
 TOOLCHAINS = ("1.96.0", "1.85.0")
 ZIG_VERSION = "0.16.0"
-PYTHON_VERSION = (3, 12, 15)
-PYTHON_SOURCE_URL = "https://www.python.org/ftp/python/3.12.15/Python-3.12.15.tgz"
-PYTHON_SOURCE_SHA256 = "de1a241a519e0a3374fea98988d0b52c886743f9d953f23be8269cc7b59c5fab"
-PYTHON_BUILD_STEPS = ("sdk", "openssl-prefix", "compiler", "extract", "configure", "make", "install", "verify")
+PYTHON_VERSION = python_bootstrap.VERSION
+PYTHON_SOURCE_URL = python_bootstrap.SOURCE_URL
+PYTHON_SOURCE_SHA256 = python_bootstrap.SOURCE_SHA256
+PYTHON_BUILD_STEPS = python_bootstrap.BUILD_STEPS
 XCODE = Path("/Applications/Xcode_15.4.app/Contents/Developer")
 SDK_VERSION = "14.5"
 TARGETS = {"macos-arm64": "aarch64-macos.14.0", "linux-x86_64": "x86_64-linux-gnu.2.39"}
@@ -68,27 +68,7 @@ def check_fixture_closure(files, tracked, public):
 
 def checked_python_bootstrap(receipt, executable):
     """Bind a retained source bootstrap to the interpreter actually running CI."""
-    value = json.loads(Path(receipt).read_bytes())
-    qualify.require(value.get("pass") is True and value["python"]["version"] == list(PYTHON_VERSION),
-                    "Python source bootstrap did not complete")
-    qualify.require(value["source_url"] == PYTHON_SOURCE_URL
-                    and value["source_sha256"] == value["downloaded_source_sha256"] == PYTHON_SOURCE_SHA256
-                    and value["workflow_sha256"] == qualify.digest(ROOT / ".github/workflows/rust-engine.yml"),
-                    "Python source bootstrap recipe differs")
-    python = Path(executable).resolve(strict=True)
-    qualify.require(Path(value["python"]["path"]).resolve(strict=True) == python
-                    and qualify.digest(python) == value["python"]["sha256"],
-                    "Python source bootstrap interpreter differs")
-    qualify.require([command["label"] for command in value["commands"]] == list(PYTHON_BUILD_STEPS),
-                    "Python source bootstrap command roster differs")
-    for command in value["commands"]:
-        qualify.require(command["exit"] == 0, "Python source bootstrap command failed")
-        invocation = hashlib.sha256(json.dumps(command["argv"], separators=(",", ":")).encode()).hexdigest()
-        qualify.require(invocation == command["invocation_sha256"], "Python source bootstrap invocation changed")
-        for channel in ("stdout", "stderr"):
-            qualify.require(qualify.digest(command[channel]["path"]) == command[channel]["sha256"],
-                            "Python source bootstrap log changed")
-    return {"path": str(receipt), "sha256": qualify.digest(receipt), "receipt": value}
+    return python_bootstrap.checked_receipt(receipt, executable, ROOT / ".github/workflows/rust-engine.yml")
 
 
 def public_grammar_inputs():

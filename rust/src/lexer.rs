@@ -7,7 +7,6 @@ use irgx::{Munch, Pick};
 use std::sync::Arc;
 use thiserror::Error;
 
-mod permissions;
 mod recipe;
 
 #[cfg(all(test, feature = "munch-image"))]
@@ -89,7 +88,6 @@ pub(crate) struct ScanScratch {
     winners: Vec<u32>,
     workers: WorkerSlates,
     admitted: Vec<bool>,
-    permissions: permissions::Cache,
 }
 // A held identity token prevents address reuse when scratch outlives a lexer.
 // Native programs stay immutable and shared; each local Munch owns its pool.
@@ -558,14 +556,7 @@ impl Lexer {
             winners,
             workers,
             admitted: marks,
-            permissions,
         } = scratch;
-        let permission_key = admitted
-            .filter(|_| permissions::Cache::worthwhile(&self.tiers))
-            .map(|ids| {
-                permissions.bind(&self.worker_identity);
-                permissions::Cache::key(ids, fresh)
-            });
         if let Some(ids) = admitted {
             if self.admission_slots > marks.len() {
                 marks
@@ -613,37 +604,16 @@ impl Lexer {
             let native_allow = if admitted.is_none() && fresh {
                 None
             } else {
-                let cached = permission_key.and_then(|key| {
-                    permissions.get(
-                        key,
-                        admitted.expect("filtered permission key"),
-                        fresh,
-                        tier_index,
-                    )
-                });
-                if let Some(cached) = cached {
-                    allow.extend_from_slice(cached);
-                } else {
-                    allow.extend(
-                        tier.entries
-                            .iter()
-                            .enumerate()
-                            .filter(|(_, entry)| {
-                                (admitted.is_none() || entry.extra || named(entry))
-                                    && (!entry.immediate || fresh)
-                            })
-                            .map(|(i, _)| u32::try_from(i).expect("bounded lexer tier entries")),
-                    );
-                    if let Some(key) = permission_key {
-                        permissions.insert(
-                            key,
-                            admitted.expect("filtered permission key"),
-                            fresh,
-                            tier_index,
-                            allow,
-                        );
-                    }
-                }
+                allow.extend(
+                    tier.entries
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, entry)| {
+                            (admitted.is_none() || entry.extra || named(entry))
+                                && (!entry.immediate || fresh)
+                        })
+                        .map(|(i, _)| u32::try_from(i).expect("bounded lexer tier entries")),
+                );
                 if allow.is_empty() {
                     continue;
                 }

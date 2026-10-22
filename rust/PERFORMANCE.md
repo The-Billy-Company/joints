@@ -48,6 +48,13 @@ does not describe parsing throughput. No broad parsing or lexical gain is
 established. Single-call subtree timings are near clock granularity.
 The general 5–10× target remains unmet.
 
+A separately rebuilt starting CLI and the current runtime CLI produce
+byte-identical JSON, Go and Python folios with the same fresh native108
+selection. The three sizes are 161,950, 4,008,638 and 4,649,374 bytes;
+`artifact-comparison/report.json` retains source/native identities, executable
+hashes, mint commands and artifact hashes. This checks the compiler and seal
+changes without inferring wire equivalence from equal file sizes.
+
 The initial combined candidate had alarming Go compile wall-time regressions.
 Separate whole-process CPU controls did not reproduce those regressions:
 baseline/edited median child CPU ratios were 1.035 for the first candidate
@@ -64,6 +71,43 @@ then separately retains starting-Rust benchmark executables, artifact-byte
 comparisons, raw samples and summaries. Installed delivery, full working
 consumers, fixed Rust/Zig cost acceptance, sealed validation and rollback
 remain separate gates. Earlier receipts below are historical snapshots.
+
+The same comparison also completed on the actual macOS ARM64 and Ubuntu
+x86_64 CI hosts in [source CI run 39867510800](https://github.com/The-Billy-Company/joints/actions/runs/39867510800).
+Both hosts passed the full 460-test roster, with 16 declared ignores, on Rust
+1.85 and 1.96. This run identifies PR merge source `792e67d` and native
+`0e74778`; it does not qualify subsequent source or dependency revisions.
+Its performance jobs retain 45 observations per backend/workload/case.
+
+| Workload | macOS speedup range | Linux speedup range |
+|---|---:|---:|
+| Artifact load | 0.997–1.191 | 1.013–1.266 |
+| Compile | 1.020–1.037 | 0.919–1.074 |
+| Fresh-store effect product | 3.429–72.411 | 5.278–72.568 |
+| Fresh-session parse | 0.937–1.073 | 0.967–1.028 |
+| Reused-session parse | 0.860–1.007 | 0.933–1.040 |
+| Query execute | 1.270–1.335 | 1.138–1.235 |
+| Sibling navigation | 0.907–3.571 | 0.973–4.062 |
+
+Each range covers the four retained cases, using starting/edited median time.
+Go fresh/reused parsing is 0.937/0.860 on macOS and 0.967/0.933 on Linux;
+Python is 0.983/0.946 and 0.983/0.957 respectively. These actual-host results
+confirm that broad parsing improvements and the general 5–10× target have
+not been achieved. They do not isolate a responsible change. Exact reports,
+binary hashes, p95 values and raw observations are retained under
+`source-ci-a63830d-{macos-arm64,linux-x86_64}/rust-engine-ci/` in the same
+local evidence directory.
+
+The optional permission cache in `26f48be` was subsequently withdrawn. A
+same-source activation ablation retained identical native/archive/binding and
+569 source/fixture identities, exact output digests and 45 observations per
+backend/group. Cache-off/cache-on median speedups were 1.067/1.207 for Go
+fresh/reused parsing and 1.060/0.969 for Python. Whole-child CPU includes grammar
+setup and validation, so these wall-time ratios alone do not identify equivalent
+per-function CPU gains. Exact binaries, patch, rounds, tails and CPU observations
+are retained under `.local/permission-cache-ablation-20261022/`. The final source
+also removes redundant tree-proof checks and specializes sibling direction/name
+flags at compile time; it requires fresh qualification and measurement.
 
 
 ## Earlier safe public-API profiling trial, 2026-10-22

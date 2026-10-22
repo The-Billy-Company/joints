@@ -383,7 +383,8 @@ impl TreeSnapshot {
             let Some(node) = self.nodes.get(id.index()) else {
                 return false;
             };
-            if node.parent().is_some()
+            if node.span.end() > self.source.len()
+                || node.parent().is_some()
                 || previous_root.is_some_and(|previous| previous >= id.index())
                 || node.span.start() < root_end
             {
@@ -393,11 +394,6 @@ impl TreeSnapshot {
             root_end = node.span.end();
         }
         for (index, node) in self.nodes.iter().enumerate() {
-            if node.span.end() > self.source.len()
-                || node.parent().is_some_and(|parent| parent.index() >= index)
-            {
-                return false;
-            }
             let Some(children) = self.children.get(node.child_range()) else {
                 return false;
             };
@@ -425,9 +421,11 @@ impl TreeSnapshot {
                 previous_end = child.span.end();
             }
         }
-        // Matching parent links and strictly ordered runs make all counted
-        // edges unique. Parents precede children, so there are no cycles. With
-        // exactly one root/parent edge per node, every node is reachable.
+        // Roots have no parent; matching child parent links and strictly
+        // increasing child IDs make all counted incoming edges unique. Equal
+        // edge/node counts cover the arena. Parent IDs decrease toward a root,
+        // so there are no cycles or unreachable nodes. Child bounds are nested
+        // within their parents, and every root is bounded by the source.
         edges == self.nodes.len()
     }
 
@@ -605,7 +603,7 @@ impl<'tree> Node<'tree> {
             })
     }
 
-    fn neighbor(self, forward: bool, named: bool) -> Option<Self> {
+    fn neighbor<const FORWARD: bool, const NAMED: bool>(self) -> Option<Self> {
         let run = self.sibling_run();
         let mut from = self;
         if run.len() > 16 {
@@ -614,7 +612,7 @@ impl<'tree> Node<'tree> {
             // sibling directory again for every punctuation/name hop. When a
             // subtree intervenes, retain the ordered-directory lookup below.
             loop {
-                let id = if forward {
+                let id = if FORWARD {
                     if run.last() == Some(&from.id) {
                         return None;
                     }
@@ -636,7 +634,7 @@ impl<'tree> Node<'tree> {
                     tree: self.tree,
                     id,
                 };
-                if !named || from.is_named() {
+                if !NAMED || from.is_named() {
                     return Some(from);
                 }
             }
@@ -655,33 +653,33 @@ impl<'tree> Node<'tree> {
             tree: self.tree,
             id,
         };
-        if forward {
+        if FORWARD {
             run[at + 1..]
                 .iter()
                 .copied()
                 .map(make)
-                .find(|node| !named || node.is_named())
+                .find(|node| !NAMED || node.is_named())
         } else {
             run[..at]
                 .iter()
                 .rev()
                 .copied()
                 .map(make)
-                .find(|node| !named || node.is_named())
+                .find(|node| !NAMED || node.is_named())
         }
     }
 
     pub fn next_sibling(self) -> Option<Self> {
-        self.neighbor(true, false)
+        self.neighbor::<true, false>()
     }
     pub fn prev_sibling(self) -> Option<Self> {
-        self.neighbor(false, false)
+        self.neighbor::<false, false>()
     }
     pub fn next_named_sibling(self) -> Option<Self> {
-        self.neighbor(true, true)
+        self.neighbor::<true, true>()
     }
     pub fn prev_named_sibling(self) -> Option<Self> {
-        self.neighbor(false, true)
+        self.neighbor::<false, true>()
     }
 
     pub fn depth(self) -> usize {
@@ -952,5 +950,67 @@ mod tests {
                 assert_eq!(tree.measure(), tree.measure_full());
             }
         }
+    }
+
+    #[test]
+    fn edge_coverage_and_ancestor_bounds_preserve_malformed_surveys() {
+        let grammar =
+            CompiledGrammar::compile(include_bytes!("../../test/grammar/json.json")).unwrap();
+        let mut tree = grammar.session().parse(b"[]").unwrap();
+        let node = |parent, children| {
+            NodeData::new(
+                SymbolId::from_index(0),
+                None,
+                ByteSpan::new(0, 2).unwrap(),
+                None,
+                parent,
+                children,
+                false,
+            )
+            .unwrap()
+        };
+        let fallback = |tree: &TreeSnapshot| {
+            assert!(!tree.sound_edges());
+            let expected = tree.measure_full();
+            assert!(!expected.is_sound());
+            assert_eq!(tree.measure(), expected);
+            expected
+        };
+        tree.roots = vec![NodeId(0)];
+
+        // An uncovered self-parented node has no counted incoming edge.
+        tree.nodes = vec![
+            node(None, 0..1),
+            node(Some(NodeId(0)), 1..1),
+            node(Some(NodeId(2)), 1..1),
+        ];
+        tree.children = vec![NodeId(1)];
+        let survey = fallback(&tree);
+        assert_eq!((survey.walked, survey.held, survey.torn), (2, 3, 0));
+
+        // A duplicate incoming edge can hide an orphan in the edge count;
+        // exact child-parent equality must reject the unreachable owner's edge.
+        tree.nodes = vec![
+            node(None, 0..1),
+            node(Some(NodeId(0)), 1..2),
+            node(Some(NodeId(0)), 2..2),
+        ];
+        tree.children = vec![NodeId(2), NodeId(2)];
+        let survey = fallback(&tree);
+        assert_eq!((survey.walked, survey.held, survey.torn), (2, 3, 0));
+
+        tree.nodes = vec![
+            node(None, 0..1),
+            node(Some(NodeId(0)), 1..2),
+            node(Some(NodeId(1)), 2..2),
+        ];
+        tree.children = vec![NodeId(1), NodeId(2)];
+        assert!(tree.sound_edges());
+        assert_eq!(tree.measure(), tree.measure_full());
+        tree.nodes[0].span = ByteSpan::new(0, 3).unwrap();
+        assert_eq!(fallback(&tree).loose, 1);
+        tree.nodes[0].span = ByteSpan::new(0, 2).unwrap();
+        tree.nodes[2].span = ByteSpan::new(0, 3).unwrap();
+        assert_eq!(fallback(&tree).loose, 2);
     }
 }

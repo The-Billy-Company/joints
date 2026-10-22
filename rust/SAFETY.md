@@ -161,15 +161,9 @@ The native machine, transition meter, winner checks and empty-token rules are
 unchanged. Differential controls cover mask-word boundaries, tied winners,
 invalid input offsets, binary inputs and exhausted budgets.
 
-Filtered native permission ordinals may additionally use a worker-local cache
-for larger lexer tiers. Its 64 slots use four-way buckets and exact admitted
-IDs, freshness, tier and lexer identity; hashes alone never establish a hit.
-A weak identity prevents allocation-address reuse without changing the native
-worker's strong-owner hint. Directory and retained key/ordinal vector capacities
-fit 64 KiB; optional allocation failure falls back to recomputation. This bound
-excludes the cache header, allocator overhead and rejected allocator overdelivery.
-No source, scanner result or transition answer is retained, and native scans,
-winner checks and work debits remain unchanged.
+Filtered native permission ordinals are recomputed from the current lexical
+question. The optional permission-cache trial was withdrawn after controlled
+performance measurements; the existing exclusive native worker pool remains.
 
 The scanner-book artifact seal is computed once per process from the complete
 ordered embedded sources. This immutable identity cache skips no artifact
