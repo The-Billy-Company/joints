@@ -927,6 +927,8 @@ def verify_candidate(archive: Path, output: Path, execution_scope: str, *, pytho
         data = scratch / "source.json";data.write_bytes('{"café":[1,2]}'.encode())
         parsed = run([cli, "parse", grammar, data, "--all", "--json", "--mend=none", "--no-supply"])
         answer = json.loads(parsed.stdout)
+        # sole: installed parse JSON proves strictness from stop/repair fields;
+        # stamp owns human stderr verdict parsing, not this structured evidence.
         require(answer["stop"]["kind"] == "accepted" and answer["roots"] == 1
                 and answer["mends"] == answer["supplied"] == answer["skipped"] == 0,
                 "installed CLI did not strictly parse")

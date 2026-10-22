@@ -35,15 +35,96 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           path: joints
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: The-Billy-Company/irregex
-          ref: 59dede3d8ac5a280ca5addc8d5ceefe3aa9917f9
+          ref: 0e74778b48dd99d2162f9a3af79027d1d1ee977d
           path: irregex
           persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        if: matrix.target == 'linux-x86_64'
         with: {python-version: '3.12.15'}
+      # Python 3.12 security releases are source-only; setup-python does not
+      # publish 3.12.15 for this retired macOS image. Keep the actual OS floor.
+      - name: Build the exact official Python on macOS 14
+        if: matrix.target == 'macos-arm64'
+        run: |
+          python3 -B - <<'PY'
+          import hashlib, json, os, pathlib, platform, subprocess, sys, time, urllib.request
+          assert platform.system() == 'Darwin' and platform.machine() == 'arm64'
+          assert platform.mac_ver()[0].split('.')[0] == '14'
+          root = pathlib.Path.cwd()
+          evidence = root / '.local/rust-engine-ci-bootstrap/python-source'
+          evidence.mkdir(parents=True, exist_ok=False)
+          work = pathlib.Path(os.environ['RUNNER_TEMP']) / 'joints-python-3.12.15'
+          work.mkdir(exist_ok=False)
+          prefix = work / 'installed'
+          archive = work / 'Python-3.12.15.tgz'
+          url = 'https://www.python.org/ftp/python/3.12.15/Python-3.12.15.tgz'
+          expected = 'de1a241a519e0a3374fea98988d0b52c886743f9d953f23be8269cc7b59c5fab'
+          def sha(path):
+              return hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
+          receipt = {'schema': 1, 'pass': False, 'source_url': url, 'source_sha256': expected,
+                     'workflow_sha256': sha(root / '.github/workflows/rust-engine.yml'),
+                     'bootstrap_python': {'path': sys.executable, 'sha256': sha(sys.executable)},
+                     'host': {'system': platform.system(), 'machine': platform.machine(), 'macos': platform.mac_ver()[0]},
+                     'commands': []}
+          def save():
+              (evidence / 'receipt.json').write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n')
+          env = dict(os.environ, DEVELOPER_DIR='/Applications/Xcode_15.4.app/Contents/Developer',
+                     MACOSX_DEPLOYMENT_TARGET='14.0', CC='/usr/bin/clang')
+          def run(label, argv, cwd=work):
+              row = {'label': label, 'argv': list(map(str, argv)), 'cwd': str(cwd),
+                     'environment': {key: env[key] for key in ('DEVELOPER_DIR', 'MACOSX_DEPLOYMENT_TARGET', 'CC', 'SDKROOT') if key in env},
+                     'started': time.time()}
+              row['invocation_sha256'] = hashlib.sha256(json.dumps(row['argv'], separators=(',', ':')).encode()).hexdigest()
+              receipt['commands'].append(row)
+              save()
+              result = subprocess.run(row['argv'], cwd=cwd, env=env, capture_output=True)
+              for channel in ('stdout', 'stderr'):
+                  path = evidence / (label + '.' + channel)
+                  path.write_bytes(getattr(result, channel))
+                  row[channel] = {'path': str(path), 'sha256': sha(path)}
+              row.update(exit=result.returncode, finished=time.time())
+              save()
+              assert result.returncode == 0, label + ' failed; retained bootstrap logs contain the error'
+              return result.stdout.decode().strip()
+          save()
+          with urllib.request.urlopen(url) as response, archive.open('wb') as target:
+              assert response.geturl() == url, 'unexpected source redirect'
+              total = 0
+              while True:
+                  block = response.read(1 << 20)
+                  if not block:
+                      break
+                  total += len(block)
+                  assert total <= 32 << 20, 'Python source exceeds byte budget'
+                  target.write(block)
+          assert sha(archive) == expected, 'official Python source SHA256 differs'
+          receipt['downloaded_source_sha256'] = sha(archive)
+          env['SDKROOT'] = run('sdk', ['/usr/bin/xcrun', '--sdk', 'macosx14.5', '--show-sdk-path'])
+          openssl = run('openssl-prefix', ['brew', '--prefix', 'openssl@3'])
+          run('compiler', ['/usr/bin/clang', '--version'])
+          run('extract', ['/usr/bin/tar', '-xzf', str(archive), '-C', str(work)])
+          source = work / 'Python-3.12.15'
+          run('configure', [source / 'configure', '--prefix=' + str(prefix), '--with-openssl=' + openssl,
+                            '--with-openssl-rpath=auto', '--with-ensurepip=no'], source)
+          run('make', ['/usr/bin/make', '-j2'], source)
+          run('install', ['/usr/bin/make', 'install'], source)
+          python = prefix / 'bin/python3.12'
+          version = run('verify', [python, '-B', '-c', 'import ctypes, ssl, sys, zlib; assert sys.version_info[:3] == (3, 12, 15); print(sys.version)'])
+          (prefix / 'bin/python').symlink_to('python3.12')
+          receipt.update(python={'path': str(python), 'sha256': sha(python), 'version': [3, 12, 15], 'full_version': version},
+                         openssl_libraries={str(path): sha(path) for path in sorted((pathlib.Path(openssl) / 'lib').glob('lib*.3.dylib'))},
+                         **{'pass': True})
+          save()
+          with open(os.environ['GITHUB_PATH'], 'a') as path:
+              path.write(str(prefix / 'bin') + '\n')
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('ENGINE_CI_PYTHON_BOOTSTRAP=' + str(evidence / 'receipt.json') + '\n')
+          PY
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29
         with:
           version: 0.16.0
@@ -57,6 +138,7 @@ jobs:
       - name: Check offline CI controls and fetch public grammar pins
         run: |
           python -B -m unittest discover -s tool -p test_rust_engine_ci.py
+          python -B -m unittest discover -s tool -p test_rust_perf_ci.py
           mkdir -p .local/rust-engine-ci-bootstrap
           python -B tool/grammars.py fetch --set=all 2>&1 | tee .local/rust-engine-ci-bootstrap/fetch.log
           python -B tool/grammars.py verify --set=all 2>&1 | tee .local/rust-engine-ci-bootstrap/verify.log
@@ -64,7 +146,7 @@ jobs:
         env:
           ENGINE_CI_TARGET: ${{ matrix.target }}
         run: |
-          python -B tool/rust_engine_ci.py --target "$ENGINE_CI_TARGET" --output .local/rust-engine-ci
+          python -B tool/rust_engine_ci.py --target "$ENGINE_CI_TARGET" --output .local/rust-engine-ci --performance-baseline 9881c9687a5211a4088c36f44d1f4b08cc90b97f
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
@@ -77,3 +159,10 @@ jobs:
             joints/.local/rust-engine-ci/native-boundary.json
             joints/.local/rust-engine-ci/*.stdout
             joints/.local/rust-engine-ci/*.stderr
+            joints/.local/rust-engine-ci/performance/report.json
+            joints/.local/rust-engine-ci/performance/binaries/
+            joints/.local/rust-engine-ci/performance/*.stdout
+            joints/.local/rust-engine-ci/performance/*.stderr
+            joints/.local/rust-engine-ci/performance/*/*.json
+            joints/.local/rust-engine-ci/performance/*/*.stdout
+            joints/.local/rust-engine-ci/performance/*/*.stderr

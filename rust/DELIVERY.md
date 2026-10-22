@@ -65,6 +65,14 @@ reachable on its remote. Source CI supplies correctness evidence; installed
 packages, complete working consumers, performance and cutover still require
 their own checks.
 
+macOS builds the pinned official Python 3.12.15 source because that security
+release has no `setup-python` binary for the macOS 14 ARM64 image. The source
+hash, build commands, logs and resulting interpreter identity are retained.
+After correctness checks, the workflow separately compares the unchanged
+15-workload benchmark with starting Rust commit `9881c96` on four cases.
+It retains raw samples and p95 results without treating those diagnostics as
+the complete Rust/Zig cost protocol or a cutover verdict.
+
 Run with Python 3.12 or newer, Cargo, and the exact qualified source checkouts:
 
 ```sh
