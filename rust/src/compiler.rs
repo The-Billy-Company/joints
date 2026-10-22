@@ -6,7 +6,7 @@
 
 use std::borrow::Cow;
 use std::cell::Cell;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::fmt;
 use std::sync::Arc;
 
@@ -16,6 +16,8 @@ use thiserror::Error;
 
 use crate::ids::{FieldId, ProductionId, ReductionId, StateId, SymbolId};
 
+#[cfg(test)]
+mod construction_tests;
 mod table;
 use table::FrozenTables;
 
@@ -3542,7 +3544,7 @@ fn escape_literal(text: &str) -> String {
     out
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct StateItem {
     pub production: ProductionId,
     pub dot: usize,
@@ -3903,7 +3905,9 @@ fn lr0(
     let limits = &gr.limits;
     let rules = by_lhs(symbols, productions);
     let mut work = 0;
-    let mut known = BTreeMap::new();
+    // This directory is queried by exact identity only. Construction order
+    // comes from the ordered symbol kernels below, never directory iteration.
+    let mut known = HashMap::new();
     let mut states = Vec::new();
     let mut marks = Vec::new();
     let mut graph = Vec::new();
@@ -3927,7 +3931,10 @@ fn lr0(
         if count > limits.items {
             return Err(CompileError::Limit("LR items"));
         }
-        known.insert((initial.clone(), 0usize), StateId::from_index(states.len()));
+        known.insert(
+            (vec![Item { production, dot: 0 }], 0usize),
+            StateId::from_index(states.len()),
+        );
         states.push(initial);
         marks.push(0usize);
         graph.push(BTreeMap::new());
@@ -3944,27 +3951,30 @@ fn lr0(
                     .insert(gr.cursors.at(item.production, item.dot + 1));
             }
         }
+        let source = (!plan.is_empty()).then(|| (kernel(&states[at]), marks[at]));
         for (symbol, kernel) in kernels {
             let target: StateItems = kernel.iter().copied().collect();
-            let source = (crate::compiler::kernel(&states[at]), marks[at]);
-            let lane = plan
-                .get(&target)
-                .and_then(|p| p.get(&source))
+            let lane = source
+                .as_ref()
+                .and_then(|source| plan.get(&target)?.get(source))
                 .copied()
                 .unwrap_or(0);
-            let items = closure(
-                kernel,
-                productions,
-                &rules,
-                &gr.cursors,
-                &mut work,
-                limits,
-                &gr.work,
-            )?;
-            let key = (items.clone(), lane);
+            // A transition kernel contains only advanced (dot > 0) items.
+            // Closure adds only dot-zero items, so these kernels identify the
+            // same states as full closures while avoiding repeated expansion.
+            let key = (target, lane);
             let id = if let Some(&id) = known.get(&key) {
                 id
             } else {
+                let items = closure(
+                    kernel,
+                    productions,
+                    &rules,
+                    &gr.cursors,
+                    &mut work,
+                    limits,
+                    &gr.work,
+                )?;
                 if states.len() >= limits.states {
                     return Err(CompileError::Limit("LR states"));
                 }
@@ -4010,11 +4020,20 @@ fn first_sets(
                     shared,
                     "FIRST work",
                 )?;
-                let additions = first[step.symbol.index()].clone();
-                let dst = &mut first[p.lhs.index()];
-                let before = dst.len();
-                dst.extend(additions);
-                changed |= before != dst.len();
+                let source = step.symbol.index();
+                let destination = p.lhs.index();
+                if source != destination {
+                    let (dst, additions) = if destination < source {
+                        let (before, after) = first.split_at_mut(source);
+                        (&mut before[destination], &after[0])
+                    } else {
+                        let (before, after) = first.split_at_mut(destination);
+                        (&mut after[0], &before[source])
+                    };
+                    let before = dst.len();
+                    dst.extend(additions.iter().copied());
+                    changed |= before != dst.len();
+                }
                 if !nullable[step.symbol.index()] {
                     empty = false;
                     break;

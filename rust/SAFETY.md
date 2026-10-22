@@ -24,11 +24,20 @@ keep alias and field choices at their individual use sites.
 Published node IDs follow a complete source-ordered preorder traversal. Each
 sibling run is strictly increasing, including empty spans, and every subtree
 occupies one contiguous ID interval. Wide sibling lookup can therefore use a
-checked binary search, and subtree size can follow the final child chain without
+direct step between adjacent leaves, falling back to checked binary search
+when a subtree intervenes. Subtree size can follow the final child chain without
 allocating a traversal stack. Nodes continue to borrow their owning snapshot;
 these shortcuts add no indexes, unsafe access, or retained storage. Independent
 linear navigation and explicit descendant walks check the results on complete
 trees and partial forests.
+
+Structural validation first checks ordered root/child runs, exact parent links,
+parent-before-child IDs, spans, and the total edge count. Unique incoming edges,
+acyclic parents and one edge per node prove complete reachability without a
+visited bitmap or width-sized frontier. A failed proof uses the original full
+walk, preserving its exact diagnostic counters for malformed storage. Query
+execution also uses the materializer's preorder arena directly; result capture
+vectors are allocated once while retaining match order and work debits.
 
 Advancement borrows an immutable automaton from an operation-owned `Arc`.
 The borrow never escapes the operation. Singleton stack bodies keep their
@@ -107,6 +116,16 @@ return Zero before copying interior ledger claims. Surviving claims retain the
 same order, guards, interning, and publication rules; this removes temporary
 copies without changing effect identities or resource accounting.
 
+Full selected-trace products may prove a concrete stack from the grammar's
+start state before interning a single final grounded run. Stored LR links,
+exact reduction RHS symbols/floors and every appended transition establish the
+same guards as primitive folding. Empty traces remain Identity. Holes or any
+failed proof use the original fold with an untouched store, including validation
+after absorbing Zero. The optimized path retains fewer intermediate runs and
+does not reproduce their opaque allocation order or memo warmup. Final runs
+still obey the original interner capacity. Bounded move-range products retain
+their existing general guarded fold and work accounting.
+
 Public effect stores retain every distinct interned effect until the store is
 dropped, because callers may have copied their handles. A document owns a private
 store and exposes descriptions rather than handles. It marks the store before
@@ -141,6 +160,20 @@ contain every tier ordinal, can use the binding's all-admitted representation.
 The native machine, transition meter, winner checks and empty-token rules are
 unchanged. Differential controls cover mask-word boundaries, tied winners,
 invalid input offsets, binary inputs and exhausted budgets.
+
+Filtered native permission ordinals may additionally use a worker-local cache
+for larger lexer tiers. Its 64 slots use four-way buckets and exact admitted
+IDs, freshness, tier and lexer identity; hashes alone never establish a hit.
+A weak identity prevents allocation-address reuse without changing the native
+worker's strong-owner hint. Directory and retained key/ordinal vector capacities
+fit 64 KiB; optional allocation failure falls back to recomputation. This bound
+excludes the cache header, allocator overhead and rejected allocator overdelivery.
+No source, scanner result or transition answer is retained, and native scans,
+winner checks and work debits remain unchanged.
+
+The scanner-book artifact seal is computed once per process from the complete
+ordered embedded sources. This immutable identity cache skips no artifact
+envelope hash, native image check or source/roster validation.
 
 ## Validation
 

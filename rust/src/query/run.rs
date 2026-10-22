@@ -11,11 +11,11 @@ struct Capture {
     id: CaptureId,
     node: NodeId,
 }
-struct Held {
+struct Held<'t> {
     pattern: PatternId,
     finish: usize,
     begin: usize,
-    captures: Vec<Capture>,
+    captures: Vec<QueryCapture<'t>>,
 }
 
 struct Bindings<'q> {
@@ -74,7 +74,7 @@ struct Cursor<'q, 't> {
     limits: QueryLimits,
     budget: Budget,
     found: Vec<Capture>,
-    held: Vec<Held>,
+    held: Vec<Held<'t>>,
     published_captures: usize,
 }
 
@@ -83,6 +83,21 @@ pub(super) fn execute<'t>(
     tree: &'t TreeSnapshot,
     foreign: ForeignPolicy,
     limits: QueryLimits,
+) -> Result<Vec<QueryMatch<'t>>, QueryError> {
+    // Materialization stores every published node in source-ordered preorder.
+    // Walking that arena preserves the former depth-first visit order without
+    // allocating and maintaining a second frontier of the same node IDs.
+    let nodes = (0..tree.nodes.len())
+        .map(|index| NodeId(u32::try_from(index).expect("published tree node index")));
+    execute_nodes(query, tree, foreign, limits, nodes)
+}
+
+fn execute_nodes<'t>(
+    query: &Query,
+    tree: &'t TreeSnapshot,
+    foreign: ForeignPolicy,
+    limits: QueryLimits,
+    nodes: impl Iterator<Item = NodeId>,
 ) -> Result<Vec<QueryMatch<'t>>, QueryError> {
     let mut c = Cursor {
         query,
@@ -95,8 +110,7 @@ pub(super) fn execute<'t>(
         published_captures: 0,
     };
     c.budget.charge(tree.roots.len())?;
-    let mut frontier = tree.roots.iter().rev().copied().collect::<Vec<_>>();
-    while let Some(root) = frontier.pop() {
+    for root in nodes {
         c.budget.charge(1)?;
         for (index, pattern) in query.patterns.iter().enumerate() {
             c.budget.charge(1)?;
@@ -125,9 +139,8 @@ pub(super) fn execute<'t>(
             }
             c.found.clear();
         }
-        let children = &tree.children[tree.nodes[root.index()].child_range()];
-        c.budget.charge(children.len())?;
-        frontier.extend(children.iter().rev().copied());
+        c.budget
+            .charge(tree.nodes[root.index()].child_range().len())?;
     }
     let count = c.held.len();
     c.budget
@@ -138,19 +151,13 @@ pub(super) fn execute<'t>(
         .into_iter()
         .map(|m| QueryMatch {
             pattern: m.pattern,
-            captures: m
-                .captures
-                .into_iter()
-                .map(|cap| QueryCapture {
-                    id: cap.id,
-                    node: tree
-                        .node_at(cap.node.index())
-                        .expect("query captures checked tree node"),
-                })
-                .collect(),
+            captures: m.captures,
         })
         .collect())
 }
+
+#[cfg(test)]
+mod tests;
 
 impl<'q, 't> Cursor<'q, 't> {
     fn enter(&mut self, depth: usize) -> Result<(), QueryError> {
@@ -313,7 +320,17 @@ impl<'q, 't> Cursor<'q, 't> {
                         pattern: PatternId::from_index(*pattern),
                         begin,
                         finish,
-                        captures: self.found.clone(),
+                        captures: self
+                            .found
+                            .iter()
+                            .map(|capture| QueryCapture {
+                                id: capture.id,
+                                node: self
+                                    .tree
+                                    .node_at(capture.node.index())
+                                    .expect("query captures checked tree node"),
+                            })
+                            .collect(),
                     });
                 }
                 // Predicate filtering does not ask a greedy occurrence to shorten.

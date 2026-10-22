@@ -49,6 +49,22 @@ V2/S3 candidates; it cannot package the current source as native105.
 
 ## Standalone source closure
 
+The separate [Rust source workflow](../.github/workflows/rust-engine.yml) runs
+on pull requests and manual dispatches. It builds native108 from the exact IRGX
+commit pinned in the workflow, then checks formatting, all targets/features,
+Clippy, and the unfiltered release-profile default test roster on Rust 1.85 and
+1.96. Each job verifies its actual Ubuntu 24.04 x86-64 or macOS 14 ARM64 host;
+the Mac job selects Xcode 15.4 and SDK 14.5 explicitly. Host, source, tool,
+checked native-boundary, command, and named test records are retained.
+
+The workflow fetches and verifies public `grammars.toml` pins because several
+default tests embed gitignored grammar files. All other fixture inputs must
+be committed. It uses no private consumer checkout or sealed holdout and
+preserves declared ignored tests. The pinned IRGX commit must first be
+reachable on its remote. Source CI supplies correctness evidence; installed
+packages, complete working consumers, performance and cutover still require
+their own checks.
+
 Run with Python 3.12 or newer, Cargo, and the exact qualified source checkouts:
 
 ```sh
@@ -335,6 +351,19 @@ installed archives on Ubuntu 24.04 x86-64 and macOS 14 ARM64. It requires an exa
 helper-present commit and HTTPS archive URLs with independently supplied SHA-256
 digests. The verifier bootstrap is pinned separately from the candidate archive.
 No workflow is dispatched by editing this file or by an ordinary push.
+
+Keep the workflow's three verifier SHA-256 pins synchronized when changing
+`tool/rust_delivery.py`, `tool/rust_archive.py`, or
+`tool/rust_static_boundary.py`. Before preparing a helper commit, run the
+offline delivery controls with Python 3.12 or newer:
+
+```sh
+python3.12 -B -m unittest discover -s tool -p test_rust_delivery.py
+```
+
+The controls check those exact workflow pins as well as package and input
+refusals. A stale bootstrap pin otherwise prevents the installed checks from
+starting, even when the candidate archive itself is valid.
 
 Each job checks its actual OS and architecture before execution, retains the
 package's original build scope, and records the new verification scope. An

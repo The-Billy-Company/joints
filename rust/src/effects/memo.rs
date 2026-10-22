@@ -123,6 +123,9 @@ impl Memo {
         key.start()
     }
 
+    // Three hot callers already know the operation tag. Inlining lets them
+    // specialize key comparison and owner reconstruction on warm cache hits.
+    #[inline(always)]
     pub(super) fn get(&mut self, key: Key, owner: u64) -> Option<Effect> {
         #[cfg(test)]
         {

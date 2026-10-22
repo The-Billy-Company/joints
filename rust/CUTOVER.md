@@ -1,5 +1,14 @@
 # Rust candidate activation and rollback
 
+The optimization follow-on must qualify its own frozen source and packages
+before adoption. Earlier Q7 and predecessor receipts below remain evidence for
+their recorded snapshots; later runtime changes do not inherit those passes.
+The existing local sequence is `tool/rust_qualify.py`, then
+`tool/rust_bundle.py`, followed by `tool/rust_delivery.py export`, `pack`, and
+`verify`. These steps create new outputs and check the preceding source and artifact
+identities. See [delivery](DELIVERY.md) for the exact
+arguments and the native108 selection required by the current source.
+
 The workspace is receiving further performance and memory-safety changes.
 The current Q7 source reclaims unpublished effects after rejected document
 edits. It passes 443 default tests on each Rust version, strict checks and the

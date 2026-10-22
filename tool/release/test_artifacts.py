@@ -64,6 +64,74 @@ class ArtifactGuards(unittest.TestCase):
         ):
             artifacts.native(Args())
 
+    def native_archive(self, overrides=None, *, extra=False):
+        payload = {
+            name: name.encode()
+            for name in (
+                "bin/joints", "lib/libjnt.a", "lib/libjnt.so", "include/jnt.h",
+                "grammar/json.json", "LICENSE", "NOTICE", "README.md",
+            )
+        }
+        files = {name: hashlib.sha256(data).hexdigest() for name, data in payload.items()}
+        ledger = {
+            "commit": artifacts.IRREGEX, "dirty": False, "files": {},
+            "ledger_sha256": hashlib.sha256(artifacts.encoded({})).hexdigest(),
+        }
+        manifest = {
+            "schema": 1, "version": "0.1.0", "target": "linux-x86_64", "abi": 2,
+            "zig": "0.16.0", "cpu": "baseline", "source": ledger,
+            "irregex": ledger, "files": files,
+        }
+        manifest.update(overrides or {})
+        payload["manifest.json"] = artifacts.encoded(manifest)
+        if extra:
+            payload["bin/undeclared-runtime"] = b"unselected backend"
+        archive = self.root / "native.tar.gz"
+        with tarfile.open(archive, "w:gz") as package:
+            for name, data in payload.items():
+                member = tarfile.TarInfo(f"joints-0.1.0-linux-x86_64/{name}")
+                member.size = len(data)
+                package.addfile(member, io.BytesIO(data))
+        return archive
+
+    def test_native_manifest_supports_only_the_legacy_zig_backend(self):
+        for index, fields in enumerate(({}, {"backend": "zig"})):
+            with self.subTest(fields=fields):
+                artifacts.unpack_native(
+                    self.native_archive(fields), self.root / f"valid-{index}",
+                    "0.1.0", "linux-x86_64",
+                )
+        for index, backend in enumerate(("rust", "unknown", "", None, 1)):
+            with self.subTest(backend=backend), self.assertRaisesRegex(RuntimeError, "unsupported native backend"):
+                artifacts.unpack_native(
+                    self.native_archive({"backend": backend}), self.root / f"backend-{index}",
+                    "0.1.0", "linux-x86_64",
+                )
+
+    def test_native_manifest_versions_and_abi_cannot_substitute_for_the_selection(self):
+        for index, (fields, message) in enumerate((
+            ({"version": "0.2.0"}, "version mismatch"),
+            ({"abi": 3}, "target/ABI mismatch"),
+        )):
+            with self.subTest(fields=fields), self.assertRaisesRegex(RuntimeError, message):
+                artifacts.unpack_native(
+                    self.native_archive(fields), self.root / f"identity-{index}",
+                    "0.1.0", "linux-x86_64",
+                )
+
+    def test_native_inventory_refuses_missing_extra_and_undeclared_members(self):
+        for index, files in enumerate(({}, {"bin/other-backend": "0" * 64})):
+            with self.subTest(files=files), self.assertRaisesRegex(RuntimeError, "member inventory mismatch"):
+                artifacts.unpack_native(
+                    self.native_archive({"files": files}), self.root / f"inventory-{index}",
+                    "0.1.0", "linux-x86_64",
+                )
+        with self.assertRaisesRegex(RuntimeError, "unexpected native member"):
+            artifacts.unpack_native(
+                self.native_archive(extra=True), self.root / "undeclared-member",
+                "0.1.0", "linux-x86_64",
+            )
+
     def test_registry_404_is_absent_but_service_failure_is_error(self):
         url = "https://pypi.org/pypi/joints/0.1.0/json"
         for code, absent in ((404, True), (503, False), (429, False)):
