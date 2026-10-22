@@ -161,6 +161,7 @@ jobs:
             joints/.local/rust-engine-ci/*.stderr
             joints/.local/rust-engine-ci/performance/report.json
             joints/.local/rust-engine-ci/performance/binaries/
+            joints/.local/rust-engine-ci/performance/artifacts/
             joints/.local/rust-engine-ci/performance/*.stdout
             joints/.local/rust-engine-ci/performance/*.stderr
             joints/.local/rust-engine-ci/performance/*/*.json

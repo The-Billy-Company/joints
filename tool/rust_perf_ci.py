@@ -9,13 +9,13 @@ import time
 import rust_qualify as qualify
 
 
-def benchmark_executable(stdout):
+def benchmark_executable(stdout, name="runtime", kind="bench"):
     found = []
     for line in stdout.splitlines():
         row = json.loads(line)
         if (row.get("reason") == "compiler-artifact"
-                and row.get("target", {}).get("name") == "runtime"
-                and row.get("target", {}).get("kind") == ["bench"]
+                and row.get("target", {}).get("name") == name
+                and row.get("target", {}).get("kind") == [kind]
                 and row.get("executable")):
             found.append(Path(row["executable"]).resolve(strict=True))
     qualify.require(len(found) == 1, "benchmark build did not identify exactly one runtime executable")
@@ -66,10 +66,29 @@ def run(root, out, baseline, chain, env, source_report, source_report_path):
                           cwd=source, controls=controls)
             executable = benchmark_executable(Path(row["stdout"]["path"]).read_text())
             shutil.copy2(executable, binaries / name)
+            row = command("build-cli-" + name,
+                          qualify.cargo_command(chain, ["build", "--release", "--bin", "joints-rs",
+                                                         "--message-format=json"], source / "rust/Cargo.toml"),
+                          cwd=source, controls=controls)
+            executable = benchmark_executable(Path(row["stdout"]["path"]).read_text(), "joints-rs", "bin")
+            shutil.copy2(executable, binaries / (name + "-cli"))
         command("baseline-clean", ["git", "diff", "--exit-code", "HEAD"], cwd=home)
         require_same_benchmark(home / "rust/benches/runtime.rs", root / "rust/benches/runtime.rs")
-        report["binaries"] = {name: {"path": str(binaries / name), "sha256": qualify.digest(binaries / name)}
-                              for name in ("baseline", "candidate")}
+        report["binaries"] = {path.name: {"path": str(path), "sha256": qualify.digest(path)}
+                              for path in sorted(binaries.iterdir())}
+        artifacts = out / "artifacts"
+        artifacts.mkdir()
+        report["artifact_equivalence"] = []
+        for name, grammar in (("json", "test/grammar/json.json"),
+                              ("go", "upstream/grammars/go.json"),
+                              ("python", "upstream/grammars/python.json")):
+            paths = [artifacts / (name + "-" + backend + ".folio") for backend in ("baseline", "candidate")]
+            for backend, path in zip(("baseline", "candidate"), paths):
+                command("mint-" + name + "-" + backend,
+                        [binaries / (backend + "-cli"), "mint", root / grammar, "-o", path])
+            qualify.require(paths[0].read_bytes() == paths[1].read_bytes(), "starting and candidate artifact bytes differ: " + name)
+            report["artifact_equivalence"].append({"case": name, "sha256": qualify.digest(paths[0]),
+                                                    "bytes": paths[0].stat().st_size})
         # All own compiler jobs have finished before the first timed child.
         cases = (("json-wide", "test/grammar/json.json", None),
                  ("json-ledger", "test/grammar/json.json", "research/joinery/corpus/ledger.json"),

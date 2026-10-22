@@ -7,7 +7,66 @@ installed-package, and cost runs;
 their individual ratios must not be multiplied into a predicted result.
 The 1.10 latency/RSS ceiling and default cutover remain open.
 
-## Safe public-API profiling follow-on, 2026-10-22
+## Cutover follow-on against starting Rust, 2026-10-22
+
+The requested baseline is commit `9881c96`. A fresh benchmark executable was
+captured from that checkout before these edits. The following diagnostic uses
+the same benchmark source against runtime commit `26f48be`, with the same
+checked native archive. It includes the concrete selected-trace product,
+bounded lexer permission cache, compiler/artifact changes and query/tree paths.
+Later CI-only changes and the equivalent MSRV comparison-expression rewrite
+are qualified separately; these measurements do not claim their exact bytes.
+
+Three alternating rounds retain 45 samples per backend/workload/case and
+matching complete tree, lexical, query and effect digests. All team builds and
+profiling jobs finished before timing. Other host processes remained heavily
+active, and both medians and tails fluctuate. Values are starting/edited;
+below one is a regression. Every p95 and raw sample is retained under
+`.local/rust-optimization-followup-2026-10-22/measure-final/`.
+
+| Workload | Wide JSON | Ledger JSON | Go | Python |
+|---|---:|---:|---:|---:|
+| Artifact load | 1.330 | 1.355 | 1.230 | 1.056 |
+| Artifact write | 1.148 | 1.353 | 1.855 | 1.209 |
+| Bank load | 1.250 | 1.154 | 0.821 | 0.778 |
+| Compile | 1.121 | 1.209 | 2.000 | 1.519 |
+| Paired end edits | 1.250 | 1.082 | 0.886 | 1.442 |
+| Document open | 0.970 | 1.156 | 0.751 | 1.633 |
+| Fresh-store effect product | 2.670 | 49.450 | 59.962 | 113.841 |
+| Lexical walk | 1.002 | 0.923 | 0.947 | 0.945 |
+| Fresh-session parse | 0.987 | 1.164 | 0.667 | 1.366 |
+| Reused-session parse | 0.992 | 0.959 | 0.788 | 0.916 |
+| Query compile | 1.353 | 1.361 | 1.125 | 1.497 |
+| Query execute | 1.318 | 1.307 | 1.389 | 1.296 |
+| Covering node | 1.031 | 1.000 | 0.968 | 0.953 |
+| Sibling navigation | 3.915 | 0.900 | 0.875 | 0.859 |
+| Root subtree size | 1.000 | 1.000 | 1.000 | 1.000 |
+
+Only three of 60 groups meet 5×. Fresh-store products avoid the original
+intermediate effect interning, so their gain varies with trace diversity and
+does not describe parsing throughput. No broad parsing or lexical gain is
+established. Single-call subtree timings are near clock granularity.
+The general 5–10× target remains unmet.
+
+The initial combined candidate had alarming Go compile wall-time regressions.
+Separate whole-process CPU controls did not reproduce those regressions:
+baseline/edited median child CPU ratios were 1.035 for the first candidate
+and 1.091 after kernel-directory/product changes. Those controls include setup,
+validation and destruction; they are diagnostics, not per-function CPU times
+or a reason to discard adverse wall samples. Raw controls and inclusive CPU
+profiles remain in the same evidence directory.
+
+The combined local release suite passes 460 tests with 16 declared ignores,
+including independent compiler, cache-accounting, selected-product and
+malformed-tree controls. The source CI workflow now repeats strict checks and
+the complete default roster on both Rust compilers and actual target hosts,
+then separately retains starting-Rust benchmark executables, artifact-byte
+comparisons, raw samples and summaries. Installed delivery, full working
+consumers, fixed Rust/Zig cost acceptance, sealed validation and rollback
+remain separate gates. Earlier receipts below are historical snapshots.
+
+
+## Earlier safe public-API profiling trial, 2026-10-22
 
 The development checkout adds checked sibling lookup over preorder IDs,
 allocation-free subtree counting, full-tier native lexer admission, a single
