@@ -1,0 +1,30 @@
+{
+  "language": "json",
+  "mends": 0,
+  "path": "inputs/fixtures/json-empty.json",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 1,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 1
+  },
+  "tree": [
+    {
+      "end": 0,
+      "kids": [],
+      "name": "document",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "status": "selected-only-for-private-candidate-gate",
+  "scope": "Two versioned conflict-only recipes. Published consumer profiles, dirty preparer, assertions, original v1 recipe bytes and ci.py remain unchanged. Full default and governed consumer gates remain required.",
+  "consumer_observed": {
+    "head": "32f4d640bf25cd0d28f0a06d307e4f3c27ee78b0",
+    "preparer_sha256": "bca7d42bc71237b6896b4437f5d77254fca9c2284371fa33121c1394ca3767c8",
+    "ci_sha256": "9430847b82f87376388549035ba4828325dfb9de27b4fa96b94f8a9147711ab5",
+    "coherent_source_manifest_sha256": "943834686738f1770948b5c04b733d8c27a38e23c8baa0ab2a3c98902ca6497e"
+  },
+  "changes": [
+    {
+      "profile": "regulator-typescript-rust-v2",
+      "parent_profile": "regulator-typescript-v1",
+      "recipe": {
+        "path": "grammar/typescript-rust-v2.json",
+        "sha256": "4600c0be9554dff6766160f0321182a41cb2d897df3abd78c7f51b7a69798e4e"
+      },
+      "base": {
+        "repo": "tree-sitter/tree-sitter-typescript",
+        "commit": "75b3874edb2dc714fb1fd77a32013d0f8699989f",
+        "sha256": "99dc4b95424dff47c89acb50d5d3f25b081b07eaff43994b7881dccd4186b214"
+      },
+      "parent_recipe_sha256": "84ac391aa7f4e33a03ca36c1d76d916b07be995bb3a3edbb221e9ed32762fcf3",
+      "parent_derived_sha256": "67e259c40eb53bbe1e518c0483ae6eb528ac0d214f04f8a44a7c38dd7c79f0da",
+      "derived_sha256": "06578a5fc60e1685625a321989663b5faeb3acb3ca17c19e096ddd32c782aa4f",
+      "added_conflicts": [
+        [
+          "_intrinsic_import_type",
+          "_intrinsic_import_type_member"
+        ],
+        [
+          "_intrinsic_import_type",
+          "_intrinsic_import_type_generic"
+        ],
+        [
+          "primary_expression",
+          "_import_type_query_arguments"
+        ]
+      ],
+      "all_other_recipe_values_equal": true,
+      "changed_recipe_fields": [
+        "profile_id",
+        "expected_grammar_sha256",
+        "added_conflicts"
+      ]
+    },
+    {
+      "profile": "regulator-tsx-rust-v2",
+      "parent_profile": "regulator-tsx-v1",
+      "recipe": {
+        "path": "grammar/tsx-rust-v2.json",
+        "sha256": "ac3a9ed11c07f31868c78ab523658ec9af59700095613c41f3e3018a785d9053"
+      },
+      "base": {
+        "repo": "tree-sitter/tree-sitter-typescript",
+        "commit": "75b3874edb2dc714fb1fd77a32013d0f8699989f",
+        "sha256": "f98a7830b67be266c9e9effb673a5fc154ad6aa26f87f7c6d4a9191e09d8b357"
+      },
+      "parent_recipe_sha256": "b0d53c988c3e260ecbd3b661451d9fb254bcdaa894f5d8a817b7ace9ba036071",
+      "parent_derived_sha256": "428ec7a32e65850bc9437aa57378af54c9190be18e91e8deaad8739b770b15e9",
+      "derived_sha256": "66984eca07047c6d3aa12acdedf8043e79040d9afb10c84b2b4fc684fa20531a",
+      "added_conflicts": [
+        [
+          "_intrinsic_import_type",
+          "_intrinsic_import_type_member"
+        ],
+        [
+          "_intrinsic_import_type",
+          "_intrinsic_import_type_generic"
+        ],
+        [
+          "primary_expression",
+          "_import_type_query_arguments"
+        ]
+      ],
+      "all_other_recipe_values_equal": true,
+      "changed_recipe_fields": [
+        "profile_id",
+        "expected_grammar_sha256",
+        "added_conflicts"
+      ]
+    }
+  ],
+  "independent_generation": {
+    "path": "evidence/typescript-v2-generation.json",
+    "sha256": "52ba0f04c80bdda734036f0186f5127445c0b86a37a6e5e13a586e9e0ba2048f"
+  },
+  "unchanged_native_constructor": {
+    "path": "evidence/typescript-v2-native.json",
+    "sha256": "729044143a7dc58bde8aeaad301c31f45ce649dd1d6a21458489322b27e0230c"
+  },
+  "consumer_test_patch": null
+}

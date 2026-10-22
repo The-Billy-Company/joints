@@ -1,0 +1,1 @@
+{"language":"json","path":"inputs/fixtures/json-empty.json","stop":{"kind":"accepted"},"roots":1,"mends":0,"skipped":0,"supplied":0,"spurned":0,"scars":[],"survey":{"walked":1,"held":1,"sound":true,"loose":0,"disorder":0,"torn":0},"tree":[{"name":"document","named":true,"start":0,"end":0,"kids":[]}]}

@@ -1,0 +1,317 @@
+{
+  "language": "php",
+  "mends": 0,
+  "path": "research/joinery/specimen/php/text-swallows-remainder.php",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 39,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 39
+  },
+  "tree": [
+    {
+      "end": 70,
+      "kids": [
+        {
+          "end": 5,
+          "kids": [],
+          "name": "php_tag",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 15,
+          "kids": [
+            {
+              "end": 14,
+              "kids": [
+                {
+                  "end": 8,
+                  "field": "left",
+                  "kids": [
+                    {
+                      "end": 7,
+                      "kids": [],
+                      "name": "$",
+                      "named": false,
+                      "start": 6
+                    },
+                    {
+                      "end": 8,
+                      "kids": [],
+                      "name": "name",
+                      "named": true,
+                      "start": 7
+                    }
+                  ],
+                  "name": "variable_name",
+                  "named": true,
+                  "start": 6
+                },
+                {
+                  "end": 10,
+                  "kids": [],
+                  "name": "=",
+                  "named": false,
+                  "start": 9
+                },
+                {
+                  "end": 14,
+                  "field": "right",
+                  "kids": [
+                    {
+                      "end": 12,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 11
+                    },
+                    {
+                      "end": 13,
+                      "kids": [],
+                      "name": "string_content",
+                      "named": true,
+                      "start": 12
+                    },
+                    {
+                      "end": 14,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 13
+                    }
+                  ],
+                  "name": "encapsed_string",
+                  "named": true,
+                  "start": 11
+                }
+              ],
+              "name": "assignment_expression",
+              "named": true,
+              "start": 6
+            },
+            {
+              "end": 15,
+              "kids": [],
+              "name": ";",
+              "named": false,
+              "start": 14
+            }
+          ],
+          "name": "expression_statement",
+          "named": true,
+          "start": 6
+        },
+        {
+          "end": 42,
+          "kids": [
+            {
+              "end": 24,
+              "kids": [],
+              "name": "function",
+              "named": false,
+              "start": 16
+            },
+            {
+              "end": 26,
+              "field": "name",
+              "kids": [],
+              "name": "name",
+              "named": true,
+              "start": 25
+            },
+            {
+              "end": 28,
+              "field": "parameters",
+              "kids": [
+                {
+                  "end": 27,
+                  "kids": [],
+                  "name": "(",
+                  "named": false,
+                  "start": 26
+                },
+                {
+                  "end": 28,
+                  "kids": [],
+                  "name": ")",
+                  "named": false,
+                  "start": 27
+                }
+              ],
+              "name": "formal_parameters",
+              "named": true,
+              "start": 26
+            },
+            {
+              "end": 42,
+              "field": "body",
+              "kids": [
+                {
+                  "end": 30,
+                  "kids": [],
+                  "name": "{",
+                  "named": false,
+                  "start": 29
+                },
+                {
+                  "end": 40,
+                  "kids": [
+                    {
+                      "end": 37,
+                      "kids": [],
+                      "name": "return",
+                      "named": false,
+                      "start": 31
+                    },
+                    {
+                      "end": 39,
+                      "kids": [],
+                      "name": "integer",
+                      "named": true,
+                      "start": 38
+                    },
+                    {
+                      "end": 40,
+                      "kids": [],
+                      "name": ";",
+                      "named": false,
+                      "start": 39
+                    }
+                  ],
+                  "name": "return_statement",
+                  "named": true,
+                  "start": 31
+                },
+                {
+                  "end": 42,
+                  "kids": [],
+                  "name": "}",
+                  "named": false,
+                  "start": 41
+                }
+              ],
+              "name": "compound_statement",
+              "named": true,
+              "start": 29
+            }
+          ],
+          "name": "function_definition",
+          "named": true,
+          "start": 16
+        },
+        {
+          "end": 69,
+          "kids": [
+            {
+              "end": 51,
+              "kids": [],
+              "name": "function",
+              "named": false,
+              "start": 43
+            },
+            {
+              "end": 53,
+              "field": "name",
+              "kids": [],
+              "name": "name",
+              "named": true,
+              "start": 52
+            },
+            {
+              "end": 55,
+              "field": "parameters",
+              "kids": [
+                {
+                  "end": 54,
+                  "kids": [],
+                  "name": "(",
+                  "named": false,
+                  "start": 53
+                },
+                {
+                  "end": 55,
+                  "kids": [],
+                  "name": ")",
+                  "named": false,
+                  "start": 54
+                }
+              ],
+              "name": "formal_parameters",
+              "named": true,
+              "start": 53
+            },
+            {
+              "end": 69,
+              "field": "body",
+              "kids": [
+                {
+                  "end": 57,
+                  "kids": [],
+                  "name": "{",
+                  "named": false,
+                  "start": 56
+                },
+                {
+                  "end": 67,
+                  "kids": [
+                    {
+                      "end": 64,
+                      "kids": [],
+                      "name": "return",
+                      "named": false,
+                      "start": 58
+                    },
+                    {
+                      "end": 66,
+                      "kids": [],
+                      "name": "integer",
+                      "named": true,
+                      "start": 65
+                    },
+                    {
+                      "end": 67,
+                      "kids": [],
+                      "name": ";",
+                      "named": false,
+                      "start": 66
+                    }
+                  ],
+                  "name": "return_statement",
+                  "named": true,
+                  "start": 58
+                },
+                {
+                  "end": 69,
+                  "kids": [],
+                  "name": "}",
+                  "named": false,
+                  "start": 68
+                }
+              ],
+              "name": "compound_statement",
+              "named": true,
+              "start": 56
+            }
+          ],
+          "name": "function_definition",
+          "named": true,
+          "start": 43
+        }
+      ],
+      "name": "program",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

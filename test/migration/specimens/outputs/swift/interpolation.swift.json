@@ -1,0 +1,230 @@
+{
+  "language": "swift",
+  "mends": 0,
+  "path": "research/joinery/specimen/swift/interpolation.swift",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 26,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 26
+  },
+  "tree": [
+    {
+      "end": 33,
+      "kids": [
+        {
+          "end": 9,
+          "kids": [
+            {
+              "end": 3,
+              "kids": [
+                {
+                  "end": 3,
+                  "field": "mutability",
+                  "kids": [],
+                  "name": "let",
+                  "named": false,
+                  "start": 0
+                }
+              ],
+              "name": "value_binding_pattern",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 5,
+              "field": "name",
+              "kids": [
+                {
+                  "end": 5,
+                  "field": "bound_identifier",
+                  "kids": [],
+                  "name": "simple_identifier",
+                  "named": true,
+                  "start": 4
+                }
+              ],
+              "name": "pattern",
+              "named": true,
+              "start": 4
+            },
+            {
+              "end": 7,
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 6
+            },
+            {
+              "end": 9,
+              "field": "value",
+              "kids": [],
+              "name": "integer_literal",
+              "named": true,
+              "start": 8
+            }
+          ],
+          "name": "property_declaration",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 32,
+          "kids": [
+            {
+              "end": 13,
+              "kids": [
+                {
+                  "end": 13,
+                  "field": "mutability",
+                  "kids": [],
+                  "name": "let",
+                  "named": false,
+                  "start": 10
+                }
+              ],
+              "name": "value_binding_pattern",
+              "named": true,
+              "start": 10
+            },
+            {
+              "end": 15,
+              "field": "name",
+              "kids": [
+                {
+                  "end": 15,
+                  "field": "bound_identifier",
+                  "kids": [],
+                  "name": "simple_identifier",
+                  "named": true,
+                  "start": 14
+                }
+              ],
+              "name": "pattern",
+              "named": true,
+              "start": 14
+            },
+            {
+              "end": 17,
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 16
+            },
+            {
+              "end": 32,
+              "field": "value",
+              "kids": [
+                {
+                  "end": 19,
+                  "kids": [],
+                  "name": "\"",
+                  "named": false,
+                  "start": 18
+                },
+                {
+                  "end": 21,
+                  "field": "text",
+                  "kids": [],
+                  "name": "line_str_text",
+                  "named": true,
+                  "start": 19
+                },
+                {
+                  "end": 23,
+                  "kids": [],
+                  "name": "\\(",
+                  "named": false,
+                  "start": 21
+                },
+                {
+                  "end": 28,
+                  "field": "interpolation",
+                  "kids": [
+                    {
+                      "end": 28,
+                      "field": "value",
+                      "kids": [
+                        {
+                          "end": 24,
+                          "field": "lhs",
+                          "kids": [],
+                          "name": "simple_identifier",
+                          "named": true,
+                          "start": 23
+                        },
+                        {
+                          "end": 26,
+                          "field": "op",
+                          "kids": [],
+                          "name": "+",
+                          "named": false,
+                          "start": 25
+                        },
+                        {
+                          "end": 28,
+                          "field": "rhs",
+                          "kids": [],
+                          "name": "integer_literal",
+                          "named": true,
+                          "start": 27
+                        }
+                      ],
+                      "name": "additive_expression",
+                      "named": true,
+                      "start": 23
+                    }
+                  ],
+                  "name": "interpolated_expression",
+                  "named": true,
+                  "start": 23
+                },
+                {
+                  "end": 29,
+                  "kids": [],
+                  "name": ")",
+                  "named": false,
+                  "start": 28
+                },
+                {
+                  "end": 31,
+                  "field": "text",
+                  "kids": [],
+                  "name": "line_str_text",
+                  "named": true,
+                  "start": 29
+                },
+                {
+                  "end": 32,
+                  "kids": [],
+                  "name": "\"",
+                  "named": false,
+                  "start": 31
+                }
+              ],
+              "name": "line_string_literal",
+              "named": true,
+              "start": 18
+            }
+          ],
+          "name": "property_declaration",
+          "named": true,
+          "start": 10
+        }
+      ],
+      "name": "source_file",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

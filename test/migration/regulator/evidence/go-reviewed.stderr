@@ -1,0 +1,2 @@
+[33mWarning:[0m No `tree-sitter.json` file found in your grammar, this file is required to generate with ABI 15. Using ABI version 14 instead.
+This file can be set up with `tree-sitter init`. For more information, see https://tree-sitter.github.io/tree-sitter/cli/init.

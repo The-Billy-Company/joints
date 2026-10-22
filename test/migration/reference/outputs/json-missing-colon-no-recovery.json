@@ -1,0 +1,62 @@
+{
+  "language": "json",
+  "mends": 0,
+  "path": "inputs/fixtures/json-missing-colon.json",
+  "roots": 2,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "at": 10,
+    "kind": "unexpected",
+    "state": 16,
+    "symbol": "number"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 5,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 5
+  },
+  "tree": [
+    {
+      "end": 1,
+      "kids": [],
+      "name": "{",
+      "named": false,
+      "start": 0
+    },
+    {
+      "end": 9,
+      "kids": [
+        {
+          "end": 2,
+          "kids": [],
+          "name": "\"",
+          "named": false,
+          "start": 1
+        },
+        {
+          "end": 8,
+          "kids": [],
+          "name": "string_content",
+          "named": true,
+          "start": 2
+        },
+        {
+          "end": 9,
+          "kids": [],
+          "name": "\"",
+          "named": false,
+          "start": 8
+        }
+      ],
+      "name": "string",
+      "named": true,
+      "start": 1
+    }
+  ]
+}

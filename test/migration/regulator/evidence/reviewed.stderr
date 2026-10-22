@@ -1,0 +1,17 @@
+[33mWarning:[0m No `tree-sitter.json` file found in your grammar, this file is required to generate with ABI 15. Using ABI version 14 instead.
+This file can be set up with `tree-sitter init`. For more information, see https://tree-sitter.github.io/tree-sitter/cli/init.
+[33mWarning:[0m unnecessary conflicts:
+  `boolean_operator`, `_default_boolean_operator`
+  `conditional_expression`, `_default_conditional_expression`
+  `subscript`, `_default_subscript`
+  `attribute`, `_default_attribute`
+  `type_alias_statement`, `primary_expression`
+  `except_clause`, `primary_expression`
+  `not_operator`, `_default_not_operator`
+  `await`, `_default_await`
+  `unary_operator`, `_default_unary_operator`
+  `comparison_operator`, `_default_comparison_operator`
+  `lambda`, `_default_lambda`
+  `call`, `_default_call`
+  `expression`, `_default_expression`
+  `binary_operator`, `_default_binary_operator`

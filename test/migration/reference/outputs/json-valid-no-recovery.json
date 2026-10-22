@@ -1,0 +1,352 @@
+{
+  "language": "json",
+  "mends": 0,
+  "path": "inputs/fixtures/json-valid.json",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 44,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 44
+  },
+  "tree": [
+    {
+      "end": 55,
+      "kids": [
+        {
+          "end": 54,
+          "kids": [
+            {
+              "end": 1,
+              "kids": [],
+              "name": "{",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 16,
+              "kids": [
+                {
+                  "end": 8,
+                  "field": "key",
+                  "kids": [
+                    {
+                      "end": 2,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 1
+                    },
+                    {
+                      "end": 7,
+                      "kids": [],
+                      "name": "string_content",
+                      "named": true,
+                      "start": 2
+                    },
+                    {
+                      "end": 8,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 7
+                    }
+                  ],
+                  "name": "string",
+                  "named": true,
+                  "start": 1
+                },
+                {
+                  "end": 9,
+                  "kids": [],
+                  "name": ":",
+                  "named": false,
+                  "start": 8
+                },
+                {
+                  "end": 16,
+                  "field": "value",
+                  "kids": [
+                    {
+                      "end": 10,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 9
+                    },
+                    {
+                      "end": 15,
+                      "kids": [],
+                      "name": "string_content",
+                      "named": true,
+                      "start": 10
+                    },
+                    {
+                      "end": 16,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 15
+                    }
+                  ],
+                  "name": "string",
+                  "named": true,
+                  "start": 9
+                }
+              ],
+              "name": "pair",
+              "named": true,
+              "start": 1
+            },
+            {
+              "end": 17,
+              "kids": [],
+              "name": ",",
+              "named": false,
+              "start": 16
+            },
+            {
+              "end": 41,
+              "kids": [
+                {
+                  "end": 25,
+                  "field": "key",
+                  "kids": [
+                    {
+                      "end": 18,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 17
+                    },
+                    {
+                      "end": 24,
+                      "kids": [],
+                      "name": "string_content",
+                      "named": true,
+                      "start": 18
+                    },
+                    {
+                      "end": 25,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 24
+                    }
+                  ],
+                  "name": "string",
+                  "named": true,
+                  "start": 17
+                },
+                {
+                  "end": 26,
+                  "kids": [],
+                  "name": ":",
+                  "named": false,
+                  "start": 25
+                },
+                {
+                  "end": 41,
+                  "field": "value",
+                  "kids": [
+                    {
+                      "end": 27,
+                      "kids": [],
+                      "name": "[",
+                      "named": false,
+                      "start": 26
+                    },
+                    {
+                      "end": 28,
+                      "kids": [],
+                      "name": "number",
+                      "named": true,
+                      "start": 27
+                    },
+                    {
+                      "end": 29,
+                      "kids": [],
+                      "name": ",",
+                      "named": false,
+                      "start": 28
+                    },
+                    {
+                      "end": 40,
+                      "kids": [
+                        {
+                          "end": 30,
+                          "kids": [],
+                          "name": "{",
+                          "named": false,
+                          "start": 29
+                        },
+                        {
+                          "end": 39,
+                          "kids": [
+                            {
+                              "end": 34,
+                              "field": "key",
+                              "kids": [
+                                {
+                                  "end": 31,
+                                  "kids": [],
+                                  "name": "\"",
+                                  "named": false,
+                                  "start": 30
+                                },
+                                {
+                                  "end": 33,
+                                  "kids": [],
+                                  "name": "string_content",
+                                  "named": true,
+                                  "start": 31
+                                },
+                                {
+                                  "end": 34,
+                                  "kids": [],
+                                  "name": "\"",
+                                  "named": false,
+                                  "start": 33
+                                }
+                              ],
+                              "name": "string",
+                              "named": true,
+                              "start": 30
+                            },
+                            {
+                              "end": 35,
+                              "kids": [],
+                              "name": ":",
+                              "named": false,
+                              "start": 34
+                            },
+                            {
+                              "end": 39,
+                              "field": "value",
+                              "kids": [],
+                              "name": "true",
+                              "named": true,
+                              "start": 35
+                            }
+                          ],
+                          "name": "pair",
+                          "named": true,
+                          "start": 30
+                        },
+                        {
+                          "end": 40,
+                          "kids": [],
+                          "name": "}",
+                          "named": false,
+                          "start": 39
+                        }
+                      ],
+                      "name": "object",
+                      "named": true,
+                      "start": 29
+                    },
+                    {
+                      "end": 41,
+                      "kids": [],
+                      "name": "]",
+                      "named": false,
+                      "start": 40
+                    }
+                  ],
+                  "name": "array",
+                  "named": true,
+                  "start": 26
+                }
+              ],
+              "name": "pair",
+              "named": true,
+              "start": 17
+            },
+            {
+              "end": 42,
+              "kids": [],
+              "name": ",",
+              "named": false,
+              "start": 41
+            },
+            {
+              "end": 53,
+              "kids": [
+                {
+                  "end": 48,
+                  "field": "key",
+                  "kids": [
+                    {
+                      "end": 43,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 42
+                    },
+                    {
+                      "end": 47,
+                      "kids": [],
+                      "name": "string_content",
+                      "named": true,
+                      "start": 43
+                    },
+                    {
+                      "end": 48,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 47
+                    }
+                  ],
+                  "name": "string",
+                  "named": true,
+                  "start": 42
+                },
+                {
+                  "end": 49,
+                  "kids": [],
+                  "name": ":",
+                  "named": false,
+                  "start": 48
+                },
+                {
+                  "end": 53,
+                  "field": "value",
+                  "kids": [],
+                  "name": "null",
+                  "named": true,
+                  "start": 49
+                }
+              ],
+              "name": "pair",
+              "named": true,
+              "start": 42
+            },
+            {
+              "end": 54,
+              "kids": [],
+              "name": "}",
+              "named": false,
+              "start": 53
+            }
+          ],
+          "name": "object",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "document",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

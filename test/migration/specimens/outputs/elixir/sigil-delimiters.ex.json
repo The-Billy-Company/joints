@@ -1,0 +1,625 @@
+{
+  "language": "elixir",
+  "mends": 0,
+  "path": "research/joinery/specimen/elixir/sigil-delimiters.ex",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 85,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 79
+  },
+  "tree": [
+    {
+      "end": 106,
+      "kids": [
+        {
+          "end": 16,
+          "kids": [
+            {
+              "end": 1,
+              "field": "left",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 3,
+              "field": "operator",
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 2
+            },
+            {
+              "end": 16,
+              "field": "right",
+              "kids": [
+                {
+                  "end": 5,
+                  "kids": [],
+                  "name": "~",
+                  "named": false,
+                  "start": 4
+                },
+                {
+                  "end": 6,
+                  "kids": [],
+                  "name": "sigil_name",
+                  "named": true,
+                  "start": 5
+                },
+                {
+                  "end": 7,
+                  "field": "quoted_start",
+                  "kids": [],
+                  "name": "(",
+                  "named": false,
+                  "start": 6
+                },
+                {
+                  "end": 11,
+                  "kids": [],
+                  "name": "quoted_content",
+                  "named": true,
+                  "start": 7
+                },
+                {
+                  "end": 15,
+                  "kids": [
+                    {
+                      "end": 13,
+                      "kids": [],
+                      "name": "#{",
+                      "named": false,
+                      "start": 11
+                    },
+                    {
+                      "end": 14,
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 13
+                    },
+                    {
+                      "end": 15,
+                      "kids": [],
+                      "name": "}",
+                      "named": false,
+                      "start": 14
+                    }
+                  ],
+                  "name": "interpolation",
+                  "named": true,
+                  "start": 11
+                },
+                {
+                  "end": 16,
+                  "field": "quoted_end",
+                  "kids": [],
+                  "name": ")",
+                  "named": false,
+                  "start": 15
+                }
+              ],
+              "name": "sigil",
+              "named": true,
+              "start": 4
+            }
+          ],
+          "name": "binary_operator",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 33,
+          "kids": [
+            {
+              "end": 18,
+              "field": "left",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 17
+            },
+            {
+              "end": 20,
+              "field": "operator",
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 19
+            },
+            {
+              "end": 33,
+              "field": "right",
+              "kids": [
+                {
+                  "end": 22,
+                  "kids": [],
+                  "name": "~",
+                  "named": false,
+                  "start": 21
+                },
+                {
+                  "end": 23,
+                  "kids": [],
+                  "name": "sigil_name",
+                  "named": true,
+                  "start": 22
+                },
+                {
+                  "end": 24,
+                  "field": "quoted_start",
+                  "kids": [],
+                  "name": "{",
+                  "named": false,
+                  "start": 23
+                },
+                {
+                  "end": 28,
+                  "kids": [],
+                  "name": "quoted_content",
+                  "named": true,
+                  "start": 24
+                },
+                {
+                  "end": 32,
+                  "kids": [
+                    {
+                      "end": 30,
+                      "kids": [],
+                      "name": "#{",
+                      "named": false,
+                      "start": 28
+                    },
+                    {
+                      "end": 31,
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 30
+                    },
+                    {
+                      "end": 32,
+                      "kids": [],
+                      "name": "}",
+                      "named": false,
+                      "start": 31
+                    }
+                  ],
+                  "name": "interpolation",
+                  "named": true,
+                  "start": 28
+                },
+                {
+                  "end": 33,
+                  "field": "quoted_end",
+                  "kids": [],
+                  "name": "}",
+                  "named": false,
+                  "start": 32
+                }
+              ],
+              "name": "sigil",
+              "named": true,
+              "start": 21
+            }
+          ],
+          "name": "binary_operator",
+          "named": true,
+          "start": 17
+        },
+        {
+          "end": 52,
+          "kids": [
+            {
+              "end": 35,
+              "field": "left",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 34
+            },
+            {
+              "end": 37,
+              "field": "operator",
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 36
+            },
+            {
+              "end": 52,
+              "field": "right",
+              "kids": [
+                {
+                  "end": 39,
+                  "kids": [],
+                  "name": "~",
+                  "named": false,
+                  "start": 38
+                },
+                {
+                  "end": 40,
+                  "kids": [],
+                  "name": "sigil_name",
+                  "named": true,
+                  "start": 39
+                },
+                {
+                  "end": 41,
+                  "field": "quoted_start",
+                  "kids": [],
+                  "name": "[",
+                  "named": false,
+                  "start": 40
+                },
+                {
+                  "end": 47,
+                  "kids": [],
+                  "name": "quoted_content",
+                  "named": true,
+                  "start": 41
+                },
+                {
+                  "end": 51,
+                  "kids": [
+                    {
+                      "end": 49,
+                      "kids": [],
+                      "name": "#{",
+                      "named": false,
+                      "start": 47
+                    },
+                    {
+                      "end": 50,
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 49
+                    },
+                    {
+                      "end": 51,
+                      "kids": [],
+                      "name": "}",
+                      "named": false,
+                      "start": 50
+                    }
+                  ],
+                  "name": "interpolation",
+                  "named": true,
+                  "start": 47
+                },
+                {
+                  "end": 52,
+                  "field": "quoted_end",
+                  "kids": [],
+                  "name": "]",
+                  "named": false,
+                  "start": 51
+                }
+              ],
+              "name": "sigil",
+              "named": true,
+              "start": 38
+            }
+          ],
+          "name": "binary_operator",
+          "named": true,
+          "start": 34
+        },
+        {
+          "end": 70,
+          "kids": [
+            {
+              "end": 54,
+              "field": "left",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 53
+            },
+            {
+              "end": 56,
+              "field": "operator",
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 55
+            },
+            {
+              "end": 70,
+              "field": "right",
+              "kids": [
+                {
+                  "end": 58,
+                  "kids": [],
+                  "name": "~",
+                  "named": false,
+                  "start": 57
+                },
+                {
+                  "end": 59,
+                  "kids": [],
+                  "name": "sigil_name",
+                  "named": true,
+                  "start": 58
+                },
+                {
+                  "end": 60,
+                  "field": "quoted_start",
+                  "kids": [],
+                  "name": "<",
+                  "named": false,
+                  "start": 59
+                },
+                {
+                  "end": 65,
+                  "kids": [],
+                  "name": "quoted_content",
+                  "named": true,
+                  "start": 60
+                },
+                {
+                  "end": 69,
+                  "kids": [
+                    {
+                      "end": 67,
+                      "kids": [],
+                      "name": "#{",
+                      "named": false,
+                      "start": 65
+                    },
+                    {
+                      "end": 68,
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 67
+                    },
+                    {
+                      "end": 69,
+                      "kids": [],
+                      "name": "}",
+                      "named": false,
+                      "start": 68
+                    }
+                  ],
+                  "name": "interpolation",
+                  "named": true,
+                  "start": 65
+                },
+                {
+                  "end": 70,
+                  "field": "quoted_end",
+                  "kids": [],
+                  "name": ">",
+                  "named": false,
+                  "start": 69
+                }
+              ],
+              "name": "sigil",
+              "named": true,
+              "start": 57
+            }
+          ],
+          "name": "binary_operator",
+          "named": true,
+          "start": 53
+        },
+        {
+          "end": 88,
+          "kids": [
+            {
+              "end": 72,
+              "field": "left",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 71
+            },
+            {
+              "end": 74,
+              "field": "operator",
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 73
+            },
+            {
+              "end": 88,
+              "field": "right",
+              "kids": [
+                {
+                  "end": 76,
+                  "kids": [],
+                  "name": "~",
+                  "named": false,
+                  "start": 75
+                },
+                {
+                  "end": 77,
+                  "kids": [],
+                  "name": "sigil_name",
+                  "named": true,
+                  "start": 76
+                },
+                {
+                  "end": 78,
+                  "field": "quoted_start",
+                  "kids": [],
+                  "name": "|",
+                  "named": false,
+                  "start": 77
+                },
+                {
+                  "end": 83,
+                  "kids": [],
+                  "name": "quoted_content",
+                  "named": true,
+                  "start": 78
+                },
+                {
+                  "end": 87,
+                  "kids": [
+                    {
+                      "end": 85,
+                      "kids": [],
+                      "name": "#{",
+                      "named": false,
+                      "start": 83
+                    },
+                    {
+                      "end": 86,
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 85
+                    },
+                    {
+                      "end": 87,
+                      "kids": [],
+                      "name": "}",
+                      "named": false,
+                      "start": 86
+                    }
+                  ],
+                  "name": "interpolation",
+                  "named": true,
+                  "start": 83
+                },
+                {
+                  "end": 88,
+                  "field": "quoted_end",
+                  "kids": [],
+                  "name": "|",
+                  "named": false,
+                  "start": 87
+                }
+              ],
+              "name": "sigil",
+              "named": true,
+              "start": 75
+            }
+          ],
+          "name": "binary_operator",
+          "named": true,
+          "start": 71
+        },
+        {
+          "end": 105,
+          "kids": [
+            {
+              "end": 90,
+              "field": "left",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 89
+            },
+            {
+              "end": 92,
+              "field": "operator",
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 91
+            },
+            {
+              "end": 105,
+              "field": "right",
+              "kids": [
+                {
+                  "end": 94,
+                  "kids": [],
+                  "name": "~",
+                  "named": false,
+                  "start": 93
+                },
+                {
+                  "end": 95,
+                  "kids": [],
+                  "name": "sigil_name",
+                  "named": true,
+                  "start": 94
+                },
+                {
+                  "end": 96,
+                  "field": "quoted_start",
+                  "kids": [],
+                  "name": "/",
+                  "named": false,
+                  "start": 95
+                },
+                {
+                  "end": 100,
+                  "kids": [],
+                  "name": "quoted_content",
+                  "named": true,
+                  "start": 96
+                },
+                {
+                  "end": 104,
+                  "kids": [
+                    {
+                      "end": 102,
+                      "kids": [],
+                      "name": "#{",
+                      "named": false,
+                      "start": 100
+                    },
+                    {
+                      "end": 103,
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 102
+                    },
+                    {
+                      "end": 104,
+                      "kids": [],
+                      "name": "}",
+                      "named": false,
+                      "start": 103
+                    }
+                  ],
+                  "name": "interpolation",
+                  "named": true,
+                  "start": 100
+                },
+                {
+                  "end": 105,
+                  "field": "quoted_end",
+                  "kids": [],
+                  "name": "/",
+                  "named": false,
+                  "start": 104
+                }
+              ],
+              "name": "sigil",
+              "named": true,
+              "start": 93
+            }
+          ],
+          "name": "binary_operator",
+          "named": true,
+          "start": 89
+        }
+      ],
+      "name": "source",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

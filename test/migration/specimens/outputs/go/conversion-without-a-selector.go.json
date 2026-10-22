@@ -1,0 +1,231 @@
+{
+  "language": "go",
+  "mends": 0,
+  "path": "research/joinery/specimen/go/conversion-without-a-selector.go",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 31,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 27
+  },
+  "tree": [
+    {
+      "end": 50,
+      "kids": [
+        {
+          "end": 12,
+          "kids": [
+            {
+              "end": 7,
+              "kids": [],
+              "name": "package",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 12,
+              "kids": [],
+              "name": "package_identifier",
+              "named": true,
+              "start": 8
+            }
+          ],
+          "name": "package_clause",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 49,
+          "kids": [
+            {
+              "end": 18,
+              "kids": [],
+              "name": "func",
+              "named": false,
+              "start": 14
+            },
+            {
+              "end": 20,
+              "field": "name",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 19
+            },
+            {
+              "end": 27,
+              "field": "parameters",
+              "kids": [
+                {
+                  "end": 21,
+                  "kids": [],
+                  "name": "(",
+                  "named": false,
+                  "start": 20
+                },
+                {
+                  "end": 26,
+                  "kids": [
+                    {
+                      "end": 22,
+                      "field": "name",
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 21
+                    },
+                    {
+                      "end": 26,
+                      "field": "type",
+                      "kids": [],
+                      "name": "type_identifier",
+                      "named": true,
+                      "start": 23
+                    }
+                  ],
+                  "name": "parameter_declaration",
+                  "named": true,
+                  "start": 21
+                },
+                {
+                  "end": 27,
+                  "kids": [],
+                  "name": ")",
+                  "named": false,
+                  "start": 26
+                }
+              ],
+              "name": "parameter_list",
+              "named": true,
+              "start": 20
+            },
+            {
+              "end": 31,
+              "field": "result",
+              "kids": [],
+              "name": "type_identifier",
+              "named": true,
+              "start": 28
+            },
+            {
+              "end": 49,
+              "field": "body",
+              "kids": [
+                {
+                  "end": 33,
+                  "kids": [],
+                  "name": "{",
+                  "named": false,
+                  "start": 32
+                },
+                {
+                  "end": 47,
+                  "kids": [
+                    {
+                      "end": 47,
+                      "kids": [
+                        {
+                          "end": 40,
+                          "kids": [],
+                          "name": "return",
+                          "named": false,
+                          "start": 34
+                        },
+                        {
+                          "end": 47,
+                          "kids": [
+                            {
+                              "end": 47,
+                              "kids": [
+                                {
+                                  "end": 44,
+                                  "field": "function",
+                                  "kids": [],
+                                  "name": "identifier",
+                                  "named": true,
+                                  "start": 41
+                                },
+                                {
+                                  "end": 47,
+                                  "field": "arguments",
+                                  "kids": [
+                                    {
+                                      "end": 45,
+                                      "kids": [],
+                                      "name": "(",
+                                      "named": false,
+                                      "start": 44
+                                    },
+                                    {
+                                      "end": 46,
+                                      "kids": [],
+                                      "name": "identifier",
+                                      "named": true,
+                                      "start": 45
+                                    },
+                                    {
+                                      "end": 47,
+                                      "kids": [],
+                                      "name": ")",
+                                      "named": false,
+                                      "start": 46
+                                    }
+                                  ],
+                                  "name": "argument_list",
+                                  "named": true,
+                                  "start": 44
+                                }
+                              ],
+                              "name": "call_expression",
+                              "named": true,
+                              "start": 41
+                            }
+                          ],
+                          "name": "expression_list",
+                          "named": true,
+                          "start": 41
+                        }
+                      ],
+                      "name": "return_statement",
+                      "named": true,
+                      "start": 34
+                    }
+                  ],
+                  "name": "statement_list",
+                  "named": true,
+                  "start": 34
+                },
+                {
+                  "end": 49,
+                  "kids": [],
+                  "name": "}",
+                  "named": false,
+                  "start": 48
+                }
+              ],
+              "name": "block",
+              "named": true,
+              "start": 32
+            }
+          ],
+          "name": "function_declaration",
+          "named": true,
+          "start": 14
+        }
+      ],
+      "name": "source_file",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

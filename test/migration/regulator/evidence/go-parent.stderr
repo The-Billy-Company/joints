@@ -1,0 +1,21 @@
+[33mWarning:[0m No `tree-sitter.json` file found in your grammar, this file is required to generate with ABI 15. Using ABI version 14 instead.
+This file can be set up with `tree-sitter init`. For more information, see https://tree-sitter.github.io/tree-sitter/cli/init.
+[31mError:[0m Error when generating parser
+
+Caused by:
+    Unresolved conflict for symbol sequence:
+    
+      'func'  parameter_list  identifier  '['  identifier  •  ','  …
+    
+    Possible interpretations:
+    
+      1:  'func'  parameter_list  identifier  '['  (_simple_type  identifier)  •  ','  …
+      2:  'func'  parameter_list  identifier  '['  (type_parameter_declaration  identifier  •  var_spec_repeat1  type_elem)
+    
+    Possible resolutions:
+    
+      1:  Specify a higher precedence in `type_parameter_declaration` than in the other rules.
+      2:  Specify a higher precedence in `_simple_type` than in the other rules.
+      3:  Specify a left or right associativity in `_simple_type`
+      4:  Add a conflict for these rules: `type_parameter_declaration`, `_simple_type`
+    

@@ -1,0 +1,108 @@
+{
+  "language": "ruby",
+  "mends": 0,
+  "path": "research/joinery/specimen/ruby/hash-key-symbol.rb",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 11,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 11
+  },
+  "tree": [
+    {
+      "end": 16,
+      "kids": [
+        {
+          "end": 15,
+          "kids": [
+            {
+              "end": 1,
+              "field": "left",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 3,
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 2
+            },
+            {
+              "end": 15,
+              "field": "right",
+              "kids": [
+                {
+                  "end": 5,
+                  "kids": [],
+                  "name": "{",
+                  "named": false,
+                  "start": 4
+                },
+                {
+                  "end": 13,
+                  "kids": [
+                    {
+                      "end": 10,
+                      "field": "key",
+                      "kids": [],
+                      "name": "hash_key_symbol",
+                      "named": true,
+                      "start": 6
+                    },
+                    {
+                      "end": 11,
+                      "kids": [],
+                      "name": ":",
+                      "named": false,
+                      "start": 10
+                    },
+                    {
+                      "end": 13,
+                      "field": "value",
+                      "kids": [],
+                      "name": "integer",
+                      "named": true,
+                      "start": 12
+                    }
+                  ],
+                  "name": "pair",
+                  "named": true,
+                  "start": 6
+                },
+                {
+                  "end": 15,
+                  "kids": [],
+                  "name": "}",
+                  "named": false,
+                  "start": 14
+                }
+              ],
+              "name": "hash",
+              "named": true,
+              "start": 4
+            }
+          ],
+          "name": "assignment",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "program",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

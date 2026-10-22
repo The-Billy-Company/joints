@@ -1,0 +1,1 @@
+{"language":"json","path":"inputs/fixtures/json-invalid-byte.json","stop":{"kind":"stray","at":0},"roots":0,"mends":0,"skipped":0,"supplied":0,"spurned":0,"scars":[],"survey":{"walked":0,"held":0,"sound":true,"loose":0,"disorder":0,"torn":0},"tree":[]}

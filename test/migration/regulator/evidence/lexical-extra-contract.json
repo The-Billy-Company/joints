@@ -1,0 +1,310 @@
+{
+  "schema": 1,
+  "case": "atomic-extra-interleaving",
+  "classification": "inherited_lexical_contract_difference",
+  "scope": "This fixture records actual distinct trees. It does not normalize the native result into Tree-sitter conformance. Native extras are selected in separate lexical reads; the current engine does not interleave lexical separators into a structural token match.",
+  "grammar": {
+    "name": "lexical_extra_contract",
+    "rules": {
+      "doc": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "("
+          },
+          {
+            "type": "STRING",
+            "value": "x"
+          },
+          {
+            "type": "STRING",
+            "value": ")"
+          }
+        ]
+      }
+    },
+    "extras": [
+      {
+        "type": "ALIAS",
+        "content": {
+          "type": "TOKEN",
+          "content": {
+            "type": "STRING",
+            "value": "x"
+          }
+        },
+        "named": true,
+        "value": "renamed"
+      }
+    ]
+  },
+  "grammar_bytes_sha256": "2ec81ba284afeab27bc54ac2cc795f7e28a84900df6cba21007d92fb9205be5a",
+  "source": "(xx)",
+  "source_sha256": "a5b4bc19d3d04a5a1113073475b2ed96c6d8bd9186d6d4ef24f58dea98806f92",
+  "tree_sitter": {
+    "version": "0.26.11",
+    "cli_binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+    "cli_launcher_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+    "generated_parser_sha256": "ccf2e7b5d82fd00153549cddabcc327d33132dc74259e3fa786b6f5f21e9e6aa",
+    "generated_language_abi": 14,
+    "receipts": [
+      {
+        "operation": "version",
+        "argv": [
+          "/Users/griffinstrier/Billy-Company/joints/.local/differential/cli/node_modules/.bin/tree-sitter",
+          "--version"
+        ],
+        "cwd": "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle",
+        "exit": 0,
+        "stdout": "tree-sitter 0.26.11\n",
+        "stderr": "",
+        "stdout_sha256": "b2cfe63a3c73f0d62440b8d3c9038bdf1babef18397a31c5ca1c80fc1ffe6d9c",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "operation": "generate",
+        "argv": [
+          "/Users/griffinstrier/Billy-Company/joints/.local/differential/cli/node_modules/.bin/tree-sitter",
+          "generate",
+          "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/grammar.json"
+        ],
+        "cwd": "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle",
+        "exit": 0,
+        "stdout": "",
+        "stderr": "\u001b[33mWarning:\u001b[0m No `tree-sitter.json` file found in your grammar, this file is required to generate with ABI 15. Using ABI version 14 instead.\nThis file can be set up with `tree-sitter init`. For more information, see https://tree-sitter.github.io/tree-sitter/cli/init.\n",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e0996f7763a7bc5d6c37dab5ebc8d409e06c0db6e02cf503608a9630c40c3b24"
+      },
+      {
+        "operation": "compile",
+        "argv": [
+          "cc",
+          "-shared",
+          "-fPIC",
+          "-O2",
+          "-I/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/src",
+          "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/src/parser.c",
+          "-o",
+          "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/lexical_extra_contract.dylib"
+        ],
+        "cwd": "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle",
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "operation": "xml",
+        "argv": [
+          "/Users/griffinstrier/Billy-Company/joints/.local/differential/cli/node_modules/.bin/tree-sitter",
+          "parse",
+          "--lib-path",
+          "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/lexical_extra_contract.dylib",
+          "--lang-name",
+          "lexical_extra_contract",
+          "--xml",
+          "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/source.txt"
+        ],
+        "cwd": "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle",
+        "exit": 0,
+        "stdout": "<?xml version=\"1.0\"?>\n<sources>\n  <source name=\"/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/source.txt\">\n    <doc srow=\"0\" scol=\"0\" erow=\"0\" ecol=\"4\">\n      (\n      xx\n      )\n    </doc>\n  </source>\n</sources>\n",
+        "stderr": "\u001b[33mWarning:\u001b[0m You have not configured any parser directories!\nPlease run `tree-sitter init-config` and edit the resulting\nconfiguration file to indicate where we should look for\nlanguage grammars.\n\n",
+        "stdout_sha256": "4b9f30392c9c3b7826a252d8f1a1fde1fcfb1f2c827d3addd163a450059a663e",
+        "stderr_sha256": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0"
+      },
+      {
+        "operation": "cst",
+        "argv": [
+          "/Users/griffinstrier/Billy-Company/joints/.local/differential/cli/node_modules/.bin/tree-sitter",
+          "parse",
+          "--lib-path",
+          "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/lexical_extra_contract.dylib",
+          "--lang-name",
+          "lexical_extra_contract",
+          "--cst",
+          "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/source.txt"
+        ],
+        "cwd": "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle",
+        "exit": 0,
+        "stdout": "0:0 - 0:4   doc\n0:0 - 0:1     \"(\"\n0:1 - 0:3     \"x\"\n0:3 - 0:4     \")\"\n",
+        "stderr": "\u001b[33mWarning:\u001b[0m You have not configured any parser directories!\nPlease run `tree-sitter init-config` and edit the resulting\nconfiguration file to indicate where we should look for\nlanguage grammars.\n\n",
+        "stdout_sha256": "7c66df764f7de1eb06534ce54bfbd67d186de7a2e9e50dcf82d1afbd131f8b24",
+        "stderr_sha256": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0"
+      }
+    ],
+    "strict": true,
+    "tree": [
+      {
+        "name": "doc",
+        "named": true,
+        "start": 0,
+        "end": 4,
+        "kids": [
+          {
+            "name": "(",
+            "named": false,
+            "start": 0,
+            "end": 1,
+            "kids": []
+          },
+          {
+            "name": "x",
+            "named": false,
+            "start": 1,
+            "end": 3,
+            "kids": []
+          },
+          {
+            "name": ")",
+            "named": false,
+            "start": 3,
+            "end": 4,
+            "kids": []
+          }
+        ]
+      }
+    ],
+    "stable_inputs": true
+  },
+  "native": [
+    {
+      "implementation": "rust",
+      "binary_sha256": "de8be8595669be2c94d0928687c0d0c82a1e6c48eefa7b933ea15e04ff57aa7c",
+      "argv": [
+        "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/native-original-final/joints-de8be8595669be2c94d0928687c0d0c82a1e6c48eefa7b933ea15e04ff57aa7c",
+        "parse",
+        "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/grammar.json",
+        "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/source.txt",
+        "--json",
+        "--all",
+        "--mend=none",
+        "--no-supply"
+      ],
+      "exit": 0,
+      "stdout_sha256": "2d2a56704f3ba975d2dbf4ec769da9861e93477919b2837a5f7f0dcee233e23b",
+      "stderr_sha256": "52236d02e7ae94f503b8c76db7bce449da87a55623fc7d877aac84b6825f5002",
+      "stdout": "{\"language\":\"lexical_extra_contract\",\"path\":\"/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/source.txt\",\"stop\":{\"kind\":\"accepted\"},\"roots\":1,\"mends\":0,\"skipped\":0,\"supplied\":0,\"spurned\":0,\"scars\":[],\"survey\":{\"walked\":4,\"held\":4,\"sound\":true,\"loose\":0,\"disorder\":0,\"torn\":0},\"tree\":[{\"name\":\"doc\",\"named\":true,\"start\":0,\"end\":4,\"kids\":[{\"name\":\"(\",\"named\":false,\"start\":0,\"end\":1,\"kids\":[]},{\"name\":\"x\",\"named\":false,\"start\":1,\"end\":2,\"kids\":[]},{\"name\":\")\",\"named\":false,\"start\":3,\"end\":4,\"kids\":[]}]}]}\n",
+      "stderr": "joints: /Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/source.txt: accepted, 1 root, surveyed 4 of 4 nodes\n",
+      "strict": true,
+      "tree": [
+        {
+          "name": "doc",
+          "named": true,
+          "start": 0,
+          "end": 4,
+          "kids": [
+            {
+              "name": "(",
+              "named": false,
+              "start": 0,
+              "end": 1,
+              "kids": []
+            },
+            {
+              "name": "x",
+              "named": false,
+              "start": 1,
+              "end": 2,
+              "kids": []
+            },
+            {
+              "name": ")",
+              "named": false,
+              "start": 3,
+              "end": 4,
+              "kids": []
+            }
+          ]
+        }
+      ],
+      "semantic_tree_equal_to_ts": false
+    },
+    {
+      "implementation": "sealed_zig",
+      "binary_sha256": "709bf8c0ce4a3c9ad5deb400e42d5025439e76c45bbcfaaf0959be31cff768ec",
+      "argv": [
+        "/Users/griffinstrier/Billy-Company/joints/.local/pin/rust-reference/bin/joints",
+        "parse",
+        "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/grammar.json",
+        "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/source.txt",
+        "--json",
+        "--all",
+        "--mend=none",
+        "--no-supply"
+      ],
+      "exit": 0,
+      "stdout_sha256": "83e01d12d340830dde349c7212d191b7de5d4849f380ffc307ca764601c4fe67",
+      "stderr_sha256": "c97e7d85208328614ec3d326d8faf20b688310e3b146de6661d78fbb55d8d6cd",
+      "stdout": "{\"language\":\"lexical_extra_contract\",\"path\":\"/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/source.txt\",\"stop\":{\"kind\":\"accepted\"},\"roots\":1,\"mends\":0,\"skipped\":0,\"supplied\":0,\"spurned\":0,\"scars\":[],\"survey\":{\"walked\":5,\"held\":5,\"sound\":true,\"loose\":0,\"disorder\":0,\"torn\":0},\"tree\":[{\"name\":\"doc\",\"named\":true,\"start\":0,\"end\":4,\"kids\":[{\"name\":\"(\",\"named\":false,\"start\":0,\"end\":1,\"kids\":[]},{\"name\":\"x\",\"named\":false,\"start\":1,\"end\":2,\"kids\":[]},{\"name\":\"x\",\"named\":false,\"start\":2,\"end\":3,\"kids\":[]},{\"name\":\")\",\"named\":false,\"start\":3,\"end\":4,\"kids\":[]}]}]}\n",
+      "stderr": "joints: /Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/source.txt: accepted, 1 root, surveyed 5 of 5 nodes\n",
+      "strict": true,
+      "tree": [
+        {
+          "name": "doc",
+          "named": true,
+          "start": 0,
+          "end": 4,
+          "kids": [
+            {
+              "name": "(",
+              "named": false,
+              "start": 0,
+              "end": 1,
+              "kids": []
+            },
+            {
+              "name": "x",
+              "named": false,
+              "start": 1,
+              "end": 2,
+              "kids": []
+            },
+            {
+              "name": "x",
+              "named": false,
+              "start": 2,
+              "end": 3,
+              "kids": []
+            },
+            {
+              "name": ")",
+              "named": false,
+              "start": 3,
+              "end": 4,
+              "kids": []
+            }
+          ]
+        }
+      ],
+      "semantic_tree_equal_to_ts": false
+    }
+  ],
+  "observed_difference": {
+    "tree_sitter": "One structural x leaf spans bytes1..3; the generated lexer accepts x and loops on x before committing the same leaf. The alias name creates no node.",
+    "rust": "One structural x leaf spans bytes1..2; the second x is an invisible separator read. The alias name creates no node.",
+    "sealed_zig": "The structural x spans bytes1..2 and a separate visible extra x spans2..3. This is the frozen implementation, not the desired native extra visibility."
+  },
+  "attestation": {
+    "inputs_before": {
+      "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/finish-portable-extra.py": "6e80780149f10de77144bd96de29cd8b41168d6011af084c5c53187e6a31a9ac",
+      "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle.json": "5ce373a29983fe65a2ec8d095e9538cf0752acf9e8ebdd95f9b49c1830c2301f",
+      "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/grammar.json": "2ec81ba284afeab27bc54ac2cc795f7e28a84900df6cba21007d92fb9205be5a",
+      "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/source.txt": "a5b4bc19d3d04a5a1113073475b2ed96c6d8bd9186d6d4ef24f58dea98806f92",
+      "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/native-original-final/joints-de8be8595669be2c94d0928687c0d0c82a1e6c48eefa7b933ea15e04ff57aa7c": "de8be8595669be2c94d0928687c0d0c82a1e6c48eefa7b933ea15e04ff57aa7c",
+      "/Users/griffinstrier/Billy-Company/joints/.local/pin/rust-reference/bin/joints": "709bf8c0ce4a3c9ad5deb400e42d5025439e76c45bbcfaaf0959be31cff768ec"
+    },
+    "inputs_after": {
+      "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/finish-portable-extra.py": "6e80780149f10de77144bd96de29cd8b41168d6011af084c5c53187e6a31a9ac",
+      "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle.json": "5ce373a29983fe65a2ec8d095e9538cf0752acf9e8ebdd95f9b49c1830c2301f",
+      "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/grammar.json": "2ec81ba284afeab27bc54ac2cc795f7e28a84900df6cba21007d92fb9205be5a",
+      "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/portable-extra-oracle/source.txt": "a5b4bc19d3d04a5a1113073475b2ed96c6d8bd9186d6d4ef24f58dea98806f92",
+      "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/make-review/native-original-final/joints-de8be8595669be2c94d0928687c0d0c82a1e6c48eefa7b933ea15e04ff57aa7c": "de8be8595669be2c94d0928687c0d0c82a1e6c48eefa7b933ea15e04ff57aa7c",
+      "/Users/griffinstrier/Billy-Company/joints/.local/pin/rust-reference/bin/joints": "709bf8c0ce4a3c9ad5deb400e42d5025439e76c45bbcfaaf0959be31cff768ec"
+    },
+    "oracle_receipts_stable": true,
+    "native_run_stable": true,
+    "native_scope": "Immutable diagnostic executable, not the final source-attested release gate."
+  }
+}

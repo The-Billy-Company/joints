@@ -1,0 +1,128 @@
+{
+  "language": "php",
+  "mends": 0,
+  "path": "research/joinery/specimen/php/dollar-digit-is-text.php",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 14,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 14
+  },
+  "tree": [
+    {
+      "end": 20,
+      "kids": [
+        {
+          "end": 5,
+          "kids": [],
+          "name": "php_tag",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 19,
+          "kids": [
+            {
+              "end": 18,
+              "kids": [
+                {
+                  "end": 8,
+                  "field": "left",
+                  "kids": [
+                    {
+                      "end": 7,
+                      "kids": [],
+                      "name": "$",
+                      "named": false,
+                      "start": 6
+                    },
+                    {
+                      "end": 8,
+                      "kids": [],
+                      "name": "name",
+                      "named": true,
+                      "start": 7
+                    }
+                  ],
+                  "name": "variable_name",
+                  "named": true,
+                  "start": 6
+                },
+                {
+                  "end": 10,
+                  "kids": [],
+                  "name": "=",
+                  "named": false,
+                  "start": 9
+                },
+                {
+                  "end": 18,
+                  "field": "right",
+                  "kids": [
+                    {
+                      "end": 12,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 11
+                    },
+                    {
+                      "end": 14,
+                      "kids": [],
+                      "name": "escape_sequence",
+                      "named": true,
+                      "start": 12
+                    },
+                    {
+                      "end": 17,
+                      "kids": [],
+                      "name": "string_content",
+                      "named": true,
+                      "start": 14
+                    },
+                    {
+                      "end": 18,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 17
+                    }
+                  ],
+                  "name": "encapsed_string",
+                  "named": true,
+                  "start": 11
+                }
+              ],
+              "name": "assignment_expression",
+              "named": true,
+              "start": 6
+            },
+            {
+              "end": 19,
+              "kids": [],
+              "name": ";",
+              "named": false,
+              "start": 18
+            }
+          ],
+          "name": "expression_statement",
+          "named": true,
+          "start": 6
+        }
+      ],
+      "name": "program",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

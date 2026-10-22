@@ -1,0 +1,85 @@
+{
+  "name": "reserved_gap_contract",
+  "rules": {
+    "doc": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "x"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "identifier"
+            },
+            {
+              "type": "STRING",
+              "value": ";"
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "."
+            },
+            {
+              "type": "RESERVED",
+              "context_name": "properties",
+              "content": {
+                "type": "SYMBOL",
+                "name": "identifier"
+              }
+            },
+            {
+              "type": "STRING",
+              "value": ";"
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "@"
+            },
+            {
+              "type": "STRING",
+              "value": "if"
+            },
+            {
+              "type": "STRING",
+              "value": "!"
+            }
+          ]
+        }
+      ]
+    },
+    "identifier": {
+      "type": "PATTERN",
+      "value": "[a-z]+"
+    }
+  },
+  "word": "identifier",
+  "reserved": {
+    "global": [
+      {
+        "type": "STRING",
+        "value": "if"
+      }
+    ],
+    "properties": []
+  },
+  "extras": [
+    {
+      "type": "PATTERN",
+      "value": "\\s"
+    }
+  ]
+}

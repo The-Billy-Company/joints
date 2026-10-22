@@ -1,0 +1,90 @@
+{
+  "name": "cursor_ranks",
+  "rules": {
+    "doc": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "node"
+            },
+            {
+              "type": "STRING",
+              "value": ";"
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "other"
+            },
+            {
+              "type": "STRING",
+              "value": "w"
+            },
+            {
+              "type": "STRING",
+              "value": ";"
+            }
+          ]
+        }
+      ]
+    },
+    "node": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_high"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "_low"
+            }
+          ]
+        },
+        {
+          "type": "STRING",
+          "value": "w"
+        }
+      ]
+    },
+    "_high": {
+      "type": "PREC_LEFT",
+      "value": 1,
+      "content": {
+        "type": "STRING",
+        "value": "x"
+      }
+    },
+    "_low": {
+      "type": "PREC_LEFT",
+      "value": 0,
+      "content": {
+        "type": "STRING",
+        "value": "x"
+      }
+    },
+    "other": {
+      "type": "PREC_LEFT",
+      "value": 0,
+      "content": {
+        "type": "STRING",
+        "value": "x"
+      }
+    }
+  },
+  "inline": [
+    "_high",
+    "_low"
+  ]
+}

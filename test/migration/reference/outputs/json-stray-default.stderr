@@ -1,0 +1,2 @@
+joints: inputs/fixtures/json-stray.json: unexpected string_content at 10 in state 28, 3 roots, supplied 1, spurned 0, surveyed 6 of 9 nodes
+joints: json: weave on string_content in state 28 (2 read, 4 fold, 0 frayed): the cell is empty, and a merged lookahead is a superset of every canonical one it stands for, so it is empty under every split

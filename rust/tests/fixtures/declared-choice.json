@@ -1,0 +1,1106 @@
+[
+  {
+    "name": "call_first",
+    "grammar": "{\n  \"name\": \"call_first\",\n  \"rules\": {\n    \"program\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_expr\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \";\"\n        }\n      ]\n    },\n    \"_expr\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"identifier\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"string\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"call_expression\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"binary_expression\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"parenthesized_expression\"\n        }\n      ]\n    },\n    \"call_expression\": {\n      \"type\": \"PREC\",\n      \"value\": 2,\n      \"content\": {\n        \"type\": \"SEQ\",\n        \"members\": [\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"function\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            }\n          },\n          {\n            \"type\": \"CHOICE\",\n            \"members\": [\n              {\n                \"type\": \"FIELD\",\n                \"name\": \"type_arguments\",\n                \"content\": {\n                  \"type\": \"SYMBOL\",\n                  \"name\": \"type_arguments\"\n                }\n              },\n              {\n                \"type\": \"BLANK\"\n              }\n            ]\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"arguments\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"arguments\"\n            }\n          }\n        ]\n      }\n    },\n    \"binary_expression\": {\n      \"type\": \"PREC_LEFT\",\n      \"value\": 1,\n      \"content\": {\n        \"type\": \"SEQ\",\n        \"members\": [\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"left\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            }\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"operator\",\n            \"content\": {\n              \"type\": \"CHOICE\",\n              \"members\": [\n                {\n                  \"type\": \"STRING\",\n                  \"value\": \"<\"\n                },\n                {\n                  \"type\": \"STRING\",\n                  \"value\": \">\"\n                }\n              ]\n            }\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"right\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            }\n          }\n        ]\n      }\n    },\n    \"arguments\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"(\"\n        },\n        {\n          \"type\": \"CHOICE\",\n          \"members\": [\n            {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            },\n            {\n              \"type\": \"BLANK\"\n            }\n          ]\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \")\"\n        }\n      ]\n    },\n    \"parenthesized_expression\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"(\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_expr\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \")\"\n        }\n      ]\n    },\n    \"type_arguments\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"<\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"primary_type\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \">\"\n        }\n      ]\n    },\n    \"primary_type\": {\n      \"type\": \"ALIAS\",\n      \"content\": {\n        \"type\": \"SYMBOL\",\n        \"name\": \"identifier\"\n      },\n      \"named\": true,\n      \"value\": \"type_identifier\"\n    },\n    \"identifier\": {\n      \"type\": \"PATTERN\",\n      \"value\": \"[a-zA-Z]+\"\n    },\n    \"string\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"\\\"\"\n        },\n        {\n          \"type\": \"PATTERN\",\n          \"value\": \"[^\\\"\\n]+\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \"\\\"\"\n        }\n      ]\n    }\n  },\n  \"extras\": [\n    {\n      \"type\": \"PATTERN\",\n      \"value\": \"\\\\s\"\n    }\n  ],\n  \"conflicts\": [\n    [\n      \"_expr\",\n      \"primary_type\"\n    ]\n  ]\n}",
+    "source": "f<T>(\"x\");",
+    "expected": [
+      [
+        0,
+        "program",
+        true,
+        null,
+        0,
+        10
+      ],
+      [
+        1,
+        "call_expression",
+        true,
+        null,
+        0,
+        9
+      ],
+      [
+        2,
+        "identifier",
+        true,
+        "function",
+        0,
+        1
+      ],
+      [
+        2,
+        "type_arguments",
+        true,
+        "type_arguments",
+        1,
+        4
+      ],
+      [
+        3,
+        "<",
+        false,
+        null,
+        1,
+        2
+      ],
+      [
+        3,
+        "primary_type",
+        true,
+        null,
+        2,
+        3
+      ],
+      [
+        4,
+        "type_identifier",
+        true,
+        null,
+        2,
+        3
+      ],
+      [
+        3,
+        ">",
+        false,
+        null,
+        3,
+        4
+      ],
+      [
+        2,
+        "arguments",
+        true,
+        "arguments",
+        4,
+        9
+      ],
+      [
+        3,
+        "(",
+        false,
+        null,
+        4,
+        5
+      ],
+      [
+        3,
+        "string",
+        true,
+        null,
+        5,
+        8
+      ],
+      [
+        4,
+        "\"",
+        false,
+        null,
+        5,
+        6
+      ],
+      [
+        4,
+        "\"",
+        false,
+        null,
+        7,
+        8
+      ],
+      [
+        3,
+        ")",
+        false,
+        null,
+        8,
+        9
+      ],
+      [
+        1,
+        ";",
+        false,
+        null,
+        9,
+        10
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "26b3c90edc6559cbcb26a24c6c0ed2130b02c511fa2a81d3293693394a7c3454",
+      "source_sha256": "8bf118020f68a342737947524926d8e8f9f4c17755470ef3cb98b889ee81ee49",
+      "parser_c_sha256": "c05e568cc87c522fdb2c6cff3b599c8f0b7c89fd09819e950c3e04390a12c5f1",
+      "xml_sha256": "3313dbf7bba86caa2da57bae7cffa622d5ecb9bd71c001ea38970dd8fb8d9330",
+      "cst_sha256": "0526ac71c1d468df784fe3ed15f4be77bcf44f32503b0c509a57373f86993b99"
+    }
+  },
+  {
+    "name": "binary_first",
+    "grammar": "{\n  \"name\": \"binary_first\",\n  \"rules\": {\n    \"program\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_expr\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \";\"\n        }\n      ]\n    },\n    \"_expr\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"identifier\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"string\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"call_expression\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"binary_expression\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"parenthesized_expression\"\n        }\n      ]\n    },\n    \"binary_expression\": {\n      \"type\": \"PREC_LEFT\",\n      \"value\": 1,\n      \"content\": {\n        \"type\": \"SEQ\",\n        \"members\": [\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"left\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            }\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"operator\",\n            \"content\": {\n              \"type\": \"CHOICE\",\n              \"members\": [\n                {\n                  \"type\": \"STRING\",\n                  \"value\": \"<\"\n                },\n                {\n                  \"type\": \"STRING\",\n                  \"value\": \">\"\n                }\n              ]\n            }\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"right\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            }\n          }\n        ]\n      }\n    },\n    \"call_expression\": {\n      \"type\": \"PREC\",\n      \"value\": 2,\n      \"content\": {\n        \"type\": \"SEQ\",\n        \"members\": [\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"function\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            }\n          },\n          {\n            \"type\": \"CHOICE\",\n            \"members\": [\n              {\n                \"type\": \"FIELD\",\n                \"name\": \"type_arguments\",\n                \"content\": {\n                  \"type\": \"SYMBOL\",\n                  \"name\": \"type_arguments\"\n                }\n              },\n              {\n                \"type\": \"BLANK\"\n              }\n            ]\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"arguments\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"arguments\"\n            }\n          }\n        ]\n      }\n    },\n    \"arguments\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"(\"\n        },\n        {\n          \"type\": \"CHOICE\",\n          \"members\": [\n            {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            },\n            {\n              \"type\": \"BLANK\"\n            }\n          ]\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \")\"\n        }\n      ]\n    },\n    \"parenthesized_expression\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"(\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_expr\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \")\"\n        }\n      ]\n    },\n    \"type_arguments\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"<\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"primary_type\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \">\"\n        }\n      ]\n    },\n    \"primary_type\": {\n      \"type\": \"ALIAS\",\n      \"content\": {\n        \"type\": \"SYMBOL\",\n        \"name\": \"identifier\"\n      },\n      \"named\": true,\n      \"value\": \"type_identifier\"\n    },\n    \"identifier\": {\n      \"type\": \"PATTERN\",\n      \"value\": \"[a-zA-Z]+\"\n    },\n    \"string\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"\\\"\"\n        },\n        {\n          \"type\": \"PATTERN\",\n          \"value\": \"[^\\\"\\n]+\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \"\\\"\"\n        }\n      ]\n    }\n  },\n  \"extras\": [\n    {\n      \"type\": \"PATTERN\",\n      \"value\": \"\\\\s\"\n    }\n  ],\n  \"conflicts\": [\n    [\n      \"_expr\",\n      \"primary_type\"\n    ]\n  ]\n}",
+    "source": "f<T>(\"x\");",
+    "expected": [
+      [
+        0,
+        "program",
+        true,
+        null,
+        0,
+        10
+      ],
+      [
+        1,
+        "binary_expression",
+        true,
+        null,
+        0,
+        9
+      ],
+      [
+        2,
+        "binary_expression",
+        true,
+        "left",
+        0,
+        3
+      ],
+      [
+        3,
+        "identifier",
+        true,
+        "left",
+        0,
+        1
+      ],
+      [
+        3,
+        "<",
+        false,
+        "operator",
+        1,
+        2
+      ],
+      [
+        3,
+        "identifier",
+        true,
+        "right",
+        2,
+        3
+      ],
+      [
+        2,
+        ">",
+        false,
+        "operator",
+        3,
+        4
+      ],
+      [
+        2,
+        "parenthesized_expression",
+        true,
+        "right",
+        4,
+        9
+      ],
+      [
+        3,
+        "(",
+        false,
+        null,
+        4,
+        5
+      ],
+      [
+        3,
+        "string",
+        true,
+        null,
+        5,
+        8
+      ],
+      [
+        4,
+        "\"",
+        false,
+        null,
+        5,
+        6
+      ],
+      [
+        4,
+        "\"",
+        false,
+        null,
+        7,
+        8
+      ],
+      [
+        3,
+        ")",
+        false,
+        null,
+        8,
+        9
+      ],
+      [
+        1,
+        ";",
+        false,
+        null,
+        9,
+        10
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "1235a8d89695fe82badf75cbd923a1cfaa50c86c2da85c62cd051e0d87629752",
+      "source_sha256": "8bf118020f68a342737947524926d8e8f9f4c17755470ef3cb98b889ee81ee49",
+      "parser_c_sha256": "71d61273ff256f2848a515c7e08c64e24cbedc869ad49f0223141b2acd2c606d",
+      "xml_sha256": "8dc2e9f74a0134f1d826df2ac6be1ee527c9c20ce648cad134a087e17cfdacfc",
+      "cst_sha256": "3ae41d3c7710721204147c523a77c8f76cff1a6a865b223e63b196560c7d16b5"
+    }
+  },
+  {
+    "name": "static_binary",
+    "grammar": "{\n  \"name\": \"static_binary\",\n  \"rules\": {\n    \"program\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_expr\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \";\"\n        }\n      ]\n    },\n    \"_expr\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"identifier\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"string\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"call_expression\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"binary_expression\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"parenthesized_expression\"\n        }\n      ]\n    },\n    \"call_expression\": {\n      \"type\": \"PREC\",\n      \"value\": 0,\n      \"content\": {\n        \"type\": \"SEQ\",\n        \"members\": [\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"function\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            }\n          },\n          {\n            \"type\": \"CHOICE\",\n            \"members\": [\n              {\n                \"type\": \"FIELD\",\n                \"name\": \"type_arguments\",\n                \"content\": {\n                  \"type\": \"SYMBOL\",\n                  \"name\": \"type_arguments\"\n                }\n              },\n              {\n                \"type\": \"BLANK\"\n              }\n            ]\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"arguments\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"arguments\"\n            }\n          }\n        ]\n      }\n    },\n    \"binary_expression\": {\n      \"type\": \"PREC_LEFT\",\n      \"value\": 2,\n      \"content\": {\n        \"type\": \"SEQ\",\n        \"members\": [\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"left\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            }\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"operator\",\n            \"content\": {\n              \"type\": \"CHOICE\",\n              \"members\": [\n                {\n                  \"type\": \"STRING\",\n                  \"value\": \"<\"\n                },\n                {\n                  \"type\": \"STRING\",\n                  \"value\": \">\"\n                }\n              ]\n            }\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"right\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            }\n          }\n        ]\n      }\n    },\n    \"arguments\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"(\"\n        },\n        {\n          \"type\": \"CHOICE\",\n          \"members\": [\n            {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            },\n            {\n              \"type\": \"BLANK\"\n            }\n          ]\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \")\"\n        }\n      ]\n    },\n    \"parenthesized_expression\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"(\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_expr\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \")\"\n        }\n      ]\n    },\n    \"type_arguments\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"<\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"primary_type\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \">\"\n        }\n      ]\n    },\n    \"primary_type\": {\n      \"type\": \"ALIAS\",\n      \"content\": {\n        \"type\": \"SYMBOL\",\n        \"name\": \"identifier\"\n      },\n      \"named\": true,\n      \"value\": \"type_identifier\"\n    },\n    \"identifier\": {\n      \"type\": \"PATTERN\",\n      \"value\": \"[a-zA-Z]+\"\n    },\n    \"string\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"\\\"\"\n        },\n        {\n          \"type\": \"PATTERN\",\n          \"value\": \"[^\\\"\\n]+\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \"\\\"\"\n        }\n      ]\n    }\n  },\n  \"extras\": [\n    {\n      \"type\": \"PATTERN\",\n      \"value\": \"\\\\s\"\n    }\n  ],\n  \"conflicts\": [\n    [\n      \"_expr\",\n      \"primary_type\"\n    ]\n  ]\n}",
+    "source": "f<T>(\"x\");",
+    "expected": [
+      [
+        0,
+        "program",
+        true,
+        null,
+        0,
+        10
+      ],
+      [
+        1,
+        "call_expression",
+        true,
+        null,
+        0,
+        9
+      ],
+      [
+        2,
+        "identifier",
+        true,
+        "function",
+        0,
+        1
+      ],
+      [
+        2,
+        "type_arguments",
+        true,
+        "type_arguments",
+        1,
+        4
+      ],
+      [
+        3,
+        "<",
+        false,
+        null,
+        1,
+        2
+      ],
+      [
+        3,
+        "primary_type",
+        true,
+        null,
+        2,
+        3
+      ],
+      [
+        4,
+        "type_identifier",
+        true,
+        null,
+        2,
+        3
+      ],
+      [
+        3,
+        ">",
+        false,
+        null,
+        3,
+        4
+      ],
+      [
+        2,
+        "arguments",
+        true,
+        "arguments",
+        4,
+        9
+      ],
+      [
+        3,
+        "(",
+        false,
+        null,
+        4,
+        5
+      ],
+      [
+        3,
+        "string",
+        true,
+        null,
+        5,
+        8
+      ],
+      [
+        4,
+        "\"",
+        false,
+        null,
+        5,
+        6
+      ],
+      [
+        4,
+        "\"",
+        false,
+        null,
+        7,
+        8
+      ],
+      [
+        3,
+        ")",
+        false,
+        null,
+        8,
+        9
+      ],
+      [
+        1,
+        ";",
+        false,
+        null,
+        9,
+        10
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "dd933e7d354189b9d0a74fe069f6fba9aed6b6a8cc4411b4c583efd766ce257e",
+      "source_sha256": "8bf118020f68a342737947524926d8e8f9f4c17755470ef3cb98b889ee81ee49",
+      "parser_c_sha256": "e6baf1649cb6f1f413c4a17bf6e53e7c1ad58972b2f42900bc7d1e05455e632c",
+      "xml_sha256": "a007c833027870c7a1d2c1b285482e8b4fdd68cd445fba9dd0fe8c4ebc7905c3",
+      "cst_sha256": "0526ac71c1d468df784fe3ed15f4be77bcf44f32503b0c509a57373f86993b99"
+    }
+  },
+  {
+    "name": "dynamic_call",
+    "grammar": "{\n  \"name\": \"dynamic_call\",\n  \"rules\": {\n    \"program\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_expr\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \";\"\n        }\n      ]\n    },\n    \"_expr\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"identifier\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"string\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"call_expression\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"binary_expression\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"parenthesized_expression\"\n        }\n      ]\n    },\n    \"binary_expression\": {\n      \"type\": \"PREC_LEFT\",\n      \"value\": 1,\n      \"content\": {\n        \"type\": \"SEQ\",\n        \"members\": [\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"left\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            }\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"operator\",\n            \"content\": {\n              \"type\": \"CHOICE\",\n              \"members\": [\n                {\n                  \"type\": \"STRING\",\n                  \"value\": \"<\"\n                },\n                {\n                  \"type\": \"STRING\",\n                  \"value\": \">\"\n                }\n              ]\n            }\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"right\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            }\n          }\n        ]\n      }\n    },\n    \"call_expression\": {\n      \"type\": \"PREC_DYNAMIC\",\n      \"value\": 2,\n      \"content\": {\n        \"type\": \"PREC\",\n        \"value\": 2,\n        \"content\": {\n          \"type\": \"SEQ\",\n          \"members\": [\n            {\n              \"type\": \"FIELD\",\n              \"name\": \"function\",\n              \"content\": {\n                \"type\": \"SYMBOL\",\n                \"name\": \"_expr\"\n              }\n            },\n            {\n              \"type\": \"CHOICE\",\n              \"members\": [\n                {\n                  \"type\": \"FIELD\",\n                  \"name\": \"type_arguments\",\n                  \"content\": {\n                    \"type\": \"SYMBOL\",\n                    \"name\": \"type_arguments\"\n                  }\n                },\n                {\n                  \"type\": \"BLANK\"\n                }\n              ]\n            },\n            {\n              \"type\": \"FIELD\",\n              \"name\": \"arguments\",\n              \"content\": {\n                \"type\": \"SYMBOL\",\n                \"name\": \"arguments\"\n              }\n            }\n          ]\n        }\n      }\n    },\n    \"arguments\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"(\"\n        },\n        {\n          \"type\": \"CHOICE\",\n          \"members\": [\n            {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            },\n            {\n              \"type\": \"BLANK\"\n            }\n          ]\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \")\"\n        }\n      ]\n    },\n    \"parenthesized_expression\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"(\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_expr\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \")\"\n        }\n      ]\n    },\n    \"type_arguments\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"<\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"primary_type\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \">\"\n        }\n      ]\n    },\n    \"primary_type\": {\n      \"type\": \"ALIAS\",\n      \"content\": {\n        \"type\": \"SYMBOL\",\n        \"name\": \"identifier\"\n      },\n      \"named\": true,\n      \"value\": \"type_identifier\"\n    },\n    \"identifier\": {\n      \"type\": \"PATTERN\",\n      \"value\": \"[a-zA-Z]+\"\n    },\n    \"string\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"\\\"\"\n        },\n        {\n          \"type\": \"PATTERN\",\n          \"value\": \"[^\\\"\\n]+\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \"\\\"\"\n        }\n      ]\n    }\n  },\n  \"extras\": [\n    {\n      \"type\": \"PATTERN\",\n      \"value\": \"\\\\s\"\n    }\n  ],\n  \"conflicts\": [\n    [\n      \"_expr\",\n      \"primary_type\"\n    ]\n  ]\n}",
+    "source": "f<T>(\"x\");",
+    "expected": [
+      [
+        0,
+        "program",
+        true,
+        null,
+        0,
+        10
+      ],
+      [
+        1,
+        "call_expression",
+        true,
+        null,
+        0,
+        9
+      ],
+      [
+        2,
+        "identifier",
+        true,
+        "function",
+        0,
+        1
+      ],
+      [
+        2,
+        "type_arguments",
+        true,
+        "type_arguments",
+        1,
+        4
+      ],
+      [
+        3,
+        "<",
+        false,
+        null,
+        1,
+        2
+      ],
+      [
+        3,
+        "primary_type",
+        true,
+        null,
+        2,
+        3
+      ],
+      [
+        4,
+        "type_identifier",
+        true,
+        null,
+        2,
+        3
+      ],
+      [
+        3,
+        ">",
+        false,
+        null,
+        3,
+        4
+      ],
+      [
+        2,
+        "arguments",
+        true,
+        "arguments",
+        4,
+        9
+      ],
+      [
+        3,
+        "(",
+        false,
+        null,
+        4,
+        5
+      ],
+      [
+        3,
+        "string",
+        true,
+        null,
+        5,
+        8
+      ],
+      [
+        4,
+        "\"",
+        false,
+        null,
+        5,
+        6
+      ],
+      [
+        4,
+        "\"",
+        false,
+        null,
+        7,
+        8
+      ],
+      [
+        3,
+        ")",
+        false,
+        null,
+        8,
+        9
+      ],
+      [
+        1,
+        ";",
+        false,
+        null,
+        9,
+        10
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "b40bc43fa933173a7bedbfd85b78043dd78f1f4f1ed789a1f2e47fbfaf1d664d",
+      "source_sha256": "8bf118020f68a342737947524926d8e8f9f4c17755470ef3cb98b889ee81ee49",
+      "parser_c_sha256": "99eb9dc98f507b9d991d80a89c603359a053cfc84100dbcdc398e05098008654",
+      "xml_sha256": "179a3649d677552303343ede15ee36aa042eb2c0140f34d44193fc31eb0e3528",
+      "cst_sha256": "0526ac71c1d468df784fe3ed15f4be77bcf44f32503b0c509a57373f86993b99"
+    }
+  },
+  {
+    "name": "dynamic_binary",
+    "grammar": "{\n  \"name\": \"dynamic_binary\",\n  \"rules\": {\n    \"program\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_expr\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \";\"\n        }\n      ]\n    },\n    \"_expr\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"identifier\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"string\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"call_expression\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"binary_expression\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"parenthesized_expression\"\n        }\n      ]\n    },\n    \"call_expression\": {\n      \"type\": \"PREC\",\n      \"value\": 2,\n      \"content\": {\n        \"type\": \"SEQ\",\n        \"members\": [\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"function\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            }\n          },\n          {\n            \"type\": \"CHOICE\",\n            \"members\": [\n              {\n                \"type\": \"FIELD\",\n                \"name\": \"type_arguments\",\n                \"content\": {\n                  \"type\": \"SYMBOL\",\n                  \"name\": \"type_arguments\"\n                }\n              },\n              {\n                \"type\": \"BLANK\"\n              }\n            ]\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"arguments\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"arguments\"\n            }\n          }\n        ]\n      }\n    },\n    \"binary_expression\": {\n      \"type\": \"PREC_DYNAMIC\",\n      \"value\": 2,\n      \"content\": {\n        \"type\": \"PREC_LEFT\",\n        \"value\": 1,\n        \"content\": {\n          \"type\": \"SEQ\",\n          \"members\": [\n            {\n              \"type\": \"FIELD\",\n              \"name\": \"left\",\n              \"content\": {\n                \"type\": \"SYMBOL\",\n                \"name\": \"_expr\"\n              }\n            },\n            {\n              \"type\": \"FIELD\",\n              \"name\": \"operator\",\n              \"content\": {\n                \"type\": \"CHOICE\",\n                \"members\": [\n                  {\n                    \"type\": \"STRING\",\n                    \"value\": \"<\"\n                  },\n                  {\n                    \"type\": \"STRING\",\n                    \"value\": \">\"\n                  }\n                ]\n              }\n            },\n            {\n              \"type\": \"FIELD\",\n              \"name\": \"right\",\n              \"content\": {\n                \"type\": \"SYMBOL\",\n                \"name\": \"_expr\"\n              }\n            }\n          ]\n        }\n      }\n    },\n    \"arguments\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"(\"\n        },\n        {\n          \"type\": \"CHOICE\",\n          \"members\": [\n            {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            },\n            {\n              \"type\": \"BLANK\"\n            }\n          ]\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \")\"\n        }\n      ]\n    },\n    \"parenthesized_expression\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"(\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_expr\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \")\"\n        }\n      ]\n    },\n    \"type_arguments\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"<\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"primary_type\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \">\"\n        }\n      ]\n    },\n    \"primary_type\": {\n      \"type\": \"ALIAS\",\n      \"content\": {\n        \"type\": \"SYMBOL\",\n        \"name\": \"identifier\"\n      },\n      \"named\": true,\n      \"value\": \"type_identifier\"\n    },\n    \"identifier\": {\n      \"type\": \"PATTERN\",\n      \"value\": \"[a-zA-Z]+\"\n    },\n    \"string\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"\\\"\"\n        },\n        {\n          \"type\": \"PATTERN\",\n          \"value\": \"[^\\\"\\n]+\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \"\\\"\"\n        }\n      ]\n    }\n  },\n  \"extras\": [\n    {\n      \"type\": \"PATTERN\",\n      \"value\": \"\\\\s\"\n    }\n  ],\n  \"conflicts\": [\n    [\n      \"_expr\",\n      \"primary_type\"\n    ]\n  ]\n}",
+    "source": "f<T>(\"x\");",
+    "expected": [
+      [
+        0,
+        "program",
+        true,
+        null,
+        0,
+        10
+      ],
+      [
+        1,
+        "binary_expression",
+        true,
+        null,
+        0,
+        9
+      ],
+      [
+        2,
+        "binary_expression",
+        true,
+        "left",
+        0,
+        3
+      ],
+      [
+        3,
+        "identifier",
+        true,
+        "left",
+        0,
+        1
+      ],
+      [
+        3,
+        "<",
+        false,
+        "operator",
+        1,
+        2
+      ],
+      [
+        3,
+        "identifier",
+        true,
+        "right",
+        2,
+        3
+      ],
+      [
+        2,
+        ">",
+        false,
+        "operator",
+        3,
+        4
+      ],
+      [
+        2,
+        "parenthesized_expression",
+        true,
+        "right",
+        4,
+        9
+      ],
+      [
+        3,
+        "(",
+        false,
+        null,
+        4,
+        5
+      ],
+      [
+        3,
+        "string",
+        true,
+        null,
+        5,
+        8
+      ],
+      [
+        4,
+        "\"",
+        false,
+        null,
+        5,
+        6
+      ],
+      [
+        4,
+        "\"",
+        false,
+        null,
+        7,
+        8
+      ],
+      [
+        3,
+        ")",
+        false,
+        null,
+        8,
+        9
+      ],
+      [
+        1,
+        ";",
+        false,
+        null,
+        9,
+        10
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "3a682002d5a95d537601275519eb075b8bd9c046201ef2affbef0b42f9d3f257",
+      "source_sha256": "8bf118020f68a342737947524926d8e8f9f4c17755470ef3cb98b889ee81ee49",
+      "parser_c_sha256": "8a85d033e88eb23e8d47c19d980475b9f3b234f17cbb46919c02bf2bc6ecec1e",
+      "xml_sha256": "8a417f0b1948b85bdc8697f6adb432cc536c1d46fd37f56b683381a0b859e550",
+      "cst_sha256": "3ae41d3c7710721204147c523a77c8f76cff1a6a865b223e63b196560c7d16b5"
+    }
+  },
+  {
+    "name": "hidden_order",
+    "grammar": "{\n  \"name\": \"hidden_order\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"late\"\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"early\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ]\n}",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "early",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "f0050e1d561ef9a67f5886c3b298a40aa7cbb6ce3b3aba8733fb49e1cb52fe9d",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "d0bfdbb77e2d003a65c1cd4773932e55da5a9a47e1205dbc28c5c8f943e71ae8",
+      "xml_sha256": "c5a54904208584e1831dd55aa86385f4991fc113826487af482782e1d05e5854",
+      "cst_sha256": "f0fe9131e6a15799c666ea6505735538a261492d89760f990fd1ca1059add45b"
+    }
+  },
+  {
+    "name": "hidden_order_two",
+    "grammar": "{\n  \"name\": \"hidden_order_two\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"late\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \"y\"\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"early\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \"y\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ]\n}",
+    "source": "xy",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        2
+      ],
+      [
+        1,
+        "late",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "y",
+        false,
+        null,
+        1,
+        2
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "cf5dd653785208ff83bacc497bfae62878217d25b7844e1c53e7daa3913b84fc",
+      "source_sha256": "769a4e6d0003189c7e96c5d9b7e810a0d11c3a12832527ec94b0f86d277f51ca",
+      "parser_c_sha256": "fa0438ad7cb017002a1d58a52f9e7e62613d4e92bece460cd3a631c1b7185006",
+      "xml_sha256": "8b62659ca82b6f325c674821d3bb58c13d14ce6690e6bd0dbbaabe440254a24d",
+      "cst_sha256": "e2ecd8eef737054f0a0e38d84d94646a2a2af5ad62811afd18ef848704b435a9"
+    }
+  },
+  {
+    "name": "aliases_fields",
+    "grammar": "{\n  \"name\": \"aliases_fields\",\n  \"rules\": {\n    \"program\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_expr\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \";\"\n        }\n      ]\n    },\n    \"_expr\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"identifier\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"string\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"call_expression\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"binary_expression\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"parenthesized_expression\"\n        }\n      ]\n    },\n    \"call_expression\": {\n      \"type\": \"PREC\",\n      \"value\": 2,\n      \"content\": {\n        \"type\": \"SEQ\",\n        \"members\": [\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"function\",\n            \"content\": {\n              \"type\": \"ALIAS\",\n              \"content\": {\n                \"type\": \"SYMBOL\",\n                \"name\": \"_expr\"\n              },\n              \"value\": \"z_function\",\n              \"named\": true\n            }\n          },\n          {\n            \"type\": \"CHOICE\",\n            \"members\": [\n              {\n                \"type\": \"FIELD\",\n                \"name\": \"type_arguments\",\n                \"content\": {\n                  \"type\": \"SYMBOL\",\n                  \"name\": \"type_arguments\"\n                }\n              },\n              {\n                \"type\": \"BLANK\"\n              }\n            ]\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"arguments\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"arguments\"\n            }\n          }\n        ]\n      }\n    },\n    \"binary_expression\": {\n      \"type\": \"PREC_LEFT\",\n      \"value\": 1,\n      \"content\": {\n        \"type\": \"SEQ\",\n        \"members\": [\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"left\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            }\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"operator\",\n            \"content\": {\n              \"type\": \"CHOICE\",\n              \"members\": [\n                {\n                  \"type\": \"STRING\",\n                  \"value\": \"<\"\n                },\n                {\n                  \"type\": \"STRING\",\n                  \"value\": \">\"\n                }\n              ]\n            }\n          },\n          {\n            \"type\": \"FIELD\",\n            \"name\": \"right\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            }\n          }\n        ]\n      }\n    },\n    \"arguments\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"(\"\n        },\n        {\n          \"type\": \"CHOICE\",\n          \"members\": [\n            {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_expr\"\n            },\n            {\n              \"type\": \"BLANK\"\n            }\n          ]\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \")\"\n        }\n      ]\n    },\n    \"parenthesized_expression\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"(\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_expr\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \")\"\n        }\n      ]\n    },\n    \"type_arguments\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"<\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"primary_type\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \">\"\n        }\n      ]\n    },\n    \"primary_type\": {\n      \"type\": \"ALIAS\",\n      \"content\": {\n        \"type\": \"SYMBOL\",\n        \"name\": \"identifier\"\n      },\n      \"named\": true,\n      \"value\": \"type_identifier\"\n    },\n    \"identifier\": {\n      \"type\": \"PATTERN\",\n      \"value\": \"[a-zA-Z]+\"\n    },\n    \"string\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"\\\"\"\n        },\n        {\n          \"type\": \"PATTERN\",\n          \"value\": \"[^\\\"\\n]+\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \"\\\"\"\n        }\n      ]\n    }\n  },\n  \"extras\": [\n    {\n      \"type\": \"PATTERN\",\n      \"value\": \"\\\\s\"\n    }\n  ],\n  \"conflicts\": [\n    [\n      \"_expr\",\n      \"primary_type\"\n    ]\n  ]\n}",
+    "source": "f<T>(\"x\");",
+    "expected": [
+      [
+        0,
+        "program",
+        true,
+        null,
+        0,
+        10
+      ],
+      [
+        1,
+        "call_expression",
+        true,
+        null,
+        0,
+        9
+      ],
+      [
+        2,
+        "z_function",
+        true,
+        "function",
+        0,
+        1
+      ],
+      [
+        3,
+        "identifier",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "type_arguments",
+        true,
+        "type_arguments",
+        1,
+        4
+      ],
+      [
+        3,
+        "<",
+        false,
+        null,
+        1,
+        2
+      ],
+      [
+        3,
+        "primary_type",
+        true,
+        null,
+        2,
+        3
+      ],
+      [
+        4,
+        "type_identifier",
+        true,
+        null,
+        2,
+        3
+      ],
+      [
+        3,
+        ">",
+        false,
+        null,
+        3,
+        4
+      ],
+      [
+        2,
+        "arguments",
+        true,
+        "arguments",
+        4,
+        9
+      ],
+      [
+        3,
+        "(",
+        false,
+        null,
+        4,
+        5
+      ],
+      [
+        3,
+        "string",
+        true,
+        null,
+        5,
+        8
+      ],
+      [
+        4,
+        "\"",
+        false,
+        null,
+        5,
+        6
+      ],
+      [
+        4,
+        "\"",
+        false,
+        null,
+        7,
+        8
+      ],
+      [
+        3,
+        ")",
+        false,
+        null,
+        8,
+        9
+      ],
+      [
+        1,
+        ";",
+        false,
+        null,
+        9,
+        10
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "5c6b1b00667694d7593515f337d0d6c8244966f177f7279e7a844a1a4f6593e3",
+      "source_sha256": "8bf118020f68a342737947524926d8e8f9f4c17755470ef3cb98b889ee81ee49",
+      "parser_c_sha256": "c2987b124d893194a6bbb6f817a9e9cca72ee070010bc43997f054f22c361f1a",
+      "xml_sha256": "3acf9053d2a8e22e32d8adbdd58aefae9387814c400971225e3f1f2c9521e82c",
+      "cst_sha256": "e71979f819d5a11bec37d1cbc9520cc86e1e10ebae80003b1db12aca5e75188f"
+    }
+  },
+  {
+    "name": "hidden_alias_fields",
+    "grammar": "{\n  \"name\": \"hidden_alias_fields\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"FIELD\",\n          \"name\": \"chosen\",\n          \"content\": {\n            \"type\": \"ALIAS\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"late\"\n            },\n            \"value\": \"z_late\",\n            \"named\": true\n          }\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \"y\"\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"FIELD\",\n          \"name\": \"other\",\n          \"content\": {\n            \"type\": \"ALIAS\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"early\"\n            },\n            \"value\": \"a_early\",\n            \"named\": true\n          }\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \"y\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ]\n}",
+    "source": "xy",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        2
+      ],
+      [
+        1,
+        "z_late",
+        true,
+        "chosen",
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "y",
+        false,
+        null,
+        1,
+        2
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "d45db89e53f69edc0386535a37b05f45fc7cef6981ba7ac23dfb1ddece8144d5",
+      "source_sha256": "769a4e6d0003189c7e96c5d9b7e810a0d11c3a12832527ec94b0f86d277f51ca",
+      "parser_c_sha256": "a7b4ae17db9c42398d7ef2fd277db6462177c0f1a9886ffca511f97dbcc355e4",
+      "xml_sha256": "1f887a445f2c7854ba985d9d4fdc0265d6e6878e76375f8e0e1949b49e75dbb7",
+      "cst_sha256": "90372845830deb65a50fb464d8e0338b3c409dc24cb8cb53752a4e6b5c3e93df"
+    }
+  },
+  {
+    "name": "unit_field",
+    "grammar": "{\n  \"name\": \"unit_field\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"FIELD\",\n          \"content\": {\n            \"type\": \"SYMBOL\",\n            \"name\": \"late\"\n          },\n          \"name\": \"chosen\"\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"FIELD\",\n          \"content\": {\n            \"type\": \"SYMBOL\",\n            \"name\": \"early\"\n          },\n          \"name\": \"other\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ]\n}",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "late",
+        true,
+        "chosen",
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "918d31ecf1efbc16bbba4865d5313042414ef5b54d771ded559db39aa105bdea",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "03e5b73a09b858cf86b20cda565c909adc998ce2b41644ff588f33448f1e0277",
+      "xml_sha256": "37e5fa88c8300aecc79a51694a1ee3ce9ebca2a732c1dcb6adba3a8a9f2c3e60",
+      "cst_sha256": "a6300abd3624cfb34d8b85345419b81c6191c3716cec2ec1b20ec361e0819111"
+    }
+  },
+  {
+    "name": "unit_alias",
+    "grammar": "{\n  \"name\": \"unit_alias\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"ALIAS\",\n          \"content\": {\n            \"type\": \"SYMBOL\",\n            \"name\": \"late\"\n          },\n          \"named\": true,\n          \"value\": \"z_late\"\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"ALIAS\",\n          \"content\": {\n            \"type\": \"SYMBOL\",\n            \"name\": \"early\"\n          },\n          \"named\": true,\n          \"value\": \"a_early\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ]\n}",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "a_early",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "3fef2c2f3b2e928c732bd8ed62d441aacefb571c1de541f86292009eb93a7fd2",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "fe07d4a1b06b73f2ff1f57d4a93cd9a5ebe47944255d45409cc650dc9d054170",
+      "xml_sha256": "96c34d05be721d1ae049e3c848686f023904351f9dc90a409a3b114cec554a29",
+      "cst_sha256": "baa7cb223fac927047b8651a68fc8d03f9eed320e96d80d37f400c9f3b947fcb"
+    }
+  },
+  {
+    "name": "unit_alias_field",
+    "grammar": "{\n  \"name\": \"unit_alias_field\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"FIELD\",\n          \"content\": {\n            \"type\": \"ALIAS\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"late\"\n            },\n            \"named\": true,\n            \"value\": \"z_late\"\n          },\n          \"name\": \"chosen\"\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"FIELD\",\n          \"content\": {\n            \"type\": \"ALIAS\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"early\"\n            },\n            \"named\": true,\n            \"value\": \"a_early\"\n          },\n          \"name\": \"other\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ]\n}",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "z_late",
+        true,
+        "chosen",
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "ec5be840155bd2393ef4feee197c1f5393a0a79a8c270737eed1e6bcf587bab1",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "86b4f8d5997a0941c01dce2fca200dd8d57dea5239c6fda438af5055218721f4",
+      "xml_sha256": "d0d61814852e952f76eb174fb503ec6a779b01ba9fd55b619c6e957f6042175b",
+      "cst_sha256": "d0a7fb6675f4462adffb0ee70ab326e5733323717bbb6974dc49209ee28f359e"
+    }
+  },
+  {
+    "name": "unit_dynamic",
+    "grammar": "{\n  \"name\": \"unit_dynamic\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"PREC_DYNAMIC\",\n      \"value\": 1,\n      \"content\": {\n        \"type\": \"SEQ\",\n        \"members\": [\n          {\n            \"type\": \"SYMBOL\",\n            \"name\": \"late\"\n          }\n        ]\n      }\n    },\n    \"_hidden_late\": {\n      \"type\": \"PREC_DYNAMIC\",\n      \"value\": 1,\n      \"content\": {\n        \"type\": \"SEQ\",\n        \"members\": [\n          {\n            \"type\": \"SYMBOL\",\n            \"name\": \"early\"\n          }\n        ]\n      }\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ]\n}",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "early",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "67eaf6e0a3d4c237369a026c4634f62fa69c834bdae0dcaada8e8c87e5cfc217",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "65defa72dc5881d5ba9d23fb4ed3a19004866056d88acfbc0e40040ab70b73ca",
+      "xml_sha256": "4de0f0ad629c7732b35c7de08d2aeb83cc97bf98fca9688750b7f2ee6dceb0dd",
+      "cst_sha256": "f0fe9131e6a15799c666ea6505735538a261492d89760f990fd1ca1059add45b"
+    }
+  }
+]

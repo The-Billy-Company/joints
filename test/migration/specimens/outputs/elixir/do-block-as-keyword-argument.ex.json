@@ -1,0 +1,153 @@
+{
+  "language": "elixir",
+  "mends": 0,
+  "path": "research/joinery/specimen/elixir/do-block-as-keyword-argument.ex",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 17,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 17
+  },
+  "tree": [
+    {
+      "end": 18,
+      "kids": [
+        {
+          "end": 17,
+          "kids": [
+            {
+              "end": 4,
+              "field": "target",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 17,
+              "kids": [
+                {
+                  "end": 5,
+                  "kids": [],
+                  "name": "(",
+                  "named": false,
+                  "start": 4
+                },
+                {
+                  "end": 9,
+                  "kids": [
+                    {
+                      "end": 6,
+                      "field": "target",
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 5
+                    },
+                    {
+                      "end": 9,
+                      "kids": [
+                        {
+                          "end": 7,
+                          "kids": [],
+                          "name": "(",
+                          "named": false,
+                          "start": 6
+                        },
+                        {
+                          "end": 8,
+                          "kids": [],
+                          "name": "identifier",
+                          "named": true,
+                          "start": 7
+                        },
+                        {
+                          "end": 9,
+                          "kids": [],
+                          "name": ")",
+                          "named": false,
+                          "start": 8
+                        }
+                      ],
+                      "name": "arguments",
+                      "named": true,
+                      "start": 6
+                    }
+                  ],
+                  "name": "call",
+                  "named": true,
+                  "start": 5
+                },
+                {
+                  "end": 10,
+                  "kids": [],
+                  "name": ",",
+                  "named": false,
+                  "start": 9
+                },
+                {
+                  "end": 16,
+                  "kids": [
+                    {
+                      "end": 16,
+                      "kids": [
+                        {
+                          "end": 15,
+                          "field": "key",
+                          "kids": [],
+                          "name": "keyword",
+                          "named": true,
+                          "start": 11
+                        },
+                        {
+                          "end": 16,
+                          "field": "value",
+                          "kids": [],
+                          "name": "identifier",
+                          "named": true,
+                          "start": 15
+                        }
+                      ],
+                      "name": "pair",
+                      "named": true,
+                      "start": 11
+                    }
+                  ],
+                  "name": "keywords",
+                  "named": true,
+                  "start": 11
+                },
+                {
+                  "end": 17,
+                  "kids": [],
+                  "name": ")",
+                  "named": false,
+                  "start": 16
+                }
+              ],
+              "name": "arguments",
+              "named": true,
+              "start": 4
+            }
+          ],
+          "name": "call",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "source",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

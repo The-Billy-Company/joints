@@ -1,0 +1,16 @@
+/Users/griffinstrier/Billy-Company/joints/research/joinery/specimen/swift/default-keyword.swift
+  pattern: 46
+    capture: 1 - parent, start: (0, 0), end: (0, 46), text: `func f(x: Int) { switch x { default: break } }`
+    capture: 0 - child, start: (0, 5), end: (0, 6), text: `f`
+  pattern: 46
+    capture: 1 - parent, start: (0, 7), end: (0, 13), text: `x: Int`
+    capture: 0 - child, start: (0, 7), end: (0, 8), text: `x`
+  pattern: 141
+    capture: 1 - parent, start: (0, 7), end: (0, 13), text: `x: Int`
+    capture: 0 - child, start: (0, 10), end: (0, 13), text: `Int`
+  pattern: 189
+    capture: 1 - parent, start: (0, 0), end: (0, 46), text: `func f(x: Int) { switch x { default: break } }`
+    capture: 0 - child, start: (0, 15), end: (0, 46), text: `{ switch x { default: break } }`
+  pattern: 282
+    capture: 1 - parent, start: (0, 17), end: (0, 44), text: `switch x { default: break }`
+    capture: 0 - child, start: (0, 24), end: (0, 25), text: `x`

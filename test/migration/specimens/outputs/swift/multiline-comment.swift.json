@@ -1,0 +1,150 @@
+{
+  "language": "swift",
+  "mends": 0,
+  "path": "research/joinery/specimen/swift/multiline-comment.swift",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 16,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 16
+  },
+  "tree": [
+    {
+      "end": 33,
+      "kids": [
+        {
+          "end": 9,
+          "kids": [
+            {
+              "end": 3,
+              "kids": [
+                {
+                  "end": 3,
+                  "field": "mutability",
+                  "kids": [],
+                  "name": "let",
+                  "named": false,
+                  "start": 0
+                }
+              ],
+              "name": "value_binding_pattern",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 5,
+              "field": "name",
+              "kids": [
+                {
+                  "end": 5,
+                  "field": "bound_identifier",
+                  "kids": [],
+                  "name": "simple_identifier",
+                  "named": true,
+                  "start": 4
+                }
+              ],
+              "name": "pattern",
+              "named": true,
+              "start": 4
+            },
+            {
+              "end": 7,
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 6
+            },
+            {
+              "end": 9,
+              "field": "value",
+              "kids": [],
+              "name": "integer_literal",
+              "named": true,
+              "start": 8
+            }
+          ],
+          "name": "property_declaration",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 22,
+          "kids": [],
+          "name": "multiline_comment",
+          "named": true,
+          "start": 10
+        },
+        {
+          "end": 32,
+          "kids": [
+            {
+              "end": 26,
+              "kids": [
+                {
+                  "end": 26,
+                  "field": "mutability",
+                  "kids": [],
+                  "name": "let",
+                  "named": false,
+                  "start": 23
+                }
+              ],
+              "name": "value_binding_pattern",
+              "named": true,
+              "start": 23
+            },
+            {
+              "end": 28,
+              "field": "name",
+              "kids": [
+                {
+                  "end": 28,
+                  "field": "bound_identifier",
+                  "kids": [],
+                  "name": "simple_identifier",
+                  "named": true,
+                  "start": 27
+                }
+              ],
+              "name": "pattern",
+              "named": true,
+              "start": 27
+            },
+            {
+              "end": 30,
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 29
+            },
+            {
+              "end": 32,
+              "field": "value",
+              "kids": [],
+              "name": "integer_literal",
+              "named": true,
+              "start": 31
+            }
+          ],
+          "name": "property_declaration",
+          "named": true,
+          "start": 23
+        }
+      ],
+      "name": "source_file",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

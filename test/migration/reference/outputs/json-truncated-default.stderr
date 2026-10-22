@@ -1,0 +1,2 @@
+joints: inputs/fixtures/json-truncated.json: truncated, 7 roots, surveyed 10 of 10 nodes
+joints: json: unclosed: input ended before the start symbol closed; nothing refused a token

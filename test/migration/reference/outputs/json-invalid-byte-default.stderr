@@ -1,0 +1,2 @@
+joints: inputs/fixtures/json-invalid-byte.json: stray byte at 0, 1 root, mended 1 over 1B, surveyed 1 of 1 node
+joints: json: lexer? at byte 0 (unlexed): no terminal in the grammar matches here even with the row's restriction lifted, so no table was consulted

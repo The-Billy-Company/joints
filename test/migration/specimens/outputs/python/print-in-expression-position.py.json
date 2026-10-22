@@ -1,0 +1,101 @@
+{
+  "language": "python",
+  "mends": 0,
+  "path": "research/joinery/specimen/python/print-in-expression-position.py",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 10,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 10
+  },
+  "tree": [
+    {
+      "end": 13,
+      "kids": [
+        {
+          "end": 12,
+          "kids": [
+            {
+              "end": 1,
+              "field": "left",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 3,
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 2
+            },
+            {
+              "end": 12,
+              "field": "right",
+              "kids": [
+                {
+                  "end": 9,
+                  "field": "function",
+                  "kids": [],
+                  "name": "identifier",
+                  "named": true,
+                  "start": 4
+                },
+                {
+                  "end": 12,
+                  "field": "arguments",
+                  "kids": [
+                    {
+                      "end": 10,
+                      "kids": [],
+                      "name": "(",
+                      "named": false,
+                      "start": 9
+                    },
+                    {
+                      "end": 11,
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 10
+                    },
+                    {
+                      "end": 12,
+                      "kids": [],
+                      "name": ")",
+                      "named": false,
+                      "start": 11
+                    }
+                  ],
+                  "name": "argument_list",
+                  "named": true,
+                  "start": 9
+                }
+              ],
+              "name": "call",
+              "named": true,
+              "start": 4
+            }
+          ],
+          "name": "assignment",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "module",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

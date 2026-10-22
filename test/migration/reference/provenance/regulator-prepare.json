@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "{PYTHON}",
+    "inputs/regulator/grammar_profile.py",
+    "inputs/upstream/grammars/python.json",
+    "--recipe",
+    "inputs/regulator/grammar/python314-v1.json",
+    "--output",
+    "inputs/regulator/python314-derived.json"
+  ],
+  "derived_sha256": "04bbc228d1d1cd4977b73131338261d819227c2a236f015bb5835f049e22d300",
+  "exit": 0
+}

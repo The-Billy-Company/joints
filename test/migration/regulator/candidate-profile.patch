@@ -1,0 +1,24 @@
+diff --git a/crates/python-joints/src/tests.rs b/crates/python-joints/src/tests.rs
+--- a/crates/python-joints/src/tests.rs
++++ b/crates/python-joints/src/tests.rs
+@@ -348,7 +348,7 @@ fn native_expression_names_distinguishes_references_from_bindings() {
+     let profile = std::env::var("REGULATOR_JOINTS_PROFILE_ID").ok();
+     let modern = match profile.as_deref() {
+         None | Some("upstream") => false,
+-        Some("regulator-python314-v1") => true,
++        Some("regulator-python314-v1" | "regulator-python314-rust-v2") => true,
+         other => panic!("unknown grammar profile: {other:?}"),
+     };
+     let frontend = crate::JointsFrontend::new(crate::Grammar::Python, grammar());
+diff --git a/crates/python-joints/src/return_tests.rs b/crates/python-joints/src/return_tests.rs
+--- a/crates/python-joints/src/return_tests.rs
++++ b/crates/python-joints/src/return_tests.rs
+@@ -8,7 +8,7 @@ use regulator_python::PythonFrontend;
+ #[test]
+ fn starred_return_tuples_preserve_the_incumbent_facet_tree() {
+     let modern = std::env::var("REGULATOR_JOINTS_PROFILE_ID")
+-        .is_ok_and(|profile| profile == "regulator-python314-v1");
++        .is_ok_and(|profile| matches!(profile.as_str(), "regulator-python314-v1" | "regulator-python314-rust-v2"));
+     crate::with_parser(|parser| {
+         for source in [
+             "def f(lengths, pixels):\n    return 0.0, 0.0, *(value * pixels[unit] for value, unit in lengths)\n",

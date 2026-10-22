@@ -1,0 +1,146 @@
+{
+  "language": "scala",
+  "mends": 0,
+  "path": "research/joinery/specimen/scala/offside-braceless.scala",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 16,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 16
+  },
+  "tree": [
+    {
+      "end": 34,
+      "kids": [
+        {
+          "end": 33,
+          "kids": [
+            {
+              "end": 6,
+              "kids": [],
+              "name": "object",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 8,
+              "field": "name",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 7
+            },
+            {
+              "end": 33,
+              "field": "body",
+              "kids": [
+                {
+                  "end": 9,
+                  "kids": [],
+                  "name": ":",
+                  "named": false,
+                  "start": 8
+                },
+                {
+                  "end": 21,
+                  "kids": [
+                    {
+                      "end": 15,
+                      "kids": [],
+                      "name": "def",
+                      "named": false,
+                      "start": 12
+                    },
+                    {
+                      "end": 17,
+                      "field": "name",
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 16
+                    },
+                    {
+                      "end": 19,
+                      "kids": [],
+                      "name": "=",
+                      "named": false,
+                      "start": 18
+                    },
+                    {
+                      "end": 21,
+                      "field": "body",
+                      "kids": [],
+                      "name": "integer_literal",
+                      "named": true,
+                      "start": 20
+                    }
+                  ],
+                  "name": "function_definition",
+                  "named": true,
+                  "start": 12
+                },
+                {
+                  "end": 33,
+                  "kids": [
+                    {
+                      "end": 27,
+                      "kids": [],
+                      "name": "def",
+                      "named": false,
+                      "start": 24
+                    },
+                    {
+                      "end": 29,
+                      "field": "name",
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 28
+                    },
+                    {
+                      "end": 31,
+                      "kids": [],
+                      "name": "=",
+                      "named": false,
+                      "start": 30
+                    },
+                    {
+                      "end": 33,
+                      "field": "body",
+                      "kids": [],
+                      "name": "integer_literal",
+                      "named": true,
+                      "start": 32
+                    }
+                  ],
+                  "name": "function_definition",
+                  "named": true,
+                  "start": 24
+                }
+              ],
+              "name": "template_body",
+              "named": true,
+              "start": 8
+            }
+          ],
+          "name": "object_definition",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "compilation_unit",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

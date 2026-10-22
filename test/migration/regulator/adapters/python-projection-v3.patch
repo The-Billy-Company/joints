@@ -1,0 +1,501 @@
+--- a/libs/tools/regulator/crates/python-joints/src/control.rs
++++ b/libs/tools/regulator/crates/python-joints/src/control.rs
+@@ -161,63 +161,86 @@
+         (None, cleanup)
+     }
+ 
++    fn walk_scope(&mut self, root: Node<'tree>, declaration: Node<'tree>) {
++        let previous = self.scope;
++        let name = declaration
++            .child_by_field("name")
++            .map(|name| identifier(name, self.source));
++        if let Some(name) = &name {
++            self.bind(name.clone(), declaration, Meaning::Unknown);
++        }
++        let function = if declaration.kind() == b"function_definition" {
++            let decorators = declaration
++                .parent()
++                .filter(|parent| parent.kind() == b"decorated_definition")
++                .into_iter()
++                .flat_map(|parent| parent.named_children())
++                .filter(|decorator| decorator.kind() == b"decorator")
++                .filter_map(|decorator| {
++                    let mut value = expression(
++                        decorator
++                            .named_children()
++                            .find(|child| child.kind() != b"comment")?,
++                    );
++                    let at = span(value);
++                    while value.kind() == b"call" {
++                        value = expression(value.child_by_field("function")?);
++                    }
++                    let name = match value.kind() {
++                        b"identifier" => value,
++                        b"attribute" => value.child_by_field("attribute")?,
++                        _ => return None,
++                    };
++                    Some((at, identifier(name, self.source)))
++                })
++                .collect();
++            Some(Function {
++                span: crate::symbols::semantic_span(root),
++                name: name.unwrap_or_default(),
++                decorators,
++            })
++        } else {
++            None
++        };
++        self.scope = self.evidence.scopes.len();
++        self.evidence.scopes.push(Scope {
++            parent: Some(previous),
++            class: declaration.kind() == b"class_definition",
++            function: declaration.kind() != b"class_definition",
++            declaration: function,
++            ..Scope::default()
++        });
++        // Match the incumbent SourceOrderVisitor schedule: enter the declared
++        // scope before walking its decorators, annotations, parameters and body.
++        // The CST stores decorators outside the declaration, unlike Ruff's AST.
++        self.stack.push((declaration, None));
++        for child in root.named_children() {
++            if root != declaration && child == declaration {
++                for child in declaration.named_children() {
++                    self.walk(child);
++                }
++            } else {
++                self.walk(child);
++            }
++        }
++        self.stack.pop();
++        self.scope = previous;
++    }
++
+     fn walk(&mut self, node: Node<'tree>) {
++        if node.kind() == b"decorated_definition" {
++            if let Some(declaration) = node.named_children().find(|child| is_scope(*child)) {
++                self.walk_scope(node, declaration);
++                return;
++            }
++        }
++        if is_scope(node) {
++            self.walk_scope(node, node);
++            return;
++        }
+         let previous = self.scope;
+         let mut handler = None;
+         match node.kind() {
+-            b"function_definition" | b"class_definition" | b"lambda" => {
+-                let name = node
+-                    .child_by_field("name")
+-                    .map(|name| identifier(name, self.source));
+-                if let Some(name) = &name {
+-                    self.bind(name.clone(), node, Meaning::Unknown);
+-                }
+-                let declaration = if node.kind() == b"function_definition" {
+-                    let decorators = node
+-                        .parent()
+-                        .filter(|parent| parent.kind() == b"decorated_definition")
+-                        .into_iter()
+-                        .flat_map(|parent| parent.named_children())
+-                        .filter(|decorator| decorator.kind() == b"decorator")
+-                        .filter_map(|decorator| {
+-                            let mut value = expression(
+-                                decorator
+-                                    .named_children()
+-                                    .find(|child| child.kind() != b"comment")?,
+-                            );
+-                            let at = span(value);
+-                            while value.kind() == b"call" {
+-                                value = expression(value.child_by_field("function")?);
+-                            }
+-                            let name = match value.kind() {
+-                                b"identifier" => value,
+-                                b"attribute" => value.child_by_field("attribute")?,
+-                                _ => return None,
+-                            };
+-                            Some((at, identifier(name, self.source)))
+-                        })
+-                        .collect();
+-                    Some(Function {
+-                        span: span(
+-                            node.parent()
+-                                .filter(|parent| parent.kind() == b"decorated_definition")
+-                                .unwrap_or(node),
+-                        ),
+-                        name: name.unwrap_or_default(),
+-                        decorators,
+-                    })
+-                } else {
+-                    None
+-                };
+-                self.scope = self.evidence.scopes.len();
+-                self.evidence.scopes.push(Scope {
+-                    parent: Some(previous),
+-                    class: node.kind() == b"class_definition",
+-                    function: node.kind() != b"class_definition",
+-                    declaration,
+-                    ..Scope::default()
+-                });
+-            },
+             b"import_statement" | b"import_from_statement" | b"future_import_statement" => {
+                 self.evidence.wildcard |= node
+                     .named_children()
+--- a/libs/tools/regulator/crates/python-joints/src/symbols.rs
++++ b/libs/tools/regulator/crates/python-joints/src/symbols.rs
+@@ -180,6 +180,23 @@
+     }
+ }
+ 
++// Shared neutral facts use AST extents, while the complete CST keeps comments.
++// Descend through concrete children so closing delimiters remain part of the
++// extent; trimming source bytes would confuse comments with string contents.
++pub(crate) fn semantic_span(node: Node<'_>) -> regulator_core::node::Span {
++    let mut last = node;
++    while let Some(child) = last
++        .children()
++        .filter(|child| child.kind() != b"comment")
++        .last()
++    {
++        last = child;
++    }
++    let mut at = crate::lower::span(node);
++    at.end = last.byte_range().end;
++    at
++}
++
+ pub(crate) fn tail(name: &str) -> &str {
+     name.rsplit('.').next().unwrap_or(name)
+ }
+--- a/libs/tools/regulator/crates/python-joints/src/syntax.rs
++++ b/libs/tools/regulator/crates/python-joints/src/syntax.rs
+@@ -31,16 +31,59 @@
+ }
+ 
+ fn expression(mut node: Node<'_>) -> Node<'_> {
+-    while matches!(
+-        node.kind(),
+-        b"parenthesized_expression" | b"expression_statement" | b"as_pattern_target"
+-    ) {
+-        let Some(child) = node.named_children().find(|n| n.kind() != b"comment") else {
++    loop {
++        let grouping = matches!(
++            node.kind(),
++            b"parenthesized_expression" | b"expression_statement" | b"as_pattern_target"
++        ) || (node.kind() == b"tuple_pattern"
++            && !node.children().any(|child| child.kind() == b","));
++        if !grouping {
++            break;
++        }
++        let mut children = node
++            .named_children()
++            .filter(|child| child.kind() != b"comment");
++        let Some(child) = children.next() else {
+             break;
+         };
++        if children.next().is_some() {
++            break;
++        }
+         node = child;
+     }
+     node
++}
++
++// In a with item, the grammar can attach `as target` to the final branch
++// of an unparenthesized conditional rather than around the whole expression.
++// Only that rightmost branch can carry the item's binding; aliases inside
++// call arguments or another context expression do not belong to this item.
++fn with_target(mut context: Node<'_>) -> Option<Node<'_>> {
++    loop {
++        context = expression(context);
++        if context.kind() == b"as_pattern" {
++            return context.child_by_field("alias").map(expression);
++        }
++        if context.kind() != b"conditional_expression" {
++            return None;
++        }
++        context = context
++            .named_children()
++            .filter(|child| child.kind() != b"comment")
++            .last()?;
++    }
++}
++
++fn lambda_parameter_name(node: Node<'_>) -> bool {
++    node.parent().is_some_and(|parent| {
++        parent.kind() == b"lambda_parameters"
++            || (matches!(
++                parent.kind(),
++                b"list_splat_pattern" | b"dictionary_splat_pattern"
++            ) && parent
++                .parent()
++                .is_some_and(|group| group.kind() == b"lambda_parameters"))
++    })
+ }
+ 
+ struct Collector<'a, 'tree> {
+@@ -196,7 +239,13 @@
+                     .find(|n| n.kind() != b"comment")
+                     .map(|n| self.value(n)),
+             ),
+-            b"assignment" => Statement::Assign(node.child_by_field("right").map(|n| self.value(n))),
++            b"assignment" => {
++                let mut value = node.child_by_field("right");
++                while let Some(assignment) = value.filter(|right| right.kind() == b"assignment") {
++                    value = assignment.child_by_field("right");
++                }
++                Statement::Assign(value.map(|right| self.value(right)))
++            },
+             _ => Statement::Other,
+         }
+     }
+@@ -271,35 +320,53 @@
+             .collect::<Vec<_>>();
+         let mut owners = Vec::new();
+         for statement in statements {
+-            for item in statement
++            for clause in statement
+                 .named_children()
+                 .filter(|n| n.kind() == b"with_clause")
+-                .flat_map(|n| n.named_children())
+-                .filter(|n| n.kind() == b"with_item")
+             {
+-                let Some(context) = item.child_by_field("value").map(expression) else {
++                let mut items = clause.named_children().filter(|n| n.kind() == b"with_item");
++                if let Some(item) = items.next()
++                    && items.next().is_none()
++                    && item.byte_range() == clause.byte_range()
++                    && let Some(value) = item.child_by_field("value")
++                    && value.kind() == b"tuple"
++                    && value.byte_range() == clause.byte_range()
++                {
++                    // The grammar can read the complete parenthesized context
++                    // list as one tuple. Only this outer list is a container;
++                    // genuine tuple context expressions keep their own value.
++                    for context in value.named_children().filter(|n| n.kind() != b"comment") {
++                        owners.push(self.owner(context));
++                    }
+                     continue;
+-                };
+-                let (context, target) = if context.kind() == b"as_pattern" {
+-                    (
+-                        context
+-                            .named_children()
+-                            .find(|n| n.field() != Some(b"alias"))
+-                            .unwrap_or(context),
+-                        context.child_by_field("alias").map(expression),
+-                    )
+-                } else {
+-                    (context, None)
+-                };
+-                owners.push(Owner {
+-                    expression: self.value(context),
+-                    name: target
+-                        .filter(|n| n.kind() == b"identifier")
+-                        .map(|n| identifier(n, self.source)),
+-                });
++                }
++                for item in clause.named_children().filter(|n| n.kind() == b"with_item") {
++                    if let Some(context) = item.child_by_field("value") {
++                        owners.push(self.owner(context));
++                    }
++                }
+             }
+         }
+         owners
++    }
++
++    fn owner(&mut self, context: Node<'_>) -> Owner {
++        let context = expression(context);
++        let target = with_target(context);
++        let context = if context.kind() == b"as_pattern" {
++            context
++                .named_children()
++                .find(|n| n.field() != Some(b"alias"))
++                .unwrap_or(context)
++        } else {
++            context
++        };
++        Owner {
++            expression: self.value(context),
++            name: target
++                .filter(|n| n.kind() == b"identifier")
++                .map(|n| identifier(n, self.source)),
++        }
+     }
+ 
+     fn walk(&mut self, node: Node<'tree>) {
+@@ -318,27 +385,33 @@
+                     let function = self.value(crate::lower::call_expression(function));
+                     let mut positional = Vec::new();
+                     let mut keywords = Vec::new();
+-                    for argument in arguments
+-                        .named_children()
+-                        .filter(|n| n.kind() != b"comment")
+-                    {
+-                        if argument.kind() == b"keyword_argument" {
+-                            if let Some(right) = argument.child_by_field("value") {
+-                                keywords.push((
+-                                    argument
+-                                        .child_by_field("name")
+-                                        .map(|n| identifier(n, self.source)),
+-                                    self.value(right),
+-                                ));
++                    if arguments.kind() == b"generator_expression" {
++                        // A bare generator is the call's single argument. Its
++                        // body and comprehension clauses are not arguments.
++                        positional.push(self.value(arguments));
++                    } else {
++                        for argument in arguments
++                            .named_children()
++                            .filter(|n| n.kind() != b"comment")
++                        {
++                            if argument.kind() == b"keyword_argument" {
++                                if let Some(right) = argument.child_by_field("value") {
++                                    keywords.push((
++                                        argument
++                                            .child_by_field("name")
++                                            .map(|n| identifier(n, self.source)),
++                                        self.value(right),
++                                    ));
++                                }
++                            } else if argument.kind() == b"dictionary_splat" {
++                                let value = argument
++                                    .named_children()
++                                    .find(|node| node.kind() != b"comment")
++                                    .map_or(Value::Other, |value| self.value(value));
++                                keywords.push((None, value));
++                            } else {
++                                positional.push(self.value(argument));
+                             }
+-                        } else if argument.kind() == b"dictionary_splat" {
+-                            let value = argument
+-                                .named_children()
+-                                .find(|node| node.kind() != b"comment")
+-                                .map_or(Value::Other, |value| self.value(value));
+-                            keywords.push((None, value));
+-                        } else {
+-                            positional.push(self.value(argument));
+                         }
+                     }
+                     let awaited = self
+@@ -446,12 +519,21 @@
+                     let mut attributes = Vec::new();
+                     let mut pending = vec![body];
+                     while let Some(child) = pending.pop() {
++                        if matches!(
++                            child.kind(),
++                            b"import_statement"
++                                | b"import_from_statement"
++                                | b"future_import_statement"
++                        ) {
++                            continue;
++                        }
+                         if child.kind() == b"attribute" {
+                             if let Some(attribute) = child.child_by_field("attribute") {
+                                 attributes.push(identifier(attribute, self.source));
+                             }
+                         }
+                         if child.kind() == b"identifier"
++                            && !lambda_parameter_name(child)
+                             && crate::lower::is_expression_name(child)
+                             && child.field() != Some(b"attribute")
+                         {
+@@ -461,7 +543,7 @@
+                     }
+                     syntax::handler(
+                         self.builder,
+-                        at,
++                        crate::symbols::semantic_span(node),
+                         caught.as_ref(),
+                         &statements,
+                         &names,
+--- a/libs/tools/regulator/crates/python/src/syntax_ruff.rs
++++ b/libs/tools/regulator/crates/python/src/syntax_ruff.rs
+@@ -3,7 +3,7 @@
+ use regulator_core::facet::Region;
+ use regulator_core::node::{NodeId, Span, TreeBuilder};
+ use ruff_python_ast::visitor::source_order::{SourceOrderVisitor, TraversalSignal};
+-use ruff_python_ast::visitor::{Visitor, walk_expr};
++use ruff_python_ast::visitor::{Visitor, walk_expr, walk_stmt};
+ use ruff_python_ast::{AnyNodeRef, Expr, FStringPart, InterpolatedStringElement, ModModule, Stmt};
+ use ruff_text_size::Ranged;
+ 
+@@ -101,6 +101,20 @@
+ }
+ 
+ impl<'a> Visitor<'a> for References {
++    fn visit_stmt(&mut self, statement: &'a Stmt) {
++        if let Stmt::If(statement) = statement {
++            // Ruff 0.0.7's generic walker visits each elif test twice.
++            // Reference multiplicity follows each AST expression exactly once.
++            self.visit_expr(&statement.test);
++            self.visit_body(&statement.body);
++            for clause in &statement.elif_else_clauses {
++                self.visit_elif_else_clause(clause);
++            }
++        } else {
++            walk_stmt(self, statement);
++        }
++    }
++
+     fn visit_expr(&mut self, expression: &'a Expr) {
+         match expression {
+             Expr::Name(name) => self.names.push(name.id.to_string()),
+@@ -307,3 +321,57 @@
+         self.stack.pop();
+     }
+ }
++
++#[cfg(test)]
++mod reference_tests {
++    use super::*;
++
++    fn handler_references(source: &str) -> (Vec<String>, Vec<String>) {
++        let parsed = ruff_python_parser::parse_module(source).unwrap();
++        let Stmt::Try(statement) = &parsed.syntax().body[0] else {
++            panic!("expected one try statement");
++        };
++        let ruff_python_ast::ExceptHandler::ExceptHandler(handler) = &statement.handlers[0];
++        let mut references = References::default();
++        references.visit_body(&handler.body);
++        references.names.sort();
++        references.attributes.sort();
++        (references.names, references.attributes)
++    }
++
++    fn assert_references(source: &str, names: &[&str], attributes: &[&str]) {
++        let expected = (
++            names.iter().map(|value| (*value).to_owned()).collect(),
++            attributes.iter().map(|value| (*value).to_owned()).collect(),
++        );
++        assert_eq!(handler_references(source), expected);
++    }
++
++    #[test]
++    fn if_and_elif_references_match_independent_cpython_ast_occurrences() {
++        assert_references(
++            "try:\n    f()\nexcept Error as e:\n    if e.status == 1:\n        pass\n",
++            &["e"],
++            &["status"],
++        );
++        assert_references(
++            "try:\n    f()\nexcept Error as e:\n    if e.status == 1:\n        pass\n    elif e.status == 2:\n        pass\n",
++            &["e", "e"],
++            &["status", "status"],
++        );
++    }
++
++    #[test]
++    fn compound_elif_references_match_independent_cpython_ast_occurrences() {
++        assert_references(
++            "try:\n    f()\nexcept Error as e:\n    if e.done():\n        pass\n    elif not e.cancelled() and e.exception() is None:\n        pass\n",
++            &["e", "e", "e"],
++            &["cancelled", "done", "exception"],
++        );
++        assert_references(
++            "try:\n    f()\nexcept Error as e:\n    if isinstance(e, One):\n        pass\n    elif isinstance(e, (mod.Two, mod.Three)):\n        pass\n",
++            &["One", "e", "e", "isinstance", "isinstance", "mod", "mod"],
++            &["Three", "Two"],
++        );
++    }
++}

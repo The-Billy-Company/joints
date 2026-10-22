@@ -1,0 +1,96 @@
+{
+  "language": "swift",
+  "mends": 0,
+  "path": "research/joinery/specimen/swift/raw-string.swift",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 9,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 9
+  },
+  "tree": [
+    {
+      "end": 21,
+      "kids": [
+        {
+          "end": 20,
+          "kids": [
+            {
+              "end": 3,
+              "kids": [
+                {
+                  "end": 3,
+                  "field": "mutability",
+                  "kids": [],
+                  "name": "let",
+                  "named": false,
+                  "start": 0
+                }
+              ],
+              "name": "value_binding_pattern",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 5,
+              "field": "name",
+              "kids": [
+                {
+                  "end": 5,
+                  "field": "bound_identifier",
+                  "kids": [],
+                  "name": "simple_identifier",
+                  "named": true,
+                  "start": 4
+                }
+              ],
+              "name": "pattern",
+              "named": true,
+              "start": 4
+            },
+            {
+              "end": 7,
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 6
+            },
+            {
+              "end": 20,
+              "field": "value",
+              "kids": [
+                {
+                  "end": 20,
+                  "field": "text",
+                  "kids": [],
+                  "name": "raw_str_end_part",
+                  "named": true,
+                  "start": 8
+                }
+              ],
+              "name": "raw_string_literal",
+              "named": true,
+              "start": 8
+            }
+          ],
+          "name": "property_declaration",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "source_file",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

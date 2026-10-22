@@ -1,0 +1,91 @@
+{
+  "language": "elixir",
+  "mends": 0,
+  "path": "research/joinery/specimen/elixir/do-block-without-inner-call.ex",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 16,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 9
+  },
+  "tree": [
+    {
+      "end": 16,
+      "kids": [
+        {
+          "end": 15,
+          "kids": [
+            {
+              "end": 4,
+              "field": "target",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 6,
+              "kids": [
+                {
+                  "end": 6,
+                  "kids": [],
+                  "name": "identifier",
+                  "named": true,
+                  "start": 5
+                }
+              ],
+              "name": "arguments",
+              "named": true,
+              "start": 5
+            },
+            {
+              "end": 15,
+              "kids": [
+                {
+                  "end": 9,
+                  "kids": [],
+                  "name": "do",
+                  "named": false,
+                  "start": 7
+                },
+                {
+                  "end": 11,
+                  "kids": [],
+                  "name": "identifier",
+                  "named": true,
+                  "start": 10
+                },
+                {
+                  "end": 15,
+                  "kids": [],
+                  "name": "end",
+                  "named": false,
+                  "start": 12
+                }
+              ],
+              "name": "do_block",
+              "named": true,
+              "start": 7
+            }
+          ],
+          "name": "call",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "source",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

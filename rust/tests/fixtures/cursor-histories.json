@@ -1,0 +1,83 @@
+{
+  "name": "cursor_histories",
+  "rules": {
+    "doc": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "a"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "parent"
+            },
+            {
+              "type": "STRING",
+              "value": "="
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "b"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "parent"
+            },
+            {
+              "type": "STRING",
+              "value": "=="
+            }
+          ]
+        }
+      ]
+    },
+    "parent": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "A"
+            },
+            {
+              "type": "STRING",
+              "value": "z"
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "B"
+            },
+            {
+              "type": "STRING",
+              "value": "z"
+            }
+          ]
+        }
+      ]
+    },
+    "A": {
+      "type": "STRING",
+      "value": "A"
+    },
+    "B": {
+      "type": "STRING",
+      "value": "B"
+    }
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "language": "typescript",
+  "mends": 0,
+  "path": "research/joinery/specimen/typescript/regex-pattern.ts",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 12,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 12
+  },
+  "tree": [
+    {
+      "end": 17,
+      "kids": [
+        {
+          "end": 16,
+          "kids": [
+            {
+              "end": 3,
+              "field": "kind",
+              "kids": [],
+              "name": "let",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 15,
+              "kids": [
+                {
+                  "end": 5,
+                  "field": "name",
+                  "kids": [],
+                  "name": "identifier",
+                  "named": true,
+                  "start": 4
+                },
+                {
+                  "end": 7,
+                  "kids": [],
+                  "name": "=",
+                  "named": false,
+                  "start": 6
+                },
+                {
+                  "end": 15,
+                  "field": "value",
+                  "kids": [
+                    {
+                      "end": 9,
+                      "kids": [],
+                      "name": "/",
+                      "named": false,
+                      "start": 8
+                    },
+                    {
+                      "end": 13,
+                      "field": "pattern",
+                      "kids": [],
+                      "name": "regex_pattern",
+                      "named": true,
+                      "start": 9
+                    },
+                    {
+                      "end": 14,
+                      "kids": [],
+                      "name": "/",
+                      "named": false,
+                      "start": 13
+                    },
+                    {
+                      "end": 15,
+                      "field": "flags",
+                      "kids": [],
+                      "name": "regex_flags",
+                      "named": true,
+                      "start": 14
+                    }
+                  ],
+                  "name": "regex",
+                  "named": true,
+                  "start": 8
+                }
+              ],
+              "name": "variable_declarator",
+              "named": true,
+              "start": 4
+            },
+            {
+              "end": 16,
+              "kids": [],
+              "name": ";",
+              "named": false,
+              "start": 15
+            }
+          ],
+          "name": "lexical_declaration",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "program",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+{
+  "language": "scala",
+  "mends": 0,
+  "path": "research/joinery/specimen/scala/offside-through-comment.scala",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 17,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 17
+  },
+  "tree": [
+    {
+      "end": 42,
+      "kids": [
+        {
+          "end": 41,
+          "kids": [
+            {
+              "end": 6,
+              "kids": [],
+              "name": "object",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 8,
+              "field": "name",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 7
+            },
+            {
+              "end": 41,
+              "field": "body",
+              "kids": [
+                {
+                  "end": 9,
+                  "kids": [],
+                  "name": ":",
+                  "named": false,
+                  "start": 8
+                },
+                {
+                  "end": 17,
+                  "kids": [],
+                  "name": "block_comment",
+                  "named": true,
+                  "start": 10
+                },
+                {
+                  "end": 29,
+                  "kids": [
+                    {
+                      "end": 23,
+                      "kids": [],
+                      "name": "def",
+                      "named": false,
+                      "start": 20
+                    },
+                    {
+                      "end": 25,
+                      "field": "name",
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 24
+                    },
+                    {
+                      "end": 27,
+                      "kids": [],
+                      "name": "=",
+                      "named": false,
+                      "start": 26
+                    },
+                    {
+                      "end": 29,
+                      "field": "body",
+                      "kids": [],
+                      "name": "integer_literal",
+                      "named": true,
+                      "start": 28
+                    }
+                  ],
+                  "name": "function_definition",
+                  "named": true,
+                  "start": 20
+                },
+                {
+                  "end": 41,
+                  "kids": [
+                    {
+                      "end": 35,
+                      "kids": [],
+                      "name": "def",
+                      "named": false,
+                      "start": 32
+                    },
+                    {
+                      "end": 37,
+                      "field": "name",
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 36
+                    },
+                    {
+                      "end": 39,
+                      "kids": [],
+                      "name": "=",
+                      "named": false,
+                      "start": 38
+                    },
+                    {
+                      "end": 41,
+                      "field": "body",
+                      "kids": [],
+                      "name": "integer_literal",
+                      "named": true,
+                      "start": 40
+                    }
+                  ],
+                  "name": "function_definition",
+                  "named": true,
+                  "start": 32
+                }
+              ],
+              "name": "template_body",
+              "named": true,
+              "start": 8
+            }
+          ],
+          "name": "object_definition",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "compilation_unit",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

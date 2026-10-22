@@ -1,0 +1,347 @@
+{
+  "schema": 1,
+  "language": "python",
+  "scope": "Authored adapter regression controls; source bytes only. Independent CPython/Tree-sitter evidence classifies structural meaning. Original68 consumer assertions remain unchanged.",
+  "cases": [
+    {
+      "id": "python-minima/generator-bare",
+      "source": "f(x for x in xs)\n",
+      "sha256": "57ae847c7e3eca7182185b54d049e122ca50d6c238ef3e1922d8d64161a4fdee"
+    },
+    {
+      "id": "python-minima/generator-call",
+      "source": "any(f(x) for x in xs)\n",
+      "sha256": "1c2729584c45cb3b5f5b01e6c68f431aab4492816020d2688b8f842edf4c25d7"
+    },
+    {
+      "id": "python-minima/generator-filtered",
+      "source": "sorted(x for x in xs if p(x))\n",
+      "sha256": "1ecef3ca6d22f0c470e6b7d1fa44c2d6e1f214e71915b8b21ab18f2d97f8e263"
+    },
+    {
+      "id": "python-minima/generator-parenthesized",
+      "source": "f((x for x in xs))\n",
+      "sha256": "87f39064359f248df0c6494b4ceca47b3028d31c7306906c32d1aa9371bc49f1"
+    },
+    {
+      "id": "python-minima/list-comprehension",
+      "source": "f([x for x in xs])\n",
+      "sha256": "0eaec582654979720a6b9599770c5ec0ea330ecdd4de6866609b38fd64dbcfa7"
+    },
+    {
+      "id": "python-minima/plain-argument",
+      "source": "f(x)\n",
+      "sha256": "909032616240f338d6aeaf2ceb4dd6288fc1ef431fd9dc0f86e61988b3ce1a13"
+    },
+    {
+      "id": "python-minima/decorator-call",
+      "source": "import dataclasses\n@dataclasses.dataclass(frozen=True)\nclass C:\n    x: int\n",
+      "sha256": "c71e5b0c6913c7559805e317448422494b9f8455c7459b8a435c5b3459fe5cf4"
+    },
+    {
+      "id": "python-minima/simple-function",
+      "source": "def f(x):\n    return x\n",
+      "sha256": "72d3d5b08c2cf9d267d33ca44474dfaeabe3c74c51fad8b1094d3d07ce3856b7"
+    },
+    {
+      "id": "python-minima/except-alias",
+      "source": "try:\n    f()\nexcept ValueError as e:\n    g(e)\n",
+      "sha256": "2341587ff2d603ea9bb556ac0688d2450f33479754930387e8d2fcd3334cfc4a"
+    },
+    {
+      "id": "python-minima/with-call",
+      "source": "with f() as x:\n    g(x)\n",
+      "sha256": "f28d09df5d22cfd938486639cfbe9f2fc556d23ddd208073ac068335a26265bf"
+    },
+    {
+      "id": "minima/class-decorator",
+      "source": "import dataclasses\n@dataclasses.dataclass(frozen=True)\nclass C:\n    x: int\n",
+      "sha256": "c71e5b0c6913c7559805e317448422494b9f8455c7459b8a435c5b3459fe5cf4"
+    },
+    {
+      "id": "minima/function-decorator",
+      "source": "import functools\n@functools.cache\ndef f():\n    return 1\n",
+      "sha256": "ca762783d5b491c7b2112db47cb729f9d4eaadf3a6184b8f6db35b89fad72b12"
+    },
+    {
+      "id": "minima/function-call-decorator",
+      "source": "import functools\n@functools.lru_cache(maxsize=2)\ndef f():\n    return 1\n",
+      "sha256": "9f3d1376c77a64b6510b048f8c478ee0c6bf9b624e3babf1d3cdd7713df9c6f9"
+    },
+    {
+      "id": "minima/method-call-decorator",
+      "source": "import pytest\nclass C:\n    @pytest.mark.parametrize(\"x\", [1])\n    def m(self, x):\n        pass\n",
+      "sha256": "f36d5ea7b5f184e2abe119dd95247ec30556ac48dd98383947d9b5f7144660c3"
+    },
+    {
+      "id": "minima/class-local-shadow-method",
+      "source": "import pytest\nclass C:\n    pytest = None\n    @pytest.mark.parametrize(\"x\", [1])\n    def m(self, x):\n        pass\n",
+      "sha256": "41dbe4d22606260e27806d53776988fb401021c58d39f0f666edc3a9f6068861"
+    },
+    {
+      "id": "minima/function-parameter-shadow",
+      "source": "import functools\n@functools.lru_cache(maxsize=2)\ndef f(functools):\n    return 1\n",
+      "sha256": "46759b13dae3893dc47dd4c6d70fbb3aea3d740e7f0997c398a5b194e8b0ab07"
+    },
+    {
+      "id": "minima/function-local-shadow",
+      "source": "import functools\n@functools.lru_cache(maxsize=2)\ndef f():\n    functools = None\n    return 1\n",
+      "sha256": "7be3210e0706711978c47fc3c56b7fe8029bb95df1031df1116f7d407bb32622"
+    },
+    {
+      "id": "minima/function-global",
+      "source": "import functools\n@functools.lru_cache(maxsize=2)\ndef f():\n    global functools\n    return 1\n",
+      "sha256": "ebdee0b30900c2f00caffd0366b1d5baf6fc7622bf0c7e8f7ab5762683fecb3d"
+    },
+    {
+      "id": "minima/nested-nonlocal",
+      "source": "import functools\ndef outer():\n    alias = functools\n    @alias.lru_cache(maxsize=2)\n    def inner():\n        nonlocal alias\n        return 1\n    return inner\n",
+      "sha256": "fbe173261cacd22deb3dbddbf98fcbb9ac9b880bf418341eb9a27cb2281cb81d"
+    },
+    {
+      "id": "minima/function-trailing-comment",
+      "source": "def f():\n    return 1  # trailing comment\n",
+      "sha256": "febf58df9ad0647a92bcdd3e67848fad66a53f9672db4afd304ba28e4af06d25"
+    },
+    {
+      "id": "minima/function-standalone-comment",
+      "source": "def f():\n    return 1\n    # trailing standalone comment\n",
+      "sha256": "1df6930c71d8f6d9a733b8c376e6598a411bbe4aa1e523724e0dadc48dd5af6e"
+    },
+    {
+      "id": "minima/function-nested-comment",
+      "source": "def f():\n    if True:\n        return 1  # nested trailing comment\n",
+      "sha256": "8fe80ec80388bf5d2715fa7dd9face815115535b7820b8d3119214eea6aa8de8"
+    },
+    {
+      "id": "minima/function-parenthesized-comment",
+      "source": "def f():\n    return (\n        1 # inside parentheses\n    ) # after closing delimiter\n",
+      "sha256": "0ef012cf9f0d51a521f7de2397c1fa0ad06e30ba2eee4e6a0c7ac6b065a348ee"
+    },
+    {
+      "id": "minima/function-hash-string",
+      "source": "def f():\n    return \"# not a comment\"\n",
+      "sha256": "d58658b9e14f913f0b9e7db3c36f7c681029624c3ce160a6cba2a4b63fe8a9c9"
+    },
+    {
+      "id": "minima/handler-trailing-comment",
+      "source": "try:\n    f()\nexcept Exception:\n    return_value = []  # trailing comment\n",
+      "sha256": "e9af6072e9d2c612401a6fdb23526bf43eec8ef0a90c46fed4011ff61f90b113"
+    },
+    {
+      "id": "minima/handler-standalone-comment",
+      "source": "try:\n    f()\nexcept Exception:\n    return_value = []\n    # trailing standalone comment\n",
+      "sha256": "4f2d6524bc61133f3e6df70eea5e87a4ea9e24e3bfc65a7fe84165aa2f0b4bd5"
+    },
+    {
+      "id": "minima/async-with-chain",
+      "source": "async def f():\n    async with CM().scene().install() as eyes:\n        await g()\n",
+      "sha256": "f323e6c75e3596d839a2e4d0ed946b9f67c14d931216aed766189407049a89b1"
+    },
+    {
+      "id": "minima/async-with-simple",
+      "source": "async def f():\n    async with cm() as eyes:\n        await g()\n",
+      "sha256": "a0818bcaccb901fab13346f4c5ed94a5860efa94441690d506a7ee405836a7b8"
+    },
+    {
+      "id": "minima/async-with-noalias-chain",
+      "source": "async def f():\n    async with CM().scene().install():\n        await g()\n",
+      "sha256": "4baf9823f7c082e0e75d004d9777184950dd7019e57b8225f66b967c26da6f1b"
+    },
+    {
+      "id": "minima/async-with-nested-chain",
+      "source": "async def f():\n    async with (\n        CM().scene().install() as eyes,\n    ):\n        with (Other().install(),):\n            await g()\n",
+      "sha256": "0e0d51f2aba07ae7e5c7bf08f452f31af27d0788b396c431f8c3ab8d22a82bed"
+    },
+    {
+      "id": "minima/async-with-parenthesized-alias",
+      "source": "async def f():\n    async with (CM().scene().install()) as eyes:\n        await g()\n",
+      "sha256": "64bf5ab8ff7739e58266ceb6d0658fe406da5178e3cc316e49ff21eabd43f7d9"
+    },
+    {
+      "id": "with-controls/with-list-two",
+      "source": "async def f():\n    async with (a, b):\n        await g()\n",
+      "sha256": "b693e1f6a978dd97529d204f62b6a52f10c759f255f5839360e0cb3550b9b3f9"
+    },
+    {
+      "id": "with-controls/with-list-one",
+      "source": "async def f():\n    async with (a,):\n        await g()\n",
+      "sha256": "cdd92bb0732342048a6f0cf164952713976e8362ab739f39ca833be054a54607"
+    },
+    {
+      "id": "with-controls/with-list-as",
+      "source": "async def f():\n    async with (a as x, b as y):\n        await g()\n",
+      "sha256": "4d5f625631034e90c18a90cc7870788da5670dcd0bcce001b9a90a139486b5fb"
+    },
+    {
+      "id": "with-controls/with-one-tuple",
+      "source": "async def f():\n    async with ((a, b)):\n        await g()\n",
+      "sha256": "f23e1a25ab88ed65eda385bf68b9153373dad02ee0e6edaa9a9075ae161cebb8"
+    },
+    {
+      "id": "with-controls/with-list-one-tuple",
+      "source": "async def f():\n    async with ((a, b),):\n        await g()\n",
+      "sha256": "315e9906238aa5991d7a899bd5a8a086424a4bb15ca21e9213809aa9662f2347"
+    },
+    {
+      "id": "with-controls/with-one-parenthesized",
+      "source": "async def f():\n    async with (a):\n        await g()\n",
+      "sha256": "0d3be86beb8c95dbc844694755a8fa08271ad4d8b8aaaa7d3a52efacdf89c433"
+    },
+    {
+      "id": "with-controls/with-list-destructured-as",
+      "source": "async def f():\n    async with (a as (x, y),):\n        await g()\n",
+      "sha256": "ae878c4522745a8aa01ca99527dd15dc13d632e111eaab0f3670534afc32ec9b"
+    },
+    {
+      "id": "with-tuple-countercontrols/tuple-context-plus-another",
+      "source": "async def f():\n    async with (a, b), c:\n        await g()\n",
+      "sha256": "8f5ac0b0904f8de3123e96f5752f5c48fd22a715763150b2dae2b94cf9b05e18"
+    },
+    {
+      "id": "with-tuple-countercontrols/tuple-context-trailing-comma",
+      "source": "async def f():\n    async with (a, b),:\n        await g()\n",
+      "sha256": "47f87a108f848fe0e8cd998c3fd94fa024a2996d9be23a12e729c43684136adf"
+    },
+    {
+      "id": "with-tuple-countercontrols/multiple-and-tuple",
+      "source": "async def f():\n    async with a, (b, c):\n        await g()\n",
+      "sha256": "71d68c7879c881ed0c445c216ba2097527685579b34af3c9d8874d1d7dc5735b"
+    },
+    {
+      "id": "with-tuple-countercontrols/grouped-two-tuples",
+      "source": "async def f():\n    async with ((a, b), (c, d)):\n        await g()\n",
+      "sha256": "92f4beaf6500e98eaab00654ab2ff4305120050d9de9d114dde541be4696e378"
+    },
+    {
+      "id": "handler-reference-controls/if-elif-attribute",
+      "source": "try:\n    f()\nexcept Error as e:\n    if e.status == 1:\n        pass\n    elif e.status == 2:\n        pass\n",
+      "sha256": "a3bde6cdcf57100d494da02515c44a9ac98a0c815f346047611faa11c14af41c"
+    },
+    {
+      "id": "handler-reference-controls/if-attribute",
+      "source": "try:\n    f()\nexcept Error as e:\n    if e.status == 1:\n        pass\n",
+      "sha256": "631d7e2ce89e65a3e55d210c92a08ecbee237cd8a57e2f2d27bc829bc7abb109"
+    },
+    {
+      "id": "handler-reference-controls/elif-call-attribute",
+      "source": "try:\n    f()\nexcept Error as e:\n    if e.done():\n        pass\n    elif not e.cancelled() and e.exception() is None:\n        pass\n",
+      "sha256": "3b37cd281db6fb315d3ceba532dd6c349db926205755bc8be25f82798d3f967a"
+    },
+    {
+      "id": "handler-reference-controls/elif-isinstance-tuple",
+      "source": "try:\n    f()\nexcept Error as e:\n    if isinstance(e, One):\n        pass\n    elif isinstance(e, (mod.Two, mod.Three)):\n        pass\n",
+      "sha256": "5e2e7e9edf79d9f712a784d9070addfb025dbc15c519b47c417f93c915b196ec"
+    },
+    {
+      "id": "residual-controls/handler-import",
+      "source": "try:\n    run()\nexcept Error:\n    import package.module as local\n    from package import Name as Renamed\n    use(local, Renamed)\n",
+      "sha256": "e1edbabb802ffa1f401044f71a853ca76489dd89fb1f97afacdff126b7c2af58"
+    },
+    {
+      "id": "residual-controls/handler-nested-import",
+      "source": "try:\n    run()\nexcept Error:\n    if cond:\n        import os.path\n        from package import Name\n    use(Name)\n",
+      "sha256": "b689292f3264e7fd27f010af0e1f7ded9489390dba72023a6c26890e84384240"
+    },
+    {
+      "id": "residual-controls/handler-attribute-reference",
+      "source": "try:\n    run()\nexcept Error:\n    object.attribute(name)\n",
+      "sha256": "1fc2fc7eae1be2e1a7002d610ae01cdf47d63d76fea48972394c26d67fe34889"
+    },
+    {
+      "id": "residual-controls/handler-chain-none",
+      "source": "try:\n    run()\nexcept Error:\n    a = b = None\n",
+      "sha256": "7884c95b97d45cae93b4790349f84475c1b3a6427d4e19f88a1b9fcf5e772c7e"
+    },
+    {
+      "id": "residual-controls/handler-chain-false",
+      "source": "try:\n    run()\nexcept Error:\n    a = b = c = False\n",
+      "sha256": "7cdc6764ead9bedcbac33ad5c9d252bab74fcd16915a621802762de9d57bf54f"
+    },
+    {
+      "id": "residual-controls/handler-chain-string",
+      "source": "try:\n    run()\nexcept Error:\n    a = b = \"\"\n",
+      "sha256": "3d40e582682d48327914738d34ee08d4a593d5c562e999273c959b0fb5114db7"
+    },
+    {
+      "id": "residual-controls/handler-chain-call-counter",
+      "source": "try:\n    run()\nexcept Error:\n    a = b = call()\n",
+      "sha256": "b9d594b188ec0ea6cc591990900b311cccccbcba11b3176d84ede0d7a28e8861"
+    },
+    {
+      "id": "residual-controls/parenthesized-target",
+      "source": "(self.power) = self\n",
+      "sha256": "ac54434f595530c521710d624edcbabfa05faf27a2c7e3fdc642018d08b5ccda"
+    },
+    {
+      "id": "residual-controls/nested-parenthesized-target",
+      "source": "(((self.power))) = self\n",
+      "sha256": "558362f5a79a85f02c7c7abb0b9887b28faf5d3c776275a4e7fa118277df703c"
+    },
+    {
+      "id": "residual-controls/tuple-target-counter",
+      "source": "(self.power,) = self\n",
+      "sha256": "3681f4115a10f1f484fa458749b7f619f20152328a0e66c7e320c9758d3740ef"
+    },
+    {
+      "id": "residual-controls/pair-target-counter",
+      "source": "(self.power, other) = self\n",
+      "sha256": "2f20974998dd3bbed466751497916cb46aaae6bbc2c09abd526e9875eae79523"
+    },
+    {
+      "id": "residual-controls/conditional-with",
+      "source": "async def f():\n    async with (nullcontext(None) if cond else isolated_backend(x) as store):\n        await work(store)\n",
+      "sha256": "74dc8c73749d1cce46c65bd8870c952a41fc261a4f313a2c62408e1f6dfae48c"
+    },
+    {
+      "id": "residual-controls/conditional-with-parenthesized",
+      "source": "async def f():\n    async with ((nullcontext(None) if cond else isolated_backend(x)) as store):\n        await work(store)\n",
+      "sha256": "9400abaf62676dddd7b60bace3a9070699bc9ae20e1a4c57e00305c163ff817a"
+    },
+    {
+      "id": "residual-controls/conditional-with-two",
+      "source": "async def f():\n    async with (nullcontext(None) if cond else isolated_backend(x) as store, other as second):\n        await work(store, second)\n",
+      "sha256": "a8e445866a8a7a68a100aeea54bf2100abeabdc84365cba49ad72763de174768"
+    },
+    {
+      "id": "residual-controls/conditional-with-tuple-target-counter",
+      "source": "async def f():\n    async with (nullcontext(None) if cond else isolated_backend(x) as (store, other)):\n        await work(store, other)\n",
+      "sha256": "34493d07b107c43e7bc8c05ac493c188589ecc19284431c3b96835d183b46f84"
+    },
+    {
+      "id": "residual-controls/conditional-with-parenthesized-else-counter",
+      "source": "async def f():\n    async with (nullcontext(None) if cond else (isolated_backend(x)) as store):\n        await work(store)\n",
+      "sha256": "ded403e935e85d28ab2ee069037b6584448630c7fe99cc9e9de6d6a695d8a93a"
+    },
+    {
+      "id": "lambda-reference-controls/lambda-plain",
+      "source": "try:\n    run()\nexcept Error:\n    result = lambda text: len(encoding.encode(text))\n",
+      "sha256": "ef5000f7bee0f4eea300a2218a9531aa6377bcdedd856c5a7a8062381ea14d9f"
+    },
+    {
+      "id": "lambda-reference-controls/lambda-default-counter",
+      "source": "try:\n    run()\nexcept Error:\n    result = lambda text=default: use(text)\n",
+      "sha256": "024687a3f220c45697e2e20631cf986d9c8ed7389438375269a5ee8136ce3ea1"
+    },
+    {
+      "id": "lambda-reference-controls/lambda-splats",
+      "source": "try:\n    run()\nexcept Error:\n    result = lambda *args, **kwargs: use(args, kwargs)\n",
+      "sha256": "6dfec3a7a0bb52be5673c528853f14f2d1118faf36a1283949dd49aa2de08f4e"
+    },
+    {
+      "id": "lambda-reference-controls/lambda-mixed",
+      "source": "try:\n    run()\nexcept Error:\n    result = lambda text, *args, named=default, **kwargs: use(text, args, named, kwargs)\n",
+      "sha256": "6f2aad7a9d7f5d2105aa0a6075f490347487d292ae482e376b026baf3af7b05f"
+    },
+    {
+      "id": "lambda-reference-controls/lambda-nested-default",
+      "source": "try:\n    run()\nexcept Error:\n    result = lambda text=(lambda inner: inner): use(text)\n",
+      "sha256": "aa9c7c5fc7b13d2d8fdbe6863d5c4e4e469e9cc9bcbff5d7cfc2b5d03f6d8582"
+    },
+    {
+      "id": "lambda-reference-controls/function-parameters-counter",
+      "source": "try:\n    run()\nexcept Error:\n    def nested(text, *args, named=default, **kwargs):\n        return use(text, args, named, kwargs)\n",
+      "sha256": "908215ae3f3ccad23508a45ff4b6a50776ef62bceee9d1aad10281ac43280cbe"
+    }
+  ]
+}

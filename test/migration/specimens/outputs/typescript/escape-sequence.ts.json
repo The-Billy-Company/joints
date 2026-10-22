@@ -1,0 +1,121 @@
+{
+  "language": "typescript",
+  "mends": 0,
+  "path": "research/joinery/specimen/typescript/escape-sequence.ts",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 13,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 13
+  },
+  "tree": [
+    {
+      "end": 16,
+      "kids": [
+        {
+          "end": 15,
+          "kids": [
+            {
+              "end": 3,
+              "field": "kind",
+              "kids": [],
+              "name": "let",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 14,
+              "kids": [
+                {
+                  "end": 5,
+                  "field": "name",
+                  "kids": [],
+                  "name": "identifier",
+                  "named": true,
+                  "start": 4
+                },
+                {
+                  "end": 7,
+                  "kids": [],
+                  "name": "=",
+                  "named": false,
+                  "start": 6
+                },
+                {
+                  "end": 14,
+                  "field": "value",
+                  "kids": [
+                    {
+                      "end": 9,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 8
+                    },
+                    {
+                      "end": 10,
+                      "kids": [],
+                      "name": "string_fragment",
+                      "named": true,
+                      "start": 9
+                    },
+                    {
+                      "end": 12,
+                      "kids": [],
+                      "name": "escape_sequence",
+                      "named": true,
+                      "start": 10
+                    },
+                    {
+                      "end": 13,
+                      "kids": [],
+                      "name": "string_fragment",
+                      "named": true,
+                      "start": 12
+                    },
+                    {
+                      "end": 14,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 13
+                    }
+                  ],
+                  "name": "string",
+                  "named": true,
+                  "start": 8
+                }
+              ],
+              "name": "variable_declarator",
+              "named": true,
+              "start": 4
+            },
+            {
+              "end": 15,
+              "kids": [],
+              "name": ";",
+              "named": false,
+              "start": 14
+            }
+          ],
+          "name": "lexical_declaration",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "program",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

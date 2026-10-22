@@ -1,0 +1,54 @@
+[
+  {
+    "name": "source_file",
+    "named": true,
+    "start": 0,
+    "end": 18,
+    "kids": [
+      {
+        "name": "assignment",
+        "named": true,
+        "start": 0,
+        "end": 17,
+        "kids": [
+          {
+            "name": "identifier",
+            "named": true,
+            "start": 0,
+            "end": 1,
+            "kids": []
+          },
+          {
+            "name": "operator",
+            "named": true,
+            "start": 2,
+            "end": 3,
+            "kids": []
+          },
+          {
+            "name": "string_literal",
+            "named": true,
+            "start": 4,
+            "end": 17,
+            "kids": [
+              {
+                "name": "\"\"\"",
+                "named": false,
+                "start": 4,
+                "end": 7,
+                "kids": []
+              },
+              {
+                "name": "content",
+                "named": true,
+                "start": 7,
+                "end": 14,
+                "kids": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

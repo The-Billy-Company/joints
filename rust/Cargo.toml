@@ -1,0 +1,39 @@
+[workspace]
+members = [".", "ffi"]
+resolver = "3"
+
+[package]
+name = "joints-engine"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+license = "Apache-2.0"
+description = "Native typed parser and guarded stack-effect runtime for joints"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "joints-rs"
+path = "src/bin/joints.rs"
+
+[features]
+munch-image = ["irgx/munch-image"]
+
+[dependencies]
+irgx = { version = "=2.6.0", path = "../../irregex/bindings/rust", features = ["source-engine", "munch-image"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+thiserror = "2"
+sha2 = { version = "=0.11.0", default-features = false }
+
+[dev-dependencies]
+pcre2 = "0.2.11"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

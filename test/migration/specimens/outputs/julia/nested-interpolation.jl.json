@@ -1,0 +1,149 @@
+{
+  "language": "julia",
+  "mends": 0,
+  "path": "research/joinery/specimen/julia/nested-interpolation.jl",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 17,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 17
+  },
+  "tree": [
+    {
+      "end": 20,
+      "kids": [
+        {
+          "end": 5,
+          "kids": [
+            {
+              "end": 1,
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 3,
+              "kids": [],
+              "name": "operator",
+              "named": true,
+              "start": 2
+            },
+            {
+              "end": 5,
+              "kids": [],
+              "name": "integer_literal",
+              "named": true,
+              "start": 4
+            }
+          ],
+          "name": "assignment",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 19,
+          "kids": [
+            {
+              "end": 7,
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 6
+            },
+            {
+              "end": 9,
+              "kids": [],
+              "name": "operator",
+              "named": true,
+              "start": 8
+            },
+            {
+              "end": 19,
+              "kids": [
+                {
+                  "end": 18,
+                  "kids": [
+                    {
+                      "end": 12,
+                      "kids": [],
+                      "name": "$",
+                      "named": false,
+                      "start": 11
+                    },
+                    {
+                      "end": 13,
+                      "kids": [],
+                      "name": "(",
+                      "named": false,
+                      "start": 12
+                    },
+                    {
+                      "end": 17,
+                      "kids": [
+                        {
+                          "end": 16,
+                          "kids": [
+                            {
+                              "end": 15,
+                              "kids": [],
+                              "name": "$",
+                              "named": false,
+                              "start": 14
+                            },
+                            {
+                              "end": 16,
+                              "kids": [],
+                              "name": "identifier",
+                              "named": true,
+                              "start": 15
+                            }
+                          ],
+                          "name": "string_interpolation",
+                          "named": true,
+                          "start": 14
+                        }
+                      ],
+                      "name": "string_literal",
+                      "named": true,
+                      "start": 13
+                    },
+                    {
+                      "end": 18,
+                      "kids": [],
+                      "name": ")",
+                      "named": false,
+                      "start": 17
+                    }
+                  ],
+                  "name": "string_interpolation",
+                  "named": true,
+                  "start": 11
+                }
+              ],
+              "name": "string_literal",
+              "named": true,
+              "start": 10
+            }
+          ],
+          "name": "assignment",
+          "named": true,
+          "start": 6
+        }
+      ],
+      "name": "source_file",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

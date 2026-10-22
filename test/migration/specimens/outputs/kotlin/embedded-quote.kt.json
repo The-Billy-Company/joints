@@ -1,0 +1,105 @@
+{
+  "language": "kotlin",
+  "mends": 0,
+  "path": "research/joinery/specimen/kotlin/embedded-quote.kt",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 11,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 11
+  },
+  "tree": [
+    {
+      "end": 22,
+      "kids": [
+        {
+          "end": 21,
+          "kids": [
+            {
+              "end": 3,
+              "kids": [
+                {
+                  "end": 3,
+                  "kids": [],
+                  "name": "val",
+                  "named": false,
+                  "start": 0
+                }
+              ],
+              "name": "binding_pattern_kind",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 5,
+              "kids": [
+                {
+                  "end": 5,
+                  "kids": [],
+                  "name": "simple_identifier",
+                  "named": true,
+                  "start": 4
+                }
+              ],
+              "name": "variable_declaration",
+              "named": true,
+              "start": 4
+            },
+            {
+              "end": 7,
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 6
+            },
+            {
+              "end": 21,
+              "kids": [
+                {
+                  "end": 14,
+                  "kids": [],
+                  "name": "string_content",
+                  "named": true,
+                  "start": 11
+                },
+                {
+                  "end": 16,
+                  "kids": [],
+                  "name": "string_content",
+                  "named": true,
+                  "start": 14
+                },
+                {
+                  "end": 18,
+                  "kids": [],
+                  "name": "string_content",
+                  "named": true,
+                  "start": 16
+                }
+              ],
+              "name": "string_literal",
+              "named": true,
+              "start": 8
+            }
+          ],
+          "name": "property_declaration",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "source_file",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

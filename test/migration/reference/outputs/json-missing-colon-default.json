@@ -1,0 +1,118 @@
+{
+  "language": "json",
+  "mends": 0,
+  "path": "inputs/fixtures/json-missing-colon.json",
+  "roots": 1,
+  "scars": [
+    {
+      "at": 9,
+      "felled": false,
+      "gave": ":",
+      "heads": 1,
+      "over": 9,
+      "shifted": 4
+    }
+  ],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "at": 10,
+    "kind": "unexpected",
+    "state": 16,
+    "symbol": "number"
+  },
+  "supplied": 1,
+  "survey": {
+    "disorder": 0,
+    "held": 11,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 11
+  },
+  "tree": [
+    {
+      "end": 14,
+      "kids": [
+        {
+          "end": 13,
+          "kids": [
+            {
+              "end": 1,
+              "kids": [],
+              "name": "{",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 12,
+              "kids": [
+                {
+                  "end": 9,
+                  "field": "key",
+                  "kids": [
+                    {
+                      "end": 2,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 1
+                    },
+                    {
+                      "end": 8,
+                      "kids": [],
+                      "name": "string_content",
+                      "named": true,
+                      "start": 2
+                    },
+                    {
+                      "end": 9,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 8
+                    }
+                  ],
+                  "name": "string",
+                  "named": true,
+                  "start": 1
+                },
+                {
+                  "end": 9,
+                  "kids": [],
+                  "name": ":",
+                  "named": false,
+                  "start": 9
+                },
+                {
+                  "end": 12,
+                  "field": "value",
+                  "kids": [],
+                  "name": "number",
+                  "named": true,
+                  "start": 10
+                }
+              ],
+              "name": "pair",
+              "named": true,
+              "start": 1
+            },
+            {
+              "end": 13,
+              "kids": [],
+              "name": "}",
+              "named": false,
+              "start": 12
+            }
+          ],
+          "name": "object",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "document",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+/Users/griffinstrier/Billy-Company/joints/research/joinery/specimen/julia/raw-string.jl
+  pattern: 0
+    capture: 1 - parent, start: (0, 4), end: (0, 12), text: `raw"a\b"`
+    capture: 0 - child, start: (0, 4), end: (0, 7), text: `raw`

@@ -1,0 +1,88 @@
+{
+  "language": "html",
+  "mends": 0,
+  "path": "research/joinery/specimen/html/erroneous-end-tag.html",
+  "roots": 3,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "truncated"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 9,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 9
+  },
+  "tree": [
+    {
+      "end": 3,
+      "kids": [
+        {
+          "end": 1,
+          "kids": [],
+          "name": "<",
+          "named": false,
+          "start": 0
+        },
+        {
+          "end": 2,
+          "kids": [],
+          "name": "tag_name",
+          "named": true,
+          "start": 1
+        },
+        {
+          "end": 3,
+          "kids": [],
+          "name": ">",
+          "named": false,
+          "start": 2
+        }
+      ],
+      "name": "start_tag",
+      "named": true,
+      "start": 0
+    },
+    {
+      "end": 4,
+      "kids": [],
+      "name": "text",
+      "named": true,
+      "start": 3
+    },
+    {
+      "end": 8,
+      "kids": [
+        {
+          "end": 6,
+          "kids": [],
+          "name": "</",
+          "named": false,
+          "start": 4
+        },
+        {
+          "end": 7,
+          "kids": [],
+          "name": "erroneous_end_tag_name",
+          "named": true,
+          "start": 6
+        },
+        {
+          "end": 8,
+          "kids": [],
+          "name": ">",
+          "named": false,
+          "start": 7
+        }
+      ],
+      "name": "erroneous_end_tag",
+      "named": true,
+      "start": 4
+    }
+  ]
+}

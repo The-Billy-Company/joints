@@ -1,0 +1,169 @@
+{
+  "language": "go",
+  "mends": 0,
+  "path": "research/joinery/specimen/go/qualified-type-in-var.go",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 19,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 19
+  },
+  "tree": [
+    {
+      "end": 47,
+      "kids": [
+        {
+          "end": 12,
+          "kids": [
+            {
+              "end": 7,
+              "kids": [],
+              "name": "package",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 12,
+              "kids": [],
+              "name": "package_identifier",
+              "named": true,
+              "start": 8
+            }
+          ],
+          "name": "package_clause",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 26,
+          "kids": [
+            {
+              "end": 20,
+              "kids": [],
+              "name": "import",
+              "named": false,
+              "start": 14
+            },
+            {
+              "end": 26,
+              "kids": [
+                {
+                  "end": 26,
+                  "field": "path",
+                  "kids": [
+                    {
+                      "end": 22,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 21
+                    },
+                    {
+                      "end": 25,
+                      "kids": [],
+                      "name": "interpreted_string_literal_content",
+                      "named": true,
+                      "start": 22
+                    },
+                    {
+                      "end": 26,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 25
+                    }
+                  ],
+                  "name": "interpreted_string_literal",
+                  "named": true,
+                  "start": 21
+                }
+              ],
+              "name": "import_spec",
+              "named": true,
+              "start": 21
+            }
+          ],
+          "name": "import_declaration",
+          "named": true,
+          "start": 14
+        },
+        {
+          "end": 46,
+          "kids": [
+            {
+              "end": 31,
+              "kids": [],
+              "name": "var",
+              "named": false,
+              "start": 28
+            },
+            {
+              "end": 46,
+              "kids": [
+                {
+                  "end": 33,
+                  "field": "name",
+                  "kids": [],
+                  "name": "identifier",
+                  "named": true,
+                  "start": 32
+                },
+                {
+                  "end": 46,
+                  "field": "type",
+                  "kids": [
+                    {
+                      "end": 37,
+                      "field": "package",
+                      "kids": [],
+                      "name": "package_identifier",
+                      "named": true,
+                      "start": 34
+                    },
+                    {
+                      "end": 38,
+                      "kids": [],
+                      "name": ".",
+                      "named": false,
+                      "start": 37
+                    },
+                    {
+                      "end": 46,
+                      "field": "name",
+                      "kids": [],
+                      "name": "type_identifier",
+                      "named": true,
+                      "start": 38
+                    }
+                  ],
+                  "name": "qualified_type",
+                  "named": true,
+                  "start": 34
+                }
+              ],
+              "name": "var_spec",
+              "named": true,
+              "start": 32
+            }
+          ],
+          "name": "var_declaration",
+          "named": true,
+          "start": 28
+        }
+      ],
+      "name": "source_file",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

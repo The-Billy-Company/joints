@@ -1,0 +1,1536 @@
+{
+  "schema": 1,
+  "oracle": "tree-sitter 0.26.11",
+  "grammar": "test/grammar/json.json",
+  "grammar_sha256": "6a823bbabc1bbf85f4d7bedfff359e1751011294ac670bd51788c9aff0d68637",
+  "cases": [
+    {
+      "case": "binding-numbers",
+      "source": "[1,2,3]",
+      "query": "(number) @n",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 1,
+              "end": 2
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 3,
+              "end": 4
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 5,
+              "end": 6
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "001cfb5a99aa50e14d331b27ea7cf942dddf87951d45266a9e6e77c3916a541a"
+    },
+    {
+      "case": "binding-eq",
+      "source": "[1,2,3]",
+      "query": "((number) @n (#eq? @n \"2\"))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 3,
+              "end": 4
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "7fa26724485bb6fa7f28072d168b7514759bb90d84a00f2b28e4840af9e58cd9"
+    },
+    {
+      "case": "binding-empty",
+      "source": "[1,2,3]",
+      "query": "(object) @object",
+      "matches": [],
+      "raw_stdout_sha256": "8bbef67406a0cc6a05dbb5759b84bac3812d30f2aab8f34966345d235a777a10"
+    },
+    {
+      "case": "binding-nested",
+      "source": "{\"x\":[1,2,3]}",
+      "query": "(document (object (pair value: (array (number) @n))))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 6,
+              "end": 7
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 8,
+              "end": 9
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 10,
+              "end": 11
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "4808119911f097a09e472585e5d8425d65ec53f708063312e36da1b09fdb80bd"
+    },
+    {
+      "case": "named-wildcard",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "(_) @a",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 0,
+              "end": 19
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 0,
+              "end": 19
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 1,
+              "end": 7
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 1,
+              "end": 4
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 2,
+              "end": 3
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 6,
+              "end": 7
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 9,
+              "end": 18
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 9,
+              "end": 12
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 10,
+              "end": 11
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 14,
+              "end": 18
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "e27fb57d948709bb020226362bd468d87d335eff0cd4d294efa169fa7dab7fdb"
+    },
+    {
+      "case": "bare-wildcard",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "_ @a",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 0,
+              "end": 19
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 0,
+              "end": 19
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 0,
+              "end": 1
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 1,
+              "end": 7
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 1,
+              "end": 4
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 1,
+              "end": 2
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 2,
+              "end": 3
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 3,
+              "end": 4
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 4,
+              "end": 5
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 6,
+              "end": 7
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 7,
+              "end": 8
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 9,
+              "end": 18
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 9,
+              "end": 12
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 9,
+              "end": 10
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 10,
+              "end": 11
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 11,
+              "end": 12
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 12,
+              "end": 13
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 14,
+              "end": 18
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 18,
+              "end": 19
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "9e0c44d7216898e5d18948a915befb33eaf0e3026f012bbc9a63a2711ff7feb4"
+    },
+    {
+      "case": "literal-comma",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "\",\" @c",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "c",
+              "start": 7,
+              "end": 8
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "19f0a62c3b66f8a34e0863a54e23aaf2a6a5e18ea238008fca9be7a5ec07730e"
+    },
+    {
+      "case": "literal-colon",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "\":\" @c",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "c",
+              "start": 4,
+              "end": 5
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "c",
+              "start": 12,
+              "end": 13
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "29c309c9dcc8182df9a4af576156bb456b44b30423ebc4afd675e9da86d3d778"
+    },
+    {
+      "case": "category",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "(_value) @v",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "v",
+              "start": 0,
+              "end": 19
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "v",
+              "start": 6,
+              "end": 7
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "v",
+              "start": 14,
+              "end": 18
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "5cec7ef06144ac71324e93208b8e1dec294d7a11efd783306945b3eae9c6efe3"
+    },
+    {
+      "case": "subtype",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "(_value/number) @v",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "v",
+              "start": 6,
+              "end": 7
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "75aec9fe38dc035e99d2120340626c26a117b5bbb121ab59319b282d404eb5a8"
+    },
+    {
+      "case": "field",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "(pair key: (string) @k)",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "k",
+              "start": 1,
+              "end": 4
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "k",
+              "start": 9,
+              "end": 12
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "c84a89bf2d9476d9dd33a1499a426d19ba1e70c19474a825c6497ea82cecf57a"
+    },
+    {
+      "case": "field-empty",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "(pair value: (string) @v)",
+      "matches": [],
+      "raw_stdout_sha256": "13d58746c70614a16a91c7b418bda88b2a5d266e4e1b25f886495d755950f166"
+    },
+    {
+      "case": "absent",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "(object !value) @o",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "o",
+              "start": 0,
+              "end": 19
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "2566d958a315b32b554b2a5ac5139a7ae29ac98eee23792b02a1ed33a46331dd"
+    },
+    {
+      "case": "absent-empty",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "(pair !value) @p",
+      "matches": [],
+      "raw_stdout_sha256": "ef8418186df3aa37f0fc4eaf66d377cc050c05c3a6819ccc0ebd9726fea0d166"
+    },
+    {
+      "case": "first",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "(object . (pair) @p)",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "p",
+              "start": 1,
+              "end": 7
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "b610ba5e4de06cbeb952521d2e181b6c38ecaf0f2c6c3853fb4a826d6a79ae12"
+    },
+    {
+      "case": "last",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "(object (pair) @p .)",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "p",
+              "start": 9,
+              "end": 18
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "66c49d02e6dcdb9c3cb0121f65f7cb03a01a3683b1f57d8bd351c9ba7f977ca5"
+    },
+    {
+      "case": "only-empty",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "(object . (pair) @p .)",
+      "matches": [],
+      "raw_stdout_sha256": "ecd2a67ed34a33b3f416b43baad48ce66d85e95d25f0553e672b7d82eb30d9a1"
+    },
+    {
+      "case": "plus",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "(object (pair)+ @p)",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "p",
+              "start": 1,
+              "end": 7
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "p",
+              "start": 9,
+              "end": 18
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "f726b1253a541093a694102248f4fa95f05ef37a291d634cb456f909902daa27"
+    },
+    {
+      "case": "star-empty",
+      "source": "{}",
+      "query": "(object (pair)* @p)",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": []
+        }
+      ],
+      "raw_stdout_sha256": "6122d71a2b89bd7e594ea5be225ce5bf172041e84e1f8a2b1eb2551f2969b5b8"
+    },
+    {
+      "case": "choice",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "[(number) (true)] @lit",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "lit",
+              "start": 6,
+              "end": 7
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "lit",
+              "start": 14,
+              "end": 18
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "7ea512864a479f2e65c9cda223fa2e71751a9eae34e4c8124f62f553a255e575"
+    },
+    {
+      "case": "choice-duplicate",
+      "source": "1",
+      "query": "[(number) (number)] @n",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 0,
+              "end": 1
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "d527e2dbf5aa563b8d1ce53a41e56d363fc50cda2b0bccb6b734d2d7cb38635d"
+    },
+    {
+      "case": "choice-captures",
+      "source": "1",
+      "query": "[(number) @n] @choice",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 0,
+              "end": 1
+            },
+            {
+              "name": "choice",
+              "start": 0,
+              "end": 1
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "a3a47655f3bca885dc38341f6aa4ebce2efe119c01d082c1dcb4c0b0be9a6d7a"
+    },
+    {
+      "case": "group",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "((pair) @x (pair) @y)",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "x",
+              "start": 1,
+              "end": 7
+            },
+            {
+              "name": "y",
+              "start": 9,
+              "end": 18
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "7ca6b3a57905a7e9610c68846aa3a21f054c1824fb427e87078e8170e712c747"
+    },
+    {
+      "case": "group-captures",
+      "source": "[1,2,3]",
+      "query": "(array ((number) @a (number) @b) @group)",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 1,
+              "end": 2
+            },
+            {
+              "name": "group",
+              "start": 1,
+              "end": 2
+            },
+            {
+              "name": "b",
+              "start": 3,
+              "end": 4
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 1,
+              "end": 2
+            },
+            {
+              "name": "group",
+              "start": 1,
+              "end": 2
+            },
+            {
+              "name": "b",
+              "start": 5,
+              "end": 6
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 3,
+              "end": 4
+            },
+            {
+              "name": "group",
+              "start": 3,
+              "end": 4
+            },
+            {
+              "name": "b",
+              "start": 5,
+              "end": 6
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "fbc204b1c8c22ce6f792709b4464e750da272bbef982a1e3d510d91f9c97970f"
+    },
+    {
+      "case": "group-optional-first",
+      "source": "[true]",
+      "query": "(array ((number)? @n (true) @t) @group)",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "t",
+              "start": 1,
+              "end": 5
+            },
+            {
+              "name": "group",
+              "start": 1,
+              "end": 5
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "15646a5e22adc5157f8438b6d5a7a93876939baa34a69703f0412b462530403b"
+    },
+    {
+      "case": "nested-group-captures",
+      "source": "[1]",
+      "query": "(array (((number) @n) @g1) @g2)",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 1,
+              "end": 2
+            },
+            {
+              "name": "g1",
+              "start": 1,
+              "end": 2
+            },
+            {
+              "name": "g2",
+              "start": 1,
+              "end": 2
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "55776b910e767f384f0d86e5555c1b876561bd95bfbc40800cb7d669d2059fb1"
+    },
+    {
+      "case": "group-plus",
+      "source": "[1,true,2,true]",
+      "query": "(array ((number) @a (true) @b)+)",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 1,
+              "end": 2
+            },
+            {
+              "name": "b",
+              "start": 3,
+              "end": 7
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 1,
+              "end": 2
+            },
+            {
+              "name": "b",
+              "start": 10,
+              "end": 14
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 8,
+              "end": 9
+            },
+            {
+              "name": "b",
+              "start": 10,
+              "end": 14
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "9055cdf148dc99ba7907857984e76b1166ad2ca95068bb2f531a22a54c5b875b"
+    },
+    {
+      "case": "nested-group-plus",
+      "source": "[[1,2],[3,4]]",
+      "query": "(array ((array (number) @n))+)",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 2,
+              "end": 3
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 4,
+              "end": 5
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 8,
+              "end": 9
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 10,
+              "end": 11
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "e74bdff5433660fe449859f64beaf0993bb2cc0c95e31b72e7a25ebfa1a169f7"
+    },
+    {
+      "case": "combinations",
+      "source": "[1,2,3]",
+      "query": "(array ((number) @a (number) @b))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 1,
+              "end": 2
+            },
+            {
+              "name": "b",
+              "start": 3,
+              "end": 4
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 1,
+              "end": 2
+            },
+            {
+              "name": "b",
+              "start": 5,
+              "end": 6
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 3,
+              "end": 4
+            },
+            {
+              "name": "b",
+              "start": 5,
+              "end": 6
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "23b978c0ce29ef2f62eccbd14680f3976033de202b03143a6552285dfdaf86d1"
+    },
+    {
+      "case": "nested-combinations",
+      "source": "[[1,2],[3,4]]",
+      "query": "(array (array (number) @a) (array (number) @b))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 2,
+              "end": 3
+            },
+            {
+              "name": "b",
+              "start": 8,
+              "end": 9
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 4,
+              "end": 5
+            },
+            {
+              "name": "b",
+              "start": 8,
+              "end": 9
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 2,
+              "end": 3
+            },
+            {
+              "name": "b",
+              "start": 10,
+              "end": 11
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 4,
+              "end": 5
+            },
+            {
+              "name": "b",
+              "start": 10,
+              "end": 11
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "88d2613c3b1d56216fb4d583850731908ad1f58d50fc5bfb315e3d3596233d72"
+    },
+    {
+      "case": "nested-parent",
+      "source": "{\"a\":[1,2,3]}",
+      "query": "(pair key: (string) @k value: (array (number) @n))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "k",
+              "start": 1,
+              "end": 4
+            },
+            {
+              "name": "n",
+              "start": 6,
+              "end": 7
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "k",
+              "start": 1,
+              "end": 4
+            },
+            {
+              "name": "n",
+              "start": 8,
+              "end": 9
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "k",
+              "start": 1,
+              "end": 4
+            },
+            {
+              "name": "n",
+              "start": 10,
+              "end": 11
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "ec689f8befd8710ed0ac75ccf2fc27803f63e5c5606d95022ac4c06beca41de6"
+    },
+    {
+      "case": "nested-star",
+      "source": "{\"a\":[1],\"b\":[]}",
+      "query": "(pair key: (string) @k value: (array (number)* @n))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "k",
+              "start": 1,
+              "end": 4
+            },
+            {
+              "name": "n",
+              "start": 6,
+              "end": 7
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "k",
+              "start": 9,
+              "end": 12
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "2189d8a2056dec71db30f87a874c06d87992cabd429c6b774ad05d2ab2cf912d"
+    },
+    {
+      "case": "finish-order",
+      "source": "[1,2]",
+      "query": "(number) @n\n(array (number) @v)",
+      "matches": [
+        {
+          "pattern": 1,
+          "captures": [
+            {
+              "name": "v",
+              "start": 1,
+              "end": 2
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 1,
+              "end": 2
+            }
+          ]
+        },
+        {
+          "pattern": 1,
+          "captures": [
+            {
+              "name": "v",
+              "start": 3,
+              "end": 4
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 3,
+              "end": 4
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "d4ccaa556404c4f9f0cab37346fe0b7a819acd9c31550e9291158012253c32f1"
+    },
+    {
+      "case": "same-node-order",
+      "source": "1",
+      "query": "(number) @first\n(number) @second",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "first",
+              "start": 0,
+              "end": 1
+            }
+          ]
+        },
+        {
+          "pattern": 1,
+          "captures": [
+            {
+              "name": "second",
+              "start": 0,
+              "end": 1
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "876513f31e4be785d91f907482b65af6955b55d1fd6bde6f05b1abc2d9af8a9c"
+    },
+    {
+      "case": "comment-anchor",
+      "source": "[1,/*x*/2]",
+      "query": "(array (number) @a . (number) @b)",
+      "matches": [],
+      "raw_stdout_sha256": "546fb73c93650fa24f106241f00fca209ce4b83110c47c010108bcfd9667ff04"
+    },
+    {
+      "case": "comment-no-anchor",
+      "source": "[1,/*x*/2]",
+      "query": "(array (number) @a (number) @b)",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 1,
+              "end": 2
+            },
+            {
+              "name": "b",
+              "start": 8,
+              "end": 9
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "7f2becfece851204bbd43a89a8dd72021a631f92d25527dc3ab18f350fc8f681"
+    },
+    {
+      "case": "comment-first",
+      "source": "[/*x*/1]",
+      "query": "(array . (number) @a)",
+      "matches": [],
+      "raw_stdout_sha256": "395ad7d3a69195ef3eb471cfb9a2a0f519c8cd17e2e9be4e2b465085eade94ef"
+    },
+    {
+      "case": "comment-last",
+      "source": "[1/*x*/]",
+      "query": "(array (number) @a .)",
+      "matches": [],
+      "raw_stdout_sha256": "9452b57d459eb7b5f822591672a99fd36d9c4fbc32017907c067e8a8c9697971"
+    },
+    {
+      "case": "zero-captures",
+      "source": "[1,2]",
+      "query": "(number)",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": []
+        },
+        {
+          "pattern": 0,
+          "captures": []
+        }
+      ],
+      "raw_stdout_sha256": "7d6267bdacb3f6c2799e3633b2e071a39a43f23c623e06eb42f8bef86583e8a9"
+    },
+    {
+      "case": "multiline",
+      "source": "[1,\n 2]",
+      "query": "(array (number) @n) @array",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "array",
+              "start": 0,
+              "end": 7
+            },
+            {
+              "name": "n",
+              "start": 1,
+              "end": 2
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "array",
+              "start": 0,
+              "end": 7
+            },
+            {
+              "name": "n",
+              "start": 5,
+              "end": 6
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "6d1cc137b247a91213d322aff3fbc67ce74a035b54ef4efb80350aad4e0afb70"
+    },
+    {
+      "case": "eq?",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "((string_content) @c (#eq? @c \"a\"))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "c",
+              "start": 2,
+              "end": 3
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "676ddb7d7eb1d4590f4754fc67369c7a76fa220afc6badf6d87db092fbe7c411"
+    },
+    {
+      "case": "not-eq?",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "((string_content) @c (#not-eq? @c \"b\"))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "c",
+              "start": 2,
+              "end": 3
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "2916488cf65275ffade75a5cfadf0b9269943f784b6bf97cf070dc2eabad7394"
+    },
+    {
+      "case": "any-of?",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "((string_content) @c (#any-of? @c \"b\" \"z\"))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "c",
+              "start": 10,
+              "end": 11
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "d26d1d9df96411d8f66a81ef43e43d355d85561bef1d24cb6ef27a439737766c"
+    },
+    {
+      "case": "not-any-of?",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "((string_content) @c (#not-any-of? @c \"b\" \"z\"))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "c",
+              "start": 2,
+              "end": 3
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "2a5e6c78994416040a9421580db4c6a2ae4bbb3a8863df73bb5102be8f69c7c1"
+    },
+    {
+      "case": "match?",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "((string_content) @c (#match? @c \"^[ab]$\"))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "c",
+              "start": 2,
+              "end": 3
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "c",
+              "start": 10,
+              "end": 11
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "90670c441f0a562bccabf0ba8b6dad77b0c50599ed9f2a0926d5c427de9d1364"
+    },
+    {
+      "case": "not-match?",
+      "source": "{\"a\": 1, \"b\": true}",
+      "query": "((string_content) @c (#not-match? @c \"^a$\"))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "c",
+              "start": 10,
+              "end": 11
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "5a887161fe7481c073fc2d728d63c1297a964bb0fcb491055ad9d5fa0680c550"
+    },
+    {
+      "case": "eq-captures",
+      "source": "{\"a\":\"a\",\"b\":\"c\"}",
+      "query": "((pair key: (string (string_content) @a) value: (string (string_content) @b)) (#eq? @a @b))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 2,
+              "end": 3
+            },
+            {
+              "name": "b",
+              "start": 6,
+              "end": 7
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "7921bdf44438ff8661eddd20578730e55bb0f305e61581b5739e2632d022bda6"
+    },
+    {
+      "case": "optional-unbound",
+      "source": "[]",
+      "query": "((array (number)? @n) (#eq? @n \"anything\"))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": []
+        }
+      ],
+      "raw_stdout_sha256": "4edcee244a44d5053211cff5cbe75ee68dbd0d5fdc7ff710266d8990bf7ba0a3"
+    },
+    {
+      "case": "directive",
+      "source": "[1,2]",
+      "query": "((number) @n (#set! injection.language \"json\"))",
+      "matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 1,
+              "end": 2
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 3,
+              "end": 4
+            }
+          ]
+        }
+      ],
+      "raw_stdout_sha256": "a8e87a57eb714874e432c1c24852da27a4c7e92640d69ee4569908f8f326fa5a"
+    }
+  ],
+  "cli_launcher_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+  "cli_binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5"
+}

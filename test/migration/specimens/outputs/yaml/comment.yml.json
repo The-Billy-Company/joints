@@ -1,0 +1,125 @@
+{
+  "language": "yaml",
+  "mends": 0,
+  "path": "research/joinery/specimen/yaml/comment.yml",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 13,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 13
+  },
+  "tree": [
+    {
+      "end": 31,
+      "kids": [
+        {
+          "end": 19,
+          "kids": [],
+          "name": "comment",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 31,
+          "kids": [
+            {
+              "end": 31,
+              "kids": [
+                {
+                  "end": 31,
+                  "kids": [
+                    {
+                      "end": 30,
+                      "kids": [
+                        {
+                          "end": 23,
+                          "field": "key",
+                          "kids": [
+                            {
+                              "end": 23,
+                              "kids": [
+                                {
+                                  "end": 23,
+                                  "kids": [],
+                                  "name": "string_scalar",
+                                  "named": true,
+                                  "start": 20
+                                }
+                              ],
+                              "name": "plain_scalar",
+                              "named": true,
+                              "start": 20
+                            }
+                          ],
+                          "name": "flow_node",
+                          "named": true,
+                          "start": 20
+                        },
+                        {
+                          "end": 24,
+                          "kids": [],
+                          "name": ":",
+                          "named": false,
+                          "start": 23
+                        },
+                        {
+                          "end": 30,
+                          "field": "value",
+                          "kids": [
+                            {
+                              "end": 30,
+                              "kids": [
+                                {
+                                  "end": 30,
+                                  "kids": [],
+                                  "name": "string_scalar",
+                                  "named": true,
+                                  "start": 25
+                                }
+                              ],
+                              "name": "plain_scalar",
+                              "named": true,
+                              "start": 25
+                            }
+                          ],
+                          "name": "flow_node",
+                          "named": true,
+                          "start": 25
+                        }
+                      ],
+                      "name": "block_mapping_pair",
+                      "named": true,
+                      "start": 20
+                    }
+                  ],
+                  "name": "block_mapping",
+                  "named": true,
+                  "start": 20
+                }
+              ],
+              "name": "block_node",
+              "named": true,
+              "start": 20
+            }
+          ],
+          "name": "document",
+          "named": true,
+          "start": 20
+        }
+      ],
+      "name": "stream",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

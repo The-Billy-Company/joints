@@ -1,0 +1,86 @@
+{
+  "name": "family_source_order",
+  "rules": {
+    "doc": {
+      "type": "SYMBOL",
+      "name": "call"
+    },
+    "call": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "FIELD",
+              "name": "target",
+              "content": {
+                "type": "SYMBOL",
+                "name": "A"
+              }
+            },
+            {
+              "type": "FIELD",
+              "name": "arg",
+              "content": {
+                "type": "SYMBOL",
+                "name": "tail"
+              }
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "B"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "tail"
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "FIELD",
+              "name": "target",
+              "content": {
+                "type": "SYMBOL",
+                "name": "B"
+              }
+            },
+            {
+              "type": "FIELD",
+              "name": "arg",
+              "content": {
+                "type": "SYMBOL",
+                "name": "tail"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "A": {
+      "type": "PATTERN",
+      "value": "a"
+    },
+    "B": {
+      "type": "PATTERN",
+      "value": "b"
+    },
+    "tail": {
+      "type": "PATTERN",
+      "value": "x"
+    }
+  },
+  "conflicts": [
+    [
+      "call"
+    ]
+  ]
+}

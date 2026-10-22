@@ -1,0 +1,139 @@
+# Opt-in installed-package validation only. Final local candidate gates precede dispatch.
+# This workflow has no push, pull-request, schedule, release or default-switch trigger.
+# Package build/execution declarations stay immutable, including emulated builds.
+# This later verification records native-host separately after exact host checks.
+# Dispatch requires a helper-present commit containing
+# the exact three native108 verifier hashes below, and runner-accessible HTTPS archive URLs with
+# independently supplied SHA256s. No storage endpoint or authentication flow is
+# invented here. The historical HEAD without these tools is not a bootstrap.
+# macos-14 is presently documented as ARM64, but retires 2026-11-02 and has
+# brownouts. Recheck availability before authorized execution; if unavailable,
+# use an explicitly authorized actual macOS14 ARM64 runner, never a newer floor.
+# https://docs.github.com/en/actions/reference/runners/github-hosted-runners
+# https://github.com/actions/runner-images/issues/13518
+name: Rust candidate installed platform checks
+on:
+  workflow_dispatch:
+    inputs:
+      helper_ref:
+        description: Exact 40-hex helper-present commit; must match pinned tool hashes below
+        required: true
+        type: string
+      linux_url: {required: true, type: string}
+      linux_sha256: {required: true, type: string}
+      macos_url: {required: true, type: string}
+      macos_sha256: {required: true, type: string}
+permissions:
+  contents: read
+jobs:
+  installed:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {target: linux-x86_64, runner: ubuntu-24.04, url: linux_url, sha: linux_sha256}
+          - {target: macos-arm64, runner: macos-14, url: macos_url, sha: macos_sha256}
+    runs-on: ${{ matrix.runner }}
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with: {python-version: '3.12.15'}
+      - name: Validate explicit helper and candidate inputs
+        env:
+          HELPER_REF: ${{ inputs.helper_ref }}
+          CANDIDATE_URL: ${{ inputs[matrix.url] }}
+          CANDIDATE_SHA256: ${{ inputs[matrix.sha] }}
+        run: |
+          python - <<'PY'
+          import os, re, urllib.parse
+          assert re.fullmatch('[0-9a-f]{40}', os.environ['HELPER_REF']), 'exact helper commit required'
+          url = urllib.parse.urlsplit(os.environ['CANDIDATE_URL'])
+          assert url.scheme == 'https' and url.hostname and not url.username and not url.password
+          assert re.fullmatch('[0-9a-f]{64}', os.environ['CANDIDATE_SHA256'])
+          PY
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.helper_ref }}
+          persist-credentials: false
+      - name: Pin the shipped verifier bootstrap
+        env:
+          HELPER_REF: ${{ inputs.helper_ref }}
+        run: |
+          python - <<'PY'
+          import hashlib, os, pathlib, subprocess
+          assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == os.environ['HELPER_REF']
+          expected = {
+              'tool/rust_delivery.py': '803a7205997aeee6d236695d18f4fb692ba7cd01a6e32d42b9720d41da851806',
+              'tool/rust_archive.py': '21d89b26bac4ce393a32f689e9ff9d3e1bce444ecb63c7c7c6081e313998c426',
+              'tool/rust_static_boundary.py': '73b547872eb08ac06f6a426779c3b5268326a9556e964cb594062db7b60b035a',
+          }
+          for name, sha in expected.items():
+              path = pathlib.Path(name)
+              assert path.is_file() and not path.is_symlink(), 'helper-present commit required: ' + name
+              assert hashlib.file_digest(path.open('rb'), 'sha256').hexdigest() == sha, name
+          print('verified helper commit', os.environ['HELPER_REF'])
+          PY
+      - name: Verify actual host floor and download pinned local candidate
+        env:
+          CANDIDATE_URL: ${{ inputs[matrix.url] }}
+          CANDIDATE_SHA256: ${{ inputs[matrix.sha] }}
+          EXPECTED_TARGET: ${{ matrix.target }}
+        run: |
+          python - <<'PY'
+          import hashlib, os, pathlib, platform, re, urllib.parse, urllib.request
+          target = os.environ['EXPECTED_TARGET']
+          if target == 'macos-arm64':
+              assert platform.system() == 'Darwin' and platform.machine() == 'arm64'
+              assert platform.mac_ver()[0].split('.')[0] == '14', platform.mac_ver()
+          else:
+              assert platform.system() == 'Linux' and platform.machine() == 'x86_64'
+              release = dict(line.split('=', 1) for line in pathlib.Path('/etc/os-release').read_text().splitlines() if '=' in line)
+              assert release.get('ID', '').strip('"') == 'ubuntu'
+              assert release.get('VERSION_ID', '').strip('"') == '24.04'
+              assert not pathlib.Path('/.dockerenv').exists()
+          url, sha = os.environ['CANDIDATE_URL'], os.environ['CANDIDATE_SHA256']
+          assert url.startswith('https://') and re.fullmatch('[0-9a-f]{64}', sha)
+          with urllib.request.urlopen(url) as response, open('candidate.tar.gz', 'wb') as output:
+              assert urllib.parse.urlsplit(response.geturl()).scheme == 'https', 'HTTPS redirect required'
+              total = 0
+              while block := response.read(1 << 20):
+                  total += len(block)
+                  assert total <= 2 << 30, 'candidate download exceeds archive byte budget'
+                  output.write(block)
+          with open('candidate.tar.gz','rb') as source:
+              assert hashlib.file_digest(source,'sha256').hexdigest() == sha
+          print('actual native host', platform.platform(), platform.machine(), platform.libc_ver())
+          print('candidate sha256', sha)
+          PY
+      - name: Make both required Rust toolchains available
+        shell: bash
+        run: |
+          rustup toolchain install 1.85.0 --profile minimal
+          rustup toolchain install 1.96.0 --profile minimal
+          {
+            rustup run 1.85.0 rustc -Vv
+            rustup run 1.85.0 cargo -Vv
+            rustup run 1.96.0 rustc -Vv
+            rustup run 1.96.0 cargo -Vv
+          } > bootstrap-tools.txt
+      - name: Execute installed candidate contracts
+        shell: bash
+        run: |
+          args=()
+          if [[ "${{ matrix.target }}" == macos-arm64 ]]; then
+            args+=(--sdkroot "$(xcrun --show-sdk-path)")
+          fi
+          python tool/rust_delivery.py verify --archive candidate.tar.gz --output installed-check \
+            --execution-scope native-host --rust-toolchain 1.85.0 --python "$(command -v python)" "${args[@]}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: local-candidate-${{ matrix.target }}-evidence
+          path: |
+            bootstrap-tools.txt
+            installed-check/report.json
+            installed-check/logs
+            installed-check/platform-logs
+            installed-check/deployment-logs
+          if-no-files-found: error

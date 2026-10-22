@@ -1,0 +1,82 @@
+{
+  "language": "json",
+  "mends": 0,
+  "path": "inputs/fixtures/json-multiple.json",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 8,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 8
+  },
+  "tree": [
+    {
+      "end": 11,
+      "kids": [
+        {
+          "end": 2,
+          "kids": [
+            {
+              "end": 1,
+              "kids": [],
+              "name": "{",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 2,
+              "kids": [],
+              "name": "}",
+              "named": false,
+              "start": 1
+            }
+          ],
+          "name": "object",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 5,
+          "kids": [
+            {
+              "end": 4,
+              "kids": [],
+              "name": "[",
+              "named": false,
+              "start": 3
+            },
+            {
+              "end": 5,
+              "kids": [],
+              "name": "]",
+              "named": false,
+              "start": 4
+            }
+          ],
+          "name": "array",
+          "named": true,
+          "start": 3
+        },
+        {
+          "end": 10,
+          "kids": [],
+          "name": "true",
+          "named": true,
+          "start": 6
+        }
+      ],
+      "name": "document",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

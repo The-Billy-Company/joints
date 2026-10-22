@@ -1,0 +1,21 @@
+diff --git a/crates/python-joints/src/go_tests.rs b/crates/python-joints/src/go_tests.rs
+--- a/crates/python-joints/src/go_tests.rs
++++ b/crates/python-joints/src/go_tests.rs
+@@ -293,7 +293,7 @@
+     let profile = std::env::var("REGULATOR_JOINTS_GO_PROFILE_ID").unwrap_or_default();
+     let allocations = "package fixture\nvar a = new(\"text\")\nvar b = new(makeValue())\nvar c = new(x > 0)\nvar d = new([]int{1,2})\nvar e = new(any)\nvar f = make([]int, 2)\n";
+     let methods = "package fixture\ntype Value struct{}\nfunc (v Value) Map[T any](value T) T { return value }\n";
+-    if profile != "regulator-go127-v1" {
++    if !matches!(profile.as_str(), "regulator-go127-v1" | "regulator-go127-rust-v2") {
+         for source in [allocations, methods] {
+             assert!(
+                 frontend
+@@ -350,7 +350,7 @@
+ fn native_go_profile_preserves_empty_statement_lists() {
+     let frontend = JointsFrontend::new(crate::Grammar::Go, grammar());
+     let profile = std::env::var("REGULATOR_JOINTS_GO_PROFILE_ID").unwrap_or_default();
+-    if profile != "regulator-go127-v1" {
++    if !matches!(profile.as_str(), "regulator-go127-v1" | "regulator-go127-rust-v2") {
+         assert!(
+             frontend
+                 .lower(&Source::new(

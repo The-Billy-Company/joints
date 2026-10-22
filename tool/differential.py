@@ -563,65 +563,133 @@ def graft_fields(root: Node, lang: Path, source: Path, names: list[str], at: Lin
     grammar wraps it in a `FIELD`, but `ts_node_child_by_field_name` finds it
     and so does a query - which is the surface that actually matters, since a
     `highlights.scm` is queries. So the oracle is asked in its query voice:
-    one pattern per declared field, capturing the parent and the child. A
+    patterns per declared field and concrete child type. A
     printed field that the query contradicts raises rather than being
     overwritten; the two faces of one runtime must agree or neither is usable.
     """
+    # Ranges alone do not identify nodes: successive visible wrappers can
+    # cover the same bytes. Ask for a concrete child type/namedness, then
+    # resolve the capture against actual direct CST edges. Concrete parent
+    # query patterns are unsuitable: TS 0.26.11 rejects some inherited fields
+    # as impossible even while its XML and node-types report them. Metadata
+    # plans additional named-field cross-checks; it never overrides a printer.
+    metadata = json.loads((lang / "src" / "node-types.json").read_text(encoding="utf-8"))
+    types = {(n["type"], n["named"]): n for n in metadata}
+    expanded: dict[tuple[str, bool], set[tuple[str, bool]]] = {}
+
+    def concrete(kind: tuple[str, bool]) -> set[tuple[str, bool]]:
+        if kind in expanded:
+            return expanded[kind]
+        out, todo = set(), [kind]
+        while todo:
+            item = todo.pop()
+            if item in out:
+                continue
+            out.add(item)
+            todo.extend((n["type"], n["named"])
+                        for n in types.get(item, {}).get("subtypes", []))
+        expanded[kind] = out
+        return out
+
+    specs: dict[tuple[str, str, bool], None] = {}
+    edges: dict[tuple[int, int, str, bool, int, int], list[Node]] = {}
+    printed: set[str] = set()
+
+    def inventory(node: Node) -> None:
+        fields = types.get((node.name, node.named), {}).get("fields", {})
+        for kid in node.kids:
+            key = (node.start, node.end, kid.name, kid.named, kid.start, kid.end)
+            edges.setdefault(key, []).append(kid)
+            # Anonymous fields are absent from both printers, so ask for every
+            # authored field rather than infer eligibility from node-types.
+            # Metadata can omit fields inherited through aliases/hidden rules.
+            if not kid.named:
+                for field in names:
+                    specs.setdefault((field, kid.name, False), None)
+            elif kid.field:
+                printed.add(kid.field)
+                specs.setdefault((kid.field, kid.name, True), None)
+            for field, description in fields.items():
+                if (node.named and field in names
+                        and any((kid.name, kid.named) in concrete((n["type"], n["named"]))
+                                for n in description.get("types", []))):
+                    specs.setdefault((field, kid.name, kid.named), None)
+            inventory(kid)
+
+    inventory(root)
+    selected = list(specs)
+    if not selected:
+        return
+
+    def query_type(name: str, named: bool) -> str:
+        return f"({name})" if named else json.dumps(name, ensure_ascii=False)
+
     # Per lane, not per workspace. This file was `WORK / "query.scm"`, one
     # mutable path every concurrent measurement wrote its own pattern list to -
     # and the reader below maps a pattern *ordinal* back to a name through the
-    # local `names`, so reading another lane's file does not fail, it silently
+    # local pattern roster, so reading another lane's file does not fail, it silently
     # renames every field. That is the shape of "the printer says value, its
     # query says declaration": not a disagreement between two faces of one
     # library, but this process reading an answer to somebody else's question.
     q = SEAT / "query.scm"
     SEAT.mkdir(parents=True, exist_ok=True)
-    while names:
-        q.write_text("".join(f"((_ {n}: _ @child) @parent)\n" for n in names), encoding="utf-8")
+    while selected:
+        q.write_text("".join(
+            f"((_ {field}: {query_type(child, child_named)} @child) @parent)\n"
+            for field, child, child_named in selected), encoding="utf-8")
         got = cli([str(TS), "query", "-p", str(lang), str(q), str(source)], WORK)
         if got.returncode == 0:
             break
-        # A field the grammar declares but the compiled language does not have
-        # (typescript inherits rules from javascript that its own parser prunes)
-        # is a field no node can be carrying. Drop it and ask again.
         gone = re.search(r'Invalid field name "(\w+)"', got.stderr)
-        if not gone:
+        if not gone or gone[1] not in {s[0] for s in selected}:
             raise ValueError(f"tree-sitter query: {gripe(got.stderr)}")
-        if gone[1] not in names:
-            # The CLI is complaining about a field we did not ask about, so it
-            # read a different file than the one just written and dropping the
-            # name would not shrink anything. This loop used to spin on that
-            # forever, silently, which is how a shared `query.scm` presented as
-            # a hang rather than as a fault.
-            raise ValueError(f"tree-sitter query: rejected {gone[1]!r}, which this "
-                             "query never asked for; the query file was not ours")
-        names = [n for n in names if n != gone[1]]
+        if gone[1] in printed:
+            raise ValueError(f"tree-sitter query rejects field {gone[1]!r} reported by its printer")
+        # Authored fields pruned from the generated language cannot occur.
+        # Remove precisely that field and rebuild the pattern ordinal map.
+        selected = [s for s in selected if s[0] != gone[1]]
     else:
         return
-    table: dict[tuple[int, int, int, int], str | None] = {}
-    field, hit = "", {}
+    table: dict[Node, str] = {}
+    spec, hit = None, {}
+
+    def finish() -> None:
+        if spec is None:
+            return
+        if hit.keys() != {"parent", "child"}:
+            raise ValueError("tree-sitter query: incomplete parent/child identity")
+        field, child, child_named = spec
+        key = (*hit["parent"], child, child_named, *hit["child"])
+        matches = edges.get(key, [])
+        if len(matches) > 1 and child_named:
+            # The printers already preserve named fields. An ambiguous query
+            # cannot cross-check these edges, and must never rewrite them.
+            return
+        if len(matches) != 1:
+            raise ValueError(f"tree-sitter query: ambiguous or absent typed edge {key!r}")
+        kid = matches[0]
+        if kid in table and table[kid] != field:
+            raise ValueError("tree-sitter query: one child carries contradictory fields")
+        table[kid] = field
+
     for line in got.stdout.splitlines():
         if m := QPATTERN.match(line):
-            field, hit = names[int(m[1])], {}
-        elif (m := QCAPTURE.match(line)) and field:
+            finish()
+            index = int(m[1])
+            if index >= len(selected):
+                raise ValueError("tree-sitter query: unknown pattern identity")
+            spec, hit = selected[index], {}
+        elif (m := QCAPTURE.match(line)) and spec is not None:
+            if m[1] not in {"parent", "child"} or m[1] in hit:
+                raise ValueError("tree-sitter query: repeated or unknown capture identity")
             hit[m[1]] = (at.off(int(m[2]), int(m[3])), at.off(int(m[4]), int(m[5])))
-            if len(hit) == 2:
-                key = (*hit["parent"], *hit["child"])
-                # Two children of one parent covering the same bytes cannot be
-                # told apart by span, so that key is retired rather than guessed.
-                table[key] = field if table.get(key, field) == field else None
-    def apply(node: Node) -> None:
-        for kid in node.kids:
-            want = table.get((node.start, node.end, kid.start, kid.end))
-            if want is None:
-                pass
-            elif kid.field is None:
-                kid.field = want
-            elif kid.field != want:
-                raise ValueError(f"tree-sitter's printer says {kid.field}, its query says {want}")
-            apply(kid)
-
-    apply(root)
+    finish()
+    for kid, want in table.items():
+        if (kid.named or kid.field is not None) and kid.field != want:
+            raise ValueError(f"tree-sitter's printer says {kid.field}, its query says {want}")
+    for kid, want in table.items():
+        if not kid.named:
+            kid.field = want
 
 
 def same(a: Node, b: Node) -> bool:

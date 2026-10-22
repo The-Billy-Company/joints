@@ -1,0 +1,86 @@
+{
+  "language": "kotlin",
+  "mends": 1,
+  "path": "research/joinery/specimen/kotlin/unterminated.kt",
+  "roots": 4,
+  "scars": [
+    {
+      "at": 9,
+      "felled": true,
+      "heads": 1,
+      "over": 10,
+      "shifted": 4
+    }
+  ],
+  "skipped": 1,
+  "spurned": 0,
+  "stop": {
+    "at": 9,
+    "kind": "unexpected",
+    "state": 93,
+    "symbol": "(?:[^\\r\\n]*)"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 7,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 7
+  },
+  "tree": [
+    {
+      "end": 3,
+      "kids": [
+        {
+          "end": 3,
+          "kids": [],
+          "name": "val",
+          "named": false,
+          "start": 0
+        }
+      ],
+      "name": "binding_pattern_kind",
+      "named": true,
+      "start": 0
+    },
+    {
+      "end": 5,
+      "kids": [
+        {
+          "end": 5,
+          "kids": [],
+          "name": "simple_identifier",
+          "named": true,
+          "start": 4
+        }
+      ],
+      "name": "variable_declaration",
+      "named": true,
+      "start": 4
+    },
+    {
+      "end": 7,
+      "kids": [],
+      "name": "=",
+      "named": false,
+      "start": 6
+    },
+    {
+      "end": 12,
+      "kids": [
+        {
+          "end": 12,
+          "kids": [],
+          "name": "simple_identifier",
+          "named": true,
+          "start": 10
+        }
+      ],
+      "name": "source_file",
+      "named": true,
+      "start": 10
+    }
+  ]
+}

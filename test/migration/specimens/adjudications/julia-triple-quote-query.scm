@@ -1,0 +1,6 @@
+((_ name: "\"\"\"" @child) @parent)
+((_ condition: "\"\"\"" @child) @parent)
+((_ alternative: "\"\"\"" @child) @parent)
+((_ value: "\"\"\"" @child) @parent)
+((_ prefix: "\"\"\"" @child) @parent)
+((_ suffix: "\"\"\"" @child) @parent)

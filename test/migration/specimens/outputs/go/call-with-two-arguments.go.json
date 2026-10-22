@@ -1,0 +1,319 @@
+{
+  "language": "go",
+  "mends": 0,
+  "path": "research/joinery/specimen/go/call-with-two-arguments.go",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 42,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 39
+  },
+  "tree": [
+    {
+      "end": 65,
+      "kids": [
+        {
+          "end": 12,
+          "kids": [
+            {
+              "end": 7,
+              "kids": [],
+              "name": "package",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 12,
+              "kids": [],
+              "name": "package_identifier",
+              "named": true,
+              "start": 8
+            }
+          ],
+          "name": "package_clause",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 26,
+          "kids": [
+            {
+              "end": 20,
+              "kids": [],
+              "name": "import",
+              "named": false,
+              "start": 14
+            },
+            {
+              "end": 26,
+              "kids": [
+                {
+                  "end": 26,
+                  "field": "path",
+                  "kids": [
+                    {
+                      "end": 22,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 21
+                    },
+                    {
+                      "end": 25,
+                      "kids": [],
+                      "name": "interpreted_string_literal_content",
+                      "named": true,
+                      "start": 22
+                    },
+                    {
+                      "end": 26,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 25
+                    }
+                  ],
+                  "name": "interpreted_string_literal",
+                  "named": true,
+                  "start": 21
+                }
+              ],
+              "name": "import_spec",
+              "named": true,
+              "start": 21
+            }
+          ],
+          "name": "import_declaration",
+          "named": true,
+          "start": 14
+        },
+        {
+          "end": 64,
+          "kids": [
+            {
+              "end": 32,
+              "kids": [],
+              "name": "func",
+              "named": false,
+              "start": 28
+            },
+            {
+              "end": 37,
+              "field": "name",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 33
+            },
+            {
+              "end": 39,
+              "field": "parameters",
+              "kids": [
+                {
+                  "end": 38,
+                  "kids": [],
+                  "name": "(",
+                  "named": false,
+                  "start": 37
+                },
+                {
+                  "end": 39,
+                  "kids": [],
+                  "name": ")",
+                  "named": false,
+                  "start": 38
+                }
+              ],
+              "name": "parameter_list",
+              "named": true,
+              "start": 37
+            },
+            {
+              "end": 64,
+              "field": "body",
+              "kids": [
+                {
+                  "end": 41,
+                  "kids": [],
+                  "name": "{",
+                  "named": false,
+                  "start": 40
+                },
+                {
+                  "end": 63,
+                  "kids": [
+                    {
+                      "end": 62,
+                      "kids": [
+                        {
+                          "end": 62,
+                          "kids": [
+                            {
+                              "end": 52,
+                              "field": "function",
+                              "kids": [
+                                {
+                                  "end": 46,
+                                  "field": "operand",
+                                  "kids": [],
+                                  "name": "identifier",
+                                  "named": true,
+                                  "start": 43
+                                },
+                                {
+                                  "end": 47,
+                                  "kids": [],
+                                  "name": ".",
+                                  "named": false,
+                                  "start": 46
+                                },
+                                {
+                                  "end": 52,
+                                  "field": "field",
+                                  "kids": [],
+                                  "name": "field_identifier",
+                                  "named": true,
+                                  "start": 47
+                                }
+                              ],
+                              "name": "selector_expression",
+                              "named": true,
+                              "start": 43
+                            },
+                            {
+                              "end": 62,
+                              "field": "arguments",
+                              "kids": [
+                                {
+                                  "end": 53,
+                                  "kids": [],
+                                  "name": "(",
+                                  "named": false,
+                                  "start": 52
+                                },
+                                {
+                                  "end": 56,
+                                  "kids": [
+                                    {
+                                      "end": 54,
+                                      "kids": [],
+                                      "name": "\"",
+                                      "named": false,
+                                      "start": 53
+                                    },
+                                    {
+                                      "end": 55,
+                                      "kids": [],
+                                      "name": "interpreted_string_literal_content",
+                                      "named": true,
+                                      "start": 54
+                                    },
+                                    {
+                                      "end": 56,
+                                      "kids": [],
+                                      "name": "\"",
+                                      "named": false,
+                                      "start": 55
+                                    }
+                                  ],
+                                  "name": "interpreted_string_literal",
+                                  "named": true,
+                                  "start": 53
+                                },
+                                {
+                                  "end": 57,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 56
+                                },
+                                {
+                                  "end": 61,
+                                  "kids": [
+                                    {
+                                      "end": 59,
+                                      "kids": [],
+                                      "name": "\"",
+                                      "named": false,
+                                      "start": 58
+                                    },
+                                    {
+                                      "end": 60,
+                                      "kids": [],
+                                      "name": "interpreted_string_literal_content",
+                                      "named": true,
+                                      "start": 59
+                                    },
+                                    {
+                                      "end": 61,
+                                      "kids": [],
+                                      "name": "\"",
+                                      "named": false,
+                                      "start": 60
+                                    }
+                                  ],
+                                  "name": "interpreted_string_literal",
+                                  "named": true,
+                                  "start": 58
+                                },
+                                {
+                                  "end": 62,
+                                  "kids": [],
+                                  "name": ")",
+                                  "named": false,
+                                  "start": 61
+                                }
+                              ],
+                              "name": "argument_list",
+                              "named": true,
+                              "start": 52
+                            }
+                          ],
+                          "name": "call_expression",
+                          "named": true,
+                          "start": 43
+                        }
+                      ],
+                      "name": "expression_statement",
+                      "named": true,
+                      "start": 43
+                    }
+                  ],
+                  "name": "statement_list",
+                  "named": true,
+                  "start": 43
+                },
+                {
+                  "end": 64,
+                  "kids": [],
+                  "name": "}",
+                  "named": false,
+                  "start": 63
+                }
+              ],
+              "name": "block",
+              "named": true,
+              "start": 40
+            }
+          ],
+          "name": "function_declaration",
+          "named": true,
+          "start": 28
+        }
+      ],
+      "name": "source_file",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+0:0  - 1:0    source_file
+0:0  - 0:46     function_declaration
+0:0  - 0:4        "func"
+0:5  - 0:6        name: simple_identifier `f`
+0:6  - 0:7        "("
+0:7  - 0:13       parameter
+0:7  - 0:8          name: simple_identifier `x`
+0:8  - 0:9          ":"
+0:10 - 0:13         name: user_type
+0:10 - 0:13           type_identifier `Int`
+0:13 - 0:14       ")"
+0:15 - 0:46       body: function_body
+0:15 - 0:16         "{"
+0:17 - 0:44         statements
+0:17 - 0:44           switch_statement
+0:17 - 0:23             "switch"
+0:24 - 0:25             expr: simple_identifier `x`
+0:26 - 0:27             "{"
+0:28 - 0:42             switch_entry
+0:28 - 0:35               default_keyword `default`
+0:35 - 0:36               ":"
+0:37 - 0:42               statements
+0:37 - 0:42                 control_transfer_statement
+0:37 - 0:42                   "break"
+0:43 - 0:44             "}"
+0:45 - 0:46         "}"

@@ -1,0 +1,248 @@
+{
+  "language": "bash",
+  "mends": 2,
+  "path": "research/joinery/specimen/bash/regex-in-test-command.sh",
+  "roots": 10,
+  "scars": [
+    {
+      "at": 15,
+      "felled": true,
+      "heads": 1,
+      "over": 16,
+      "shifted": 6
+    },
+    {
+      "at": 23,
+      "felled": true,
+      "heads": 1,
+      "over": 24,
+      "shifted": 10
+    }
+  ],
+  "skipped": 2,
+  "spurned": 0,
+  "stop": {
+    "at": 15,
+    "kind": "unexpected",
+    "state": 1171,
+    "symbol": "["
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 27,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 27
+  },
+  "tree": [
+    {
+      "end": 2,
+      "kids": [],
+      "name": "if",
+      "named": false,
+      "start": 0
+    },
+    {
+      "end": 5,
+      "kids": [],
+      "name": "[[",
+      "named": false,
+      "start": 3
+    },
+    {
+      "end": 8,
+      "kids": [
+        {
+          "end": 7,
+          "kids": [],
+          "name": "$",
+          "named": false,
+          "start": 6
+        },
+        {
+          "end": 8,
+          "kids": [],
+          "name": "variable_name",
+          "named": true,
+          "start": 7
+        }
+      ],
+      "name": "simple_expansion",
+      "named": true,
+      "start": 6
+    },
+    {
+      "end": 11,
+      "kids": [],
+      "name": "=~",
+      "named": false,
+      "start": 9
+    },
+    {
+      "end": 15,
+      "kids": [],
+      "name": "word",
+      "named": true,
+      "start": 12
+    },
+    {
+      "end": 19,
+      "kids": [
+        {
+          "end": 19,
+          "kids": [],
+          "name": "word",
+          "named": true,
+          "start": 16
+        }
+      ],
+      "name": "command_name",
+      "named": true,
+      "start": 16
+    },
+    {
+      "end": 20,
+      "field": "argument",
+      "kids": [],
+      "name": "word",
+      "named": true,
+      "start": 19
+    },
+    {
+      "end": 21,
+      "field": "argument",
+      "kids": [],
+      "name": "word",
+      "named": true,
+      "start": 20
+    },
+    {
+      "end": 22,
+      "kids": [],
+      "name": "$",
+      "named": false,
+      "start": 21
+    },
+    {
+      "end": 44,
+      "kids": [
+        {
+          "end": 25,
+          "kids": [
+            {
+              "end": 25,
+              "field": "name",
+              "kids": [
+                {
+                  "end": 25,
+                  "kids": [],
+                  "name": "word",
+                  "named": true,
+                  "start": 24
+                }
+              ],
+              "name": "command_name",
+              "named": true,
+              "start": 24
+            }
+          ],
+          "name": "command",
+          "named": true,
+          "start": 24
+        },
+        {
+          "end": 26,
+          "kids": [],
+          "name": ";",
+          "named": false,
+          "start": 25
+        },
+        {
+          "end": 31,
+          "kids": [
+            {
+              "end": 31,
+              "field": "name",
+              "kids": [
+                {
+                  "end": 31,
+                  "kids": [],
+                  "name": "word",
+                  "named": true,
+                  "start": 27
+                }
+              ],
+              "name": "command_name",
+              "named": true,
+              "start": 27
+            }
+          ],
+          "name": "command",
+          "named": true,
+          "start": 27
+        },
+        {
+          "end": 40,
+          "kids": [
+            {
+              "end": 37,
+              "field": "name",
+              "kids": [
+                {
+                  "end": 37,
+                  "kids": [],
+                  "name": "word",
+                  "named": true,
+                  "start": 33
+                }
+              ],
+              "name": "command_name",
+              "named": true,
+              "start": 33
+            },
+            {
+              "end": 40,
+              "field": "argument",
+              "kids": [],
+              "name": "word",
+              "named": true,
+              "start": 38
+            }
+          ],
+          "name": "command",
+          "named": true,
+          "start": 33
+        },
+        {
+          "end": 43,
+          "kids": [
+            {
+              "end": 43,
+              "field": "name",
+              "kids": [
+                {
+                  "end": 43,
+                  "kids": [],
+                  "name": "word",
+                  "named": true,
+                  "start": 41
+                }
+              ],
+              "name": "command_name",
+              "named": true,
+              "start": 41
+            }
+          ],
+          "name": "command",
+          "named": true,
+          "start": 41
+        }
+      ],
+      "name": "program",
+      "named": true,
+      "start": 24
+    }
+  ]
+}

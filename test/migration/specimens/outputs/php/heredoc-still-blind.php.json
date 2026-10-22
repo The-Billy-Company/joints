@@ -1,0 +1,92 @@
+{
+  "language": "php",
+  "mends": 1,
+  "path": "research/joinery/specimen/php/heredoc-still-blind.php",
+  "roots": 5,
+  "scars": [
+    {
+      "at": 14,
+      "felled": true,
+      "heads": 1,
+      "over": 15,
+      "shifted": 5
+    }
+  ],
+  "skipped": 1,
+  "spurned": 0,
+  "stop": {
+    "at": 14,
+    "kind": "unexpected",
+    "state": 71,
+    "symbol": "(?:\\\\?[^'\\\\]+)"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 8,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 8
+  },
+  "tree": [
+    {
+      "end": 5,
+      "kids": [],
+      "name": "php_tag",
+      "named": true,
+      "start": 0
+    },
+    {
+      "end": 8,
+      "kids": [
+        {
+          "end": 7,
+          "kids": [],
+          "name": "$",
+          "named": false,
+          "start": 6
+        },
+        {
+          "end": 8,
+          "kids": [],
+          "name": "name",
+          "named": true,
+          "start": 7
+        }
+      ],
+      "name": "variable_name",
+      "named": true,
+      "start": 6
+    },
+    {
+      "end": 10,
+      "kids": [],
+      "name": "=",
+      "named": false,
+      "start": 9
+    },
+    {
+      "end": 14,
+      "kids": [],
+      "name": "<<<",
+      "named": false,
+      "start": 11
+    },
+    {
+      "end": 25,
+      "kids": [
+        {
+          "end": 25,
+          "kids": [],
+          "name": "text",
+          "named": true,
+          "start": 15
+        }
+      ],
+      "name": "program",
+      "named": true,
+      "start": 15
+    }
+  ]
+}

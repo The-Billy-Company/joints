@@ -1,0 +1,199 @@
+[
+  {
+    "end": 47,
+    "kids": [
+      {
+        "end": 46,
+        "kids": [
+          {
+            "end": 4,
+            "kids": [],
+            "name": "func",
+            "named": false,
+            "start": 0
+          },
+          {
+            "end": 6,
+            "field": "name",
+            "kids": [],
+            "name": "simple_identifier",
+            "named": true,
+            "start": 5
+          },
+          {
+            "end": 7,
+            "kids": [],
+            "name": "(",
+            "named": false,
+            "start": 6
+          },
+          {
+            "end": 13,
+            "kids": [
+              {
+                "end": 8,
+                "field": "name",
+                "kids": [],
+                "name": "simple_identifier",
+                "named": true,
+                "start": 7
+              },
+              {
+                "end": 9,
+                "kids": [],
+                "name": ":",
+                "named": false,
+                "start": 8
+              },
+              {
+                "end": 13,
+                "field": "name",
+                "kids": [
+                  {
+                    "end": 13,
+                    "kids": [],
+                    "name": "type_identifier",
+                    "named": true,
+                    "start": 10
+                  }
+                ],
+                "name": "user_type",
+                "named": true,
+                "start": 10
+              }
+            ],
+            "name": "parameter",
+            "named": true,
+            "start": 7
+          },
+          {
+            "end": 14,
+            "kids": [],
+            "name": ")",
+            "named": false,
+            "start": 13
+          },
+          {
+            "end": 46,
+            "field": "body",
+            "kids": [
+              {
+                "end": 16,
+                "kids": [],
+                "name": "{",
+                "named": false,
+                "start": 15
+              },
+              {
+                "end": 44,
+                "kids": [
+                  {
+                    "end": 44,
+                    "kids": [
+                      {
+                        "end": 23,
+                        "kids": [],
+                        "name": "switch",
+                        "named": false,
+                        "start": 17
+                      },
+                      {
+                        "end": 25,
+                        "field": "expr",
+                        "kids": [],
+                        "name": "simple_identifier",
+                        "named": true,
+                        "start": 24
+                      },
+                      {
+                        "end": 27,
+                        "kids": [],
+                        "name": "{",
+                        "named": false,
+                        "start": 26
+                      },
+                      {
+                        "end": 42,
+                        "kids": [
+                          {
+                            "end": 35,
+                            "kids": [],
+                            "name": "default_keyword",
+                            "named": true,
+                            "start": 28
+                          },
+                          {
+                            "end": 36,
+                            "kids": [],
+                            "name": ":",
+                            "named": false,
+                            "start": 35
+                          },
+                          {
+                            "end": 42,
+                            "kids": [
+                              {
+                                "end": 42,
+                                "kids": [
+                                  {
+                                    "end": 42,
+                                    "kids": [],
+                                    "name": "break",
+                                    "named": false,
+                                    "start": 37
+                                  }
+                                ],
+                                "name": "control_transfer_statement",
+                                "named": true,
+                                "start": 37
+                              }
+                            ],
+                            "name": "statements",
+                            "named": true,
+                            "start": 37
+                          }
+                        ],
+                        "name": "switch_entry",
+                        "named": true,
+                        "start": 28
+                      },
+                      {
+                        "end": 44,
+                        "kids": [],
+                        "name": "}",
+                        "named": false,
+                        "start": 43
+                      }
+                    ],
+                    "name": "switch_statement",
+                    "named": true,
+                    "start": 17
+                  }
+                ],
+                "name": "statements",
+                "named": true,
+                "start": 17
+              },
+              {
+                "end": 46,
+                "kids": [],
+                "name": "}",
+                "named": false,
+                "start": 45
+              }
+            ],
+            "name": "function_body",
+            "named": true,
+            "start": 15
+          }
+        ],
+        "name": "function_declaration",
+        "named": true,
+        "start": 0
+      }
+    ],
+    "name": "source_file",
+    "named": true,
+    "start": 0
+  }
+]

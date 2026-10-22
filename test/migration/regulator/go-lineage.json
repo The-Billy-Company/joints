@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "status": "candidate-not-selected",
+  "profile": "regulator-go127-rust-v2",
+  "parent_profile": "regulator-go127-v1",
+  "recipe": {
+    "path": "grammar/go127-rust-v2.json",
+    "sha256": "21ce606d7e8c1806c02d7e3f7f50319fdf7cf0ef8cea877ddfa6fd82c510fdf6"
+  },
+  "change": {
+    "rules_unchanged": true,
+    "parent_recipe_sha256": "63cddd60ebbd1d8c56b5e62f592a44331be974e9ad768bc2e0fdee48a3a5c67a",
+    "parent_derived_sha256": "af7e06ba271f33e6c28a91f57881272c8c8b061bb027cdd5cd9d261c96b2c503",
+    "candidate_derived_sha256": "ffc8a018d1af9c45dbc2b2638a353a180d179247b9e82524cbcc3c263301ead4",
+    "added_conflicts": [
+      [
+        "type_parameter_declaration",
+        "_simple_type"
+      ]
+    ]
+  },
+  "base": {
+    "repository": "tree-sitter/tree-sitter-go",
+    "commit": "2346a3ab1bb3857b48b29d779a1ef9799a248cd7",
+    "sha256": "0dcc665aa521a1b73a200be13b4e376780cca037d764a165f12864babfe28000"
+  },
+  "consumer_observed": {
+    "head": "68e54e1efa082ee8bde23a2e832dbb1095f193ea",
+    "preparer_sha256": "de522f50d46a3e888dbaaec49cab61090ca4f4c77af50e2be7d5857987f6065e",
+    "ci_sha256": "5b0ff74dcee8f3d4a0ff49ed81e007a22074c174957b739f7a4524cd317a81b6",
+    "private_source_manifest_sha256": "8afc011aed51df1af2c414df8686b93656daf170d0317c17b4a0ccabc0e7bc1e"
+  },
+  "independent_generation": {
+    "version": "tree-sitter 0.26.11",
+    "oracle_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+    "parent_exit": 1,
+    "candidate_exit": 0,
+    "candidate_manifest_sha256": "21dd92dbb12c8f55edd48fe3e2c6f91452edb18194e799afd1c6c1be22d1925f",
+    "stable": true,
+    "diagnostics": {
+      "evidence/go-parent.stderr": "6c5d6e8e9ee6e17a0e347cce516e01f45161e7ff6786247e52613cec0d8e1003",
+      "evidence/go-reviewed.stderr": "e0996f7763a7bc5d6c37dab5ebc8d409e06c0db6e02cf503608a9630c40c3b24"
+    },
+    "full_generation_is_not_full_consumer_equivalence": true
+  },
+  "private_consumer_test_patch": {
+    "path": "go-candidate-profile.patch",
+    "sha256": "99509b5d69d805fbfadbc71c3246603706a453c88447414f08ff7b3c75705d9e",
+    "scope": "Admit the explicit v2 identity in two existing modern-dialect tests only; all original assertions unchanged. Not applied to live consumer."
+  },
+  "adoption": "Requires full private local-source ABI and Regulator facets; no default or published-release gate change."
+}

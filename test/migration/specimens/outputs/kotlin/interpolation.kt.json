@@ -1,0 +1,201 @@
+{
+  "language": "kotlin",
+  "mends": 0,
+  "path": "research/joinery/specimen/kotlin/interpolation.kt",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 24,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 24
+  },
+  "tree": [
+    {
+      "end": 33,
+      "kids": [
+        {
+          "end": 9,
+          "kids": [
+            {
+              "end": 3,
+              "kids": [
+                {
+                  "end": 3,
+                  "kids": [],
+                  "name": "val",
+                  "named": false,
+                  "start": 0
+                }
+              ],
+              "name": "binding_pattern_kind",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 5,
+              "kids": [
+                {
+                  "end": 5,
+                  "kids": [],
+                  "name": "simple_identifier",
+                  "named": true,
+                  "start": 4
+                }
+              ],
+              "name": "variable_declaration",
+              "named": true,
+              "start": 4
+            },
+            {
+              "end": 7,
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 6
+            },
+            {
+              "end": 9,
+              "kids": [],
+              "name": "integer_literal",
+              "named": true,
+              "start": 8
+            }
+          ],
+          "name": "property_declaration",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 32,
+          "kids": [
+            {
+              "end": 13,
+              "kids": [
+                {
+                  "end": 13,
+                  "kids": [],
+                  "name": "val",
+                  "named": false,
+                  "start": 10
+                }
+              ],
+              "name": "binding_pattern_kind",
+              "named": true,
+              "start": 10
+            },
+            {
+              "end": 15,
+              "kids": [
+                {
+                  "end": 15,
+                  "kids": [],
+                  "name": "simple_identifier",
+                  "named": true,
+                  "start": 14
+                }
+              ],
+              "name": "variable_declaration",
+              "named": true,
+              "start": 14
+            },
+            {
+              "end": 17,
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 16
+            },
+            {
+              "end": 32,
+              "kids": [
+                {
+                  "end": 21,
+                  "kids": [],
+                  "name": "string_content",
+                  "named": true,
+                  "start": 19
+                },
+                {
+                  "end": 23,
+                  "kids": [],
+                  "name": "interpolation_expression_start",
+                  "named": true,
+                  "start": 21
+                },
+                {
+                  "end": 28,
+                  "kids": [
+                    {
+                      "end": 28,
+                      "kids": [
+                        {
+                          "end": 24,
+                          "kids": [],
+                          "name": "simple_identifier",
+                          "named": true,
+                          "start": 23
+                        },
+                        {
+                          "end": 26,
+                          "kids": [],
+                          "name": "+",
+                          "named": false,
+                          "start": 25
+                        },
+                        {
+                          "end": 28,
+                          "kids": [],
+                          "name": "integer_literal",
+                          "named": true,
+                          "start": 27
+                        }
+                      ],
+                      "name": "additive_expression",
+                      "named": true,
+                      "start": 23
+                    }
+                  ],
+                  "name": "interpolated_expression",
+                  "named": true,
+                  "start": 23
+                },
+                {
+                  "end": 29,
+                  "kids": [],
+                  "name": "interpolation_expression_end",
+                  "named": true,
+                  "start": 28
+                },
+                {
+                  "end": 31,
+                  "kids": [],
+                  "name": "string_content",
+                  "named": true,
+                  "start": 29
+                }
+              ],
+              "name": "string_literal",
+              "named": true,
+              "start": 18
+            }
+          ],
+          "name": "property_declaration",
+          "named": true,
+          "start": 10
+        }
+      ],
+      "name": "source_file",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

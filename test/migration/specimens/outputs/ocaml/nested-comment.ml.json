@@ -1,0 +1,130 @@
+{
+  "language": "ocaml",
+  "mends": 0,
+  "path": "research/joinery/specimen/ocaml/nested-comment.ml",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 14,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 14
+  },
+  "tree": [
+    {
+      "end": 38,
+      "kids": [
+        {
+          "end": 9,
+          "kids": [
+            {
+              "end": 3,
+              "kids": [],
+              "name": "let",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 9,
+              "kids": [
+                {
+                  "end": 5,
+                  "field": "pattern",
+                  "kids": [],
+                  "name": "value_name",
+                  "named": true,
+                  "start": 4
+                },
+                {
+                  "end": 7,
+                  "kids": [],
+                  "name": "=",
+                  "named": false,
+                  "start": 6
+                },
+                {
+                  "end": 9,
+                  "field": "body",
+                  "kids": [],
+                  "name": "number",
+                  "named": true,
+                  "start": 8
+                }
+              ],
+              "name": "let_binding",
+              "named": true,
+              "start": 4
+            }
+          ],
+          "name": "value_definition",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 27,
+          "kids": [],
+          "name": "comment",
+          "named": true,
+          "start": 10
+        },
+        {
+          "end": 37,
+          "kids": [
+            {
+              "end": 31,
+              "kids": [],
+              "name": "let",
+              "named": false,
+              "start": 28
+            },
+            {
+              "end": 37,
+              "kids": [
+                {
+                  "end": 33,
+                  "field": "pattern",
+                  "kids": [],
+                  "name": "value_name",
+                  "named": true,
+                  "start": 32
+                },
+                {
+                  "end": 35,
+                  "kids": [],
+                  "name": "=",
+                  "named": false,
+                  "start": 34
+                },
+                {
+                  "end": 37,
+                  "field": "body",
+                  "kids": [],
+                  "name": "number",
+                  "named": true,
+                  "start": 36
+                }
+              ],
+              "name": "let_binding",
+              "named": true,
+              "start": 32
+            }
+          ],
+          "name": "value_definition",
+          "named": true,
+          "start": 28
+        }
+      ],
+      "name": "compilation_unit",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

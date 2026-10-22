@@ -1,0 +1,2 @@
+joints: inputs/fixtures/json-missing-colon.json: unexpected number at 10 in state 16, 1 root, supplied 1, spurned 0, surveyed 11 of 11 nodes
+joints: json: weave on number in state 16, 1 fold(s) on from 32 (6 read, 17 fold, 0 frayed): the cell is empty, and a merged lookahead is a superset of every canonical one it stands for, so it is empty under every split

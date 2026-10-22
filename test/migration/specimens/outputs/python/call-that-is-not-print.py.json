@@ -1,0 +1,77 @@
+{
+  "language": "python",
+  "mends": 0,
+  "path": "research/joinery/specimen/python/call-that-is-not-print.py",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 7,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 7
+  },
+  "tree": [
+    {
+      "end": 7,
+      "kids": [
+        {
+          "end": 6,
+          "kids": [
+            {
+              "end": 3,
+              "field": "function",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 6,
+              "field": "arguments",
+              "kids": [
+                {
+                  "end": 4,
+                  "kids": [],
+                  "name": "(",
+                  "named": false,
+                  "start": 3
+                },
+                {
+                  "end": 5,
+                  "kids": [],
+                  "name": "identifier",
+                  "named": true,
+                  "start": 4
+                },
+                {
+                  "end": 6,
+                  "kids": [],
+                  "name": ")",
+                  "named": false,
+                  "start": 5
+                }
+              ],
+              "name": "argument_list",
+              "named": true,
+              "start": 3
+            }
+          ],
+          "name": "call",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "module",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

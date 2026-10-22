@@ -1,0 +1,611 @@
+[
+  {
+    "name": "unit_multiple_distinct",
+    "grammar": "{\n  \"name\": \"unit_multiple_distinct\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"late\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"other_early\"\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"other_late\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    },\n    \"other_early\": {\n      \"type\": \"STRING\",\n      \"value\": \"z\"\n    },\n    \"other_late\": {\n      \"type\": \"STRING\",\n      \"value\": \"q\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ]\n}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "early",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "invocation_wrapper_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "0b1cbc72c6951dbcd9975a7aaf3469930a7c9a7560dd17d52208ab12b23f77fd",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "a3f81285dd9de4086d1e21a00545e7e33fa25890f3bea14501e0f683355c121b",
+      "xml_sha256": "2058638aa6ec0d846c10a09dbbeee2400a6b42d2f18b63fa870f96349edd17d6",
+      "cst_sha256": "f0fe9131e6a15799c666ea6505735538a261492d89760f990fd1ca1059add45b",
+      "hidden_reduction_occurrences": {
+        "_hidden_early": 0,
+        "_hidden_late": 0
+      }
+    }
+  },
+  {
+    "name": "unit_mixed_width",
+    "grammar": "{\n  \"name\": \"unit_mixed_width\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"late\"\n        },\n        {\n          \"type\": \"SEQ\",\n          \"members\": [\n            {\n              \"type\": \"SYMBOL\",\n              \"name\": \"late\"\n            },\n            {\n              \"type\": \"STRING\",\n              \"value\": \"z\"\n            }\n          ]\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"early\"\n        },\n        {\n          \"type\": \"SEQ\",\n          \"members\": [\n            {\n              \"type\": \"SYMBOL\",\n              \"name\": \"early\"\n            },\n            {\n              \"type\": \"STRING\",\n              \"value\": \"q\"\n            }\n          ]\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ]\n}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "late",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "invocation_wrapper_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "e7c2914779bcd098f2ea84592abdaf425f9b9f573e58ada70648beea077b7d07",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "8a9141f37b673fecda5542fb3fb022598a415d00218139a511cd67628a8897c3",
+      "xml_sha256": "83780539af41d243bff9e141d23e26eab67e529098d9d0bd801ef7be20207f80",
+      "cst_sha256": "388d47cc2fa3dbf4820b01c1d69855fa755c29c917ad6c79f1c6c0bb0c4fe7ef",
+      "hidden_reduction_occurrences": {
+        "_hidden_early": 2,
+        "_hidden_late": 2
+      }
+    }
+  },
+  {
+    "name": "unit_multiple_alias",
+    "grammar": "{\n  \"name\": \"unit_multiple_alias\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SEQ\",\n          \"members\": [\n            {\n              \"type\": \"ALIAS\",\n              \"content\": {\n                \"type\": \"SYMBOL\",\n                \"name\": \"late\"\n              },\n              \"named\": true,\n              \"value\": \"z_late\"\n            }\n          ]\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \"z\"\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SEQ\",\n          \"members\": [\n            {\n              \"type\": \"ALIAS\",\n              \"content\": {\n                \"type\": \"SYMBOL\",\n                \"name\": \"early\"\n              },\n              \"named\": true,\n              \"value\": \"a_early\"\n            }\n          ]\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \"q\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ]\n}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "a_early",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "invocation_wrapper_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "d580beff2ece568379d8ba29ea0486d17d5e1d24aba812b6bc8a3efb46656ffc",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "22ae5d5d1d9cfa261ae8898346294af473abff5df229dc6b02b0d7eb552cc53b",
+      "xml_sha256": "f6ba491f31ef48a5958f6da2c06cd430e342f60f764e05dba4b1e42882473f87",
+      "cst_sha256": "baa7cb223fac927047b8651a68fc8d03f9eed320e96d80d37f400c9f3b947fcb",
+      "hidden_reduction_occurrences": {
+        "_hidden_early": 0,
+        "_hidden_late": 0
+      }
+    }
+  },
+  {
+    "name": "unit_contested_single",
+    "grammar": "{\n  \"name\": \"unit_contested_single\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"z_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SYMBOL\",\n      \"name\": \"early\"\n    },\n    \"z_late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"early\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"_hidden_early\",\n      \"z_late\"\n    ]\n  ]\n}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "early",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "invocation_wrapper_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "ae7820a5129b372169b7415ef917f06b89dcb99724b6fe6326b1f11dbcd87edf",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "52b4a35c4d66c27ffe36f9c0725aba506290c0817eae61c1addb0fdc86ec0413",
+      "xml_sha256": "a1963c520af208ddd8f6f3ead8b786f2954d9d0fe94ad30d48f65f8d68410464",
+      "cst_sha256": "f0fe9131e6a15799c666ea6505735538a261492d89760f990fd1ca1059add45b",
+      "hidden_reduction_occurrences": {
+        "_hidden_early": 1,
+        "_hidden_late": 0
+      }
+    }
+  },
+  {
+    "name": "unit_supertype",
+    "grammar": "{\n  \"name\": \"unit_supertype\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"late\"\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"early\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ],\n  \"supertypes\": [\n    \"_hidden_early\",\n    \"_hidden_late\"\n  ]\n}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "late",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "invocation_wrapper_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "bc3f7fc54f894f4a1896eeab2914bf4485e5aea0a39b1d949288b38b5a6a5197",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "9f1187403b255d959517ef6eb9229ea4b130a3c42f53e4b84fbed3869b38fdb3",
+      "xml_sha256": "2798a4cb8b41cd4c31b6d1b82d235926fc5df654ebac3404c91b0742c8c4f96a",
+      "cst_sha256": "388d47cc2fa3dbf4820b01c1d69855fa755c29c917ad6c79f1c6c0bb0c4fe7ef",
+      "hidden_reduction_occurrences": {
+        "_hidden_early": 1,
+        "_hidden_late": 1
+      }
+    }
+  },
+  {
+    "name": "unit_aliased_wrapper",
+    "grammar": "{\n  \"name\": \"unit_aliased_wrapper\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"ALIAS\",\n          \"content\": {\n            \"type\": \"SYMBOL\",\n            \"name\": \"_hidden_early\"\n          },\n          \"value\": \"z_late\",\n          \"named\": true\n        },\n        {\n          \"type\": \"ALIAS\",\n          \"content\": {\n            \"type\": \"SYMBOL\",\n            \"name\": \"_hidden_late\"\n          },\n          \"value\": \"a_early\",\n          \"named\": true\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"late\"\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"early\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ]\n}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "z_late",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "late",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        3,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "invocation_wrapper_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "8091818447fb34525d8056c5675dcb08f196b3e0949fa3c5c5a8aa551997aed0",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "373455bd9bf9444cd1645bb2bdaa67e95638cfd1bbfbe82d2e1cfbc202e5b26d",
+      "xml_sha256": "05b5a9552a3f7bd132c321ccfad4e8922de7381ccedf7b98a091f2464faddb35",
+      "cst_sha256": "5dc1ac4fd108dcbf7ff8b7fe1759c3ba66380d6cc83a9f653b4b51b8caa6125c",
+      "hidden_reduction_occurrences": {
+        "_hidden_early": 1,
+        "_hidden_late": 1
+      }
+    }
+  },
+  {
+    "name": "unit_inherited_field",
+    "grammar": "{\n  \"name\": \"unit_inherited_field\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SYMBOL\",\n      \"name\": \"_inner_early\"\n    },\n    \"_hidden_late\": {\n      \"type\": \"SYMBOL\",\n      \"name\": \"_inner_late\"\n    },\n    \"_inner_late\": {\n      \"type\": \"FIELD\",\n      \"name\": \"other\",\n      \"content\": {\n        \"type\": \"SYMBOL\",\n        \"name\": \"early\"\n      }\n    },\n    \"_inner_early\": {\n      \"type\": \"FIELD\",\n      \"name\": \"chosen\",\n      \"content\": {\n        \"type\": \"SYMBOL\",\n        \"name\": \"late\"\n      }\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ]\n}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "late",
+        true,
+        "chosen",
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "invocation_wrapper_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "b303261d681492b7df6811492841caecc88ee2ed63e10668d445e711d8cf11b7",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "3a285885abcfef4c887fc5a8f76a47394abd9aea45e77358032645540c9c428a",
+      "xml_sha256": "aee4b2e112d7f595e9a046f11d6c0c106e8d778736ec2956b90a9e8e3ee214ab",
+      "cst_sha256": "a6300abd3624cfb34d8b85345419b81c6191c3716cec2ec1b20ec361e0819111",
+      "hidden_reduction_occurrences": {
+        "_hidden_early": 1,
+        "_hidden_late": 1
+      }
+    }
+  },
+  {
+    "name": "unit_local_alias_recipe",
+    "grammar": "{\n  \"name\": \"unit_local_alias_recipe\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SEQ\",\n          \"members\": [\n            {\n              \"type\": \"CHOICE\",\n              \"members\": [\n                {\n                  \"type\": \"SYMBOL\",\n                  \"name\": \"_hidden_early\"\n                },\n                {\n                  \"type\": \"SYMBOL\",\n                  \"name\": \"_hidden_late\"\n                }\n              ]\n            },\n            {\n              \"type\": \"STRING\",\n              \"value\": \"!\"\n            }\n          ]\n        },\n        {\n          \"type\": \"SEQ\",\n          \"members\": [\n            {\n              \"type\": \"SYMBOL\",\n              \"name\": \"late\"\n            },\n            {\n              \"type\": \"STRING\",\n              \"value\": \"?\"\n            }\n          ]\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"ALIAS\",\n          \"content\": {\n            \"type\": \"SYMBOL\",\n            \"name\": \"late\"\n          },\n          \"named\": true,\n          \"value\": \"z_late\"\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"ALIAS\",\n          \"content\": {\n            \"type\": \"SYMBOL\",\n            \"name\": \"early\"\n          },\n          \"named\": true,\n          \"value\": \"a_early\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ]\n}\n",
+    "source": "x!",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        2
+      ],
+      [
+        1,
+        "z_late",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "!",
+        false,
+        null,
+        1,
+        2
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "invocation_wrapper_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "890e8e15ef14dd0b6c36766b5a56b2b3bb54d20e19427585538e79238f35445c",
+      "source_sha256": "4038e65dabd8922151d75a4b8d63a713558d3c8fb205447dcb84aac44df1b684",
+      "parser_c_sha256": "93f05470e420509c782b1207c252bbc65750b2588ffbc6085cd329d37d1b6f6a",
+      "xml_sha256": "49f2ed730d41e0e56ff64daf05f29f74f09c0ac53b8f1a4eaec970097b14125e",
+      "cst_sha256": "9c82e82f2a8d760ef5e864d2db6ba0eca4e49c93bfc07a2e1720a4f37c148408",
+      "hidden_reduction_occurrences": {
+        "_hidden_early": 1,
+        "_hidden_late": 0
+      }
+    }
+  },
+  {
+    "name": "unit_extra_nonterminal",
+    "grammar": "{\n  \"name\": \"unit_extra_nonterminal\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"late\"\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"early\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    },\n    \"comment\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"#\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"body\"\n        }\n      ]\n    },\n    \"body\": {\n      \"type\": \"PATTERN\",\n      \"value\": \"[a-z]+\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ],\n  \"extras\": [\n    {\n      \"type\": \"SYMBOL\",\n      \"name\": \"comment\"\n    }\n  ]\n}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "late",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "invocation_wrapper_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "169841d01ee353ab18dfcc1ab7c78f535286fe17a5d673acbb4f6165d4fbb931",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "a5499ed910c6980bf55fa9d8dd3ad21677ea781b2a184044433c0f87c116c697",
+      "xml_sha256": "c7f3b5515a6674b80a2c95dbbb5b246cba7f59a5fb89fdac87c2c7efac6a9b48",
+      "cst_sha256": "388d47cc2fa3dbf4820b01c1d69855fa755c29c917ad6c79f1c6c0bb0c4fe7ef",
+      "hidden_reduction_occurrences": {
+        "_hidden_early": 1,
+        "_hidden_late": 1
+      }
+    }
+  },
+  {
+    "name": "unit_extra_lexical",
+    "grammar": "{\n  \"name\": \"unit_extra_lexical\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"late\"\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"early\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    },\n    \"comment\": {\n      \"type\": \"TOKEN\",\n      \"content\": {\n        \"type\": \"SEQ\",\n        \"members\": [\n          {\n            \"type\": \"STRING\",\n            \"value\": \"#\"\n          },\n          {\n            \"type\": \"PATTERN\",\n            \"value\": \"[a-z]+\"\n          }\n        ]\n      }\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ],\n  \"extras\": [\n    {\n      \"type\": \"SYMBOL\",\n      \"name\": \"comment\"\n    }\n  ]\n}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "early",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "invocation_wrapper_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "db90950b987e799729fbbaa84a4d496b78e050901318b916f6616c99c70d1079",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "1de48411344c29d9a2a0c212fc2b647cc0ad321c540a5aee015ddb74d72b1623",
+      "xml_sha256": "d7ca4fdf3d4b8bd794f7c3c7060c245eca3074771f965858a174943ff771f5c7",
+      "cst_sha256": "f0fe9131e6a15799c666ea6505735538a261492d89760f990fd1ca1059add45b",
+      "hidden_reduction_occurrences": {
+        "_hidden_early": 0,
+        "_hidden_late": 0
+      }
+    }
+  },
+  {
+    "name": "unit_inline_host_alias",
+    "grammar": "{\n  \"name\": \"unit_inline_host_alias\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"ALIAS\",\n      \"content\": {\n        \"type\": \"SYMBOL\",\n        \"name\": \"_inline_early\"\n      },\n      \"value\": \"z_late\",\n      \"named\": true\n    },\n    \"_hidden_late\": {\n      \"type\": \"ALIAS\",\n      \"content\": {\n        \"type\": \"SYMBOL\",\n        \"name\": \"_inline_late\"\n      },\n      \"value\": \"a_early\",\n      \"named\": true\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    },\n    \"_inline_early\": {\n      \"type\": \"SYMBOL\",\n      \"name\": \"late\"\n    },\n    \"_inline_late\": {\n      \"type\": \"SYMBOL\",\n      \"name\": \"early\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ],\n  \"inline\": [\n    \"_inline_early\",\n    \"_inline_late\"\n  ]\n}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "z_late",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "invocation_wrapper_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "438af954ab21e5abb695621cd97d3908d5c79eef349b7f4effdedb4d3c5a1016",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "f722f07affb9f3b3c9de86b887c6f7b426ce1c3e5441137f494326a3a5fa0f7d",
+      "xml_sha256": "a342f0c26efb934dfcf8c3b0030be98308254c5f68c51cfd43722658e8565f7a",
+      "cst_sha256": "ecf4dd5498712fddea62d6a8fd784450f7612d31f1dd952d412bd58ce81f784c",
+      "hidden_reduction_occurrences": {
+        "_hidden_early": 1,
+        "_hidden_late": 1
+      }
+    }
+  },
+  {
+    "name": "unit_inline_body_alias",
+    "grammar": "{\n  \"name\": \"unit_inline_body_alias\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_early\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"_hidden_late\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SYMBOL\",\n      \"name\": \"_inline_early\"\n    },\n    \"_hidden_late\": {\n      \"type\": \"SYMBOL\",\n      \"name\": \"_inline_late\"\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    },\n    \"_inline_early\": {\n      \"type\": \"ALIAS\",\n      \"content\": {\n        \"type\": \"SYMBOL\",\n        \"name\": \"late\"\n      },\n      \"named\": true,\n      \"value\": \"z_late\"\n    },\n    \"_inline_late\": {\n      \"type\": \"ALIAS\",\n      \"content\": {\n        \"type\": \"SYMBOL\",\n        \"name\": \"early\"\n      },\n      \"named\": true,\n      \"value\": \"a_early\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ],\n  \"inline\": [\n    \"_inline_early\",\n    \"_inline_late\"\n  ]\n}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "a_early",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "invocation_wrapper_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "c41d71d7f404b08c40ea229cc37fe99e2c647a818ae499c4a3d547236e07bef9",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "877ff6f9ee14991f2e85b95ab4795ac12ddf7b99444ad2cfbc27bf874bee9908",
+      "xml_sha256": "25255e9cd5fba5127429026a76cd375c47e4b44dbd1d8ad08faf687c5e7a4468",
+      "cst_sha256": "baa7cb223fac927047b8651a68fc8d03f9eed320e96d80d37f400c9f3b947fcb",
+      "hidden_reduction_occurrences": {
+        "_hidden_early": 0,
+        "_hidden_late": 0
+      }
+    }
+  },
+  {
+    "name": "unit_extra_existing_key",
+    "grammar": "{\n  \"name\": \"unit_extra_existing_key\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"CHOICE\",\n          \"members\": [\n            {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_hidden_early\"\n            },\n            {\n              \"type\": \"SYMBOL\",\n              \"name\": \"_hidden_late\"\n            }\n          ]\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \"#\"\n        }\n      ]\n    },\n    \"_hidden_early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"late\"\n        }\n      ]\n    },\n    \"_hidden_late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"early\"\n        }\n      ]\n    },\n    \"early\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"late\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"atom\"\n        }\n      ]\n    },\n    \"atom\": {\n      \"type\": \"STRING\",\n      \"value\": \"x\"\n    },\n    \"comment\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"#\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"body\"\n        }\n      ]\n    },\n    \"body\": {\n      \"type\": \"PATTERN\",\n      \"value\": \"[a-z]+\"\n    }\n  },\n  \"conflicts\": [\n    [\n      \"early\",\n      \"late\"\n    ]\n  ],\n  \"extras\": [\n    {\n      \"type\": \"SYMBOL\",\n      \"name\": \"comment\"\n    }\n  ]\n}\n",
+    "source": "x#",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        2
+      ],
+      [
+        1,
+        "early",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "atom",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "#",
+        false,
+        null,
+        1,
+        2
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "invocation_wrapper_sha256": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+      "grammar_sha256": "917c3d70a490871c868843551afb6927a42c9800caccc8aba4a8f793067226e6",
+      "source_sha256": "7e98893c8018587c28810fd48b6d8ba4beb91090357e7f324b81aba60f0618b0",
+      "parser_c_sha256": "18c66513678665bece840595674a28e314cb3fd3e637fddb26b22a94a0c45269",
+      "xml_sha256": "b0df7408ae82309a43b2d3c6baacb7d2b9aa8608f223bcb803a9941758b9ff3d",
+      "cst_sha256": "9843ada1e5cd43a53df7eb5f5d7feaa74fe3bacfd1211597745797d56b808c58",
+      "hidden_reduction_occurrences": {
+        "_hidden_early": 0,
+        "_hidden_late": 0
+      }
+    }
+  }
+]

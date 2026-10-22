@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<sources>
+  <source name="/Users/griffinstrier/Billy-Company/joints/research/joinery/specimen/swift/default-keyword.swift">
+    <source_file srow="0" scol="0" erow="1" ecol="0">
+      <function_declaration srow="0" scol="0" erow="0" ecol="46">
+        func
+        <simple_identifier field="name" srow="0" scol="5" erow="0" ecol="6">f</simple_identifier>
+        (
+        <parameter srow="0" scol="7" erow="0" ecol="13">
+          <simple_identifier field="name" srow="0" scol="7" erow="0" ecol="8">x</simple_identifier>
+          :
+          <user_type field="name" srow="0" scol="10" erow="0" ecol="13">
+            <type_identifier srow="0" scol="10" erow="0" ecol="13">Int</type_identifier>
+          </user_type>
+        </parameter>
+        )
+        <function_body field="body" srow="0" scol="15" erow="0" ecol="46">
+          {
+          <statements srow="0" scol="17" erow="0" ecol="44">
+            <switch_statement srow="0" scol="17" erow="0" ecol="44">
+              switch
+              <simple_identifier field="expr" srow="0" scol="24" erow="0" ecol="25">x</simple_identifier>
+              {
+              <switch_entry srow="0" scol="28" erow="0" ecol="42">
+                <default_keyword srow="0" scol="28" erow="0" ecol="35">default</default_keyword>
+                :
+                <statements srow="0" scol="37" erow="0" ecol="42">
+                  <control_transfer_statement srow="0" scol="37" erow="0" ecol="42">
+                    break
+                  </control_transfer_statement>
+                </statements>
+              </switch_entry>
+              }
+            </switch_statement>
+          </statements>
+          }
+        </function_body>
+      </function_declaration>
+    </source_file>
+  </source>
+</sources>

@@ -1,0 +1,18 @@
+[package]
+name = "joints-ffi"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+license = "Apache-2.0"
+description = "C ABI 2 boundary for the native joints Rust engine"
+
+[lib]
+name = "jnt"
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+joints-engine = { path = ".." }
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"

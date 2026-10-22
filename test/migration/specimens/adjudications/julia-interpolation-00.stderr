@@ -1,0 +1,5 @@
+[33mWarning:[0m You have not configured any parser directories!
+Please run `tree-sitter init-config` and edit the resulting
+configuration file to indicate where we should look for
+language grammars.
+

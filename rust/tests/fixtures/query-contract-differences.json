@@ -1,0 +1,157 @@
+{
+  "schema": 1,
+  "grammar_sha256": "6a823bbabc1bbf85f4d7bedfff359e1751011294ac670bd51788c9aff0d68637",
+  "cases": [
+    {
+      "case": "category",
+      "source_sha256": "61807b147845a2b000c0e1b97a60b9860ad91e083281f9f8a0a69fcc1312ed35",
+      "query_sha256": "48f6dde836212f0aad2a6c92fb800fbf49f0dbb9935bd5fe252d583246abc48d",
+      "oracle_stdout_sha256": "5cec7ef06144ac71324e93208b8e1dec294d7a11efd783306945b3eae9c6efe3",
+      "native_matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "v",
+              "start": 0,
+              "end": 19
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "v",
+              "start": 1,
+              "end": 4
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "v",
+              "start": 6,
+              "end": 7
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "v",
+              "start": 9,
+              "end": 12
+            }
+          ]
+        },
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "v",
+              "start": 14,
+              "end": 18
+            }
+          ]
+        }
+      ],
+      "rationale": "The native query contract tests membership of the reduced symbol in the supertype closure; it includes the same string symbol in key positions. Official tree-sitter retains supertype role provenance and excludes those key occurrences.",
+      "basis": "src/kernel/gloss/scribe.zig:fits; scribe_test.zig bare-supertype membership",
+      "zig_stdout_sha256": "0dab9ef354bb8247aae2b0569c841ea1f05eb9e36f05892a22c85ea483c8b0d5"
+    },
+    {
+      "case": "plus",
+      "source_sha256": "61807b147845a2b000c0e1b97a60b9860ad91e083281f9f8a0a69fcc1312ed35",
+      "query_sha256": "e5caf931d38606def8cf1a93f5e27316a7bff959345155e6e4ebf12c50775d22",
+      "oracle_stdout_sha256": "f726b1253a541093a694102248f4fa95f05ef37a291d634cb456f909902daa27",
+      "native_matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "p",
+              "start": 1,
+              "end": 7
+            },
+            {
+              "name": "p",
+              "start": 9,
+              "end": 18
+            }
+          ]
+        }
+      ],
+      "rationale": "The native contract greedily collects repeated sibling captures into one complete match.",
+      "basis": "src/kernel/gloss/scribe.zig:at; scribe_test.zig quantified siblings",
+      "zig_stdout_sha256": "2325d23dce851a7bd5784c87410f21c10d816de0da3431241667f6d82094cee9"
+    },
+    {
+      "case": "group-plus",
+      "source_sha256": "2232d29621d679b45134490af516011a977ee766faba24f752b772720bf72f94",
+      "query_sha256": "3c7f92a3c44aa72ec6b7b1f3a3fb248ce76db877f37ff11bf1a3a2c85eb27756",
+      "oracle_stdout_sha256": "9055cdf148dc99ba7907857984e76b1166ad2ca95068bb2f531a22a54c5b875b",
+      "native_matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "a",
+              "start": 1,
+              "end": 2
+            },
+            {
+              "name": "b",
+              "start": 3,
+              "end": 7
+            },
+            {
+              "name": "a",
+              "start": 8,
+              "end": 9
+            },
+            {
+              "name": "b",
+              "start": 10,
+              "end": 14
+            }
+          ]
+        }
+      ],
+      "rationale": "The native contract greedily collects quantified group repetitions into one complete match.",
+      "basis": "RUST_DESIGN.md query behavior; src/kernel/gloss/scribe_test.zig quantified groups",
+      "zig_stdout_sha256": "bd88c75a6340cbbff50336afd63ce8de010504dfd8f5ec178141309f1dc36eb8"
+    },
+    {
+      "case": "nested-group-plus",
+      "source_sha256": "03a4cc702aa6e4f169ff34dd055714141eae3d2d7c50f6f053150cc72ef12638",
+      "query_sha256": "6c8ce22b0738884b48bbdc6e4734890603fabcd39cc3fa2b1e49d9b4c6f05f5e",
+      "oracle_stdout_sha256": "e74bdff5433660fe449859f64beaf0993bb2cc0c95e31b72e7a25ebfa1a169f7",
+      "native_matches": [
+        {
+          "pattern": 0,
+          "captures": [
+            {
+              "name": "n",
+              "start": 2,
+              "end": 3
+            },
+            {
+              "name": "n",
+              "start": 8,
+              "end": 9
+            }
+          ]
+        }
+      ],
+      "rationale": "A quantified group commits the first complete nested assignment for each greedy occurrence in the native contract.",
+      "basis": "src/kernel/gloss/scribe.zig Frame.greedy; scribe_test.zig nested quantified groups",
+      "zig_stdout_sha256": "7010236697a0d42569256147e5a30d8bc758bb45ce78fa1d0166223b6b8c72da"
+    }
+  ],
+  "frozen_zig_binary_sha256": "709bf8c0ce4a3c9ad5deb400e42d5025439e76c45bbcfaaf0959be31cff768ec",
+  "frozen_baseline_manifest_sha256": "dbbb7e1b4de06de0121e9b15fe9abfbc7248f1dbef942b5260ee438370cc963d"
+}

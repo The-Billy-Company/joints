@@ -1,0 +1,174 @@
+{
+  "schema": 1,
+  "scope": "Exact sequential pinned official generator observations. Original and intermediate refusals are retained. Final grammar bytes are reconstructed from pinned base and reviewed recipe; no upstream grammar is vendored. Generation alone is not consumer equivalence.",
+  "generator": {
+    "version": "tree-sitter 0.26.11",
+    "sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5"
+  },
+  "private_raw_report_sha256": "76974bed3175c3b585f5113e3bd4fa9f05a139ed85988cc28b62adec5cdf57db",
+  "stable": true,
+  "cases": [
+    {
+      "language": "typescript",
+      "parent_derived_sha256": "67e259c40eb53bbe1e518c0483ae6eb528ac0d214f04f8a44a7c38dd7c79f0da",
+      "candidate_derived_sha256": "06578a5fc60e1685625a321989663b5faeb3acb3ca17c19e096ddd32c782aa4f",
+      "added_conflicts": [
+        [
+          "_intrinsic_import_type",
+          "_intrinsic_import_type_member"
+        ],
+        [
+          "_intrinsic_import_type",
+          "_intrinsic_import_type_generic"
+        ],
+        [
+          "primary_expression",
+          "_import_type_query_arguments"
+        ]
+      ],
+      "attempts": [
+        {
+          "attempt": 0,
+          "grammar_sha256": "67e259c40eb53bbe1e518c0483ae6eb528ac0d214f04f8a44a7c38dd7c79f0da",
+          "exit": 1,
+          "seconds": 0.264558666,
+          "stdout": "",
+          "stderr": "\u001b[33mWarning:\u001b[0m No `tree-sitter.json` file found in your grammar, this file is required to generate with ABI 15. Using ABI version 14 instead.\nThis file can be set up with `tree-sitter init`. For more information, see https://tree-sitter.github.io/tree-sitter/cli/init.\n\u001b[31mError:\u001b[0m Error when generating parser\n\nCaused by:\n    Unresolved conflict for symbol sequence:\n    \n      expression  'as'  _intrinsic_import_type_reference  \u2022  '.'  \u2026\n    \n    Possible interpretations:\n    \n      1:  expression  'as'  (_intrinsic_import_type  _intrinsic_import_type_reference)  \u2022  '.'  \u2026\n      2:  expression  'as'  (_intrinsic_import_type_member  _intrinsic_import_type_reference  \u2022  '.'  identifier)\n    \n    Possible resolutions:\n    \n      1:  Specify a higher precedence in `_intrinsic_import_type_member` than in the other rules.\n      2:  Specify a higher precedence in `_intrinsic_import_type` than in the other rules.\n      3:  Specify a left or right associativity in `_intrinsic_import_type`\n      4:  Add a conflict for these rules: `_intrinsic_import_type`, `_intrinsic_import_type_member`\n    \n",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "22b93d18e448bf0f15f4295c3ef5d4f29c817fee948a91e4461256d249faaaa1",
+          "input_stable": true,
+          "requested_conflict": [
+            "_intrinsic_import_type",
+            "_intrinsic_import_type_member"
+          ]
+        },
+        {
+          "attempt": 1,
+          "grammar_sha256": "8d1bb8e0702c7dbe31a94adca144e7e05aeed02a6705ea02e0bba8c68587322d",
+          "exit": 1,
+          "seconds": 0.2612724169999999,
+          "stdout": "",
+          "stderr": "\u001b[33mWarning:\u001b[0m No `tree-sitter.json` file found in your grammar, this file is required to generate with ABI 15. Using ABI version 14 instead.\nThis file can be set up with `tree-sitter init`. For more information, see https://tree-sitter.github.io/tree-sitter/cli/init.\n\u001b[31mError:\u001b[0m Error when generating parser\n\nCaused by:\n    Unresolved conflict for symbol sequence:\n    \n      expression  'as'  _intrinsic_import_type_reference  \u2022  '<'  \u2026\n    \n    Possible interpretations:\n    \n      1:  expression  'as'  (_intrinsic_import_type  _intrinsic_import_type_reference)  \u2022  '<'  \u2026\n      2:  expression  'as'  (_intrinsic_import_type_generic  _intrinsic_import_type_reference  \u2022  type_arguments)\n    \n    Possible resolutions:\n    \n      1:  Specify a higher precedence in `_intrinsic_import_type_generic` than in the other rules.\n      2:  Specify a higher precedence in `_intrinsic_import_type` than in the other rules.\n      3:  Specify a left or right associativity in `_intrinsic_import_type`\n      4:  Add a conflict for these rules: `_intrinsic_import_type`, `_intrinsic_import_type_generic`\n    \n",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "75483ef9f6e382f7bc9b98e28e9e97ac27f812157735e4d6d78a08d6c274b702",
+          "input_stable": true,
+          "requested_conflict": [
+            "_intrinsic_import_type",
+            "_intrinsic_import_type_generic"
+          ]
+        },
+        {
+          "attempt": 2,
+          "grammar_sha256": "e92eaf2f5e6cfa1a2ba66817be13288ad78d3d4dbe35ac3bc7709120d58066e9",
+          "exit": 1,
+          "seconds": 0.9524924159999999,
+          "stdout": "",
+          "stderr": "\u001b[33mWarning:\u001b[0m No `tree-sitter.json` file found in your grammar, this file is required to generate with ABI 15. Using ABI version 14 instead.\nThis file can be set up with `tree-sitter init`. For more information, see https://tree-sitter.github.io/tree-sitter/cli/init.\n\u001b[31mError:\u001b[0m Error when generating parser\n\nCaused by:\n    Unresolved conflict for symbol sequence:\n    \n      '<'  '('  import  '('  string  \u2022  ','  \u2026\n    \n    Possible interpretations:\n    \n      1:  '<'  '('  import  '('  (primary_expression  string)  \u2022  ','  \u2026\n      2:  '<'  '('  import  (_import_type_query_arguments  '('  string  \u2022  ','  _import_type_query_options  ')')\n    \n    Possible resolutions:\n    \n      1:  Specify a higher precedence in `_import_type_query_arguments` than in the other rules.\n      2:  Specify a higher precedence in `primary_expression` than in the other rules.\n      3:  Specify a left or right associativity in `primary_expression`\n      4:  Add a conflict for these rules: `primary_expression`, `_import_type_query_arguments`\n    \n",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "ddc1aefeccb12033ae39a6d0485217978462b5d7f09124726416d408aa08df24",
+          "input_stable": true,
+          "requested_conflict": [
+            "primary_expression",
+            "_import_type_query_arguments"
+          ]
+        },
+        {
+          "attempt": 3,
+          "grammar_sha256": "06578a5fc60e1685625a321989663b5faeb3acb3ca17c19e096ddd32c782aa4f",
+          "exit": 0,
+          "seconds": 2.986814709,
+          "stdout": "",
+          "stderr": "\u001b[33mWarning:\u001b[0m No `tree-sitter.json` file found in your grammar, this file is required to generate with ABI 15. Using ABI version 14 instead.\nThis file can be set up with `tree-sitter init`. For more information, see https://tree-sitter.github.io/tree-sitter/cli/init.\n\u001b[33mWarning:\u001b[0m unnecessary conflicts:\n  `_type_query_call_expression`, `_import_type_query_call_expression`\n  `call_expression`, `_type_query_call_expression`, `_import_type_query_call_expression`\n  `call_expression`, `_import_type_query_call_expression`\n",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "601c1e3b3c37fa220c037419425ec961de20abf23b121ff92642529a80a3712a",
+          "input_stable": true,
+          "generated_outputs": {
+            "src/parser.c": "3a74dfba245aa4999444c3000957583b40b981a7cbac34335a3c926a66cc64a7",
+            "src/node-types.json": "0401140e54e58234d7625e4566ed18eac82f51975dca2133846b0675ac934b05"
+          }
+        }
+      ]
+    },
+    {
+      "language": "tsx",
+      "parent_derived_sha256": "428ec7a32e65850bc9437aa57378af54c9190be18e91e8deaad8739b770b15e9",
+      "candidate_derived_sha256": "66984eca07047c6d3aa12acdedf8043e79040d9afb10c84b2b4fc684fa20531a",
+      "added_conflicts": [
+        [
+          "_intrinsic_import_type",
+          "_intrinsic_import_type_member"
+        ],
+        [
+          "_intrinsic_import_type",
+          "_intrinsic_import_type_generic"
+        ],
+        [
+          "primary_expression",
+          "_import_type_query_arguments"
+        ]
+      ],
+      "attempts": [
+        {
+          "attempt": 0,
+          "grammar_sha256": "428ec7a32e65850bc9437aa57378af54c9190be18e91e8deaad8739b770b15e9",
+          "exit": 1,
+          "seconds": 0.25475066599999996,
+          "stdout": "",
+          "stderr": "\u001b[33mWarning:\u001b[0m No `tree-sitter.json` file found in your grammar, this file is required to generate with ABI 15. Using ABI version 14 instead.\nThis file can be set up with `tree-sitter init`. For more information, see https://tree-sitter.github.io/tree-sitter/cli/init.\n\u001b[31mError:\u001b[0m Error when generating parser\n\nCaused by:\n    Unresolved conflict for symbol sequence:\n    \n      expression  'as'  _intrinsic_import_type_reference  \u2022  '.'  \u2026\n    \n    Possible interpretations:\n    \n      1:  expression  'as'  (_intrinsic_import_type  _intrinsic_import_type_reference)  \u2022  '.'  \u2026\n      2:  expression  'as'  (_intrinsic_import_type_member  _intrinsic_import_type_reference  \u2022  '.'  identifier)\n    \n    Possible resolutions:\n    \n      1:  Specify a higher precedence in `_intrinsic_import_type_member` than in the other rules.\n      2:  Specify a higher precedence in `_intrinsic_import_type` than in the other rules.\n      3:  Specify a left or right associativity in `_intrinsic_import_type`\n      4:  Add a conflict for these rules: `_intrinsic_import_type`, `_intrinsic_import_type_member`\n    \n",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "22b93d18e448bf0f15f4295c3ef5d4f29c817fee948a91e4461256d249faaaa1",
+          "input_stable": true,
+          "requested_conflict": [
+            "_intrinsic_import_type",
+            "_intrinsic_import_type_member"
+          ]
+        },
+        {
+          "attempt": 1,
+          "grammar_sha256": "cab2e20563f6886897bbe3029f7214be4c2506954595484d62b0520e3ff9e6ca",
+          "exit": 1,
+          "seconds": 0.24475108299999998,
+          "stdout": "",
+          "stderr": "\u001b[33mWarning:\u001b[0m No `tree-sitter.json` file found in your grammar, this file is required to generate with ABI 15. Using ABI version 14 instead.\nThis file can be set up with `tree-sitter init`. For more information, see https://tree-sitter.github.io/tree-sitter/cli/init.\n\u001b[31mError:\u001b[0m Error when generating parser\n\nCaused by:\n    Unresolved conflict for symbol sequence:\n    \n      expression  'as'  _intrinsic_import_type_reference  \u2022  '<'  \u2026\n    \n    Possible interpretations:\n    \n      1:  expression  'as'  (_intrinsic_import_type  _intrinsic_import_type_reference)  \u2022  '<'  \u2026\n      2:  expression  'as'  (_intrinsic_import_type_generic  _intrinsic_import_type_reference  \u2022  type_arguments)\n    \n    Possible resolutions:\n    \n      1:  Specify a higher precedence in `_intrinsic_import_type_generic` than in the other rules.\n      2:  Specify a higher precedence in `_intrinsic_import_type` than in the other rules.\n      3:  Specify a left or right associativity in `_intrinsic_import_type`\n      4:  Add a conflict for these rules: `_intrinsic_import_type`, `_intrinsic_import_type_generic`\n    \n",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "75483ef9f6e382f7bc9b98e28e9e97ac27f812157735e4d6d78a08d6c274b702",
+          "input_stable": true,
+          "requested_conflict": [
+            "_intrinsic_import_type",
+            "_intrinsic_import_type_generic"
+          ]
+        },
+        {
+          "attempt": 2,
+          "grammar_sha256": "62459b26c7795bbf2633c40674142ee5b3050ad74ee055970fad49bded80435a",
+          "exit": 1,
+          "seconds": 1.032993375,
+          "stdout": "",
+          "stderr": "\u001b[33mWarning:\u001b[0m No `tree-sitter.json` file found in your grammar, this file is required to generate with ABI 15. Using ABI version 14 instead.\nThis file can be set up with `tree-sitter init`. For more information, see https://tree-sitter.github.io/tree-sitter/cli/init.\n\u001b[31mError:\u001b[0m Error when generating parser\n\nCaused by:\n    Unresolved conflict for symbol sequence:\n    \n      expression  '<'  import  '('  string  \u2022  ','  \u2026\n    \n    Possible interpretations:\n    \n      1:  expression  '<'  import  '('  (primary_expression  string)  \u2022  ','  \u2026\n      2:  expression  '<'  import  (_import_type_query_arguments  '('  string  \u2022  ','  _import_type_query_options  ')')\n    \n    Possible resolutions:\n    \n      1:  Specify a higher precedence in `_import_type_query_arguments` than in the other rules.\n      2:  Specify a higher precedence in `primary_expression` than in the other rules.\n      3:  Specify a left or right associativity in `primary_expression`\n      4:  Add a conflict for these rules: `primary_expression`, `_import_type_query_arguments`\n    \n",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "ab5514429e35e3744a2042b1635130395cb58f9ed114fbc9ed8de320d07a8c5b",
+          "input_stable": true,
+          "requested_conflict": [
+            "primary_expression",
+            "_import_type_query_arguments"
+          ]
+        },
+        {
+          "attempt": 3,
+          "grammar_sha256": "66984eca07047c6d3aa12acdedf8043e79040d9afb10c84b2b4fc684fa20531a",
+          "exit": 0,
+          "seconds": 3.134386875,
+          "stdout": "",
+          "stderr": "\u001b[33mWarning:\u001b[0m No `tree-sitter.json` file found in your grammar, this file is required to generate with ABI 15. Using ABI version 14 instead.\nThis file can be set up with `tree-sitter init`. For more information, see https://tree-sitter.github.io/tree-sitter/cli/init.\n\u001b[33mWarning:\u001b[0m unnecessary conflicts:\n  `call_expression`, `_type_query_call_expression`, `_import_type_query_call_expression`\n  `call_expression`, `_import_type_query_call_expression`\n  `_type_query_call_expression`, `_import_type_query_call_expression`\n",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "044626a6d7b451584e4052c57dfe7e4a4483aedd817db39c07863dca3c37ce8f",
+          "input_stable": true,
+          "generated_outputs": {
+            "src/parser.c": "16088764af56526e70b90cd5af30586fd884d3d44440a232581a03c2be533955",
+            "src/node-types.json": "374ad24cd2523f72d61026b4f584d252e4bdbdc4c953b0b9c21b1e7f43762733"
+          }
+        }
+      ]
+    }
+  ]
+}

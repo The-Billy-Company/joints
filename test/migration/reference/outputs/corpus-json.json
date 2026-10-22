@@ -1,0 +1,2987 @@
+{
+  "language": "json",
+  "mends": 0,
+  "path": "inputs/research/joinery/corpus/ledger.json",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 397,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 397
+  },
+  "tree": [
+    {
+      "end": 774,
+      "kids": [
+        {
+          "end": 773,
+          "kids": [
+            {
+              "end": 1,
+              "kids": [],
+              "name": "{",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 771,
+              "kids": [
+                {
+                  "end": 12,
+                  "field": "key",
+                  "kids": [
+                    {
+                      "end": 5,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 4
+                    },
+                    {
+                      "end": 11,
+                      "kids": [],
+                      "name": "string_content",
+                      "named": true,
+                      "start": 5
+                    },
+                    {
+                      "end": 12,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 11
+                    }
+                  ],
+                  "name": "string",
+                  "named": true,
+                  "start": 4
+                },
+                {
+                  "end": 13,
+                  "kids": [],
+                  "name": ":",
+                  "named": false,
+                  "start": 12
+                },
+                {
+                  "end": 771,
+                  "field": "value",
+                  "kids": [
+                    {
+                      "end": 15,
+                      "kids": [],
+                      "name": "{",
+                      "named": false,
+                      "start": 14
+                    },
+                    {
+                      "end": 36,
+                      "kids": [
+                        {
+                          "end": 26,
+                          "field": "key",
+                          "kids": [
+                            {
+                              "end": 21,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 20
+                            },
+                            {
+                              "end": 25,
+                              "kids": [],
+                              "name": "string_content",
+                              "named": true,
+                              "start": 21
+                            },
+                            {
+                              "end": 26,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 25
+                            }
+                          ],
+                          "name": "string",
+                          "named": true,
+                          "start": 20
+                        },
+                        {
+                          "end": 27,
+                          "kids": [],
+                          "name": ":",
+                          "named": false,
+                          "start": 26
+                        },
+                        {
+                          "end": 36,
+                          "field": "value",
+                          "kids": [
+                            {
+                              "end": 29,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 28
+                            },
+                            {
+                              "end": 35,
+                              "kids": [],
+                              "name": "string_content",
+                              "named": true,
+                              "start": 29
+                            },
+                            {
+                              "end": 36,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 35
+                            }
+                          ],
+                          "name": "string",
+                          "named": true,
+                          "start": 28
+                        }
+                      ],
+                      "name": "pair",
+                      "named": true,
+                      "start": 20
+                    },
+                    {
+                      "end": 37,
+                      "kids": [],
+                      "name": ",",
+                      "named": false,
+                      "start": 36
+                    },
+                    {
+                      "end": 86,
+                      "kids": [
+                        {
+                          "end": 50,
+                          "field": "key",
+                          "kids": [
+                            {
+                              "end": 43,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 42
+                            },
+                            {
+                              "end": 49,
+                              "kids": [],
+                              "name": "string_content",
+                              "named": true,
+                              "start": 43
+                            },
+                            {
+                              "end": 50,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 49
+                            }
+                          ],
+                          "name": "string",
+                          "named": true,
+                          "start": 42
+                        },
+                        {
+                          "end": 51,
+                          "kids": [],
+                          "name": ":",
+                          "named": false,
+                          "start": 50
+                        },
+                        {
+                          "end": 86,
+                          "field": "value",
+                          "kids": [
+                            {
+                              "end": 53,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 52
+                            },
+                            {
+                              "end": 67,
+                              "kids": [],
+                              "name": "string_content",
+                              "named": true,
+                              "start": 53
+                            },
+                            {
+                              "end": 69,
+                              "kids": [],
+                              "name": "escape_sequence",
+                              "named": true,
+                              "start": 67
+                            },
+                            {
+                              "end": 83,
+                              "kids": [],
+                              "name": "string_content",
+                              "named": true,
+                              "start": 69
+                            },
+                            {
+                              "end": 85,
+                              "kids": [],
+                              "name": "escape_sequence",
+                              "named": true,
+                              "start": 83
+                            },
+                            {
+                              "end": 86,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 85
+                            }
+                          ],
+                          "name": "string",
+                          "named": true,
+                          "start": 52
+                        }
+                      ],
+                      "name": "pair",
+                      "named": true,
+                      "start": 42
+                    },
+                    {
+                      "end": 87,
+                      "kids": [],
+                      "name": ",",
+                      "named": false,
+                      "start": 86
+                    },
+                    {
+                      "end": 106,
+                      "kids": [
+                        {
+                          "end": 100,
+                          "field": "key",
+                          "kids": [
+                            {
+                              "end": 93,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 92
+                            },
+                            {
+                              "end": 99,
+                              "kids": [],
+                              "name": "string_content",
+                              "named": true,
+                              "start": 93
+                            },
+                            {
+                              "end": 100,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 99
+                            }
+                          ],
+                          "name": "string",
+                          "named": true,
+                          "start": 92
+                        },
+                        {
+                          "end": 101,
+                          "kids": [],
+                          "name": ":",
+                          "named": false,
+                          "start": 100
+                        },
+                        {
+                          "end": 106,
+                          "field": "value",
+                          "kids": [],
+                          "name": "true",
+                          "named": true,
+                          "start": 102
+                        }
+                      ],
+                      "name": "pair",
+                      "named": true,
+                      "start": 92
+                    },
+                    {
+                      "end": 107,
+                      "kids": [],
+                      "name": ",",
+                      "named": false,
+                      "start": 106
+                    },
+                    {
+                      "end": 123,
+                      "kids": [
+                        {
+                          "end": 119,
+                          "field": "key",
+                          "kids": [
+                            {
+                              "end": 113,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 112
+                            },
+                            {
+                              "end": 118,
+                              "kids": [],
+                              "name": "string_content",
+                              "named": true,
+                              "start": 113
+                            },
+                            {
+                              "end": 119,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 118
+                            }
+                          ],
+                          "name": "string",
+                          "named": true,
+                          "start": 112
+                        },
+                        {
+                          "end": 120,
+                          "kids": [],
+                          "name": ":",
+                          "named": false,
+                          "start": 119
+                        },
+                        {
+                          "end": 123,
+                          "field": "value",
+                          "kids": [],
+                          "name": "number",
+                          "named": true,
+                          "start": 121
+                        }
+                      ],
+                      "name": "pair",
+                      "named": true,
+                      "start": 112
+                    },
+                    {
+                      "end": 124,
+                      "kids": [],
+                      "name": ",",
+                      "named": false,
+                      "start": 123
+                    },
+                    {
+                      "end": 384,
+                      "kids": [
+                        {
+                          "end": 135,
+                          "field": "key",
+                          "kids": [
+                            {
+                              "end": 130,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 129
+                            },
+                            {
+                              "end": 134,
+                              "kids": [],
+                              "name": "string_content",
+                              "named": true,
+                              "start": 130
+                            },
+                            {
+                              "end": 135,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 134
+                            }
+                          ],
+                          "name": "string",
+                          "named": true,
+                          "start": 129
+                        },
+                        {
+                          "end": 136,
+                          "kids": [],
+                          "name": ":",
+                          "named": false,
+                          "start": 135
+                        },
+                        {
+                          "end": 384,
+                          "field": "value",
+                          "kids": [
+                            {
+                              "end": 138,
+                              "kids": [],
+                              "name": "[",
+                              "named": false,
+                              "start": 137
+                            },
+                            {
+                              "end": 189,
+                              "kids": [
+                                {
+                                  "end": 146,
+                                  "kids": [],
+                                  "name": "{",
+                                  "named": false,
+                                  "start": 145
+                                },
+                                {
+                                  "end": 161,
+                                  "kids": [
+                                    {
+                                      "end": 152,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 148,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 147
+                                        },
+                                        {
+                                          "end": 151,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 148
+                                        },
+                                        {
+                                          "end": 152,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 151
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 147
+                                    },
+                                    {
+                                      "end": 153,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 152
+                                    },
+                                    {
+                                      "end": 161,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 155,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 154
+                                        },
+                                        {
+                                          "end": 160,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 155
+                                        },
+                                        {
+                                          "end": 161,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 160
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 154
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 147
+                                },
+                                {
+                                  "end": 162,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 161
+                                },
+                                {
+                                  "end": 173,
+                                  "kids": [
+                                    {
+                                      "end": 170,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 164,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 163
+                                        },
+                                        {
+                                          "end": 169,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 164
+                                        },
+                                        {
+                                          "end": 170,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 169
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 163
+                                    },
+                                    {
+                                      "end": 171,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 170
+                                    },
+                                    {
+                                      "end": 173,
+                                      "field": "value",
+                                      "kids": [],
+                                      "name": "number",
+                                      "named": true,
+                                      "start": 172
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 163
+                                },
+                                {
+                                  "end": 174,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 173
+                                },
+                                {
+                                  "end": 187,
+                                  "kids": [
+                                    {
+                                      "end": 181,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 176,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 175
+                                        },
+                                        {
+                                          "end": 180,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 176
+                                        },
+                                        {
+                                          "end": 181,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 180
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 175
+                                    },
+                                    {
+                                      "end": 182,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 181
+                                    },
+                                    {
+                                      "end": 187,
+                                      "field": "value",
+                                      "kids": [],
+                                      "name": "null",
+                                      "named": true,
+                                      "start": 183
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 175
+                                },
+                                {
+                                  "end": 189,
+                                  "kids": [],
+                                  "name": "}",
+                                  "named": false,
+                                  "start": 188
+                                }
+                              ],
+                              "name": "object",
+                              "named": true,
+                              "start": 145
+                            },
+                            {
+                              "end": 190,
+                              "kids": [],
+                              "name": ",",
+                              "named": false,
+                              "start": 189
+                            },
+                            {
+                              "end": 246,
+                              "kids": [
+                                {
+                                  "end": 198,
+                                  "kids": [],
+                                  "name": "{",
+                                  "named": false,
+                                  "start": 197
+                                },
+                                {
+                                  "end": 213,
+                                  "kids": [
+                                    {
+                                      "end": 204,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 200,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 199
+                                        },
+                                        {
+                                          "end": 203,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 200
+                                        },
+                                        {
+                                          "end": 204,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 203
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 199
+                                    },
+                                    {
+                                      "end": 205,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 204
+                                    },
+                                    {
+                                      "end": 213,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 207,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 206
+                                        },
+                                        {
+                                          "end": 212,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 207
+                                        },
+                                        {
+                                          "end": 213,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 212
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 206
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 199
+                                },
+                                {
+                                  "end": 214,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 213
+                                },
+                                {
+                                  "end": 225,
+                                  "kids": [
+                                    {
+                                      "end": 222,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 216,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 215
+                                        },
+                                        {
+                                          "end": 221,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 216
+                                        },
+                                        {
+                                          "end": 222,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 221
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 215
+                                    },
+                                    {
+                                      "end": 223,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 222
+                                    },
+                                    {
+                                      "end": 225,
+                                      "field": "value",
+                                      "kids": [],
+                                      "name": "number",
+                                      "named": true,
+                                      "start": 224
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 215
+                                },
+                                {
+                                  "end": 226,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 225
+                                },
+                                {
+                                  "end": 244,
+                                  "kids": [
+                                    {
+                                      "end": 233,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 228,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 227
+                                        },
+                                        {
+                                          "end": 232,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 228
+                                        },
+                                        {
+                                          "end": 233,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 232
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 227
+                                    },
+                                    {
+                                      "end": 234,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 233
+                                    },
+                                    {
+                                      "end": 244,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 236,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 235
+                                        },
+                                        {
+                                          "end": 243,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 236
+                                        },
+                                        {
+                                          "end": 244,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 243
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 235
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 227
+                                },
+                                {
+                                  "end": 246,
+                                  "kids": [],
+                                  "name": "}",
+                                  "named": false,
+                                  "start": 245
+                                }
+                              ],
+                              "name": "object",
+                              "named": true,
+                              "start": 197
+                            },
+                            {
+                              "end": 247,
+                              "kids": [],
+                              "name": ",",
+                              "named": false,
+                              "start": 246
+                            },
+                            {
+                              "end": 298,
+                              "kids": [
+                                {
+                                  "end": 255,
+                                  "kids": [],
+                                  "name": "{",
+                                  "named": false,
+                                  "start": 254
+                                },
+                                {
+                                  "end": 270,
+                                  "kids": [
+                                    {
+                                      "end": 261,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 257,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 256
+                                        },
+                                        {
+                                          "end": 260,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 257
+                                        },
+                                        {
+                                          "end": 261,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 260
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 256
+                                    },
+                                    {
+                                      "end": 262,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 261
+                                    },
+                                    {
+                                      "end": 270,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 264,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 263
+                                        },
+                                        {
+                                          "end": 269,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 264
+                                        },
+                                        {
+                                          "end": 270,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 269
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 263
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 256
+                                },
+                                {
+                                  "end": 271,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 270
+                                },
+                                {
+                                  "end": 282,
+                                  "kids": [
+                                    {
+                                      "end": 279,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 273,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 272
+                                        },
+                                        {
+                                          "end": 278,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 273
+                                        },
+                                        {
+                                          "end": 279,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 278
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 272
+                                    },
+                                    {
+                                      "end": 280,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 279
+                                    },
+                                    {
+                                      "end": 282,
+                                      "field": "value",
+                                      "kids": [],
+                                      "name": "number",
+                                      "named": true,
+                                      "start": 281
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 272
+                                },
+                                {
+                                  "end": 283,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 282
+                                },
+                                {
+                                  "end": 296,
+                                  "kids": [
+                                    {
+                                      "end": 290,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 285,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 284
+                                        },
+                                        {
+                                          "end": 289,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 285
+                                        },
+                                        {
+                                          "end": 290,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 289
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 284
+                                    },
+                                    {
+                                      "end": 291,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 290
+                                    },
+                                    {
+                                      "end": 296,
+                                      "field": "value",
+                                      "kids": [],
+                                      "name": "null",
+                                      "named": true,
+                                      "start": 292
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 284
+                                },
+                                {
+                                  "end": 298,
+                                  "kids": [],
+                                  "name": "}",
+                                  "named": false,
+                                  "start": 297
+                                }
+                              ],
+                              "name": "object",
+                              "named": true,
+                              "start": 254
+                            },
+                            {
+                              "end": 299,
+                              "kids": [],
+                              "name": ",",
+                              "named": false,
+                              "start": 298
+                            },
+                            {
+                              "end": 378,
+                              "kids": [
+                                {
+                                  "end": 307,
+                                  "kids": [],
+                                  "name": "{",
+                                  "named": false,
+                                  "start": 306
+                                },
+                                {
+                                  "end": 321,
+                                  "kids": [
+                                    {
+                                      "end": 313,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 309,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 308
+                                        },
+                                        {
+                                          "end": 312,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 309
+                                        },
+                                        {
+                                          "end": 313,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 312
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 308
+                                    },
+                                    {
+                                      "end": 314,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 313
+                                    },
+                                    {
+                                      "end": 321,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 316,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 315
+                                        },
+                                        {
+                                          "end": 320,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 316
+                                        },
+                                        {
+                                          "end": 321,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 320
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 315
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 308
+                                },
+                                {
+                                  "end": 322,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 321
+                                },
+                                {
+                                  "end": 333,
+                                  "kids": [
+                                    {
+                                      "end": 330,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 324,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 323
+                                        },
+                                        {
+                                          "end": 329,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 324
+                                        },
+                                        {
+                                          "end": 330,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 329
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 323
+                                    },
+                                    {
+                                      "end": 331,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 330
+                                    },
+                                    {
+                                      "end": 333,
+                                      "field": "value",
+                                      "kids": [],
+                                      "name": "number",
+                                      "named": true,
+                                      "start": 332
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 323
+                                },
+                                {
+                                  "end": 334,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 333
+                                },
+                                {
+                                  "end": 376,
+                                  "kids": [
+                                    {
+                                      "end": 341,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 336,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 335
+                                        },
+                                        {
+                                          "end": 340,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 336
+                                        },
+                                        {
+                                          "end": 341,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 340
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 335
+                                    },
+                                    {
+                                      "end": 342,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 341
+                                    },
+                                    {
+                                      "end": 376,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 344,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 343
+                                        },
+                                        {
+                                          "end": 375,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 344
+                                        },
+                                        {
+                                          "end": 376,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 375
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 343
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 335
+                                },
+                                {
+                                  "end": 378,
+                                  "kids": [],
+                                  "name": "}",
+                                  "named": false,
+                                  "start": 377
+                                }
+                              ],
+                              "name": "object",
+                              "named": true,
+                              "start": 306
+                            },
+                            {
+                              "end": 384,
+                              "kids": [],
+                              "name": "]",
+                              "named": false,
+                              "start": 383
+                            }
+                          ],
+                          "name": "array",
+                          "named": true,
+                          "start": 137
+                        }
+                      ],
+                      "name": "pair",
+                      "named": true,
+                      "start": 129
+                    },
+                    {
+                      "end": 385,
+                      "kids": [],
+                      "name": ",",
+                      "named": false,
+                      "start": 384
+                    },
+                    {
+                      "end": 447,
+                      "kids": [
+                        {
+                          "end": 396,
+                          "field": "key",
+                          "kids": [
+                            {
+                              "end": 391,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 390
+                            },
+                            {
+                              "end": 395,
+                              "kids": [],
+                              "name": "string_content",
+                              "named": true,
+                              "start": 391
+                            },
+                            {
+                              "end": 396,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 395
+                            }
+                          ],
+                          "name": "string",
+                          "named": true,
+                          "start": 390
+                        },
+                        {
+                          "end": 397,
+                          "kids": [],
+                          "name": ":",
+                          "named": false,
+                          "start": 396
+                        },
+                        {
+                          "end": 447,
+                          "field": "value",
+                          "kids": [
+                            {
+                              "end": 399,
+                              "kids": [],
+                              "name": "{",
+                              "named": false,
+                              "start": 398
+                            },
+                            {
+                              "end": 410,
+                              "kids": [
+                                {
+                                  "end": 407,
+                                  "field": "key",
+                                  "kids": [
+                                    {
+                                      "end": 401,
+                                      "kids": [],
+                                      "name": "\"",
+                                      "named": false,
+                                      "start": 400
+                                    },
+                                    {
+                                      "end": 406,
+                                      "kids": [],
+                                      "name": "string_content",
+                                      "named": true,
+                                      "start": 401
+                                    },
+                                    {
+                                      "end": 407,
+                                      "kids": [],
+                                      "name": "\"",
+                                      "named": false,
+                                      "start": 406
+                                    }
+                                  ],
+                                  "name": "string",
+                                  "named": true,
+                                  "start": 400
+                                },
+                                {
+                                  "end": 408,
+                                  "kids": [],
+                                  "name": ":",
+                                  "named": false,
+                                  "start": 407
+                                },
+                                {
+                                  "end": 410,
+                                  "field": "value",
+                                  "kids": [],
+                                  "name": "number",
+                                  "named": true,
+                                  "start": 409
+                                }
+                              ],
+                              "name": "pair",
+                              "named": true,
+                              "start": 400
+                            },
+                            {
+                              "end": 411,
+                              "kids": [],
+                              "name": ",",
+                              "named": false,
+                              "start": 410
+                            },
+                            {
+                              "end": 422,
+                              "kids": [
+                                {
+                                  "end": 419,
+                                  "field": "key",
+                                  "kids": [
+                                    {
+                                      "end": 413,
+                                      "kids": [],
+                                      "name": "\"",
+                                      "named": false,
+                                      "start": 412
+                                    },
+                                    {
+                                      "end": 418,
+                                      "kids": [],
+                                      "name": "string_content",
+                                      "named": true,
+                                      "start": 413
+                                    },
+                                    {
+                                      "end": 419,
+                                      "kids": [],
+                                      "name": "\"",
+                                      "named": false,
+                                      "start": 418
+                                    }
+                                  ],
+                                  "name": "string",
+                                  "named": true,
+                                  "start": 412
+                                },
+                                {
+                                  "end": 420,
+                                  "kids": [],
+                                  "name": ":",
+                                  "named": false,
+                                  "start": 419
+                                },
+                                {
+                                  "end": 422,
+                                  "field": "value",
+                                  "kids": [],
+                                  "name": "number",
+                                  "named": true,
+                                  "start": 421
+                                }
+                              ],
+                              "name": "pair",
+                              "named": true,
+                              "start": 412
+                            },
+                            {
+                              "end": 423,
+                              "kids": [],
+                              "name": ",",
+                              "named": false,
+                              "start": 422
+                            },
+                            {
+                              "end": 434,
+                              "kids": [
+                                {
+                                  "end": 431,
+                                  "field": "key",
+                                  "kids": [
+                                    {
+                                      "end": 425,
+                                      "kids": [],
+                                      "name": "\"",
+                                      "named": false,
+                                      "start": 424
+                                    },
+                                    {
+                                      "end": 430,
+                                      "kids": [],
+                                      "name": "string_content",
+                                      "named": true,
+                                      "start": 425
+                                    },
+                                    {
+                                      "end": 431,
+                                      "kids": [],
+                                      "name": "\"",
+                                      "named": false,
+                                      "start": 430
+                                    }
+                                  ],
+                                  "name": "string",
+                                  "named": true,
+                                  "start": 424
+                                },
+                                {
+                                  "end": 432,
+                                  "kids": [],
+                                  "name": ":",
+                                  "named": false,
+                                  "start": 431
+                                },
+                                {
+                                  "end": 434,
+                                  "field": "value",
+                                  "kids": [],
+                                  "name": "number",
+                                  "named": true,
+                                  "start": 433
+                                }
+                              ],
+                              "name": "pair",
+                              "named": true,
+                              "start": 424
+                            },
+                            {
+                              "end": 435,
+                              "kids": [],
+                              "name": ",",
+                              "named": false,
+                              "start": 434
+                            },
+                            {
+                              "end": 445,
+                              "kids": [
+                                {
+                                  "end": 442,
+                                  "field": "key",
+                                  "kids": [
+                                    {
+                                      "end": 437,
+                                      "kids": [],
+                                      "name": "\"",
+                                      "named": false,
+                                      "start": 436
+                                    },
+                                    {
+                                      "end": 441,
+                                      "kids": [],
+                                      "name": "string_content",
+                                      "named": true,
+                                      "start": 437
+                                    },
+                                    {
+                                      "end": 442,
+                                      "kids": [],
+                                      "name": "\"",
+                                      "named": false,
+                                      "start": 441
+                                    }
+                                  ],
+                                  "name": "string",
+                                  "named": true,
+                                  "start": 436
+                                },
+                                {
+                                  "end": 443,
+                                  "kids": [],
+                                  "name": ":",
+                                  "named": false,
+                                  "start": 442
+                                },
+                                {
+                                  "end": 445,
+                                  "field": "value",
+                                  "kids": [],
+                                  "name": "number",
+                                  "named": true,
+                                  "start": 444
+                                }
+                              ],
+                              "name": "pair",
+                              "named": true,
+                              "start": 436
+                            },
+                            {
+                              "end": 447,
+                              "kids": [],
+                              "name": "}",
+                              "named": false,
+                              "start": 446
+                            }
+                          ],
+                          "name": "object",
+                          "named": true,
+                          "start": 398
+                        }
+                      ],
+                      "name": "pair",
+                      "named": true,
+                      "start": 390
+                    },
+                    {
+                      "end": 448,
+                      "kids": [],
+                      "name": ",",
+                      "named": false,
+                      "start": 447
+                    },
+                    {
+                      "end": 767,
+                      "kids": [
+                        {
+                          "end": 462,
+                          "field": "key",
+                          "kids": [
+                            {
+                              "end": 454,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 453
+                            },
+                            {
+                              "end": 461,
+                              "kids": [],
+                              "name": "string_content",
+                              "named": true,
+                              "start": 454
+                            },
+                            {
+                              "end": 462,
+                              "kids": [],
+                              "name": "\"",
+                              "named": false,
+                              "start": 461
+                            }
+                          ],
+                          "name": "string",
+                          "named": true,
+                          "start": 453
+                        },
+                        {
+                          "end": 463,
+                          "kids": [],
+                          "name": ":",
+                          "named": false,
+                          "start": 462
+                        },
+                        {
+                          "end": 767,
+                          "field": "value",
+                          "kids": [
+                            {
+                              "end": 465,
+                              "kids": [],
+                              "name": "[",
+                              "named": false,
+                              "start": 464
+                            },
+                            {
+                              "end": 536,
+                              "kids": [
+                                {
+                                  "end": 473,
+                                  "kids": [],
+                                  "name": "{",
+                                  "named": false,
+                                  "start": 472
+                                },
+                                {
+                                  "end": 502,
+                                  "kids": [
+                                    {
+                                      "end": 478,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 475,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 474
+                                        },
+                                        {
+                                          "end": 477,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 475
+                                        },
+                                        {
+                                          "end": 478,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 477
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 474
+                                    },
+                                    {
+                                      "end": 479,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 478
+                                    },
+                                    {
+                                      "end": 502,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 481,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 480
+                                        },
+                                        {
+                                          "end": 501,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 481
+                                        },
+                                        {
+                                          "end": 502,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 501
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 480
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 474
+                                },
+                                {
+                                  "end": 503,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 502
+                                },
+                                {
+                                  "end": 515,
+                                  "kids": [
+                                    {
+                                      "end": 508,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 505,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 504
+                                        },
+                                        {
+                                          "end": 507,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 505
+                                        },
+                                        {
+                                          "end": 508,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 507
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 504
+                                    },
+                                    {
+                                      "end": 509,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 508
+                                    },
+                                    {
+                                      "end": 515,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 511,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 510
+                                        },
+                                        {
+                                          "end": 514,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 511
+                                        },
+                                        {
+                                          "end": 515,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 514
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 510
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 504
+                                },
+                                {
+                                  "end": 516,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 515
+                                },
+                                {
+                                  "end": 534,
+                                  "kids": [
+                                    {
+                                      "end": 523,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 518,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 517
+                                        },
+                                        {
+                                          "end": 522,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 518
+                                        },
+                                        {
+                                          "end": 523,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 522
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 517
+                                    },
+                                    {
+                                      "end": 524,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 523
+                                    },
+                                    {
+                                      "end": 534,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 526,
+                                          "kids": [],
+                                          "name": "[",
+                                          "named": false,
+                                          "start": 525
+                                        },
+                                        {
+                                          "end": 527,
+                                          "kids": [],
+                                          "name": "number",
+                                          "named": true,
+                                          "start": 526
+                                        },
+                                        {
+                                          "end": 528,
+                                          "kids": [],
+                                          "name": ",",
+                                          "named": false,
+                                          "start": 527
+                                        },
+                                        {
+                                          "end": 530,
+                                          "kids": [],
+                                          "name": "number",
+                                          "named": true,
+                                          "start": 529
+                                        },
+                                        {
+                                          "end": 531,
+                                          "kids": [],
+                                          "name": ",",
+                                          "named": false,
+                                          "start": 530
+                                        },
+                                        {
+                                          "end": 533,
+                                          "kids": [],
+                                          "name": "number",
+                                          "named": true,
+                                          "start": 532
+                                        },
+                                        {
+                                          "end": 534,
+                                          "kids": [],
+                                          "name": "]",
+                                          "named": false,
+                                          "start": 533
+                                        }
+                                      ],
+                                      "name": "array",
+                                      "named": true,
+                                      "start": 525
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 517
+                                },
+                                {
+                                  "end": 536,
+                                  "kids": [],
+                                  "name": "}",
+                                  "named": false,
+                                  "start": 535
+                                }
+                              ],
+                              "name": "object",
+                              "named": true,
+                              "start": 472
+                            },
+                            {
+                              "end": 537,
+                              "kids": [],
+                              "name": ",",
+                              "named": false,
+                              "start": 536
+                            },
+                            {
+                              "end": 602,
+                              "kids": [
+                                {
+                                  "end": 545,
+                                  "kids": [],
+                                  "name": "{",
+                                  "named": false,
+                                  "start": 544
+                                },
+                                {
+                                  "end": 574,
+                                  "kids": [
+                                    {
+                                      "end": 550,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 547,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 546
+                                        },
+                                        {
+                                          "end": 549,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 547
+                                        },
+                                        {
+                                          "end": 550,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 549
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 546
+                                    },
+                                    {
+                                      "end": 551,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 550
+                                    },
+                                    {
+                                      "end": 574,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 553,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 552
+                                        },
+                                        {
+                                          "end": 573,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 553
+                                        },
+                                        {
+                                          "end": 574,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 573
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 552
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 546
+                                },
+                                {
+                                  "end": 575,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 574
+                                },
+                                {
+                                  "end": 589,
+                                  "kids": [
+                                    {
+                                      "end": 580,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 577,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 576
+                                        },
+                                        {
+                                          "end": 579,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 577
+                                        },
+                                        {
+                                          "end": 580,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 579
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 576
+                                    },
+                                    {
+                                      "end": 581,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 580
+                                    },
+                                    {
+                                      "end": 589,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 583,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 582
+                                        },
+                                        {
+                                          "end": 588,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 583
+                                        },
+                                        {
+                                          "end": 589,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 588
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 582
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 576
+                                },
+                                {
+                                  "end": 590,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 589
+                                },
+                                {
+                                  "end": 600,
+                                  "kids": [
+                                    {
+                                      "end": 597,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 592,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 591
+                                        },
+                                        {
+                                          "end": 596,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 592
+                                        },
+                                        {
+                                          "end": 597,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 596
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 591
+                                    },
+                                    {
+                                      "end": 598,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 597
+                                    },
+                                    {
+                                      "end": 600,
+                                      "field": "value",
+                                      "kids": [],
+                                      "name": "number",
+                                      "named": true,
+                                      "start": 599
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 591
+                                },
+                                {
+                                  "end": 602,
+                                  "kids": [],
+                                  "name": "}",
+                                  "named": false,
+                                  "start": 601
+                                }
+                              ],
+                              "name": "object",
+                              "named": true,
+                              "start": 544
+                            },
+                            {
+                              "end": 603,
+                              "kids": [],
+                              "name": ",",
+                              "named": false,
+                              "start": 602
+                            },
+                            {
+                              "end": 694,
+                              "kids": [
+                                {
+                                  "end": 611,
+                                  "kids": [],
+                                  "name": "{",
+                                  "named": false,
+                                  "start": 610
+                                },
+                                {
+                                  "end": 640,
+                                  "kids": [
+                                    {
+                                      "end": 616,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 613,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 612
+                                        },
+                                        {
+                                          "end": 615,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 613
+                                        },
+                                        {
+                                          "end": 616,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 615
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 612
+                                    },
+                                    {
+                                      "end": 617,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 616
+                                    },
+                                    {
+                                      "end": 640,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 619,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 618
+                                        },
+                                        {
+                                          "end": 639,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 619
+                                        },
+                                        {
+                                          "end": 640,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 639
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 618
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 612
+                                },
+                                {
+                                  "end": 641,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 640
+                                },
+                                {
+                                  "end": 654,
+                                  "kids": [
+                                    {
+                                      "end": 646,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 643,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 642
+                                        },
+                                        {
+                                          "end": 645,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 643
+                                        },
+                                        {
+                                          "end": 646,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 645
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 642
+                                    },
+                                    {
+                                      "end": 647,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 646
+                                    },
+                                    {
+                                      "end": 654,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 649,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 648
+                                        },
+                                        {
+                                          "end": 653,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 649
+                                        },
+                                        {
+                                          "end": 654,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 653
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 648
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 642
+                                },
+                                {
+                                  "end": 655,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 654
+                                },
+                                {
+                                  "end": 692,
+                                  "kids": [
+                                    {
+                                      "end": 661,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 657,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 656
+                                        },
+                                        {
+                                          "end": 660,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 657
+                                        },
+                                        {
+                                          "end": 661,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 660
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 656
+                                    },
+                                    {
+                                      "end": 662,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 661
+                                    },
+                                    {
+                                      "end": 692,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 664,
+                                          "kids": [],
+                                          "name": "{",
+                                          "named": false,
+                                          "start": 663
+                                        },
+                                        {
+                                          "end": 678,
+                                          "kids": [
+                                            {
+                                              "end": 670,
+                                              "field": "key",
+                                              "kids": [
+                                                {
+                                                  "end": 666,
+                                                  "kids": [],
+                                                  "name": "\"",
+                                                  "named": false,
+                                                  "start": 665
+                                                },
+                                                {
+                                                  "end": 669,
+                                                  "kids": [],
+                                                  "name": "string_content",
+                                                  "named": true,
+                                                  "start": 666
+                                                },
+                                                {
+                                                  "end": 670,
+                                                  "kids": [],
+                                                  "name": "\"",
+                                                  "named": false,
+                                                  "start": 669
+                                                }
+                                              ],
+                                              "name": "string",
+                                              "named": true,
+                                              "start": 665
+                                            },
+                                            {
+                                              "end": 671,
+                                              "kids": [],
+                                              "name": ":",
+                                              "named": false,
+                                              "start": 670
+                                            },
+                                            {
+                                              "end": 678,
+                                              "field": "value",
+                                              "kids": [
+                                                {
+                                                  "end": 673,
+                                                  "kids": [],
+                                                  "name": "\"",
+                                                  "named": false,
+                                                  "start": 672
+                                                },
+                                                {
+                                                  "end": 677,
+                                                  "kids": [],
+                                                  "name": "string_content",
+                                                  "named": true,
+                                                  "start": 673
+                                                },
+                                                {
+                                                  "end": 678,
+                                                  "kids": [],
+                                                  "name": "\"",
+                                                  "named": false,
+                                                  "start": 677
+                                                }
+                                              ],
+                                              "name": "string",
+                                              "named": true,
+                                              "start": 672
+                                            }
+                                          ],
+                                          "name": "pair",
+                                          "named": true,
+                                          "start": 665
+                                        },
+                                        {
+                                          "end": 679,
+                                          "kids": [],
+                                          "name": ",",
+                                          "named": false,
+                                          "start": 678
+                                        },
+                                        {
+                                          "end": 690,
+                                          "kids": [
+                                            {
+                                              "end": 687,
+                                              "field": "key",
+                                              "kids": [
+                                                {
+                                                  "end": 681,
+                                                  "kids": [],
+                                                  "name": "\"",
+                                                  "named": false,
+                                                  "start": 680
+                                                },
+                                                {
+                                                  "end": 686,
+                                                  "kids": [],
+                                                  "name": "string_content",
+                                                  "named": true,
+                                                  "start": 681
+                                                },
+                                                {
+                                                  "end": 687,
+                                                  "kids": [],
+                                                  "name": "\"",
+                                                  "named": false,
+                                                  "start": 686
+                                                }
+                                              ],
+                                              "name": "string",
+                                              "named": true,
+                                              "start": 680
+                                            },
+                                            {
+                                              "end": 688,
+                                              "kids": [],
+                                              "name": ":",
+                                              "named": false,
+                                              "start": 687
+                                            },
+                                            {
+                                              "end": 690,
+                                              "field": "value",
+                                              "kids": [],
+                                              "name": "number",
+                                              "named": true,
+                                              "start": 689
+                                            }
+                                          ],
+                                          "name": "pair",
+                                          "named": true,
+                                          "start": 680
+                                        },
+                                        {
+                                          "end": 692,
+                                          "kids": [],
+                                          "name": "}",
+                                          "named": false,
+                                          "start": 691
+                                        }
+                                      ],
+                                      "name": "object",
+                                      "named": true,
+                                      "start": 663
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 656
+                                },
+                                {
+                                  "end": 694,
+                                  "kids": [],
+                                  "name": "}",
+                                  "named": false,
+                                  "start": 693
+                                }
+                              ],
+                              "name": "object",
+                              "named": true,
+                              "start": 610
+                            },
+                            {
+                              "end": 695,
+                              "kids": [],
+                              "name": ",",
+                              "named": false,
+                              "start": 694
+                            },
+                            {
+                              "end": 761,
+                              "kids": [
+                                {
+                                  "end": 703,
+                                  "kids": [],
+                                  "name": "{",
+                                  "named": false,
+                                  "start": 702
+                                },
+                                {
+                                  "end": 732,
+                                  "kids": [
+                                    {
+                                      "end": 708,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 705,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 704
+                                        },
+                                        {
+                                          "end": 707,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 705
+                                        },
+                                        {
+                                          "end": 708,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 707
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 704
+                                    },
+                                    {
+                                      "end": 709,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 708
+                                    },
+                                    {
+                                      "end": 732,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 711,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 710
+                                        },
+                                        {
+                                          "end": 731,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 711
+                                        },
+                                        {
+                                          "end": 732,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 731
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 710
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 704
+                                },
+                                {
+                                  "end": 733,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 732
+                                },
+                                {
+                                  "end": 747,
+                                  "kids": [
+                                    {
+                                      "end": 738,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 735,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 734
+                                        },
+                                        {
+                                          "end": 737,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 735
+                                        },
+                                        {
+                                          "end": 738,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 737
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 734
+                                    },
+                                    {
+                                      "end": 739,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 738
+                                    },
+                                    {
+                                      "end": 747,
+                                      "field": "value",
+                                      "kids": [
+                                        {
+                                          "end": 741,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 740
+                                        },
+                                        {
+                                          "end": 746,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 741
+                                        },
+                                        {
+                                          "end": 747,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 746
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 740
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 734
+                                },
+                                {
+                                  "end": 748,
+                                  "kids": [],
+                                  "name": ",",
+                                  "named": false,
+                                  "start": 747
+                                },
+                                {
+                                  "end": 759,
+                                  "kids": [
+                                    {
+                                      "end": 755,
+                                      "field": "key",
+                                      "kids": [
+                                        {
+                                          "end": 750,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 749
+                                        },
+                                        {
+                                          "end": 754,
+                                          "kids": [],
+                                          "name": "string_content",
+                                          "named": true,
+                                          "start": 750
+                                        },
+                                        {
+                                          "end": 755,
+                                          "kids": [],
+                                          "name": "\"",
+                                          "named": false,
+                                          "start": 754
+                                        }
+                                      ],
+                                      "name": "string",
+                                      "named": true,
+                                      "start": 749
+                                    },
+                                    {
+                                      "end": 756,
+                                      "kids": [],
+                                      "name": ":",
+                                      "named": false,
+                                      "start": 755
+                                    },
+                                    {
+                                      "end": 759,
+                                      "field": "value",
+                                      "kids": [],
+                                      "name": "number",
+                                      "named": true,
+                                      "start": 757
+                                    }
+                                  ],
+                                  "name": "pair",
+                                  "named": true,
+                                  "start": 749
+                                },
+                                {
+                                  "end": 761,
+                                  "kids": [],
+                                  "name": "}",
+                                  "named": false,
+                                  "start": 760
+                                }
+                              ],
+                              "name": "object",
+                              "named": true,
+                              "start": 702
+                            },
+                            {
+                              "end": 767,
+                              "kids": [],
+                              "name": "]",
+                              "named": false,
+                              "start": 766
+                            }
+                          ],
+                          "name": "array",
+                          "named": true,
+                          "start": 464
+                        }
+                      ],
+                      "name": "pair",
+                      "named": true,
+                      "start": 453
+                    },
+                    {
+                      "end": 771,
+                      "kids": [],
+                      "name": "}",
+                      "named": false,
+                      "start": 770
+                    }
+                  ],
+                  "name": "object",
+                  "named": true,
+                  "start": 14
+                }
+              ],
+              "name": "pair",
+              "named": true,
+              "start": 4
+            },
+            {
+              "end": 773,
+              "kids": [],
+              "name": "}",
+              "named": false,
+              "start": 772
+            }
+          ],
+          "name": "object",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "document",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

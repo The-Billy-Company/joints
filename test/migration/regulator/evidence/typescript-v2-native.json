@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "scope": "Exact same candidate grammar bytes accepted by unchanged immutable Rust c08d CLI under public finite defaults. Actual LALR trace, mint and native load; not full consumer equivalence.",
+  "binary_sha256": "09ffe52aea3aaeac59fe9063d0d2be1ff2fae9b74d0c1f5ccd4af034a5f44320",
+  "private_raw_report_sha256": "aa9bf01daee10b50fbabbcfa02bd8e0a049590e4b6bab3a04ac2633e61be8a2d",
+  "stable": true,
+  "cases": [
+    {
+      "language": "typescript",
+      "grammar_sha256": "06578a5fc60e1685625a321989663b5faeb3acb3ca17c19e096ddd32c782aa4f",
+      "artifact_sha256": "17d9b05d11879833f3a4e1214d3f4ddbdaae546e01e695e78b1021227f119413",
+      "artifact_bytes": 1627539,
+      "artifact_load": {
+        "exit": 0,
+        "seconds": 0.037697083999999936,
+        "stdout_sha256": "8b8d383947a8ac907670e3e23c6e7a12b87c6f57d1eb36226f4e0bf07d20ab58",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "commands": [
+        {
+          "verb": "grammar",
+          "exit": 0,
+          "seconds": 0.519703292,
+          "stdout": "typescript\n  symbols        429\n  productions    2762 (1 empty, 11377 RHS symbols, longest 10)\n  fields         43\n  states         1787\n  limitations    []\n",
+          "stderr": "joints: pass 0 Lalr: states Some(1787), items Some(134820), state limit 131072, work 377778..33485220, contested 1614, residual 0, priority-sensitive false, completed true\njoints: table construction complete true, work 33620040, growth state limit None, report truncated false\n",
+          "stdout_sha256": "8b8d383947a8ac907670e3e23c6e7a12b87c6f57d1eb36226f4e0bf07d20ab58",
+          "stderr_sha256": "ea368def45b45aee754ecc34f15effc768e8ced9e545a04fa5e365793d2e9847"
+        },
+        {
+          "verb": "mint",
+          "exit": 0,
+          "seconds": 0.5644215,
+          "stdout": "artifact v1: 1 languages, 1627539 bytes  /Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/coherent-ts-generation/v2/native-c08d/typescript.jnt\n  typescript: 429 symbols, 1787 states\n",
+          "stderr": "",
+          "stdout_sha256": "90de2dbfd0f0af1b8ca6237d3df83de994866585f8bb5963a8b0f62c9c9ff40a",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    },
+    {
+      "language": "tsx",
+      "grammar_sha256": "66984eca07047c6d3aa12acdedf8043e79040d9afb10c84b2b4fc684fa20531a",
+      "artifact_sha256": "f1a8e9c7fbbe6f222e6f131fabe52942d81e5ffa2dc69342099b10a7fb9544c0",
+      "artifact_bytes": 1658265,
+      "artifact_load": {
+        "exit": 0,
+        "seconds": 0.03838608299999979,
+        "stdout_sha256": "62b03236a4789f8f3ee5ef05962dd3537975407f73c81c4849ea30757fd63e20",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "commands": [
+        {
+          "verb": "grammar",
+          "exit": 0,
+          "seconds": 0.52996625,
+          "stdout": "tsx\n  symbols        429\n  productions    2850 (1 empty, 11605 RHS symbols, longest 10)\n  fields         43\n  states         1873\n  limitations    []\n",
+          "stderr": "joints: pass 0 Lalr: states Some(1873), items Some(139316), state limit 131072, work 379866..34261414, contested 1582, residual 0, priority-sensitive false, completed true\njoints: table construction complete true, work 34400730, growth state limit None, report truncated false\n",
+          "stdout_sha256": "62b03236a4789f8f3ee5ef05962dd3537975407f73c81c4849ea30757fd63e20",
+          "stderr_sha256": "c52be9e984350988d4fb3b243b7809a9034bff7d453e359fb32ee6e8521f1c6b"
+        },
+        {
+          "verb": "mint",
+          "exit": 0,
+          "seconds": 0.588235125,
+          "stdout": "artifact v1: 1 languages, 1658265 bytes  /Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/regulator/coherent-ts-generation/v2/native-c08d/tsx.jnt\n  tsx: 429 symbols, 1873 states\n",
+          "stderr": "",
+          "stdout_sha256": "7bc148f4ac3c3f4f010bd63cf19331a6a6656771b58549d5a904776650180b03",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    }
+  ]
+}

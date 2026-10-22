@@ -1,0 +1,87 @@
+{
+  "language": "elixir",
+  "mends": 0,
+  "path": "research/joinery/specimen/elixir/heredoc-quote-inside.ex",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 9,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 8
+  },
+  "tree": [
+    {
+      "end": 48,
+      "kids": [
+        {
+          "end": 47,
+          "kids": [
+            {
+              "end": 1,
+              "field": "left",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 3,
+              "field": "operator",
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 2
+            },
+            {
+              "end": 47,
+              "field": "right",
+              "kids": [
+                {
+                  "end": 7,
+                  "field": "quoted_start",
+                  "kids": [],
+                  "name": "\"\"\"",
+                  "named": false,
+                  "start": 4
+                },
+                {
+                  "end": 44,
+                  "kids": [],
+                  "name": "quoted_content",
+                  "named": true,
+                  "start": 7
+                },
+                {
+                  "end": 47,
+                  "field": "quoted_end",
+                  "kids": [],
+                  "name": "\"\"\"",
+                  "named": false,
+                  "start": 44
+                }
+              ],
+              "name": "string",
+              "named": true,
+              "start": 4
+            }
+          ],
+          "name": "binary_operator",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "source",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

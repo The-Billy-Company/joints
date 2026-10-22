@@ -1,0 +1,161 @@
+{
+  "language": "latex",
+  "mends": 0,
+  "path": "research/joinery/specimen/latex/verbatim-body.tex",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 17,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 17
+  },
+  "tree": [
+    {
+      "end": 43,
+      "kids": [
+        {
+          "end": 42,
+          "kids": [
+            {
+              "end": 16,
+              "field": "begin",
+              "kids": [
+                {
+                  "end": 6,
+                  "field": "command",
+                  "kids": [],
+                  "name": "\\begin",
+                  "named": false,
+                  "start": 0
+                },
+                {
+                  "end": 16,
+                  "field": "name",
+                  "kids": [
+                    {
+                      "end": 7,
+                      "kids": [],
+                      "name": "{",
+                      "named": false,
+                      "start": 6
+                    },
+                    {
+                      "end": 15,
+                      "field": "text",
+                      "kids": [
+                        {
+                          "end": 15,
+                          "field": "word",
+                          "kids": [],
+                          "name": "word",
+                          "named": true,
+                          "start": 7
+                        }
+                      ],
+                      "name": "text",
+                      "named": true,
+                      "start": 7
+                    },
+                    {
+                      "end": 16,
+                      "kids": [],
+                      "name": "}",
+                      "named": false,
+                      "start": 15
+                    }
+                  ],
+                  "name": "curly_group_text",
+                  "named": true,
+                  "start": 6
+                }
+              ],
+              "name": "begin",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 28,
+              "field": "verbatim",
+              "kids": [],
+              "name": "comment",
+              "named": true,
+              "start": 16
+            },
+            {
+              "end": 42,
+              "field": "end",
+              "kids": [
+                {
+                  "end": 32,
+                  "field": "command",
+                  "kids": [],
+                  "name": "\\end",
+                  "named": false,
+                  "start": 28
+                },
+                {
+                  "end": 42,
+                  "field": "name",
+                  "kids": [
+                    {
+                      "end": 33,
+                      "kids": [],
+                      "name": "{",
+                      "named": false,
+                      "start": 32
+                    },
+                    {
+                      "end": 41,
+                      "field": "text",
+                      "kids": [
+                        {
+                          "end": 41,
+                          "field": "word",
+                          "kids": [],
+                          "name": "word",
+                          "named": true,
+                          "start": 33
+                        }
+                      ],
+                      "name": "text",
+                      "named": true,
+                      "start": 33
+                    },
+                    {
+                      "end": 42,
+                      "kids": [],
+                      "name": "}",
+                      "named": false,
+                      "start": 41
+                    }
+                  ],
+                  "name": "curly_group_text",
+                  "named": true,
+                  "start": 32
+                }
+              ],
+              "name": "end",
+              "named": true,
+              "start": 28
+            }
+          ],
+          "name": "verbatim_environment",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "source_file",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

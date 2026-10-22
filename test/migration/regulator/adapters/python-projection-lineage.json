@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "scope": "Reviewable private-migration consumer corrections against the exact captured Billy source version. No live consumer/default/policy/grammar-profile/expectation changes. One explicit incumbent visitor defect is corrected in production projection code. Not full-corpus qualification.",
+  "billy_head": "32f4d640bf25cd0d28f0a06d307e4f3c27ee78b0",
+  "base_source_closure": {
+    "private_path": ".local/rust-migration/native-phase5/regulator/coherent-source.json",
+    "sha256": "943834686738f1770948b5c04b733d8c27a38e23c8baa0ab2a3c98902ca6497e"
+  },
+  "patch_sha256": "16cb109ff3c8e8e33a0d9f75141ed90e67e0bbaf339dfbcd956071f69f07fcc3",
+  "files": [
+    {
+      "path": "libs/tools/regulator/crates/python-joints/src/control.rs",
+      "before_sha256": "64ad56c5dea2855da5d8286c7c12bbe171600190efd8936a1079e5fac9abfc02",
+      "after_sha256": "50a0d7e9bf73c98e95d4a9de79cae35c9ff4dc97ff8e317a97d8d0081e0c83d6"
+    },
+    {
+      "path": "libs/tools/regulator/crates/python-joints/src/symbols.rs",
+      "before_sha256": "e1a1a240fd151ebdc5e0f843326ab5ee7306cdb1907fb0a229ebb9e7e21fa296",
+      "after_sha256": "60ffacbaa12d28d47c19134f1fe43077f6e4e07a63cdb3737daadb03ed4482c8"
+    },
+    {
+      "path": "libs/tools/regulator/crates/python-joints/src/syntax.rs",
+      "before_sha256": "5b22450ebda0a5a5494c57db63ae724a5e9c2c9eaaa4e55dae16487229b2b9f2",
+      "after_sha256": "3601f9823959a2dc8d33616adeb39102b1ecef38e48393f32087a154afa2ad44"
+    },
+    {
+      "path": "libs/tools/regulator/crates/python/src/syntax_ruff.rs",
+      "before_sha256": "91846f0297e987a9fc9dbf8b238facca4511a3ca59dd70c396e40e3d48db7ff8",
+      "after_sha256": "12f57616b70f576096e7b013d0fdc2dbfd3d0748cfafc2d10a3507938f219a91"
+    }
+  ],
+  "fixture_sha256": "9bd669cdf518ad61685971df0b9954c4077371e8be1c232b99ae7e00382d211c",
+  "authored_controls": 68,
+  "focused_results": {
+    "original_default_passed": 64,
+    "original_default_failed": 0,
+    "original_ignored": 4,
+    "authored_plus_real_controls_passed": 76,
+    "authored_plus_real_controls_requested": 76,
+    "portable_reference_module_passed": 2,
+    "runtime": "unchangedD normalized static library and reviewed artifacts; diagnostic05, not full qualification",
+    "residual_real_contents_passed": 166,
+    "residual_real_contents_requested": 166
+  },
+  "independent_evidence": {
+    "generator-arity-proof.json": {
+      "private_path": ".local/rust-migration/native-phase5/regulator/python-adapter-audit/generator-arity-proof.json",
+      "sha256": "186f6066b844c0e9870b780763e528d5e23da5909d1e9ca25b6cd1803d2e7196"
+    },
+    "projection-review.json": {
+      "private_path": ".local/rust-migration/native-phase5/regulator/python-adapter-audit/projection-review.json",
+      "sha256": "d264abca42c74e1d3d444cfb5f6e9acb6702c54c051529b75e6d2e20e78ab9d5"
+    },
+    "elif-reference-source-proof.json": {
+      "private_path": ".local/rust-migration/native-phase5/regulator/python-adapter-audit/elif-reference-source-proof.json",
+      "sha256": "fe2879f5f1e8d157fdf5af3e8c9f408b8581b34093b38b1e2023cd92595a5b1f"
+    },
+    "cpython-reference-proof.json": {
+      "private_path": ".local/rust-migration/native-phase5/regulator/python-adapter-audit/cpython-reference-proof.json",
+      "sha256": "52e3f58aab6c0fc7f2a4fc565279e0517cd256f38abb1afa32c9b6f17887ab94"
+    },
+    "portable-reference-tests.json": {
+      "private_path": ".local/rust-migration/native-phase5/regulator/python-adapter-audit/portable-reference-tests.json",
+      "sha256": "b39cdf6cd2ea5e4a6e0bae2164183048a059d684e2819c562af9f75e1f990c34"
+    },
+    "residual-controls/proof.json": {
+      "private_path": ".local/rust-migration/native-phase5/regulator/python-adapter-audit/residual-controls/proof.json",
+      "sha256": "f576d31c30f847608869774b241f508639a862117013e47207ebc2f25fc1547e"
+    },
+    "residual-controls/repair-review.json": {
+      "private_path": ".local/rust-migration/native-phase5/regulator/python-adapter-audit/residual-controls/repair-review.json",
+      "sha256": "4656a9f817c180c5e2bee07f0d4b1141daca04d53c3394c3938b2d363cdcf7d3"
+    },
+    "lambda-reference-controls/proof.json": {
+      "private_path": ".local/rust-migration/native-phase5/regulator/python-adapter-audit/lambda-reference-controls/proof.json",
+      "sha256": "63f1cb74d9839cea700e307d54b0f45b5ae4e849ec791c1dd87025fb8f7d5e15"
+    },
+    "lambda-reference-controls/repair-review.json": {
+      "private_path": ".local/rust-migration/native-phase5/regulator/python-adapter-audit/lambda-reference-controls/repair-review.json",
+      "sha256": "06fb2207ffe75175bfc6bdeaad70de787ae7b59eabf5d2be12b6ed98eaa8f5e2"
+    }
+  },
+  "dry_run_checks": [
+    {
+      "scope": "forward",
+      "exit": 0,
+      "stdout_sha256": "89c3982407cafbabf6e1efd228fae699fcd3aa36250b14fc6f429106f8542d67",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "scope": "reverse",
+      "exit": 0,
+      "stdout_sha256": "89c3982407cafbabf6e1efd228fae699fcd3aa36250b14fc6f429106f8542d67",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "contracts": [
+    "A bare generator_expression in a call arguments field is one argument; never its body/comprehension clauses.",
+    "Schedule decorated declaration scopes like the existing collector, binding/entering once. This is collector compatibility, not a claim about Python evaluation scope.",
+    "Only semantic function/handler ends exclude trailing comment extras; retain closing delimiters and all raw CST spans.",
+    "Expand only a single tuple-shaped with-list covering the complete with clause, once; preserve tuple-valued context expressions.",
+    "Correct pinned Ruff0.0.7 References double traversal of elif conditions with an If-only local override; verify exact CPython Name/Attribute multiplicity.",
+    "Handler expression-reference traversal excludes imports and lambda parameter bindings while retaining actual default-value/body uses.",
+    "Chained handler assignments project the terminal RHS value.",
+    "A comma-free single tuple_pattern is grouping; tuple bindings retain tuple semantics.",
+    "A with binding may attach to the final conditional branch; recover that binding without reclassifying the conditional value."
+  ],
+  "focused_receipts": {
+    "default-original68": {
+      "private_path": ".local/rust-migration/native-phase5/regulator/adapter-v3-d-diagnostic-05/default-original68/run.json",
+      "sha256": "7e5f9de660a123fa8f8a8416cced5caf51060b2a00b26190de4250a01d306a88"
+    },
+    "controls76": {
+      "private_path": ".local/rust-migration/native-phase5/regulator/adapter-v3-d-diagnostic-05/controls76/run.json",
+      "sha256": "631c41ac5ae370f103a98b6b7eefabbf838a3ed3dab9c32b31080812962c598d"
+    },
+    "residual166": {
+      "private_path": ".local/rust-migration/native-phase5/regulator/adapter-v3-d-diagnostic-05/residual166/run.json",
+      "sha256": "3b63ca02f6722c9b77f299ed71b106b4cd9f2c2d53ec38106664c8fa468182a9"
+    }
+  }
+}

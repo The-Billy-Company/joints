@@ -1,0 +1,21 @@
+[
+  {
+    "name": "zero_byte_source",
+    "grammar": "{\n  \"name\": \"nullable_empty_source\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"FIELD\",\n          \"name\": \"value\",\n          \"content\": {\n            \"type\": \"ALIAS\",\n            \"named\": true,\n            \"value\": \"content\",\n            \"content\": {\n              \"type\": \"TOKEN\",\n              \"content\": {\n                \"type\": \"PATTERN\",\n                \"value\": \"a*\"\n              }\n            }\n          }\n        }\n      ]\n    }\n  },\n  \"extras\": []\n}\n",
+    "source": "",
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "c6613ed36e551c280beaccbbce3f373ab3fd3b72208053c94d2dd09329c7f553",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "parser_c_sha256": "69679bcb94daec364ebb390fcbfddb2ca18d7edba7b53ad77e2525e04dabf50c",
+      "generator_exit": 0,
+      "parse_exit": 1,
+      "stop": "ERROR[0,0]",
+      "xml": "<?xml version=\"1.0\"?>\n<sources>\n  <source name=\"/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/nullable-token-source-audit/empty-source-control/empty_source/source.txt\">\n    <ERROR srow=\"0\" scol=\"0\" erow=\"0\" ecol=\"0\"></ERROR>\n  </source>\n</sources>\n/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/nullable-token-source-audit/empty-source-control/empty_source/source.txt\tParse:    0.04 ms\t     0 bytes/ms\t(ERROR [0, 0] - [0, 0])\n",
+      "xml_sha256": "c60783188199f13ae45955f22d0004cfa55155754e6ffcaba997b49bb6f7645e",
+      "cst": "0:0 - 0:0   \u2022ERROR\n/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase5/nullable-token-source-audit/empty-source-control/empty_source/source.txt\tParse:    0.01 ms\t     0 bytes/ms\t(ERROR [0, 0] - [0, 0])\n",
+      "cst_sha256": "4abbe14546edcce37a2ef45dcfa2eafc0cfb6da231fa8513a369dd3aa0c90fef"
+    }
+  }
+]

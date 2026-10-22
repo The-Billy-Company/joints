@@ -1,0 +1,75 @@
+{
+  "language": "toml",
+  "mends": 0,
+  "path": "research/joinery/specimen/toml/pair-without-comment.toml",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 7,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 7
+  },
+  "tree": [
+    {
+      "end": 8,
+      "kids": [
+        {
+          "end": 7,
+          "kids": [
+            {
+              "end": 1,
+              "kids": [],
+              "name": "bare_key",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 3,
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 2
+            },
+            {
+              "end": 7,
+              "kids": [
+                {
+                  "end": 5,
+                  "kids": [],
+                  "name": "\"",
+                  "named": false,
+                  "start": 4
+                },
+                {
+                  "end": 7,
+                  "kids": [],
+                  "name": "\"",
+                  "named": false,
+                  "start": 6
+                }
+              ],
+              "name": "string",
+              "named": true,
+              "start": 4
+            }
+          ],
+          "name": "pair",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "document",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

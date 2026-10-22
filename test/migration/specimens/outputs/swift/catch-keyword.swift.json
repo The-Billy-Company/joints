@@ -1,0 +1,234 @@
+{
+  "language": "swift",
+  "mends": 0,
+  "path": "research/joinery/specimen/swift/catch-keyword.swift",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 36,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 28
+  },
+  "tree": [
+    {
+      "end": 38,
+      "kids": [
+        {
+          "end": 37,
+          "kids": [
+            {
+              "end": 4,
+              "kids": [],
+              "name": "func",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 6,
+              "field": "name",
+              "kids": [],
+              "name": "simple_identifier",
+              "named": true,
+              "start": 5
+            },
+            {
+              "end": 7,
+              "kids": [],
+              "name": "(",
+              "named": false,
+              "start": 6
+            },
+            {
+              "end": 8,
+              "kids": [],
+              "name": ")",
+              "named": false,
+              "start": 7
+            },
+            {
+              "end": 37,
+              "field": "body",
+              "kids": [
+                {
+                  "end": 10,
+                  "kids": [],
+                  "name": "{",
+                  "named": false,
+                  "start": 9
+                },
+                {
+                  "end": 35,
+                  "kids": [
+                    {
+                      "end": 35,
+                      "kids": [
+                        {
+                          "end": 13,
+                          "kids": [],
+                          "name": "do",
+                          "named": false,
+                          "start": 11
+                        },
+                        {
+                          "end": 15,
+                          "kids": [],
+                          "name": "{",
+                          "named": false,
+                          "start": 14
+                        },
+                        {
+                          "end": 23,
+                          "kids": [
+                            {
+                              "end": 23,
+                              "kids": [
+                                {
+                                  "end": 19,
+                                  "kids": [
+                                    {
+                                      "end": 19,
+                                      "kids": [],
+                                      "name": "try",
+                                      "named": false,
+                                      "start": 16
+                                    }
+                                  ],
+                                  "name": "try_operator",
+                                  "named": true,
+                                  "start": 16
+                                },
+                                {
+                                  "end": 23,
+                                  "field": "expr",
+                                  "kids": [
+                                    {
+                                      "end": 21,
+                                      "kids": [],
+                                      "name": "simple_identifier",
+                                      "named": true,
+                                      "start": 20
+                                    },
+                                    {
+                                      "end": 23,
+                                      "kids": [
+                                        {
+                                          "end": 23,
+                                          "kids": [
+                                            {
+                                              "end": 22,
+                                              "kids": [],
+                                              "name": "(",
+                                              "named": false,
+                                              "start": 21
+                                            },
+                                            {
+                                              "end": 23,
+                                              "kids": [],
+                                              "name": ")",
+                                              "named": false,
+                                              "start": 22
+                                            }
+                                          ],
+                                          "name": "value_arguments",
+                                          "named": true,
+                                          "start": 21
+                                        }
+                                      ],
+                                      "name": "call_suffix",
+                                      "named": true,
+                                      "start": 21
+                                    }
+                                  ],
+                                  "name": "call_expression",
+                                  "named": true,
+                                  "start": 20
+                                }
+                              ],
+                              "name": "try_expression",
+                              "named": true,
+                              "start": 16
+                            }
+                          ],
+                          "name": "statements",
+                          "named": true,
+                          "start": 16
+                        },
+                        {
+                          "end": 25,
+                          "kids": [],
+                          "name": "}",
+                          "named": false,
+                          "start": 24
+                        },
+                        {
+                          "end": 35,
+                          "kids": [
+                            {
+                              "end": 31,
+                              "kids": [],
+                              "name": "catch_keyword",
+                              "named": true,
+                              "start": 26
+                            },
+                            {
+                              "end": 33,
+                              "kids": [],
+                              "name": "{",
+                              "named": false,
+                              "start": 32
+                            },
+                            {
+                              "end": 35,
+                              "kids": [],
+                              "name": "}",
+                              "named": false,
+                              "start": 34
+                            }
+                          ],
+                          "name": "catch_block",
+                          "named": true,
+                          "start": 26
+                        }
+                      ],
+                      "name": "do_statement",
+                      "named": true,
+                      "start": 11
+                    }
+                  ],
+                  "name": "statements",
+                  "named": true,
+                  "start": 11
+                },
+                {
+                  "end": 37,
+                  "kids": [],
+                  "name": "}",
+                  "named": false,
+                  "start": 36
+                }
+              ],
+              "name": "function_body",
+              "named": true,
+              "start": 9
+            }
+          ],
+          "name": "function_declaration",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "source_file",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

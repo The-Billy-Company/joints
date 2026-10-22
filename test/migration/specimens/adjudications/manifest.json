@@ -1,0 +1,653 @@
+{
+  "schema": 1,
+  "baseline_manifest_sha256": "2b392e74f568f84620f0b47f07da4aa0e09f06bada50eb79bbbed419e7dc58e6",
+  "cases": [
+    {
+      "case": "julia/command.jl",
+      "classification": "independent_correction",
+      "rationale": "Tree-sitter 0.26.11 materializes anonymous quote openers within string and command literal nodes. Sealed Zig suppressed their terminal identity through hidden lexical helper rules. Exact full-tree comparison differs only by these opener leaves, including nested literals.",
+      "inputs": {
+        "research/joinery/specimen/julia/command.jl": "48dbff2c10dfd8c246c2ce68c334dd78dbf70ddc1ce2ab4785692a9f4ac23fc4",
+        "research/joinery/specimen/julia/command.jl.expect": "0a0253c46cd929f73cad9ff8193a4fd37f5782ffb52af84edbf52828719a9bf3",
+        "upstream/grammars/julia.json": "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1"
+      },
+      "baseline_output_sha256": "7ab109ac929513284d2b41a0b54edb2f3469f792096338eebbf4cd7d3550870f",
+      "oracle": {
+        "implementation": "tree-sitter",
+        "version": "0.26.11",
+        "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+        "errors": 0,
+        "nodes": 14,
+        "stable": true,
+        "proofs": {
+          "adjudications/julia-command-query.scm": "e6d9e704a3a0bec41fb7a984766b390f39fc1a943bef9868e5108090abe86cb9",
+          "adjudications/julia-command-tree.json": "7d45e55872e854fb3eac8b4d1c6f9f69562dfa4d9940c02c4ec424fe366198f8",
+          "adjudications/julia-command-00.stdout": "c460609ec527e7e2442309d352991de238f95938c5285a09be33a1a906834454",
+          "adjudications/julia-command-00.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-command-01.stdout": "6dfef5f5b03a5dae6943f005814e862241d3acda32133027d98df11cd5e8df2d",
+          "adjudications/julia-command-01.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-command-02.stdout": "72cd856bb18a1303e348441b11d41ed3474f91ec5605865f600e7dadb32d59dc",
+          "adjudications/julia-command-02.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-command-oracle.json": "f75e963c4f8f0817e54763aae6cf6c62eb205a931a0d1a36ab1b67c7e265c735"
+        }
+      },
+      "changes": [
+        {
+          "pointer": "/0/kids/1/kids/2/kids",
+          "before": [
+            {
+              "end": 16,
+              "kids": [],
+              "name": "content",
+              "named": true,
+              "start": 11
+            },
+            {
+              "end": 18,
+              "kids": [
+                {
+                  "end": 17,
+                  "kids": [],
+                  "name": "$",
+                  "named": false,
+                  "start": 16
+                },
+                {
+                  "end": 18,
+                  "kids": [],
+                  "name": "identifier",
+                  "named": true,
+                  "start": 17
+                }
+              ],
+              "name": "string_interpolation",
+              "named": true,
+              "start": 16
+            }
+          ],
+          "after": [
+            {
+              "name": "`",
+              "named": false,
+              "start": 10,
+              "end": 11,
+              "kids": []
+            },
+            {
+              "name": "content",
+              "named": true,
+              "start": 11,
+              "end": 16,
+              "kids": []
+            },
+            {
+              "name": "string_interpolation",
+              "named": true,
+              "start": 16,
+              "end": 18,
+              "kids": [
+                {
+                  "name": "$",
+                  "named": false,
+                  "start": 16,
+                  "end": 17,
+                  "kids": []
+                },
+                {
+                  "name": "identifier",
+                  "named": true,
+                  "start": 17,
+                  "end": 18,
+                  "kids": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "tree": "adjudications/julia-command.tree.json",
+      "tree_sha256": "7d45e55872e854fb3eac8b4d1c6f9f69562dfa4d9940c02c4ec424fe366198f8"
+    },
+    {
+      "case": "julia/interpolation.jl",
+      "classification": "independent_correction",
+      "rationale": "Tree-sitter 0.26.11 materializes anonymous quote openers within string and command literal nodes. Sealed Zig suppressed their terminal identity through hidden lexical helper rules. Exact full-tree comparison differs only by these opener leaves, including nested literals.",
+      "inputs": {
+        "research/joinery/specimen/julia/interpolation.jl": "fdd06e716e8b47febbfeafa6c34020731dedeab67e54618013576cbf0bd4f726",
+        "research/joinery/specimen/julia/interpolation.jl.expect": "e3bf1124acfd6ba82ec202f56404b9424a4ba258aaab16b9de3a3d8f891412d0",
+        "upstream/grammars/julia.json": "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1"
+      },
+      "baseline_output_sha256": "d3c41d7e10ac16ab53b8ee5810ad76b30d26b97eef2b4d3b52d54dc9494f4003",
+      "oracle": {
+        "implementation": "tree-sitter",
+        "version": "0.26.11",
+        "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+        "errors": 0,
+        "nodes": 20,
+        "stable": true,
+        "proofs": {
+          "adjudications/julia-interpolation-query.scm": "fa35c11cdbb649cbe52c6c1497e7965295ccea84121c87510be1fda42173d3a2",
+          "adjudications/julia-interpolation-tree.json": "9547b69b0ded1a913dc08f6bb4401c712a314a2df3ffce18ada9d090c0ae0f1c",
+          "adjudications/julia-interpolation-00.stdout": "7132e757eee4cf3486aa3d06cfa61cd8fc08430beb961df7bf25c8357938d1e5",
+          "adjudications/julia-interpolation-00.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-interpolation-01.stdout": "44bd2732d50d5b9c212ebe057d0077f08d5dbda8212c5f5a43f952b056880fa1",
+          "adjudications/julia-interpolation-01.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-interpolation-02.stdout": "edf512ac468968e25dd5d7862a8db18beb96584791c7c5c3c48432ffb8bea9c4",
+          "adjudications/julia-interpolation-02.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-interpolation-oracle.json": "fc6997283c97527f31a3b550c1d77fb8063d781fc14e6a9866707eef412fc35b"
+        }
+      },
+      "changes": [
+        {
+          "pointer": "/0/kids/1/kids/2/kids",
+          "before": [
+            {
+              "end": 13,
+              "kids": [],
+              "name": "content",
+              "named": true,
+              "start": 11
+            },
+            {
+              "end": 21,
+              "kids": [
+                {
+                  "end": 14,
+                  "kids": [],
+                  "name": "$",
+                  "named": false,
+                  "start": 13
+                },
+                {
+                  "end": 15,
+                  "kids": [],
+                  "name": "(",
+                  "named": false,
+                  "start": 14
+                },
+                {
+                  "end": 20,
+                  "kids": [
+                    {
+                      "end": 16,
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 15
+                    },
+                    {
+                      "end": 18,
+                      "kids": [],
+                      "name": "operator",
+                      "named": true,
+                      "start": 17
+                    },
+                    {
+                      "end": 20,
+                      "kids": [],
+                      "name": "integer_literal",
+                      "named": true,
+                      "start": 19
+                    }
+                  ],
+                  "name": "binary_expression",
+                  "named": true,
+                  "start": 15
+                },
+                {
+                  "end": 21,
+                  "kids": [],
+                  "name": ")",
+                  "named": false,
+                  "start": 20
+                }
+              ],
+              "name": "string_interpolation",
+              "named": true,
+              "start": 13
+            },
+            {
+              "end": 23,
+              "kids": [],
+              "name": "content",
+              "named": true,
+              "start": 21
+            }
+          ],
+          "after": [
+            {
+              "name": "\"",
+              "named": false,
+              "start": 10,
+              "end": 11,
+              "kids": []
+            },
+            {
+              "name": "content",
+              "named": true,
+              "start": 11,
+              "end": 13,
+              "kids": []
+            },
+            {
+              "name": "string_interpolation",
+              "named": true,
+              "start": 13,
+              "end": 21,
+              "kids": [
+                {
+                  "name": "$",
+                  "named": false,
+                  "start": 13,
+                  "end": 14,
+                  "kids": []
+                },
+                {
+                  "name": "(",
+                  "named": false,
+                  "start": 14,
+                  "end": 15,
+                  "kids": []
+                },
+                {
+                  "name": "binary_expression",
+                  "named": true,
+                  "start": 15,
+                  "end": 20,
+                  "kids": [
+                    {
+                      "name": "identifier",
+                      "named": true,
+                      "start": 15,
+                      "end": 16,
+                      "kids": []
+                    },
+                    {
+                      "name": "operator",
+                      "named": true,
+                      "start": 17,
+                      "end": 18,
+                      "kids": []
+                    },
+                    {
+                      "name": "integer_literal",
+                      "named": true,
+                      "start": 19,
+                      "end": 20,
+                      "kids": []
+                    }
+                  ]
+                },
+                {
+                  "name": ")",
+                  "named": false,
+                  "start": 20,
+                  "end": 21,
+                  "kids": []
+                }
+              ]
+            },
+            {
+              "name": "content",
+              "named": true,
+              "start": 21,
+              "end": 23,
+              "kids": []
+            }
+          ]
+        }
+      ],
+      "tree": "adjudications/julia-interpolation.tree.json",
+      "tree_sha256": "9547b69b0ded1a913dc08f6bb4401c712a314a2df3ffce18ada9d090c0ae0f1c"
+    },
+    {
+      "case": "julia/nested-interpolation.jl",
+      "classification": "independent_correction",
+      "rationale": "Tree-sitter 0.26.11 materializes anonymous quote openers within string and command literal nodes. Sealed Zig suppressed their terminal identity through hidden lexical helper rules. Exact full-tree comparison differs only by these opener leaves, including nested literals.",
+      "inputs": {
+        "research/joinery/specimen/julia/nested-interpolation.jl": "be510d64571b28b885ed8cda4332769c8633000caa7e890dba04d3a437b8f806",
+        "research/joinery/specimen/julia/nested-interpolation.jl.expect": "d65a0f551872fe6d59094540d437e591690e91f7af256b4a64354221e211f739",
+        "upstream/grammars/julia.json": "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1"
+      },
+      "baseline_output_sha256": "5091f09a6a85c2334c64b9c9f1b009c59bca23921c3a2c3df58378c82a37f925",
+      "oracle": {
+        "implementation": "tree-sitter",
+        "version": "0.26.11",
+        "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+        "errors": 0,
+        "nodes": 19,
+        "stable": true,
+        "proofs": {
+          "adjudications/julia-nested-interpolation-query.scm": "fa35c11cdbb649cbe52c6c1497e7965295ccea84121c87510be1fda42173d3a2",
+          "adjudications/julia-nested-interpolation-tree.json": "f5b01cd6abe695804297d90ee5b2b1c3fce8cf40c635d3fe4e4a0284848fcf89",
+          "adjudications/julia-nested-interpolation-00.stdout": "2b753231ceaf6b0dc7bd8d13a7e92a917f2f79db3e94cbf86575049f8041dff6",
+          "adjudications/julia-nested-interpolation-00.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-nested-interpolation-01.stdout": "08a104b5763ff02971951040414544e0643e0b77f67b8177ceda11c84a90eda3",
+          "adjudications/julia-nested-interpolation-01.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-nested-interpolation-02.stdout": "e2787946b0090af004c8a177ae2a01fb5c69e5e889e0174072a1eefa22d212a9",
+          "adjudications/julia-nested-interpolation-02.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-nested-interpolation-oracle.json": "fcf43b3378c7a1c326480f5b4713244aba37e8d5b4e97fcc7b16032ac6e66939"
+        }
+      },
+      "changes": [
+        {
+          "pointer": "/0/kids/1/kids/2/kids",
+          "before": [
+            {
+              "end": 18,
+              "kids": [
+                {
+                  "end": 12,
+                  "kids": [],
+                  "name": "$",
+                  "named": false,
+                  "start": 11
+                },
+                {
+                  "end": 13,
+                  "kids": [],
+                  "name": "(",
+                  "named": false,
+                  "start": 12
+                },
+                {
+                  "end": 17,
+                  "kids": [
+                    {
+                      "end": 16,
+                      "kids": [
+                        {
+                          "end": 15,
+                          "kids": [],
+                          "name": "$",
+                          "named": false,
+                          "start": 14
+                        },
+                        {
+                          "end": 16,
+                          "kids": [],
+                          "name": "identifier",
+                          "named": true,
+                          "start": 15
+                        }
+                      ],
+                      "name": "string_interpolation",
+                      "named": true,
+                      "start": 14
+                    }
+                  ],
+                  "name": "string_literal",
+                  "named": true,
+                  "start": 13
+                },
+                {
+                  "end": 18,
+                  "kids": [],
+                  "name": ")",
+                  "named": false,
+                  "start": 17
+                }
+              ],
+              "name": "string_interpolation",
+              "named": true,
+              "start": 11
+            }
+          ],
+          "after": [
+            {
+              "name": "\"",
+              "named": false,
+              "start": 10,
+              "end": 11,
+              "kids": []
+            },
+            {
+              "name": "string_interpolation",
+              "named": true,
+              "start": 11,
+              "end": 18,
+              "kids": [
+                {
+                  "name": "$",
+                  "named": false,
+                  "start": 11,
+                  "end": 12,
+                  "kids": []
+                },
+                {
+                  "name": "(",
+                  "named": false,
+                  "start": 12,
+                  "end": 13,
+                  "kids": []
+                },
+                {
+                  "name": "string_literal",
+                  "named": true,
+                  "start": 13,
+                  "end": 17,
+                  "kids": [
+                    {
+                      "name": "\"",
+                      "named": false,
+                      "start": 13,
+                      "end": 14,
+                      "kids": []
+                    },
+                    {
+                      "name": "string_interpolation",
+                      "named": true,
+                      "start": 14,
+                      "end": 16,
+                      "kids": [
+                        {
+                          "name": "$",
+                          "named": false,
+                          "start": 14,
+                          "end": 15,
+                          "kids": []
+                        },
+                        {
+                          "name": "identifier",
+                          "named": true,
+                          "start": 15,
+                          "end": 16,
+                          "kids": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": ")",
+                  "named": false,
+                  "start": 17,
+                  "end": 18,
+                  "kids": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "tree": "adjudications/julia-nested-interpolation.tree.json",
+      "tree_sha256": "f5b01cd6abe695804297d90ee5b2b1c3fce8cf40c635d3fe4e4a0284848fcf89"
+    },
+    {
+      "case": "julia/raw-string.jl",
+      "classification": "independent_correction",
+      "rationale": "Tree-sitter 0.26.11 materializes anonymous quote openers within string and command literal nodes. Sealed Zig suppressed their terminal identity through hidden lexical helper rules. Exact full-tree comparison differs only by these opener leaves, including nested literals.",
+      "inputs": {
+        "research/joinery/specimen/julia/raw-string.jl": "109145654ea137298f18327906877f64138c9c1edc6309ec88d8fa6868721527",
+        "research/joinery/specimen/julia/raw-string.jl.expect": "dab81601f2563c96b980f91cd045aceb6e34351f63e18f9b03b785a1ec47e8b7",
+        "upstream/grammars/julia.json": "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1"
+      },
+      "baseline_output_sha256": "676fa6a2d07bc8ca09aa7cf8c918082248eb746f45863f4709bb9a042db928af",
+      "oracle": {
+        "implementation": "tree-sitter",
+        "version": "0.26.11",
+        "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+        "errors": 0,
+        "nodes": 8,
+        "stable": true,
+        "proofs": {
+          "adjudications/julia-raw-string-query.scm": "5322999ea643deb390483be41354356c4261a181f867f7b261eba5f0da0e60b5",
+          "adjudications/julia-raw-string-tree.json": "187d1afe92ca7de1e49cf3baee650bf5a411047052d2a0fb68358ebd34f55994",
+          "adjudications/julia-raw-string-00.stdout": "06b5e92a165e4a2a905f0763681474b1952bae94f3bed550b181aa2f90013d91",
+          "adjudications/julia-raw-string-00.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-raw-string-01.stdout": "30426868b13ea8a33442821b18e296f0c2ef5da10472ae4570c75de4aa4e510c",
+          "adjudications/julia-raw-string-01.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-raw-string-02.stdout": "0e9f00e327d186aa6cacb9341e95f074356288c9767fdcfdbf68d494c614edaf",
+          "adjudications/julia-raw-string-02.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-raw-string-oracle.json": "e92f7790951b08639fe45d22ca8aed6b62fed4db3953d7e28aded34589f1c437"
+        }
+      },
+      "changes": [
+        {
+          "pointer": "/0/kids/0/kids/2/kids",
+          "before": [
+            {
+              "end": 7,
+              "field": "prefix",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 4
+            },
+            {
+              "end": 11,
+              "kids": [],
+              "name": "content",
+              "named": true,
+              "start": 8
+            }
+          ],
+          "after": [
+            {
+              "name": "identifier",
+              "named": true,
+              "start": 4,
+              "end": 7,
+              "kids": [],
+              "field": "prefix"
+            },
+            {
+              "name": "\"",
+              "named": false,
+              "start": 7,
+              "end": 8,
+              "kids": []
+            },
+            {
+              "name": "content",
+              "named": true,
+              "start": 8,
+              "end": 11,
+              "kids": []
+            }
+          ]
+        }
+      ],
+      "tree": "adjudications/julia-raw-string.tree.json",
+      "tree_sha256": "187d1afe92ca7de1e49cf3baee650bf5a411047052d2a0fb68358ebd34f55994"
+    },
+    {
+      "case": "julia/triple-quote.jl",
+      "classification": "independent_correction",
+      "rationale": "Tree-sitter 0.26.11 materializes anonymous quote openers within string and command literal nodes. Sealed Zig suppressed their terminal identity through hidden lexical helper rules. Exact full-tree comparison differs only by these opener leaves, including nested literals.",
+      "inputs": {
+        "research/joinery/specimen/julia/triple-quote.jl": "132cc1c2b1510260ca2d75e9aeadea8527b3eb8f0a7295f5fa9017657999caf9",
+        "research/joinery/specimen/julia/triple-quote.jl.expect": "3600dd6751ccda3f2c61b4e48652419110269229987fc2c9f73891a5d6b6d4c8",
+        "upstream/grammars/julia.json": "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1"
+      },
+      "baseline_output_sha256": "27fa671f1361ccdee487e3c39d05dd2520a72d9a71cfbe8bd5f0272d6fdb34d1",
+      "oracle": {
+        "implementation": "tree-sitter",
+        "version": "0.26.11",
+        "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+        "errors": 0,
+        "nodes": 7,
+        "stable": true,
+        "proofs": {
+          "adjudications/julia-triple-quote-query.scm": "7132be5f06bf3ec3a87080a767cff74aad22d3520881870ac9858b901e486842",
+          "adjudications/julia-triple-quote-tree.json": "28a5853bf344781bdc378fefeb83d9c38bce2308ddbc4ca5a10ecd6475add77a",
+          "adjudications/julia-triple-quote-00.stdout": "a575ceb6c95a9dfe77821f59cfd5efdc48e2907d365d5109c1f21e31e7488185",
+          "adjudications/julia-triple-quote-00.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-triple-quote-01.stdout": "b9aa43bf30ae2827ee22430f59b87d791db5583ccaaf253dabc522ae92641060",
+          "adjudications/julia-triple-quote-01.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-triple-quote-02.stdout": "cc20428e6bb1f6f9d77b510b8b2118b11be26352f112df33db72cfdc15f82c91",
+          "adjudications/julia-triple-quote-02.stderr": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+          "adjudications/julia-triple-quote-oracle.json": "5200152374a43a9d619755c32c048c6124c5dfc7202c6f4fe899d5df0948780b"
+        }
+      },
+      "changes": [
+        {
+          "pointer": "/0/kids/0/kids/2/kids",
+          "before": [
+            {
+              "end": 14,
+              "kids": [],
+              "name": "content",
+              "named": true,
+              "start": 7
+            }
+          ],
+          "after": [
+            {
+              "name": "\"\"\"",
+              "named": false,
+              "start": 4,
+              "end": 7,
+              "kids": []
+            },
+            {
+              "name": "content",
+              "named": true,
+              "start": 7,
+              "end": 14,
+              "kids": []
+            }
+          ]
+        }
+      ],
+      "tree": "adjudications/julia-triple-quote.tree.json",
+      "tree_sha256": "28a5853bf344781bdc378fefeb83d9c38bce2308ddbc4ca5a10ecd6475add77a"
+    },
+    {
+      "case": "swift/default-keyword.swift",
+      "classification": "independent_correction",
+      "rationale": "The nearest field on a hidden derivation takes precedence. Tree-sitter 0.26.11 assigns name to the parameter user_type at10..13; sealed Zig overwrote it with outer field type. Every other node and property remains exactly the sealed tree.",
+      "inputs": {
+        "customary/swift.json": "d2aeda66accaa90a1daf80f7eb3208c0b65c22c6f91b884ad705310c160979cd",
+        "research/joinery/specimen/swift/default-keyword.swift": "9f5fc08d61143956c10c846e8c87b1f4e7cb38b990fcb4e337d6f642b5d5aaa8",
+        "research/joinery/specimen/swift/default-keyword.swift.expect": "83c9b53349dc19a6894dceeb3436c6d3c270520859e425322aa9d8767bbd511c",
+        "upstream/grammars/swift.json": "081ee7a9601afc12869659d407729a4024e5c8e1c21cc46aed3387502d430156"
+      },
+      "baseline_output_sha256": "02194d7ee0553dcbae847b76994a6ad97f7f07392ca9682bfed0c15faefc64c0",
+      "oracle": {
+        "implementation": "tree-sitter",
+        "version": "0.26.11",
+        "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+        "errors": 0,
+        "nodes": 26,
+        "stable": true,
+        "proofs": {
+          "adjudications/swift-default-keyword.version.txt": "b2cfe63a3c73f0d62440b8d3c9038bdf1babef18397a31c5ca1c80fc1ffe6d9c",
+          "adjudications/swift-default-keyword.xml": "40ff602eb580b5332a9c710d5bb001094b24450a342cf53d253b897b99c77425",
+          "adjudications/swift-default-keyword.cst": "92bfde15ebd94fe3d99d18c958e80b73e89f177c67623212e7c67b5c2ec6ff9b",
+          "adjudications/swift-default-keyword.query.txt": "3e9f3476881869674753bb0dc1769c287100cd6c67bf860012a46f782a2c876b",
+          "adjudications/swift-default-keyword.query.scm": "a5d939fb5c07452871774c26fff4e8033ed7210ef4da66a2c86661f549ec4930"
+        }
+      },
+      "changes": [
+        {
+          "pointer": "/0/kids/0/kids/3/kids/2/field",
+          "before": "type",
+          "after": "name"
+        }
+      ],
+      "tree": "adjudications/swift-default-keyword.tree.json",
+      "tree_sha256": "1925190cbdf2c1ab83f846af1bd6cc808cba3a106b0e0a8a0311cbbbfb86efeb"
+    }
+  ]
+}

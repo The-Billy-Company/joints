@@ -1,0 +1,3312 @@
+{
+  "cases": [
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/bash.json",
+        "research/joinery/specimen/bash/file-descriptor.sh",
+        "--all",
+        "--json"
+      ],
+      "case": "bash/file-descriptor.sh",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 4
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 5
+        },
+        {
+          "claim": "holds file_descriptor",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "spans file_descriptor 8 9",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "holds file_redirect",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "spans file_redirect 8 12",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "holds command",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "spans command 0 7",
+          "holds": true,
+          "line": 11
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/bash/file-descriptor.sh": "65e78324db94a726dd2e46cb75e45ec016be1cecec416db87125fb108a373366",
+        "research/joinery/specimen/bash/file-descriptor.sh.expect": "0de1393c95f23b9eef4a2ebb43899001171974426a05d4867fdd9fda9fc8a5ff",
+        "upstream/grammars/bash.json": "6c14f325170826cbc6c523ff5c2aeaa46f24bbff3a6e5eadb4533d9838fe3d81"
+      },
+      "output": "outputs/bash/file-descriptor.sh.json",
+      "output_sha256": "80a25d8895eec1c89b2b667a8ecd12315583b4780c5d7f85b7657452943671f3",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/bash.json",
+        "research/joinery/specimen/bash/regex-in-test-command.sh",
+        "--all",
+        "--json"
+      ],
+      "case": "bash/regex-in-test-command.sh",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": false,
+          "line": 28
+        },
+        {
+          "claim": "mends 0",
+          "holds": false,
+          "line": 29
+        },
+        {
+          "claim": "holds test_command",
+          "holds": false,
+          "line": 30
+        },
+        {
+          "claim": "holds regex",
+          "holds": false,
+          "line": 31
+        },
+        {
+          "claim": "spans test_command 3 25",
+          "holds": false,
+          "line": 32
+        },
+        {
+          "claim": "spans regex 12 22",
+          "holds": false,
+          "line": 33
+        }
+      ],
+      "exit": 1,
+      "inputs": {
+        "research/joinery/specimen/bash/regex-in-test-command.sh": "8d2980801b9a9004cdbba91150a09f903a2fdcbed4304262bf8116e922066509",
+        "research/joinery/specimen/bash/regex-in-test-command.sh.expect": "e9175e01e20c4cedb6df1d65cb25c57f620d882ecd5d6354e0c839e5f3c9fedf",
+        "upstream/grammars/bash.json": "6c14f325170826cbc6c523ff5c2aeaa46f24bbff3a6e5eadb4533d9838fe3d81"
+      },
+      "output": "outputs/bash/regex-in-test-command.sh.json",
+      "output_sha256": "d37f10cac0f7c3f01ba31de578e58e758ae550a27578195f9e512cd277a0b912",
+      "strict": false
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/cpp.json",
+        "research/joinery/specimen/cpp/raw-string-delimiter.cpp",
+        "--all",
+        "--json"
+      ],
+      "case": "cpp/raw-string-delimiter.cpp",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 11
+        },
+        {
+          "claim": "holds raw_string_delimiter",
+          "holds": true,
+          "line": 12
+        },
+        {
+          "claim": "spans raw_string_delimiter 18 21",
+          "holds": true,
+          "line": 13
+        },
+        {
+          "claim": "spans raw_string_delimiter 26 29",
+          "holds": true,
+          "line": 14
+        },
+        {
+          "claim": "holds raw_string_content",
+          "holds": true,
+          "line": 15
+        },
+        {
+          "claim": "spans raw_string_content 22 25",
+          "holds": true,
+          "line": 16
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/cpp/raw-string-delimiter.cpp": "e1174610dfa6a23b1006f91a29f5e6acd35e523768106942024a2fec4c27bd63",
+        "research/joinery/specimen/cpp/raw-string-delimiter.cpp.expect": "2805c121221c3b12d7e56d21e8b134ee976351268d8e2179c7523ddfc08e28c6",
+        "upstream/grammars/cpp.json": "3aa14b0b6ef87951ef9933d126f6d9774bc7d7dba11e7be1861820e381d36455"
+      },
+      "output": "outputs/cpp/raw-string-delimiter.cpp.json",
+      "output_sha256": "9bf00e12c1e4b3920659192493559fd5d8c7c6d23f2e074c074a78436bbfa1f1",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/elixir.json",
+        "research/joinery/specimen/elixir/charlist-heredoc.ex",
+        "--all",
+        "--json"
+      ],
+      "case": "elixir/charlist-heredoc.ex",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "holds quoted_content",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "spans quoted_content 7 30",
+          "holds": true,
+          "line": 9
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/elixir.json": "9ff3d13141936866210249f566b46c73a2d7d1262b2378e72dc93f604b4b3043",
+        "research/joinery/specimen/elixir/charlist-heredoc.ex": "231dad1db34490992bc1cb5bd0420003d67aa86a7331b8ca8ec2e8e50b4f2e55",
+        "research/joinery/specimen/elixir/charlist-heredoc.ex.expect": "408e488a2e5545c24120343985b81f4b0b625a0b764fe3d1de8c9dd8364ecdbe",
+        "upstream/grammars/elixir.json": "320c4af03d6d34085c744ac9923d9b963848bd639a97c5f04401472931b059c4"
+      },
+      "output": "outputs/elixir/charlist-heredoc.ex.json",
+      "output_sha256": "d20cb879b679aa3ee9f4083ad31da8c7a1a75df943e9ff2bbc40ffa2bb34c0f3",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/elixir.json",
+        "research/joinery/specimen/elixir/do-block-as-keyword-argument.ex",
+        "--all",
+        "--json"
+      ],
+      "case": "elixir/do-block-as-keyword-argument.ex",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 22
+        },
+        {
+          "claim": "holds keywords",
+          "holds": true,
+          "line": 23
+        },
+        {
+          "claim": "lacks do_block",
+          "holds": true,
+          "line": 24
+        },
+        {
+          "claim": "spans arguments 4 17",
+          "holds": true,
+          "line": 25
+        },
+        {
+          "claim": "spans call 5 9",
+          "holds": true,
+          "line": 26
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/elixir.json": "9ff3d13141936866210249f566b46c73a2d7d1262b2378e72dc93f604b4b3043",
+        "research/joinery/specimen/elixir/do-block-as-keyword-argument.ex": "d4b5499edaf65ed1e41713ed4d825bd4bb5521cc24dd52686ed61270c731a219",
+        "research/joinery/specimen/elixir/do-block-as-keyword-argument.ex.expect": "1f3de8d3403b5af7cfccd64738bc4f9ed64cd71cadaa6679921cca03b52b3189",
+        "upstream/grammars/elixir.json": "320c4af03d6d34085c744ac9923d9b963848bd639a97c5f04401472931b059c4"
+      },
+      "output": "outputs/elixir/do-block-as-keyword-argument.ex.json",
+      "output_sha256": "d325465bee81464f2755eb6d842e1fd656e357dc303cc7c8e6db3b82585ced8d",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/elixir.json",
+        "research/joinery/specimen/elixir/do-block-on-inner-call.ex",
+        "--all",
+        "--json"
+      ],
+      "case": "elixir/do-block-on-inner-call.ex",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 32
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 33
+        },
+        {
+          "claim": "holds do_block",
+          "holds": true,
+          "line": 34
+        },
+        {
+          "claim": "spans do_block 10 20",
+          "holds": true,
+          "line": 35
+        },
+        {
+          "claim": "spans arguments 5 9",
+          "holds": true,
+          "line": 36
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/elixir.json": "9ff3d13141936866210249f566b46c73a2d7d1262b2378e72dc93f604b4b3043",
+        "research/joinery/specimen/elixir/do-block-on-inner-call.ex": "ddc5270bc717a853e7f2d177c367e40cb4df5626778d4b20657fb97d0db351c1",
+        "research/joinery/specimen/elixir/do-block-on-inner-call.ex.expect": "5a81258d16f86fa783a73164c4de2a5828e1d657e39c76e60b3ac8bc864e7364",
+        "upstream/grammars/elixir.json": "320c4af03d6d34085c744ac9923d9b963848bd639a97c5f04401472931b059c4"
+      },
+      "output": "outputs/elixir/do-block-on-inner-call.ex.json",
+      "output_sha256": "a8cf4123b92cba3749eac758628deaa91291b271ea4aaa751e31c9a5ba609293",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/elixir.json",
+        "research/joinery/specimen/elixir/do-block-without-inner-call.ex",
+        "--all",
+        "--json"
+      ],
+      "case": "elixir/do-block-without-inner-call.ex",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 22
+        },
+        {
+          "claim": "holds do_block",
+          "holds": true,
+          "line": 23
+        },
+        {
+          "claim": "spans do_block 7 15",
+          "holds": true,
+          "line": 24
+        },
+        {
+          "claim": "spans arguments 5 6",
+          "holds": true,
+          "line": 25
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/elixir.json": "9ff3d13141936866210249f566b46c73a2d7d1262b2378e72dc93f604b4b3043",
+        "research/joinery/specimen/elixir/do-block-without-inner-call.ex": "10aa4eb6b87e5dae2a8bcbcc5810b8d73a7d944c67b7b9ac04eb9eec74d7c7be",
+        "research/joinery/specimen/elixir/do-block-without-inner-call.ex.expect": "f1450a00635a0bc19de519c06849d819f013943f6a61f33a3566c153a5237529",
+        "upstream/grammars/elixir.json": "320c4af03d6d34085c744ac9923d9b963848bd639a97c5f04401472931b059c4"
+      },
+      "output": "outputs/elixir/do-block-without-inner-call.ex.json",
+      "output_sha256": "25f81a49c220c92814811e4635e121d403b9ad809bbaae6c884c4a99921e59cb",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/elixir.json",
+        "research/joinery/specimen/elixir/escaped-close.ex",
+        "--all",
+        "--json"
+      ],
+      "case": "elixir/escaped-close.ex",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "holds quoted_content",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "spans quoted_content 5 6",
+          "holds": true,
+          "line": 11
+        },
+        {
+          "claim": "spans quoted_content 8 9",
+          "holds": true,
+          "line": 12
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/elixir.json": "9ff3d13141936866210249f566b46c73a2d7d1262b2378e72dc93f604b4b3043",
+        "research/joinery/specimen/elixir/escaped-close.ex": "c460706ae644c4640f8d1c3d6f922c30607b34d3d79fba5523fe02ec733c7b5b",
+        "research/joinery/specimen/elixir/escaped-close.ex.expect": "3ea98cb5715fded6f9bb7c223d50e7fba0058ffb13002c9e7d3afaded4632908",
+        "upstream/grammars/elixir.json": "320c4af03d6d34085c744ac9923d9b963848bd639a97c5f04401472931b059c4"
+      },
+      "output": "outputs/elixir/escaped-close.ex.json",
+      "output_sha256": "c1fb9ce2a3c701b4db4dd4da23d455206805c95f070bdb872e31875cd6dc1e47",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/elixir.json",
+        "research/joinery/specimen/elixir/hash-is-not-interpolation.ex",
+        "--all",
+        "--json"
+      ],
+      "case": "elixir/hash-is-not-interpolation.ex",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "holds quoted_content",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "spans quoted_content 5 8",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "spans quoted_content 12 13",
+          "holds": true,
+          "line": 11
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/elixir.json": "9ff3d13141936866210249f566b46c73a2d7d1262b2378e72dc93f604b4b3043",
+        "research/joinery/specimen/elixir/hash-is-not-interpolation.ex": "187e3da1c52eb9edd3b209eb273b1bc3c2c99ceca12df2bbf0e81e31d93959e7",
+        "research/joinery/specimen/elixir/hash-is-not-interpolation.ex.expect": "00dbd32e7222552fedd23db0fb4e053022376d85924233e6e834160a84ab4231",
+        "upstream/grammars/elixir.json": "320c4af03d6d34085c744ac9923d9b963848bd639a97c5f04401472931b059c4"
+      },
+      "output": "outputs/elixir/hash-is-not-interpolation.ex.json",
+      "output_sha256": "9f37d7de08c51ee7f898a77b1f874821229503264a036783d7bfad4b32c497f6",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/elixir.json",
+        "research/joinery/specimen/elixir/heredoc-quote-inside.ex",
+        "--all",
+        "--json"
+      ],
+      "case": "elixir/heredoc-quote-inside.ex",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 11
+        },
+        {
+          "claim": "holds quoted_content",
+          "holds": true,
+          "line": 12
+        },
+        {
+          "claim": "spans quoted_content 7 44",
+          "holds": true,
+          "line": 13
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/elixir.json": "9ff3d13141936866210249f566b46c73a2d7d1262b2378e72dc93f604b4b3043",
+        "research/joinery/specimen/elixir/heredoc-quote-inside.ex": "356cb043638b03452c871e56a294d9122456d09a1b15cd6c1890169889fe236a",
+        "research/joinery/specimen/elixir/heredoc-quote-inside.ex.expect": "c33d907cd59a1f77fb210f50f6d4b50ee32c9b159998c03e31f07cf72b0407b5",
+        "upstream/grammars/elixir.json": "320c4af03d6d34085c744ac9923d9b963848bd639a97c5f04401472931b059c4"
+      },
+      "output": "outputs/elixir/heredoc-quote-inside.ex.json",
+      "output_sha256": "dce2f65eec6483f0b92e86425428ba524424547ffbb5ea1e0c6b20594155ac3c",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/elixir.json",
+        "research/joinery/specimen/elixir/newline-before-operator.ex",
+        "--all",
+        "--json"
+      ],
+      "case": "elixir/newline-before-operator.ex",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 16
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 17
+        },
+        {
+          "claim": "holds binary_operator",
+          "holds": true,
+          "line": 18
+        },
+        {
+          "claim": "holds call",
+          "holds": true,
+          "line": 19
+        },
+        {
+          "claim": "lacks ERROR",
+          "holds": true,
+          "line": 20
+        },
+        {
+          "claim": "spans binary_operator 0 16",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "spans call 13 16",
+          "holds": true,
+          "line": 22
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/elixir.json": "9ff3d13141936866210249f566b46c73a2d7d1262b2378e72dc93f604b4b3043",
+        "research/joinery/specimen/elixir/newline-before-operator.ex": "13577c57004277c5d39fecb17720694beb09cbff5d72b3644edba35a17d79e83",
+        "research/joinery/specimen/elixir/newline-before-operator.ex.expect": "79f63acd382d2a566bcaf43a14e174fc01115e8a82a09a16756084b7c89f41a8",
+        "upstream/grammars/elixir.json": "320c4af03d6d34085c744ac9923d9b963848bd639a97c5f04401472931b059c4"
+      },
+      "output": "outputs/elixir/newline-before-operator.ex.json",
+      "output_sha256": "d88366bb41dbd89cb4b113c50c0d4d51087dd93470a05251b1026907d0bf6d09",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/elixir.json",
+        "research/joinery/specimen/elixir/quoted-atom.ex",
+        "--all",
+        "--json"
+      ],
+      "case": "elixir/quoted-atom.ex",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 18
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 19
+        },
+        {
+          "claim": "holds quoted_atom",
+          "holds": true,
+          "line": 20
+        },
+        {
+          "claim": "holds interpolation",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "lacks ERROR",
+          "holds": true,
+          "line": 22
+        },
+        {
+          "claim": "spans quoted_atom 7 16",
+          "holds": true,
+          "line": 23
+        },
+        {
+          "claim": "spans interpolation 10 14",
+          "holds": true,
+          "line": 24
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/elixir.json": "9ff3d13141936866210249f566b46c73a2d7d1262b2378e72dc93f604b4b3043",
+        "research/joinery/specimen/elixir/quoted-atom.ex": "d09e9a0f3b2d7867b6481ea7f815aebbcdf400904ec8453ce44bd12121847c23",
+        "research/joinery/specimen/elixir/quoted-atom.ex.expect": "26094838af97d02e75081c3785505f12f709ce1cdd6c64dbc3b9d9e29e4bf1b1",
+        "upstream/grammars/elixir.json": "320c4af03d6d34085c744ac9923d9b963848bd639a97c5f04401472931b059c4"
+      },
+      "output": "outputs/elixir/quoted-atom.ex.json",
+      "output_sha256": "8c774f32b8dfed2a2885ad604f5756abdf93a51a1df6f62a6f55651cc71bf325",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/elixir.json",
+        "research/joinery/specimen/elixir/sigil-delimiters.ex",
+        "--all",
+        "--json"
+      ],
+      "case": "elixir/sigil-delimiters.ex",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "holds quoted_content",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "spans quoted_content 7 11",
+          "holds": true,
+          "line": 11
+        },
+        {
+          "claim": "spans quoted_content 24 28",
+          "holds": true,
+          "line": 12
+        },
+        {
+          "claim": "spans quoted_content 41 47",
+          "holds": true,
+          "line": 13
+        },
+        {
+          "claim": "spans quoted_content 60 65",
+          "holds": true,
+          "line": 14
+        },
+        {
+          "claim": "spans quoted_content 78 83",
+          "holds": true,
+          "line": 15
+        },
+        {
+          "claim": "spans quoted_content 96 100",
+          "holds": true,
+          "line": 16
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/elixir.json": "9ff3d13141936866210249f566b46c73a2d7d1262b2378e72dc93f604b4b3043",
+        "research/joinery/specimen/elixir/sigil-delimiters.ex": "7d82300dbf13562af149570484b523a492b8376a5d8757ec0d9c519e65fc55fc",
+        "research/joinery/specimen/elixir/sigil-delimiters.ex.expect": "b4293ed4f463b85806f2905d0d1f32e716ada7f4ae2e98e04c8a8a819f869d84",
+        "upstream/grammars/elixir.json": "320c4af03d6d34085c744ac9923d9b963848bd639a97c5f04401472931b059c4"
+      },
+      "output": "outputs/elixir/sigil-delimiters.ex.json",
+      "output_sha256": "37f3ba4b49d1a6f3cca6026a06fb7072f26354ac2d90dcaa2f01e77b1ccd2e6d",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/elixir.json",
+        "research/joinery/specimen/elixir/sigil-uppercase-holds-its-braces.ex",
+        "--all",
+        "--json"
+      ],
+      "case": "elixir/sigil-uppercase-holds-its-braces.ex",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "holds quoted_content",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "spans quoted_content 7 19",
+          "holds": true,
+          "line": 11
+        },
+        {
+          "claim": "spans quoted_content 28 35",
+          "holds": true,
+          "line": 12
+        },
+        {
+          "claim": "spans quoted_content 37 50",
+          "holds": true,
+          "line": 13
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/elixir.json": "9ff3d13141936866210249f566b46c73a2d7d1262b2378e72dc93f604b4b3043",
+        "research/joinery/specimen/elixir/sigil-uppercase-holds-its-braces.ex": "58d366190c62bd2b01a2e4b73e43361615ec9bdb0aeef292e9c2cdb98f7bac56",
+        "research/joinery/specimen/elixir/sigil-uppercase-holds-its-braces.ex.expect": "2a94ce1b428bb8cd7d9bf95be3e2991f8c4be5dcee22fde9a50c97901a595ac2",
+        "upstream/grammars/elixir.json": "320c4af03d6d34085c744ac9923d9b963848bd639a97c5f04401472931b059c4"
+      },
+      "output": "outputs/elixir/sigil-uppercase-holds-its-braces.ex.json",
+      "output_sha256": "8382bfb8d2dc45f4da460ca9397380e75c384c2aa69b22fe2412bdb99f58a386",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/go.json",
+        "research/joinery/specimen/go/call-with-two-arguments.go",
+        "--all",
+        "--json"
+      ],
+      "case": "go/call-with-two-arguments.go",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 22
+        },
+        {
+          "claim": "holds call_expression",
+          "holds": true,
+          "line": 23
+        },
+        {
+          "claim": "holds selector_expression",
+          "holds": true,
+          "line": 24
+        },
+        {
+          "claim": "lacks type_conversion_expression",
+          "holds": true,
+          "line": 25
+        },
+        {
+          "claim": "lacks qualified_type",
+          "holds": true,
+          "line": 26
+        },
+        {
+          "claim": "spans call_expression 43 62",
+          "holds": true,
+          "line": 27
+        },
+        {
+          "claim": "spans argument_list 52 62",
+          "holds": true,
+          "line": 28
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/go/call-with-two-arguments.go": "1e8ea189a9f8a9eec7ee8a4f769a36b2588646cde6956adf3374062eb314665b",
+        "research/joinery/specimen/go/call-with-two-arguments.go.expect": "3bc9c761069efdd89fefb9deab5ab48d363898bed227c50469686149dfc24e82",
+        "upstream/grammars/go.json": "0dcc665aa521a1b73a200be13b4e376780cca037d764a165f12864babfe28000"
+      },
+      "output": "outputs/go/call-with-two-arguments.go.json",
+      "output_sha256": "262b659381b472110fe1cb0cea366b8287a38a1a8fa9e744b963621184d57dff",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/go.json",
+        "research/joinery/specimen/go/conversion-without-a-selector.go",
+        "--all",
+        "--json"
+      ],
+      "case": "go/conversion-without-a-selector.go",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 20
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "holds call_expression",
+          "holds": true,
+          "line": 22
+        },
+        {
+          "claim": "lacks type_conversion_expression",
+          "holds": true,
+          "line": 23
+        },
+        {
+          "claim": "lacks qualified_type",
+          "holds": true,
+          "line": 24
+        },
+        {
+          "claim": "spans call_expression 41 47",
+          "holds": true,
+          "line": 25
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/go/conversion-without-a-selector.go": "8375dd00eb3189ad7323b5fc5ca3bc45cec2b4e4c554f8265479ee741ea34832",
+        "research/joinery/specimen/go/conversion-without-a-selector.go.expect": "e86894c2a96316503880bd19099bba3cf7076dda88ecd842cfbb1768144dbd52",
+        "upstream/grammars/go.json": "0dcc665aa521a1b73a200be13b4e376780cca037d764a165f12864babfe28000"
+      },
+      "output": "outputs/go/conversion-without-a-selector.go.json",
+      "output_sha256": "c121e6d195e4abaa5cba93e42c872e6f9ed3a49deed4cc0e0c029a02ded8efe5",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/go.json",
+        "research/joinery/specimen/go/qualified-type-in-var.go",
+        "--all",
+        "--json"
+      ],
+      "case": "go/qualified-type-in-var.go",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 18
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 19
+        },
+        {
+          "claim": "holds qualified_type",
+          "holds": true,
+          "line": 20
+        },
+        {
+          "claim": "lacks call_expression",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "lacks type_conversion_expression",
+          "holds": true,
+          "line": 22
+        },
+        {
+          "claim": "spans qualified_type 34 46",
+          "holds": true,
+          "line": 23
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/go/qualified-type-in-var.go": "5df818f26f2d1db7d6aac137ce851d3d4c5e679c4bce730275263d1f20e5e7fc",
+        "research/joinery/specimen/go/qualified-type-in-var.go.expect": "8cea88cb47aa97da05191e4be4c9109935a068588e247b59aa29ebefb9a31577",
+        "upstream/grammars/go.json": "0dcc665aa521a1b73a200be13b4e376780cca037d764a165f12864babfe28000"
+      },
+      "output": "outputs/go/qualified-type-in-var.go.json",
+      "output_sha256": "9787ef5a9af25d162e4ff91f426cb05a6f55a3e26cef9ef8ba79ec6c6599d94a",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/go.json",
+        "research/joinery/specimen/go/selector-field.go",
+        "--all",
+        "--json"
+      ],
+      "case": "go/selector-field.go",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 25
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 26
+        },
+        {
+          "claim": "holds call_expression",
+          "holds": true,
+          "line": 27
+        },
+        {
+          "claim": "holds selector_expression",
+          "holds": true,
+          "line": 28
+        },
+        {
+          "claim": "holds field_identifier",
+          "holds": true,
+          "line": 29
+        },
+        {
+          "claim": "lacks type_conversion_expression",
+          "holds": true,
+          "line": 30
+        },
+        {
+          "claim": "lacks qualified_type",
+          "holds": true,
+          "line": 31
+        },
+        {
+          "claim": "spans field_identifier 47 52",
+          "holds": true,
+          "line": 32
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/go/selector-field.go": "10b6f68267220e1e4919eb184763b534569a3722e0088791259d212acb4aa310",
+        "research/joinery/specimen/go/selector-field.go.expect": "a70db99a0cedf9334f6e16d9739891c977019255c34c4193ec63a95e1699d560",
+        "upstream/grammars/go.json": "0dcc665aa521a1b73a200be13b4e376780cca037d764a165f12864babfe28000"
+      },
+      "output": "outputs/go/selector-field.go.json",
+      "output_sha256": "5d70d60d6d65a57f76fe3297dac97bd05001083e5b9cd4755671fec6b66ecd4c",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/haskell.json",
+        "research/joinery/specimen/haskell/cpp-directive.hs",
+        "--all",
+        "--json"
+      ],
+      "case": "haskell/cpp-directive.hs",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 5
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "holds cpp",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "spans cpp 0 15",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "holds bind",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "spans bind 16 34",
+          "holds": true,
+          "line": 10
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/haskell.json": "f4d1add8f39d2ca96ca28e0c1e91b55fde619309762e2ab8f414e0975653a506",
+        "research/joinery/specimen/haskell/cpp-directive.hs": "94592b5888ce6e9c204f3aa06591eb43535660c6603a437369ba45d66748f849",
+        "research/joinery/specimen/haskell/cpp-directive.hs.expect": "eb624d07d19c5fb83558a9cc3547df59d8ed5198acdbed56c687ca4c16d8995f",
+        "upstream/grammars/haskell.json": "509bd0c498d149234296d0cf6a5e93de3320679371ead4ce97d1c266b3102c3e"
+      },
+      "output": "outputs/haskell/cpp-directive.hs.json",
+      "output_sha256": "c06b919724f9cc2cbbe86b9d86a9ede9493512ab546d3ca9fae62fa4c9631531",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/html.json",
+        "research/joinery/specimen/html/erroneous-end-tag.html",
+        "--all",
+        "--json"
+      ],
+      "case": "html/erroneous-end-tag.html",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": false,
+          "line": 43
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 44
+        },
+        {
+          "claim": "holds erroneous_end_tag_name",
+          "holds": true,
+          "line": 45
+        },
+        {
+          "claim": "spans erroneous_end_tag_name 6 7",
+          "holds": true,
+          "line": 46
+        },
+        {
+          "claim": "holds element",
+          "holds": false,
+          "line": 47
+        },
+        {
+          "claim": "spans text 3 4",
+          "holds": true,
+          "line": 48
+        }
+      ],
+      "exit": 1,
+      "inputs": {
+        "customary/html.json": "9edfe4b3b7eb01fa23902204d0676634c3b1e91b57f4fce81ca345f9a3859a33",
+        "research/joinery/specimen/html/erroneous-end-tag.html": "850ff7c0341928e62fdcd3ffc54553a8b83b7ca15160eb233020207a4c68673f",
+        "research/joinery/specimen/html/erroneous-end-tag.html.expect": "87eb30142fd3864435cceb5661ffe515a9fc8ece3cf5be0c0be2a0a24c06dcec",
+        "upstream/grammars/html.json": "242c55ee874835b2d47288859878a0cf5dba50ffaae861a81d19fef6d010e227"
+      },
+      "output": "outputs/html/erroneous-end-tag.html.json",
+      "output_sha256": "1bf7878d83efff94944933b620f9c881837c88a064e61888e562f6ffa8f6e97c",
+      "strict": false
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/javascript.json",
+        "research/joinery/specimen/javascript/escape-sequence.js",
+        "--all",
+        "--json"
+      ],
+      "case": "javascript/escape-sequence.js",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 4
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 5
+        },
+        {
+          "claim": "holds escape_sequence",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "spans escape_sequence 10 12",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "spans string 8 14",
+          "holds": true,
+          "line": 8
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/javascript/escape-sequence.js": "d8149eafe3044a0ca81c4ec6dba2ac1d79d5db898107c9ed0a43cc6ea5a06ca0",
+        "research/joinery/specimen/javascript/escape-sequence.js.expect": "86be4f1cad16b856071a1994d981763b8a76ef02909da79454932cc2f1bfe9b0",
+        "upstream/grammars/javascript.json": "7d9364b824be9250ba023065784550475d277b9dc9a7d20f9bebe9e471c908c3"
+      },
+      "output": "outputs/javascript/escape-sequence.js.json",
+      "output_sha256": "94ddc587796b13c18b10d1914eb2b4c2e9d6eba972c67f165e7126f57a461456",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/javascript.json",
+        "research/joinery/specimen/javascript/regex-pattern.js",
+        "--all",
+        "--json"
+      ],
+      "case": "javascript/regex-pattern.js",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 4
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 5
+        },
+        {
+          "claim": "holds regex_pattern",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "spans regex_pattern 9 13",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "spans regex_flags 14 15",
+          "holds": true,
+          "line": 8
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/javascript/regex-pattern.js": "1a032631b402635c41c82ae106cd02d014a4c8f4df703ae9931a5a75659f352d",
+        "research/joinery/specimen/javascript/regex-pattern.js.expect": "bcc2ee1bc6a3023f7115cb3e6987b6b7682f2f13a95b9bbae86842b379fb5a51",
+        "upstream/grammars/javascript.json": "7d9364b824be9250ba023065784550475d277b9dc9a7d20f9bebe9e471c908c3"
+      },
+      "output": "outputs/javascript/regex-pattern.js.json",
+      "output_sha256": "356a9f29ce8f344b96800cc5d1a8a1dcbca54efcf8b086ac5e62dbc2ef493fef",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/julia.json",
+        "research/joinery/specimen/julia/command.jl",
+        "--all",
+        "--json"
+      ],
+      "case": "julia/command.jl",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "holds command_literal",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "holds string_interpolation",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "spans command_literal 10 19",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "spans string_interpolation 16 18",
+          "holds": true,
+          "line": 11
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/julia/command.jl": "48dbff2c10dfd8c246c2ce68c334dd78dbf70ddc1ce2ab4785692a9f4ac23fc4",
+        "research/joinery/specimen/julia/command.jl.expect": "0a0253c46cd929f73cad9ff8193a4fd37f5782ffb52af84edbf52828719a9bf3",
+        "upstream/grammars/julia.json": "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1"
+      },
+      "output": "outputs/julia/command.jl.json",
+      "output_sha256": "7ab109ac929513284d2b41a0b54edb2f3469f792096338eebbf4cd7d3550870f",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/julia.json",
+        "research/joinery/specimen/julia/interpolation.jl",
+        "--all",
+        "--json"
+      ],
+      "case": "julia/interpolation.jl",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "holds string_literal",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "holds string_interpolation",
+          "holds": true,
+          "line": 11
+        },
+        {
+          "claim": "spans string_literal 10 24",
+          "holds": true,
+          "line": 12
+        },
+        {
+          "claim": "spans string_interpolation 13 21",
+          "holds": true,
+          "line": 13
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/julia/interpolation.jl": "fdd06e716e8b47febbfeafa6c34020731dedeab67e54618013576cbf0bd4f726",
+        "research/joinery/specimen/julia/interpolation.jl.expect": "e3bf1124acfd6ba82ec202f56404b9424a4ba258aaab16b9de3a3d8f891412d0",
+        "upstream/grammars/julia.json": "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1"
+      },
+      "output": "outputs/julia/interpolation.jl.json",
+      "output_sha256": "d3c41d7e10ac16ab53b8ee5810ad76b30d26b97eef2b4d3b52d54dc9494f4003",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/julia.json",
+        "research/joinery/specimen/julia/nested-interpolation.jl",
+        "--all",
+        "--json"
+      ],
+      "case": "julia/nested-interpolation.jl",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "holds string_literal",
+          "holds": true,
+          "line": 11
+        },
+        {
+          "claim": "holds string_interpolation",
+          "holds": true,
+          "line": 12
+        },
+        {
+          "claim": "spans string_literal 10 19",
+          "holds": true,
+          "line": 13
+        },
+        {
+          "claim": "spans string_literal 13 17",
+          "holds": true,
+          "line": 14
+        },
+        {
+          "claim": "spans string_interpolation 11 18",
+          "holds": true,
+          "line": 15
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/julia/nested-interpolation.jl": "be510d64571b28b885ed8cda4332769c8633000caa7e890dba04d3a437b8f806",
+        "research/joinery/specimen/julia/nested-interpolation.jl.expect": "d65a0f551872fe6d59094540d437e591690e91f7af256b4a64354221e211f739",
+        "upstream/grammars/julia.json": "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1"
+      },
+      "output": "outputs/julia/nested-interpolation.jl.json",
+      "output_sha256": "5091f09a6a85c2334c64b9c9f1b009c59bca23921c3a2c3df58378c82a37f925",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/julia.json",
+        "research/joinery/specimen/julia/raw-string.jl",
+        "--all",
+        "--json"
+      ],
+      "case": "julia/raw-string.jl",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "holds prefixed_string_literal",
+          "holds": true,
+          "line": 11
+        },
+        {
+          "claim": "lacks escape_sequence",
+          "holds": true,
+          "line": 12
+        },
+        {
+          "claim": "spans prefixed_string_literal 4 12",
+          "holds": true,
+          "line": 13
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/julia/raw-string.jl": "109145654ea137298f18327906877f64138c9c1edc6309ec88d8fa6868721527",
+        "research/joinery/specimen/julia/raw-string.jl.expect": "dab81601f2563c96b980f91cd045aceb6e34351f63e18f9b03b785a1ec47e8b7",
+        "upstream/grammars/julia.json": "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1"
+      },
+      "output": "outputs/julia/raw-string.jl.json",
+      "output_sha256": "676fa6a2d07bc8ca09aa7cf8c918082248eb746f45863f4709bb9a042db928af",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/julia.json",
+        "research/joinery/specimen/julia/triple-quote.jl",
+        "--all",
+        "--json"
+      ],
+      "case": "julia/triple-quote.jl",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 11
+        },
+        {
+          "claim": "holds string_literal",
+          "holds": true,
+          "line": 12
+        },
+        {
+          "claim": "spans string_literal 4 17",
+          "holds": true,
+          "line": 13
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/julia/triple-quote.jl": "132cc1c2b1510260ca2d75e9aeadea8527b3eb8f0a7295f5fa9017657999caf9",
+        "research/joinery/specimen/julia/triple-quote.jl.expect": "3600dd6751ccda3f2c61b4e48652419110269229987fc2c9f73891a5d6b6d4c8",
+        "upstream/grammars/julia.json": "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1"
+      },
+      "output": "outputs/julia/triple-quote.jl.json",
+      "output_sha256": "27fa671f1361ccdee487e3c39d05dd2520a72d9a71cfbe8bd5f0272d6fdb34d1",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/kotlin.json",
+        "research/joinery/specimen/kotlin/embedded-quote.kt",
+        "--all",
+        "--json"
+      ],
+      "case": "kotlin/embedded-quote.kt",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 22
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 23
+        },
+        {
+          "claim": "holds string_literal",
+          "holds": true,
+          "line": 24
+        },
+        {
+          "claim": "spans string_literal 8 21",
+          "holds": true,
+          "line": 25
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/kotlin.json": "4a32ce596ace442333e1cb7076766ae42194069aabffeb12fd440d3d1fbba589",
+        "research/joinery/specimen/kotlin/embedded-quote.kt": "a73e5634654c5bcee23b2e32a528e69fdd2d447a8744a9f40d9534c507e568e1",
+        "research/joinery/specimen/kotlin/embedded-quote.kt.expect": "4a51e9fd9e13cb3165ab0cc0e2d4142d66850ce5d5f945bdb4611512c56cfd28",
+        "upstream/grammars/kotlin.json": "56082f33c3a77b410c37e351e6668cf354f87fa3f6ef47a070018b9e8a2681ed"
+      },
+      "output": "outputs/kotlin/embedded-quote.kt.json",
+      "output_sha256": "2ba5837a2869eeb6d548a07001edc5baf9f81222dea2720df926ab9e781869f1",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/kotlin.json",
+        "research/joinery/specimen/kotlin/escaped-quote.kt",
+        "--all",
+        "--json"
+      ],
+      "case": "kotlin/escaped-quote.kt",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "holds string_literal",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "spans string_literal 8 14",
+          "holds": true,
+          "line": 9
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/kotlin.json": "4a32ce596ace442333e1cb7076766ae42194069aabffeb12fd440d3d1fbba589",
+        "research/joinery/specimen/kotlin/escaped-quote.kt": "ec0319fa8de10f303b77ddff7343c7207f5230b7c8efb7b7993780fc416de8b5",
+        "research/joinery/specimen/kotlin/escaped-quote.kt.expect": "c8be15070b89666822dae60be22e725c03adfe3b1da9dd4ca7589574c232f73d",
+        "upstream/grammars/kotlin.json": "56082f33c3a77b410c37e351e6668cf354f87fa3f6ef47a070018b9e8a2681ed"
+      },
+      "output": "outputs/kotlin/escaped-quote.kt.json",
+      "output_sha256": "65eff3e41b8b2ae5427f4fdcc03f44d372a17c52fe8be86442eaced9ee9dcff5",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/kotlin.json",
+        "research/joinery/specimen/kotlin/greedy-close.kt",
+        "--all",
+        "--json"
+      ],
+      "case": "kotlin/greedy-close.kt",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 13
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 14
+        },
+        {
+          "claim": "holds string_literal",
+          "holds": true,
+          "line": 15
+        },
+        {
+          "claim": "spans string_literal 8 16",
+          "holds": true,
+          "line": 16
+        },
+        {
+          "claim": "spans string_content 11 13",
+          "holds": false,
+          "line": 17
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/kotlin.json": "4a32ce596ace442333e1cb7076766ae42194069aabffeb12fd440d3d1fbba589",
+        "research/joinery/specimen/kotlin/greedy-close.kt": "654b813c3b38591bb4eaee14bcc53f5088b6d56e37d2c8d7cc9c7566234aee76",
+        "research/joinery/specimen/kotlin/greedy-close.kt.expect": "aaf5429bca2197ee4db5a66352f394efbe03878582dff4ad6786e47ed977d3d8",
+        "upstream/grammars/kotlin.json": "56082f33c3a77b410c37e351e6668cf354f87fa3f6ef47a070018b9e8a2681ed"
+      },
+      "output": "outputs/kotlin/greedy-close.kt.json",
+      "output_sha256": "ea0c9c297cd6b52f609e6895b5854f83f1a76343719c025cf3b3c050e00e62c2",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/kotlin.json",
+        "research/joinery/specimen/kotlin/interpolation.kt",
+        "--all",
+        "--json"
+      ],
+      "case": "kotlin/interpolation.kt",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 12
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 13
+        },
+        {
+          "claim": "holds string_literal",
+          "holds": true,
+          "line": 14
+        },
+        {
+          "claim": "holds interpolated_expression",
+          "holds": true,
+          "line": 15
+        },
+        {
+          "claim": "lacks lambda_literal",
+          "holds": true,
+          "line": 16
+        },
+        {
+          "claim": "spans string_literal 18 32",
+          "holds": true,
+          "line": 17
+        },
+        {
+          "claim": "spans interpolated_expression 23 28",
+          "holds": true,
+          "line": 18
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/kotlin.json": "4a32ce596ace442333e1cb7076766ae42194069aabffeb12fd440d3d1fbba589",
+        "research/joinery/specimen/kotlin/interpolation.kt": "72758cc4dfe7a59dea57a72c9ac40b674798193d65e35f280073ec9574d74dc7",
+        "research/joinery/specimen/kotlin/interpolation.kt.expect": "76ed0d5b9b2e3dcaf58117c093d229d9e528e0c33710c14868c43490216fd13e",
+        "upstream/grammars/kotlin.json": "56082f33c3a77b410c37e351e6668cf354f87fa3f6ef47a070018b9e8a2681ed"
+      },
+      "output": "outputs/kotlin/interpolation.kt.json",
+      "output_sha256": "c8db7aa183a78bde526e3038950d548b4b7b0a139daab482f4d92b41bc29ad2a",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/kotlin.json",
+        "research/joinery/specimen/kotlin/nested-interpolation.kt",
+        "--all",
+        "--json"
+      ],
+      "case": "kotlin/nested-interpolation.kt",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "holds string_literal",
+          "holds": true,
+          "line": 11
+        },
+        {
+          "claim": "holds interpolated_expression",
+          "holds": true,
+          "line": 12
+        },
+        {
+          "claim": "lacks lambda_literal",
+          "holds": true,
+          "line": 13
+        },
+        {
+          "claim": "spans string_literal 18 27",
+          "holds": true,
+          "line": 14
+        },
+        {
+          "claim": "spans string_literal 21 25",
+          "holds": true,
+          "line": 15
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/kotlin.json": "4a32ce596ace442333e1cb7076766ae42194069aabffeb12fd440d3d1fbba589",
+        "research/joinery/specimen/kotlin/nested-interpolation.kt": "54ea9e36807fc56217ca855c814cfc4807995f27c8ce10482c640731ac72b0d6",
+        "research/joinery/specimen/kotlin/nested-interpolation.kt.expect": "2162470d6e92507494ff63dc47200a07dbdc3a52311d5d1a94ab963f16f88094",
+        "upstream/grammars/kotlin.json": "56082f33c3a77b410c37e351e6668cf354f87fa3f6ef47a070018b9e8a2681ed"
+      },
+      "output": "outputs/kotlin/nested-interpolation.kt.json",
+      "output_sha256": "8fd3d7cd165cf7c2cd71d09a41dc0abfb1b8ac7fbe8ef2d6a4536eb305b22ceb",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/kotlin.json",
+        "research/joinery/specimen/kotlin/unterminated.kt",
+        "--all",
+        "--json"
+      ],
+      "case": "kotlin/unterminated.kt",
+      "claims": [
+        {
+          "claim": "holds string_content",
+          "holds": false,
+          "line": 10
+        }
+      ],
+      "exit": 1,
+      "inputs": {
+        "customary/kotlin.json": "4a32ce596ace442333e1cb7076766ae42194069aabffeb12fd440d3d1fbba589",
+        "research/joinery/specimen/kotlin/unterminated.kt": "4153a22101698f844862a0bcb5f47a9a6aec3aa702a02f1f029993e31a55bf96",
+        "research/joinery/specimen/kotlin/unterminated.kt.expect": "56f5b242eba005c4919f26cb27bb17f6565e53f7791e624134dfa4f0f6a77a67",
+        "upstream/grammars/kotlin.json": "56082f33c3a77b410c37e351e6668cf354f87fa3f6ef47a070018b9e8a2681ed"
+      },
+      "output": "outputs/kotlin/unterminated.kt.json",
+      "output_sha256": "e62bfdc3c526c3e631471a258b65c6e9a7d16b2d935627ce99527dbf1f9351c6",
+      "strict": false
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/latex.json",
+        "research/joinery/specimen/latex/iffalse-fi.tex",
+        "--all",
+        "--json"
+      ],
+      "case": "latex/iffalse-fi.tex",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 18
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 19
+        },
+        {
+          "claim": "holds block_comment",
+          "holds": true,
+          "line": 20
+        },
+        {
+          "claim": "holds section",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "lacks ERROR",
+          "holds": true,
+          "line": 22
+        },
+        {
+          "claim": "spans block_comment 0 26",
+          "holds": true,
+          "line": 23
+        },
+        {
+          "claim": "spans comment 8 23",
+          "holds": true,
+          "line": 24
+        },
+        {
+          "claim": "spans section 27 38",
+          "holds": true,
+          "line": 25
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/latex/iffalse-fi.tex": "1cec3b50dc6b2730a125c3d0b94b1b4dd0ea917ceb6ae210383f2467839f48c3",
+        "research/joinery/specimen/latex/iffalse-fi.tex.expect": "7bbde8afe0f714a40256ed47330ba977bdcd2f01cb4b62efd6ef73ec39433518",
+        "upstream/grammars/latex.json": "617ee120cda4772e0d0998e21e7044f29c460a5f64e1c86c915e604a22e43616"
+      },
+      "output": "outputs/latex/iffalse-fi.tex.json",
+      "output_sha256": "0cf20fac6f382ff3c493475c766a562e4352da349d79c34f8a6e8800bdf543ed",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/latex.json",
+        "research/joinery/specimen/latex/verbatim-body.tex",
+        "--all",
+        "--json"
+      ],
+      "case": "latex/verbatim-body.tex",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 15
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 16
+        },
+        {
+          "claim": "holds verbatim_environment",
+          "holds": true,
+          "line": 17
+        },
+        {
+          "claim": "holds comment",
+          "holds": true,
+          "line": 18
+        },
+        {
+          "claim": "lacks ERROR",
+          "holds": true,
+          "line": 19
+        },
+        {
+          "claim": "spans verbatim_environment 0 42",
+          "holds": true,
+          "line": 20
+        },
+        {
+          "claim": "spans comment 16 28",
+          "holds": true,
+          "line": 21
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/latex/verbatim-body.tex": "94cbbdd093eee8ee6dcb0ae401d02d0720de9b4ed52d2cf8ed552d088f68cdb8",
+        "research/joinery/specimen/latex/verbatim-body.tex.expect": "06571ce8e6b9995a1ca8d0e500b9a681244a576e83b337bf50c1a864c71033f6",
+        "upstream/grammars/latex.json": "617ee120cda4772e0d0998e21e7044f29c460a5f64e1c86c915e604a22e43616"
+      },
+      "output": "outputs/latex/verbatim-body.tex.json",
+      "output_sha256": "d340df0918a537a53dd85cccb7028a0ef49e8b2295595c6e38bf7038d68e13bb",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/ocaml.json",
+        "research/joinery/specimen/ocaml/nested-comment.ml",
+        "--all",
+        "--json"
+      ],
+      "case": "ocaml/nested-comment.ml",
+      "claims": [
+        {
+          "claim": "holds comment",
+          "holds": true,
+          "line": 18
+        },
+        {
+          "claim": "spans comment 10 27",
+          "holds": true,
+          "line": 19
+        },
+        {
+          "claim": "lacks mult_operator",
+          "holds": true,
+          "line": 20
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/ocaml/nested-comment.ml": "f2e3c3d4849a3de80529392d630bd3b90c01d87eafe28ff9d1c1e00ac060b5aa",
+        "research/joinery/specimen/ocaml/nested-comment.ml.expect": "45467be731d2e4075e522ca48880a5c5b4f1ca4110af5c4606d1355d9dc98019",
+        "upstream/grammars/ocaml.json": "618293e3e7924b25c23f1827af7dd604807cc8da17c31a06a2f446d2f260d541"
+      },
+      "output": "outputs/ocaml/nested-comment.ml.json",
+      "output_sha256": "5423c5d31a9e219c16cda211df30d918f30566319b6cc898c75fb4312afe03f5",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/php.json",
+        "research/joinery/specimen/php/dollar-digit-is-text.php",
+        "--all",
+        "--json"
+      ],
+      "case": "php/dollar-digit-is-text.php",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 19
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 20
+        },
+        {
+          "claim": "holds encapsed_string",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "holds escape_sequence",
+          "holds": true,
+          "line": 22
+        },
+        {
+          "claim": "lacks text",
+          "holds": true,
+          "line": 23
+        },
+        {
+          "claim": "lacks variable_name_in_string",
+          "holds": true,
+          "line": 24
+        },
+        {
+          "claim": "spans escape_sequence 12 14",
+          "holds": true,
+          "line": 25
+        },
+        {
+          "claim": "spans string_content 14 17",
+          "holds": true,
+          "line": 26
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/php/dollar-digit-is-text.php": "5938bd3ea1978d73b0760e91d94cc45e101298edab75c139ddb4dd4dbb0e35dd",
+        "research/joinery/specimen/php/dollar-digit-is-text.php.expect": "af3068bc96076aa2db44855c2ea63381f3b09814b13aabe0344d52d253db9bd9",
+        "upstream/grammars/php.json": "4dd996a822c6d9130db3541104169cc45db90f03ec10627dd1a1aa3197916e7a"
+      },
+      "output": "outputs/php/dollar-digit-is-text.php.json",
+      "output_sha256": "12e2668be5faedbcb7290af46baecf3b88498f70f6649dc1253a42625ddff6bd",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/php.json",
+        "research/joinery/specimen/php/double-quoted-string.php",
+        "--all",
+        "--json"
+      ],
+      "case": "php/double-quoted-string.php",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 20
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "holds encapsed_string",
+          "holds": true,
+          "line": 22
+        },
+        {
+          "claim": "lacks text",
+          "holds": true,
+          "line": 23
+        },
+        {
+          "claim": "spans encapsed_string 11 14",
+          "holds": true,
+          "line": 24
+        },
+        {
+          "claim": "spans string_content 12 13",
+          "holds": true,
+          "line": 25
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/php/double-quoted-string.php": "2d73322098ce647f041047890818ba43c3a50ba8ec5d6aa7f73af9aab4fefeba",
+        "research/joinery/specimen/php/double-quoted-string.php.expect": "0fc1a2b601f10a195099fc058fb4c226321d61d63dd3e5665d59ba5ba63b4014",
+        "upstream/grammars/php.json": "4dd996a822c6d9130db3541104169cc45db90f03ec10627dd1a1aa3197916e7a"
+      },
+      "output": "outputs/php/double-quoted-string.php.json",
+      "output_sha256": "25256f84d61d5d87fd985d197a6c5073e73bb634519ff6abc2d3a1ec0f6d23da",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/php.json",
+        "research/joinery/specimen/php/execution-string.php",
+        "--all",
+        "--json"
+      ],
+      "case": "php/execution-string.php",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 16
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 17
+        },
+        {
+          "claim": "holds shell_command_expression",
+          "holds": true,
+          "line": 18
+        },
+        {
+          "claim": "holds variable_name",
+          "holds": true,
+          "line": 19
+        },
+        {
+          "claim": "lacks text",
+          "holds": true,
+          "line": 20
+        },
+        {
+          "claim": "spans shell_command_expression 11 18",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "spans string_content 12 15",
+          "holds": true,
+          "line": 22
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/php/execution-string.php": "86d3a9e49da947db841a8943ed1ac279e47955156192a2295a9194a60f0c91ae",
+        "research/joinery/specimen/php/execution-string.php.expect": "8bf9efc8739d2a0a90f13bc85c0f42b5ed31c064902e11c2dc09270bf3f4c562",
+        "upstream/grammars/php.json": "4dd996a822c6d9130db3541104169cc45db90f03ec10627dd1a1aa3197916e7a"
+      },
+      "output": "outputs/php/execution-string.php.json",
+      "output_sha256": "b0a83a4e98c6273f3bc27667f3956853fb1e644bf275e29c0046b2c3156ebefb",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/php.json",
+        "research/joinery/specimen/php/heredoc-still-blind.php",
+        "--all",
+        "--json"
+      ],
+      "case": "php/heredoc-still-blind.php",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": false,
+          "line": 34
+        },
+        {
+          "claim": "mends 0",
+          "holds": false,
+          "line": 35
+        },
+        {
+          "claim": "holds heredoc",
+          "holds": false,
+          "line": 36
+        },
+        {
+          "claim": "holds heredoc_body",
+          "holds": false,
+          "line": 37
+        },
+        {
+          "claim": "lacks text",
+          "holds": false,
+          "line": 38
+        },
+        {
+          "claim": "spans heredoc 11 23",
+          "holds": false,
+          "line": 39
+        },
+        {
+          "claim": "spans heredoc_body 17 19",
+          "holds": false,
+          "line": 40
+        }
+      ],
+      "exit": 1,
+      "inputs": {
+        "research/joinery/specimen/php/heredoc-still-blind.php": "384f4c35d7ace6dde53d345554db9c287c67f0792a0be551e5dceff32e44daf3",
+        "research/joinery/specimen/php/heredoc-still-blind.php.expect": "2243c9574337e38f6e0e3568b7dc6270c6a3f4f65ad036244a6c486c3d6ad8a9",
+        "upstream/grammars/php.json": "4dd996a822c6d9130db3541104169cc45db90f03ec10627dd1a1aa3197916e7a"
+      },
+      "output": "outputs/php/heredoc-still-blind.php.json",
+      "output_sha256": "a775cab391ded814a44efa33af3cd03bb337cfebc5108b6a4e7a0ec5403a16e5",
+      "strict": false
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/php.json",
+        "research/joinery/specimen/php/subscript-after-variable.php",
+        "--all",
+        "--json"
+      ],
+      "case": "php/subscript-after-variable.php",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 22
+        },
+        {
+          "claim": "holds encapsed_string",
+          "holds": true,
+          "line": 23
+        },
+        {
+          "claim": "holds subscript_expression",
+          "holds": true,
+          "line": 24
+        },
+        {
+          "claim": "holds member_access_expression",
+          "holds": true,
+          "line": 25
+        },
+        {
+          "claim": "lacks text",
+          "holds": true,
+          "line": 26
+        },
+        {
+          "claim": "spans subscript_expression 12 17",
+          "holds": true,
+          "line": 27
+        },
+        {
+          "claim": "spans member_access_expression 18 23",
+          "holds": true,
+          "line": 28
+        },
+        {
+          "claim": "spans string_content 17 18",
+          "holds": true,
+          "line": 29
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/php/subscript-after-variable.php": "7de9ef6d1f867b0cd098f1106de79569ff3e65ae192e927156b1161b29f9883b",
+        "research/joinery/specimen/php/subscript-after-variable.php.expect": "972b94a486225cfcd250b067aa5022601dd84dee92eb46c2c9115abce5c0ae4a",
+        "upstream/grammars/php.json": "4dd996a822c6d9130db3541104169cc45db90f03ec10627dd1a1aa3197916e7a"
+      },
+      "output": "outputs/php/subscript-after-variable.php.json",
+      "output_sha256": "4d1bed422c8585612b862aa6e7a359c6dc59b1778d3f6c51175b7010576d4c70",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/php.json",
+        "research/joinery/specimen/php/text-swallows-remainder.php",
+        "--all",
+        "--json"
+      ],
+      "case": "php/text-swallows-remainder.php",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 26
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 27
+        },
+        {
+          "claim": "lacks text",
+          "holds": true,
+          "line": 28
+        },
+        {
+          "claim": "holds function_definition",
+          "holds": true,
+          "line": 29
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/php/text-swallows-remainder.php": "de7fa615b3037e636bff19322a55e045291fcf3425c67ea69f7ed9b389b2acdc",
+        "research/joinery/specimen/php/text-swallows-remainder.php.expect": "5fda3316a85ac02813f02b4a876b75eaa0b9557348350db51fb8895906f3e687",
+        "upstream/grammars/php.json": "4dd996a822c6d9130db3541104169cc45db90f03ec10627dd1a1aa3197916e7a"
+      },
+      "output": "outputs/php/text-swallows-remainder.php.json",
+      "output_sha256": "1d3d6b2a0c89780d90351d0a89e81a968f1e2f388cdf02d2effdbd67e9746f46",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/python.json",
+        "research/joinery/specimen/python/call-that-is-not-print.py",
+        "--all",
+        "--json"
+      ],
+      "case": "python/call-that-is-not-print.py",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 12
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 13
+        },
+        {
+          "claim": "holds call",
+          "holds": true,
+          "line": 14
+        },
+        {
+          "claim": "holds argument_list",
+          "holds": true,
+          "line": 15
+        },
+        {
+          "claim": "lacks print_statement",
+          "holds": true,
+          "line": 16
+        },
+        {
+          "claim": "spans call 0 6",
+          "holds": true,
+          "line": 17
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/python/call-that-is-not-print.py": "05cc218a8c562d5e472f0be03da4b953c86c15ec19e96b6ef38b0abae93d88df",
+        "research/joinery/specimen/python/call-that-is-not-print.py.expect": "8184ca366cc14a729973c8d5991134fa54d4215c3c56156330b15e95f4be96ed",
+        "upstream/grammars/python.json": "d933cfea6197e57354c9ec86888adbb95971b4372efef514b82e601b5067580d"
+      },
+      "output": "outputs/python/call-that-is-not-print.py.json",
+      "output_sha256": "600568957bd42265d4891658c9533acd17a23aa59bbd18a0a243933ab273fb9a",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/python.json",
+        "research/joinery/specimen/python/escape-interpolation.py",
+        "--all",
+        "--json"
+      ],
+      "case": "python/escape-interpolation.py",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 5
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "holds escape_interpolation",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "spans escape_interpolation 6 8",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "spans escape_interpolation 13 15",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "holds interpolation",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "spans interpolation 16 19",
+          "holds": true,
+          "line": 11
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/python/escape-interpolation.py": "1c4b96ef93d965870b7b567df581722ce4888e1a7bbee3083e0f89db1ea04b60",
+        "research/joinery/specimen/python/escape-interpolation.py.expect": "3d4857cde1bdcd1ac3d14a2f3ce0be5b6fd075d4ba2721d98011c4448ae07aea",
+        "upstream/grammars/python.json": "d933cfea6197e57354c9ec86888adbb95971b4372efef514b82e601b5067580d"
+      },
+      "output": "outputs/python/escape-interpolation.py.json",
+      "output_sha256": "62331fd47c306573077943491c0df9e259280833777f659cb0ac4fc4ce5be861",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/python.json",
+        "research/joinery/specimen/python/print-as-statement.py",
+        "--all",
+        "--json"
+      ],
+      "case": "python/print-as-statement.py",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 24
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 25
+        },
+        {
+          "claim": "holds call",
+          "holds": true,
+          "line": 26
+        },
+        {
+          "claim": "holds argument_list",
+          "holds": true,
+          "line": 27
+        },
+        {
+          "claim": "lacks print_statement",
+          "holds": true,
+          "line": 28
+        },
+        {
+          "claim": "lacks parenthesized_expression",
+          "holds": true,
+          "line": 29
+        },
+        {
+          "claim": "spans call 0 8",
+          "holds": true,
+          "line": 30
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/python/print-as-statement.py": "b65b5c01e2e754f09757f2c828db9419890c41ad1cb27be76cb9b8e231645bef",
+        "research/joinery/specimen/python/print-as-statement.py.expect": "20001000977b09b900e42451f028e06abc9bb4dd61c2c5d771110b76ffc01093",
+        "upstream/grammars/python.json": "d933cfea6197e57354c9ec86888adbb95971b4372efef514b82e601b5067580d"
+      },
+      "output": "outputs/python/print-as-statement.py.json",
+      "output_sha256": "0c25731b1cbad322832336ad8bfb6a0757b11d8053733e0601f71759422f516e",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/python.json",
+        "research/joinery/specimen/python/print-in-expression-position.py",
+        "--all",
+        "--json"
+      ],
+      "case": "python/print-in-expression-position.py",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 19
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 20
+        },
+        {
+          "claim": "holds call",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "holds argument_list",
+          "holds": true,
+          "line": 22
+        },
+        {
+          "claim": "lacks print_statement",
+          "holds": true,
+          "line": 23
+        },
+        {
+          "claim": "spans call 4 12",
+          "holds": true,
+          "line": 24
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/python/print-in-expression-position.py": "e085eb871955c4f950f02201c52a9da956b6c340a1f2949a00868d3c94fc1935",
+        "research/joinery/specimen/python/print-in-expression-position.py.expect": "5b316633009272d12506546369bf314bced3f094acd76cf9980a0042912e9a04",
+        "upstream/grammars/python.json": "d933cfea6197e57354c9ec86888adbb95971b4372efef514b82e601b5067580d"
+      },
+      "output": "outputs/python/print-in-expression-position.py.json",
+      "output_sha256": "30c4f6cce776444dc3338745250045feac5d955599143e171cff6886926626bd",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/python.json",
+        "research/joinery/specimen/python/print-with-two-arguments.py",
+        "--all",
+        "--json"
+      ],
+      "case": "python/print-with-two-arguments.py",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 23
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 24
+        },
+        {
+          "claim": "holds call",
+          "holds": true,
+          "line": 25
+        },
+        {
+          "claim": "holds argument_list",
+          "holds": true,
+          "line": 26
+        },
+        {
+          "claim": "lacks print_statement",
+          "holds": true,
+          "line": 27
+        },
+        {
+          "claim": "lacks tuple",
+          "holds": true,
+          "line": 28
+        },
+        {
+          "claim": "spans call 0 11",
+          "holds": true,
+          "line": 29
+        },
+        {
+          "claim": "spans argument_list 5 11",
+          "holds": true,
+          "line": 30
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/python/print-with-two-arguments.py": "8dcd02ce1645f470f9ff81aea90851d0d4da44f2262bb3bc2710789358594040",
+        "research/joinery/specimen/python/print-with-two-arguments.py.expect": "a015520503cd76cba08adb715a2bc1b0875e451808a843a9747a586c26d4db1c",
+        "upstream/grammars/python.json": "d933cfea6197e57354c9ec86888adbb95971b4372efef514b82e601b5067580d"
+      },
+      "output": "outputs/python/print-with-two-arguments.py.json",
+      "output_sha256": "d77a937e428efc5bbccfeb13ad22b828ca3a04b65bb8089132dbdaec16b29464",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/ruby.json",
+        "research/joinery/specimen/ruby/hash-key-symbol.rb",
+        "--all",
+        "--json"
+      ],
+      "case": "ruby/hash-key-symbol.rb",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 4
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 5
+        },
+        {
+          "claim": "holds hash_key_symbol",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "spans hash_key_symbol 6 10",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "holds pair",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "spans pair 6 13",
+          "holds": true,
+          "line": 9
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/ruby/hash-key-symbol.rb": "9c0b812ca430718427d8ab89e444f7b74685b000ae347f9d4811acca4e58edfe",
+        "research/joinery/specimen/ruby/hash-key-symbol.rb.expect": "b06be6ba8fa15eae07a86b0a038141a1cf1ada2530aa362037e806974e90aad6",
+        "upstream/grammars/ruby.json": "ff0a0ab48788daea51cb418d9cfc14086dfcad50ac10e4981776be8b4d9296ab"
+      },
+      "output": "outputs/ruby/hash-key-symbol.rb.json",
+      "output_sha256": "5ff2a318968c79cb1afe6979f5c4d2a54cb0bbdc2b51dcd94e1b610b3f948b4e",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/rust.json",
+        "research/joinery/specimen/rust/raw-string-content.rs",
+        "--all",
+        "--json"
+      ],
+      "case": "rust/raw-string-content.rs",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "holds raw_string_literal",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "spans raw_string_literal 17 23",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "spans string_content 19 22",
+          "holds": true,
+          "line": 11
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/rust/raw-string-content.rs": "86650f27f98a87ff23f4d8ac454f41fb7fc622fc32e710b8b82a8fca730a4f91",
+        "research/joinery/specimen/rust/raw-string-content.rs.expect": "583698c180929c8a17418db88457cb58da403e38579ef8d5d706cb8387d528f9",
+        "upstream/grammars/rust.json": "b0f58f41f5461fa141bb98d81fe8abece3056cff979c4068a2e6cddee5aa0663"
+      },
+      "output": "outputs/rust/raw-string-content.rs.json",
+      "output_sha256": "7317e058b3b1f013fc4e5427916a4fce165fa594c854567ea29b7c7dd697714e",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/rust.json",
+        "research/joinery/specimen/rust/string-close.rs",
+        "--all",
+        "--json"
+      ],
+      "case": "rust/string-close.rs",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 12
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 13
+        },
+        {
+          "claim": "holds string_literal",
+          "holds": true,
+          "line": 14
+        },
+        {
+          "claim": "spans string_literal 17 20",
+          "holds": true,
+          "line": 15
+        },
+        {
+          "claim": "spans string_content 18 19",
+          "holds": true,
+          "line": 16
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/rust/string-close.rs": "c39dd2e2b39a56e9229701ec2f4deeb3cb16096f0ebb7647ecd6b0d4507172cf",
+        "research/joinery/specimen/rust/string-close.rs.expect": "b79d3e68eb752541da1ccd2ea5d0c69e9dc2641475184ae2b30153448ebe2e8e",
+        "upstream/grammars/rust.json": "b0f58f41f5461fa141bb98d81fe8abece3056cff979c4068a2e6cddee5aa0663"
+      },
+      "output": "outputs/rust/string-close.rs.json",
+      "output_sha256": "06eeaf3b271691de17cc5655d7511110dd2d9b3f158d51efe63dc31c4ec0e7c1",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/scala.json",
+        "research/joinery/specimen/scala/nested-comment.scala",
+        "--all",
+        "--json"
+      ],
+      "case": "scala/nested-comment.scala",
+      "claims": [
+        {
+          "claim": "holds block_comment",
+          "holds": true,
+          "line": 19
+        },
+        {
+          "claim": "spans block_comment 10 27",
+          "holds": true,
+          "line": 20
+        },
+        {
+          "claim": "lacks infix_expression",
+          "holds": true,
+          "line": 21
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/scala.json": "b018ce076b220b83079a370dc4031e89fb43f4bfbba4c73c42f04c750ae63e0d",
+        "research/joinery/specimen/scala/nested-comment.scala": "660ae93889d0024d44c053b0024860ef2336a2b3cfdc25cbb579beada7a5b0e9",
+        "research/joinery/specimen/scala/nested-comment.scala.expect": "c8e43ec994b4a9338d1399c67933bd23d7dd0bed7b4fe789d87d8c6f66e5d3a9",
+        "upstream/grammars/scala.json": "0040c891e6f062e929a7c1b596a306c8a7661d9f868a6ccdd9963381482d3589"
+      },
+      "output": "outputs/scala/nested-comment.scala.json",
+      "output_sha256": "ce2561553bee9c99d6aa2ed10ebc44b4763830bb5a977aa2aaf0320e5d80eb4d",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/scala.json",
+        "research/joinery/specimen/scala/offside-braceless.scala",
+        "--all",
+        "--json"
+      ],
+      "case": "scala/offside-braceless.scala",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 17
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 18
+        },
+        {
+          "claim": "holds object_definition",
+          "holds": true,
+          "line": 19
+        },
+        {
+          "claim": "spans object_definition 0 33",
+          "holds": true,
+          "line": 20
+        },
+        {
+          "claim": "holds template_body",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "spans template_body 8 33",
+          "holds": true,
+          "line": 22
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/scala.json": "b018ce076b220b83079a370dc4031e89fb43f4bfbba4c73c42f04c750ae63e0d",
+        "research/joinery/specimen/scala/offside-braceless.scala": "920e2efe74d85b6a5edde2cd0c47aa61379dfd7a22f09269f850bbb76810f305",
+        "research/joinery/specimen/scala/offside-braceless.scala.expect": "df9077ed8bdb955db7e6559b3af1e4e4c7cffe3557f71fc7d8cf2bf477d71af9",
+        "upstream/grammars/scala.json": "0040c891e6f062e929a7c1b596a306c8a7661d9f868a6ccdd9963381482d3589"
+      },
+      "output": "outputs/scala/offside-braceless.scala.json",
+      "output_sha256": "5855da2051c06c2024540083e22f56645331b417203699c4daaca409ba4edd45",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/scala.json",
+        "research/joinery/specimen/scala/offside-through-comment.scala",
+        "--all",
+        "--json"
+      ],
+      "case": "scala/offside-through-comment.scala",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 20
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 21
+        },
+        {
+          "claim": "holds template_body",
+          "holds": true,
+          "line": 22
+        },
+        {
+          "claim": "spans template_body 8 41",
+          "holds": true,
+          "line": 23
+        },
+        {
+          "claim": "holds block_comment",
+          "holds": true,
+          "line": 24
+        },
+        {
+          "claim": "spans block_comment 10 17",
+          "holds": true,
+          "line": 25
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/scala.json": "b018ce076b220b83079a370dc4031e89fb43f4bfbba4c73c42f04c750ae63e0d",
+        "research/joinery/specimen/scala/offside-through-comment.scala": "b0a161feb0b10cc5b2ba66c4e1be407474b089314fb77ef06966bca9f9dd3ece",
+        "research/joinery/specimen/scala/offside-through-comment.scala.expect": "c0609158a09dddb07e3077f3f55c7745e2f837805c5a110d628e61b477ed0334",
+        "upstream/grammars/scala.json": "0040c891e6f062e929a7c1b596a306c8a7661d9f868a6ccdd9963381482d3589"
+      },
+      "output": "outputs/scala/offside-through-comment.scala.json",
+      "output_sha256": "0ce5a7363f95fca91a410d711dc9211f3c9dfeb19807033e64e7c5f4ba10c7ed",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/swift.json",
+        "research/joinery/specimen/swift/catch-keyword.swift",
+        "--all",
+        "--json"
+      ],
+      "case": "swift/catch-keyword.swift",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 4
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 5
+        },
+        {
+          "claim": "holds catch_keyword",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "spans catch_keyword 26 31",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "holds catch_block",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "spans catch_block 26 35",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "holds do_statement",
+          "holds": true,
+          "line": 10
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/swift.json": "d2aeda66accaa90a1daf80f7eb3208c0b65c22c6f91b884ad705310c160979cd",
+        "research/joinery/specimen/swift/catch-keyword.swift": "ec34702c2cf0e65594314efec99f77e89afc6d971297fced0e48d4bc2858648c",
+        "research/joinery/specimen/swift/catch-keyword.swift.expect": "b1ecad91aa33e615f8a30ef6b496d2b9eee90312830d9bf194899fedc9c69172",
+        "upstream/grammars/swift.json": "081ee7a9601afc12869659d407729a4024e5c8e1c21cc46aed3387502d430156"
+      },
+      "output": "outputs/swift/catch-keyword.swift.json",
+      "output_sha256": "51bb6398dff586c590a7244090d7fc9bce43644603e7c5a4eb75d956520f52c9",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/swift.json",
+        "research/joinery/specimen/swift/default-keyword.swift",
+        "--all",
+        "--json"
+      ],
+      "case": "swift/default-keyword.swift",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 4
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 5
+        },
+        {
+          "claim": "holds default_keyword",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "spans default_keyword 28 35",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "holds switch_entry",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "spans switch_entry 28 42",
+          "holds": true,
+          "line": 9
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/swift.json": "d2aeda66accaa90a1daf80f7eb3208c0b65c22c6f91b884ad705310c160979cd",
+        "research/joinery/specimen/swift/default-keyword.swift": "9f5fc08d61143956c10c846e8c87b1f4e7cb38b990fcb4e337d6f642b5d5aaa8",
+        "research/joinery/specimen/swift/default-keyword.swift.expect": "83c9b53349dc19a6894dceeb3436c6d3c270520859e425322aa9d8767bbd511c",
+        "upstream/grammars/swift.json": "081ee7a9601afc12869659d407729a4024e5c8e1c21cc46aed3387502d430156"
+      },
+      "output": "outputs/swift/default-keyword.swift.json",
+      "output_sha256": "02194d7ee0553dcbae847b76994a6ad97f7f07392ca9682bfed0c15faefc64c0",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/swift.json",
+        "research/joinery/specimen/swift/interpolation.swift",
+        "--all",
+        "--json"
+      ],
+      "case": "swift/interpolation.swift",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "holds line_string_literal",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "spans line_string_literal 18 32",
+          "holds": true,
+          "line": 9
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/swift.json": "d2aeda66accaa90a1daf80f7eb3208c0b65c22c6f91b884ad705310c160979cd",
+        "research/joinery/specimen/swift/interpolation.swift": "05f3748e714101b2a11d4fb941816dd352233bb790528487b5e1b389a18d59f4",
+        "research/joinery/specimen/swift/interpolation.swift.expect": "34bd2fd768ab55b908ce2e5220deb0a9559145cc6843374edc1c33911c48981d",
+        "upstream/grammars/swift.json": "081ee7a9601afc12869659d407729a4024e5c8e1c21cc46aed3387502d430156"
+      },
+      "output": "outputs/swift/interpolation.swift.json",
+      "output_sha256": "972d4f82a63cc593032f7c340008f9a93f1b78fe37db460056a62bd31940287a",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/swift.json",
+        "research/joinery/specimen/swift/multiline-comment.swift",
+        "--all",
+        "--json"
+      ],
+      "case": "swift/multiline-comment.swift",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 14
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 15
+        },
+        {
+          "claim": "holds multiline_comment",
+          "holds": true,
+          "line": 16
+        },
+        {
+          "claim": "spans multiline_comment 10 22",
+          "holds": true,
+          "line": 17
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/swift.json": "d2aeda66accaa90a1daf80f7eb3208c0b65c22c6f91b884ad705310c160979cd",
+        "research/joinery/specimen/swift/multiline-comment.swift": "d68ba07247310a3912c275b979cf5d47bea0b51394b645d89160cccaac221486",
+        "research/joinery/specimen/swift/multiline-comment.swift.expect": "70528630fbc9c21771baf6a482e356f7ba102541b7d83ce81c916bf80b32adb2",
+        "upstream/grammars/swift.json": "081ee7a9601afc12869659d407729a4024e5c8e1c21cc46aed3387502d430156"
+      },
+      "output": "outputs/swift/multiline-comment.swift.json",
+      "output_sha256": "f6ed3883f530766ed092a4077bf7eedd704fb9c4e25e8fab9a2bdc5a0f6a3ff8",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/swift.json",
+        "research/joinery/specimen/swift/nested-comment.swift",
+        "--all",
+        "--json"
+      ],
+      "case": "swift/nested-comment.swift",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 13
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 14
+        },
+        {
+          "claim": "holds multiline_comment",
+          "holds": true,
+          "line": 15
+        },
+        {
+          "claim": "spans multiline_comment 10 27",
+          "holds": true,
+          "line": 16
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/swift.json": "d2aeda66accaa90a1daf80f7eb3208c0b65c22c6f91b884ad705310c160979cd",
+        "research/joinery/specimen/swift/nested-comment.swift": "6c9449a1014bbf0f9b30b0656f7f34061faa67e613e3d5271b53482ede7b8c32",
+        "research/joinery/specimen/swift/nested-comment.swift.expect": "8e815c6d8e22847d1e7ce1ac35ec603258270661a23a1f307365bce0c7ae1a00",
+        "upstream/grammars/swift.json": "081ee7a9601afc12869659d407729a4024e5c8e1c21cc46aed3387502d430156"
+      },
+      "output": "outputs/swift/nested-comment.swift.json",
+      "output_sha256": "e0e5617f4d0f028d5900312d5db8d209b23d4f0f19a078acbd606e89940bd75a",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/swift.json",
+        "research/joinery/specimen/swift/nested-interpolation.swift",
+        "--all",
+        "--json"
+      ],
+      "case": "swift/nested-interpolation.swift",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "holds line_string_literal",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "spans line_string_literal 18 29",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "spans line_string_literal 21 27",
+          "holds": true,
+          "line": 10
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/swift.json": "d2aeda66accaa90a1daf80f7eb3208c0b65c22c6f91b884ad705310c160979cd",
+        "research/joinery/specimen/swift/nested-interpolation.swift": "df430bffc16b7107a39a75e79a218d435ec2cd862c33f144f7e50c70b6f4d8c7",
+        "research/joinery/specimen/swift/nested-interpolation.swift.expect": "b8c104e1223ebcfb0743e43dc2ae669a92bb459587174eb0f595df36ed866862",
+        "upstream/grammars/swift.json": "081ee7a9601afc12869659d407729a4024e5c8e1c21cc46aed3387502d430156"
+      },
+      "output": "outputs/swift/nested-interpolation.swift.json",
+      "output_sha256": "1d650b46323a66ec0bb084d6c15dad98a5a6ed9ff53a535d6ba99fb54ff474da",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/swift.json",
+        "research/joinery/specimen/swift/raw-delimiter-in-body.swift",
+        "--all",
+        "--json"
+      ],
+      "case": "swift/raw-delimiter-in-body.swift",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "holds raw_string_literal",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "spans raw_string_literal 8 20",
+          "holds": true,
+          "line": 11
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/swift.json": "d2aeda66accaa90a1daf80f7eb3208c0b65c22c6f91b884ad705310c160979cd",
+        "research/joinery/specimen/swift/raw-delimiter-in-body.swift": "dd1aaa1080157e180c464aa4a69972db961244d809f88ed544a904cdc0d20760",
+        "research/joinery/specimen/swift/raw-delimiter-in-body.swift.expect": "3446eff4cf54989067465a3fbe39e22ad52a0723eccd124e15447feebdd87dec",
+        "upstream/grammars/swift.json": "081ee7a9601afc12869659d407729a4024e5c8e1c21cc46aed3387502d430156"
+      },
+      "output": "outputs/swift/raw-delimiter-in-body.swift.json",
+      "output_sha256": "84f1fd2049355247719719f805cb52383b2bcb9f28506818f404653ee9e72539",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/swift.json",
+        "research/joinery/specimen/swift/raw-string.swift",
+        "--all",
+        "--json"
+      ],
+      "case": "swift/raw-string.swift",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 8
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 9
+        },
+        {
+          "claim": "holds raw_string_literal",
+          "holds": true,
+          "line": 10
+        },
+        {
+          "claim": "lacks raw_str_interpolation",
+          "holds": true,
+          "line": 11
+        },
+        {
+          "claim": "spans raw_string_literal 8 20",
+          "holds": true,
+          "line": 12
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/swift.json": "d2aeda66accaa90a1daf80f7eb3208c0b65c22c6f91b884ad705310c160979cd",
+        "research/joinery/specimen/swift/raw-string.swift": "26ccacd78469313fdf8820f0b973491bcb81585395d118c2aac08f27346cb9d3",
+        "research/joinery/specimen/swift/raw-string.swift.expect": "e55e15a85f65428e45fe6dc9ca787983d65e8422235c33d8ee3e06ee00d643c3",
+        "upstream/grammars/swift.json": "081ee7a9601afc12869659d407729a4024e5c8e1c21cc46aed3387502d430156"
+      },
+      "output": "outputs/swift/raw-string.swift.json",
+      "output_sha256": "05f9285a8b2e7e4ad8f18324a8c043e3726d071364da9e125d0ae4bbdc7483b8",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/toml.json",
+        "research/joinery/specimen/toml/comment-after-pair.toml",
+        "--all",
+        "--json"
+      ],
+      "case": "toml/comment-after-pair.toml",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 29
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 30
+        },
+        {
+          "claim": "holds pair",
+          "holds": true,
+          "line": 31
+        },
+        {
+          "claim": "holds comment",
+          "holds": true,
+          "line": 32
+        },
+        {
+          "claim": "spans pair 0 12",
+          "holds": true,
+          "line": 33
+        },
+        {
+          "claim": "spans comment 9 12",
+          "holds": true,
+          "line": 34
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/toml/comment-after-pair.toml": "554721f3c3720730b52011beb650c0dbf4296203f6b47afb8decc2ffd8b76015",
+        "research/joinery/specimen/toml/comment-after-pair.toml.expect": "1f18afa93c6894e27bf2871b8ba29f8cd80a947b1cd9388f5479a9b057538034",
+        "upstream/grammars/toml.json": "fe710cf103c58a843cadba4bc64f6bef1306c90421616ebce56c9120871e28db"
+      },
+      "output": "outputs/toml/comment-after-pair.toml.json",
+      "output_sha256": "a7036fe10ef2c0bf7a40c5a3d433e76cf005bed80834d0f43537b8dad915b45a",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/toml.json",
+        "research/joinery/specimen/toml/pair-without-comment.toml",
+        "--all",
+        "--json"
+      ],
+      "case": "toml/pair-without-comment.toml",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 12
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 13
+        },
+        {
+          "claim": "holds pair",
+          "holds": true,
+          "line": 14
+        },
+        {
+          "claim": "spans pair 0 7",
+          "holds": true,
+          "line": 15
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/toml/pair-without-comment.toml": "b3c1a74c8cfe6895928157f5925ae213b609572a912ac22e0b6a718363c7d79e",
+        "research/joinery/specimen/toml/pair-without-comment.toml.expect": "6523605c271210d03f140181b4ac8633dac77225329ae8b06b6b780809f727ef",
+        "upstream/grammars/toml.json": "fe710cf103c58a843cadba4bc64f6bef1306c90421616ebce56c9120871e28db"
+      },
+      "output": "outputs/toml/pair-without-comment.toml.json",
+      "output_sha256": "94012e91d5a9912c7b38f6e519ed427a33ce61abf6328b42040288af3ffd5947",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/typescript.json",
+        "research/joinery/specimen/typescript/escape-sequence.ts",
+        "--all",
+        "--json"
+      ],
+      "case": "typescript/escape-sequence.ts",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 4
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 5
+        },
+        {
+          "claim": "holds escape_sequence",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "spans escape_sequence 10 12",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "spans string 8 14",
+          "holds": true,
+          "line": 8
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/typescript/escape-sequence.ts": "d8149eafe3044a0ca81c4ec6dba2ac1d79d5db898107c9ed0a43cc6ea5a06ca0",
+        "research/joinery/specimen/typescript/escape-sequence.ts.expect": "86be4f1cad16b856071a1994d981763b8a76ef02909da79454932cc2f1bfe9b0",
+        "upstream/grammars/typescript.json": "99dc4b95424dff47c89acb50d5d3f25b081b07eaff43994b7881dccd4186b214"
+      },
+      "output": "outputs/typescript/escape-sequence.ts.json",
+      "output_sha256": "d02da5afd9447e36c079cd4b0eb3cc4a29d4a910791e94e72ba71db765e19cdd",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/typescript.json",
+        "research/joinery/specimen/typescript/regex-pattern.ts",
+        "--all",
+        "--json"
+      ],
+      "case": "typescript/regex-pattern.ts",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 4
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 5
+        },
+        {
+          "claim": "holds regex_pattern",
+          "holds": true,
+          "line": 6
+        },
+        {
+          "claim": "spans regex_pattern 9 13",
+          "holds": true,
+          "line": 7
+        },
+        {
+          "claim": "spans regex_flags 14 15",
+          "holds": true,
+          "line": 8
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "research/joinery/specimen/typescript/regex-pattern.ts": "1a032631b402635c41c82ae106cd02d014a4c8f4df703ae9931a5a75659f352d",
+        "research/joinery/specimen/typescript/regex-pattern.ts.expect": "bcc2ee1bc6a3023f7115cb3e6987b6b7682f2f13a95b9bbae86842b379fb5a51",
+        "upstream/grammars/typescript.json": "99dc4b95424dff47c89acb50d5d3f25b081b07eaff43994b7881dccd4186b214"
+      },
+      "output": "outputs/typescript/regex-pattern.ts.json",
+      "output_sha256": "7129166e4f106d293d51e54e4c51ac10d3fb46b6a54b8c202161658e037e5831",
+      "strict": true
+    },
+    {
+      "argv": [
+        "parse",
+        "upstream/grammars/yaml.json",
+        "research/joinery/specimen/yaml/comment.yml",
+        "--all",
+        "--json"
+      ],
+      "case": "yaml/comment.yml",
+      "claims": [
+        {
+          "claim": "roots 1",
+          "holds": true,
+          "line": 11
+        },
+        {
+          "claim": "mends 0",
+          "holds": true,
+          "line": 12
+        },
+        {
+          "claim": "holds comment",
+          "holds": true,
+          "line": 13
+        },
+        {
+          "claim": "spans comment 0 19",
+          "holds": true,
+          "line": 14
+        }
+      ],
+      "exit": 0,
+      "inputs": {
+        "customary/yaml.json": "4420d1468920809d5910f62e126802a78742486db594f209ac3c6ed38e3a32c9",
+        "research/joinery/specimen/yaml/comment.yml": "d99dc45688f8f5000cd45660de59494a0420875913cd0cfc1590c4fca51570d4",
+        "research/joinery/specimen/yaml/comment.yml.expect": "6342d8c230cb0e6c1c86788c9e05bee2b93a89ee937520b80ae7fd22d1f43e02",
+        "upstream/grammars/yaml.json": "a2c03fcc9bd9b7843780854f5e8264c9d465a34172b530d9511d6e89c5d2630e"
+      },
+      "output": "outputs/yaml/comment.yml.json",
+      "output_sha256": "f0e7909e54abba09cfe46d03c78c9f72e2a5f8f33ef278e1ce8d9e6ada2a2082",
+      "strict": true
+    }
+  ],
+  "command": "capture_migration_specimens.py --reference REFERENCE --out OUTPUT",
+  "population": "66 pinned working specimens; holdout seal untouched",
+  "reference_binary_sha256": "709bf8c0ce4a3c9ad5deb400e42d5025439e76c45bbcfaaf0959be31cff768ec",
+  "reference_commit": "9f5caf7bae7d370033fe55d0bcaaba7a75e9d8a6",
+  "reference_manifest_sha256": "4be57bd42e493b13b6b017d75e0361a86fa2b0ad5a1a78ebc1b76e9c02d32831",
+  "schema": 1
+}

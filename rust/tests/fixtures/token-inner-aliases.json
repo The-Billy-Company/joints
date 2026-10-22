@@ -1,0 +1,111 @@
+{
+  "name": "inner_alias",
+  "rules": {
+    "doc": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "atomic",
+          "content": {
+            "type": "SYMBOL",
+            "name": "chunk"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": ":"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "chunk"
+          },
+          "value": "outside",
+          "named": true
+        },
+        {
+          "type": "STRING",
+          "value": ":"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "direct"
+        }
+      ]
+    },
+    "chunk": {
+      "type": "TOKEN",
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "a"
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "IMMEDIATE_TOKEN",
+                  "content": {
+                    "type": "STRING",
+                    "value": "b"
+                  }
+                },
+                "value": "inside_b",
+                "named": true
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "IMMEDIATE_TOKEN",
+                  "content": {
+                    "type": "SEQ",
+                    "members": [
+                      {
+                        "type": "STRING",
+                        "value": "\\"
+                      },
+                      {
+                        "type": "PATTERN",
+                        "value": "\\r?\\n|\\r"
+                      }
+                    ]
+                  }
+                },
+                "value": "\\",
+                "named": false
+              }
+            ]
+          },
+          {
+            "type": "STRING",
+            "value": "c"
+          }
+        ]
+      }
+    },
+    "direct": {
+      "type": "TOKEN",
+      "content": {
+        "type": "ALIAS",
+        "content": {
+          "type": "STRING",
+          "value": "z"
+        },
+        "value": "inside_z",
+        "named": false
+      }
+    }
+  },
+  "extras": [
+    {
+      "type": "PATTERN",
+      "value": "[ \\t]+"
+    }
+  ]
+}

@@ -1,0 +1,602 @@
+[
+  {
+    "name": "interior",
+    "grammar": "{\"name\":\"nullable_interior\",\"rules\":{\"doc\":{\"type\":\"SEQ\",\"members\":[{\"type\":\"STRING\",\"value\":\"(\"},{\"type\":\"FIELD\",\"content\":{\"type\":\"ALIAS\",\"content\":{\"type\":\"TOKEN\",\"content\":{\"type\":\"PATTERN\",\"value\":\"a*\"}},\"named\":true,\"value\":\"empty\"},\"name\":\"value\"},{\"type\":\"STRING\",\"value\":\")\"}]}},\"extras\":[]}\n",
+    "source": "()",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        2
+      ],
+      [
+        1,
+        "(",
+        false,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "empty",
+        true,
+        "value",
+        1,
+        1
+      ],
+      [
+        1,
+        ")",
+        false,
+        null,
+        1,
+        2
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "57dc26db30d72025db449b357f75187b60f50541d8ee4b48402aba5a94a5c195",
+      "source_sha256": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+      "parser_c_sha256": "397d13adc639203e7ad66f462d750a7ff087a38981394aefa05e409a97636742",
+      "xml_sha256": "84be29be2402a0cd0d0ba25b8698b651940aa27a55bb3860be2767c65a5ca2d5",
+      "cst_sha256": "3a174c6a8af6eb1e1773d9197a4a94dcbd4baff6e7ae113ddee9771fe32042bc"
+    }
+  },
+  {
+    "name": "eof",
+    "grammar": "{\"name\":\"nullable_eof\",\"rules\":{\"doc\":{\"type\":\"SEQ\",\"members\":[{\"type\":\"STRING\",\"value\":\"x\"},{\"type\":\"ALIAS\",\"content\":{\"type\":\"TOKEN\",\"content\":{\"type\":\"PATTERN\",\"value\":\"a*\"}},\"named\":true,\"value\":\"empty\"}]}},\"extras\":[]}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "x",
+        false,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "empty",
+        true,
+        null,
+        1,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "6600a268681700f37790669274beb6ac21fdb44c85c9dd96138391476f8722cd",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "1b723bc24259238005e0869b530654abd93b691dce6723179c23a6c42a0196b4",
+      "xml_sha256": "dd06b50fa775a4740d4b6569fb1081b8faab76aa8f89d822b4e4b634a287180b",
+      "cst_sha256": "ae222ebdb5342bfc9247ecc5434086cf797770f4bb2731036d7a7c93ebb82a33"
+    }
+  },
+  {
+    "name": "consecutive",
+    "grammar": "{\"name\":\"nullable_consecutive\",\"rules\":{\"doc\":{\"type\":\"SEQ\",\"members\":[{\"type\":\"STRING\",\"value\":\"(\"},{\"type\":\"ALIAS\",\"content\":{\"type\":\"TOKEN\",\"content\":{\"type\":\"PATTERN\",\"value\":\"a*\"}},\"named\":true,\"value\":\"one\"},{\"type\":\"ALIAS\",\"content\":{\"type\":\"TOKEN\",\"content\":{\"type\":\"PATTERN\",\"value\":\"a*\"}},\"named\":true,\"value\":\"two\"},{\"type\":\"STRING\",\"value\":\")\"}]}},\"extras\":[]}\n",
+    "source": "()",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        2
+      ],
+      [
+        1,
+        "(",
+        false,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "one",
+        true,
+        null,
+        1,
+        1
+      ],
+      [
+        1,
+        "two",
+        true,
+        null,
+        1,
+        1
+      ],
+      [
+        1,
+        ")",
+        false,
+        null,
+        1,
+        2
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "e6018c1978a7428818756bbc01ff1b591ea6cb5fb5d5c99bdcde905a2802550f",
+      "source_sha256": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+      "parser_c_sha256": "5575b3cd86e45030b2bf244fdcb5e440b7afb2eec6ce58b5b33724e1390d51ce",
+      "xml_sha256": "6040f03d08ae081df1b96a69e92c55549df5ccfabc2f2db63c796e5fa1e415cf",
+      "cst_sha256": "8a3f24a990032b624bb79d9367fd152f630680804555e9c52af517dd1a7c983f"
+    }
+  },
+  {
+    "name": "extra",
+    "grammar": "{\"name\":\"nullable_extra\",\"rules\":{\"doc\":{\"type\":\"SEQ\",\"members\":[{\"type\":\"STRING\",\"value\":\"x\"}]}},\"extras\":[{\"type\":\"TOKEN\",\"content\":{\"type\":\"PATTERN\",\"value\":\"s*\"}}]}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "x",
+        false,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "8214bc364c3491e2b1b339223568d167fabf6aef8b2de07f187eb7e6a83e4269",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "7e845d8b8879bbd7e7f54092f3eed6fde7696c3499d0e489f0a3683b28ce64fd",
+      "xml_sha256": "abc9c6a830063aff546d0998d756bc0da5bd28dca9ab3c208616d18349f1f32e",
+      "cst_sha256": "6bb385a62d2ea9a0de527be7a7dd632eff7dd8439848d20072d9ee36e657e6d4"
+    }
+  },
+  {
+    "name": "loop",
+    "grammar": "{\"name\":\"nullable_loop\",\"rules\":{\"doc\":{\"type\":\"SEQ\",\"members\":[{\"type\":\"STRING\",\"value\":\"(\"},{\"type\":\"REPEAT1\",\"content\":{\"type\":\"ALIAS\",\"content\":{\"type\":\"TOKEN\",\"content\":{\"type\":\"PATTERN\",\"value\":\"a*\"}},\"named\":true,\"value\":\"empty\"}},{\"type\":\"STRING\",\"value\":\")\"}]}},\"extras\":[]}\n",
+    "source": "()",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        2
+      ],
+      [
+        1,
+        "(",
+        false,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "empty",
+        true,
+        null,
+        1,
+        1
+      ],
+      [
+        1,
+        ")",
+        false,
+        null,
+        1,
+        2
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "ad6a3063f31592426fb4a449f149bc7273c7a6ca05caa17cdc7862892bf5ef64",
+      "source_sha256": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+      "parser_c_sha256": "5fab630e19e818807e412be63e0af8ee94bcce3467e39bde49e209fbc27be334",
+      "xml_sha256": "4c34f9f0274c9bb67076d8156485780bbe2e8d588ca0d884cba2e5647bde8cda",
+      "cst_sha256": "721919bc71c589c572ca55f40378a3beb5038abdcc58a2288a646c10e8aa84ae"
+    }
+  },
+  {
+    "name": "positive",
+    "grammar": "{\"name\":\"nullable_positive\",\"rules\":{\"doc\":{\"type\":\"SEQ\",\"members\":[{\"type\":\"STRING\",\"value\":\"(\"},{\"type\":\"ALIAS\",\"content\":{\"type\":\"TOKEN\",\"content\":{\"type\":\"PATTERN\",\"value\":\"a*\"}},\"named\":true,\"value\":\"empty\"},{\"type\":\"STRING\",\"value\":\")\"}]}},\"extras\":[]}\n",
+    "source": "(aaa)",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        5
+      ],
+      [
+        1,
+        "(",
+        false,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "empty",
+        true,
+        null,
+        1,
+        4
+      ],
+      [
+        1,
+        ")",
+        false,
+        null,
+        4,
+        5
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "93d28f33f03e4be36b9d01084cfa91a568bf36ba4984c710a810df8c9618b678",
+      "source_sha256": "a9e8c33201ccf80fac1c6f2774f03c5dc5fe6a8743e71f9c119df8a807427247",
+      "parser_c_sha256": "ffd9146223b3ab38851f8fe972c42e8835b331d6caef12fee18d5b9c19f2848c",
+      "xml_sha256": "f43b0622425af77670528453cbb4cb432d96e7db198f8ee918efb4cf860941a0",
+      "cst_sha256": "79dfb83c64c52c5fe6416fdebbe67b83745fe1810e402a7d3434eb31999c0b0e"
+    }
+  },
+  {
+    "name": "positive_competition",
+    "grammar": "{\"name\":\"nullable_positive_competition\",\"rules\":{\"doc\":{\"type\":\"CHOICE\",\"members\":[{\"type\":\"SEQ\",\"members\":[{\"type\":\"STRING\",\"value\":\"(\"},{\"type\":\"ALIAS\",\"content\":{\"type\":\"TOKEN\",\"content\":{\"type\":\"PATTERN\",\"value\":\"a*\"}},\"named\":true,\"value\":\"empty\"},{\"type\":\"STRING\",\"value\":\")\"}]},{\"type\":\"SEQ\",\"members\":[{\"type\":\"STRING\",\"value\":\"(\"},{\"type\":\"STRING\",\"value\":\"x\"},{\"type\":\"STRING\",\"value\":\")\"}]}]}},\"extras\":[]}\n",
+    "source": "(x)",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        3
+      ],
+      [
+        1,
+        "(",
+        false,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "x",
+        false,
+        null,
+        1,
+        2
+      ],
+      [
+        1,
+        ")",
+        false,
+        null,
+        2,
+        3
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "e03b49738eb1723598df5da4e06397bb5176af7a249050461bd50f94294084e8",
+      "source_sha256": "ec84ac67768312115554ab2ce62babb31be64d20af9eba87cf4c8a06f5a215d0",
+      "parser_c_sha256": "271c1fdd07550310d754aca6cca94e6951947a69c62bb9da405cbe932629b3f4",
+      "xml_sha256": "d04f26077c49a5848cda44b98006f2e72043509e6d926e586ea411208d8f5e34",
+      "cst_sha256": "f87e871ae166035a31d23ba74572eaece1412a7b02f240a46730fed1fe7c6025"
+    }
+  },
+  {
+    "name": "eof_optional",
+    "grammar": "{\"name\":\"nullable_eof_optional\",\"rules\":{\"doc\":{\"type\":\"SEQ\",\"members\":[{\"type\":\"STRING\",\"value\":\"x\"},{\"type\":\"CHOICE\",\"members\":[{\"type\":\"ALIAS\",\"content\":{\"type\":\"TOKEN\",\"content\":{\"type\":\"PATTERN\",\"value\":\"a*\"}},\"named\":true,\"value\":\"empty\"},{\"type\":\"BLANK\"}]}]}},\"extras\":[]}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "x",
+        false,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "f15acb22a523078d5da56edce71f29189e8bfb51ba2db90256f2785df229eb65",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "0ccc1e22dea323eb16e817de71afa7bf66809354fd79391f5b3963b2ec143ebf",
+      "xml_sha256": "811794d6c78a46bdef1f4208efc9184347498ee217c05c31ca5106d3a76e8ff7",
+      "cst_sha256": "6bb385a62d2ea9a0de527be7a7dd632eff7dd8439848d20072d9ee36e657e6d4"
+    }
+  },
+  {
+    "name": "same_tier_positive",
+    "grammar": "{\n  \"name\": \"nullable_same_tier_positive\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SEQ\",\n          \"members\": [\n            {\n              \"type\": \"ALIAS\",\n              \"content\": {\n                \"type\": \"TOKEN\",\n                \"content\": {\n                  \"type\": \"PREC\",\n                  \"value\": 0,\n                  \"content\": {\n                    \"type\": \"PATTERN\",\n                    \"value\": \"a*\"\n                  }\n                }\n              },\n              \"named\": true,\n              \"value\": \"zero\"\n            },\n            {\n              \"type\": \"STRING\",\n              \"value\": \"x\"\n            }\n          ]\n        },\n        {\n          \"type\": \"ALIAS\",\n          \"content\": {\n            \"type\": \"TOKEN\",\n            \"content\": {\n              \"type\": \"PREC\",\n              \"value\": 0,\n              \"content\": {\n                \"type\": \"STRING\",\n                \"value\": \"x\"\n              }\n            }\n          },\n          \"named\": true,\n          \"value\": \"positive\"\n        }\n      ]\n    }\n  },\n  \"extras\": []\n}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "positive",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "bf8bb017121057986fea124d2fefd04860e0a12e353565a7b9de46e393e5a163",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "fd07beefc281764bed02b4a3758effb831f4af20f601d6470cba0a668568db6f",
+      "xml_sha256": "512b1d4b144a456199657309d66a567d42c53a5cbf7e8131c789976d9493570e",
+      "cst_sha256": "368980116ba245d1ed489683623cd0c3eb0963a752a2bc860d3abf992bc1bbe6"
+    }
+  },
+  {
+    "name": "higher_empty",
+    "grammar": "{\n  \"name\": \"nullable_higher_empty\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SEQ\",\n          \"members\": [\n            {\n              \"type\": \"ALIAS\",\n              \"content\": {\n                \"type\": \"TOKEN\",\n                \"content\": {\n                  \"type\": \"PREC\",\n                  \"value\": 1,\n                  \"content\": {\n                    \"type\": \"PATTERN\",\n                    \"value\": \"a*\"\n                  }\n                }\n              },\n              \"named\": true,\n              \"value\": \"zero\"\n            },\n            {\n              \"type\": \"STRING\",\n              \"value\": \"x\"\n            }\n          ]\n        },\n        {\n          \"type\": \"ALIAS\",\n          \"content\": {\n            \"type\": \"TOKEN\",\n            \"content\": {\n              \"type\": \"PREC\",\n              \"value\": 0,\n              \"content\": {\n                \"type\": \"STRING\",\n                \"value\": \"x\"\n              }\n            }\n          },\n          \"named\": true,\n          \"value\": \"positive\"\n        }\n      ]\n    }\n  },\n  \"extras\": []\n}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "zero",
+        true,
+        null,
+        0,
+        0
+      ],
+      [
+        1,
+        "x",
+        false,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "cb6a3a65cd228e2a75ec5abd1f3d040b3320ca7f1cfe9d9d1b695bb89be75c48",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "6bf1824e8e79c63094ec05a8e9c5558e2d6bbc0722230c7cf3d1e1758f635b85",
+      "xml_sha256": "6cc30141a2df5116a5e85ffa42340aed347a6a7251bb562fc3e72f49dfc92d51",
+      "cst_sha256": "89c784c8d1ee3f8925a040309f0340f39f7bd776d187945369cc9fe2afd4bf95"
+    }
+  },
+  {
+    "name": "higher_positive",
+    "grammar": "{\n  \"name\": \"nullable_higher_positive\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"CHOICE\",\n      \"members\": [\n        {\n          \"type\": \"SEQ\",\n          \"members\": [\n            {\n              \"type\": \"ALIAS\",\n              \"content\": {\n                \"type\": \"TOKEN\",\n                \"content\": {\n                  \"type\": \"PREC\",\n                  \"value\": 0,\n                  \"content\": {\n                    \"type\": \"PATTERN\",\n                    \"value\": \"a*\"\n                  }\n                }\n              },\n              \"named\": true,\n              \"value\": \"zero\"\n            },\n            {\n              \"type\": \"STRING\",\n              \"value\": \"x\"\n            }\n          ]\n        },\n        {\n          \"type\": \"ALIAS\",\n          \"content\": {\n            \"type\": \"TOKEN\",\n            \"content\": {\n              \"type\": \"PREC\",\n              \"value\": 1,\n              \"content\": {\n                \"type\": \"STRING\",\n                \"value\": \"x\"\n              }\n            }\n          },\n          \"named\": true,\n          \"value\": \"positive\"\n        }\n      ]\n    }\n  },\n  \"extras\": []\n}\n",
+    "source": "x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "positive",
+        true,
+        null,
+        0,
+        1
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "f27f68840631aee346f575e03ba405714da77bbd9773e48b5ae777a61d5b9401",
+      "source_sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+      "parser_c_sha256": "7796ef71265a1feb944d3ba7dee669517e2fab6f1dce72212c1790eb3550cedc",
+      "xml_sha256": "fe227750d03c16ca184e07fef16a6b38cc25e38e30a7b24b5ceb0996682d8ec3",
+      "cst_sha256": "368980116ba245d1ed489683623cd0c3eb0963a752a2bc860d3abf992bc1bbe6"
+    }
+  },
+  {
+    "name": "global_extra_structural",
+    "grammar": "{\n  \"name\": \"nullable_global_extra_structural\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"(\"\n        },\n        {\n          \"type\": \"FIELD\",\n          \"name\": \"value\",\n          \"content\": {\n            \"type\": \"ALIAS\",\n            \"content\": {\n              \"type\": \"SYMBOL\",\n              \"name\": \"zero\"\n            },\n            \"named\": true,\n            \"value\": \"content\"\n          }\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \")\"\n        }\n      ]\n    },\n    \"zero\": {\n      \"type\": \"TOKEN\",\n      \"content\": {\n        \"type\": \"PREC\",\n        \"value\": 0,\n        \"content\": {\n          \"type\": \"PATTERN\",\n          \"value\": \"a*\"\n        }\n      }\n    }\n  },\n  \"extras\": [\n    {\n      \"type\": \"SYMBOL\",\n      \"name\": \"zero\"\n    }\n  ]\n}\n",
+    "source": "()",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        2
+      ],
+      [
+        1,
+        "(",
+        false,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        "content",
+        true,
+        "value",
+        1,
+        1
+      ],
+      [
+        1,
+        ")",
+        false,
+        null,
+        1,
+        2
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "c199af5baf1eb33c284a2f43df66fa16220db69906a7139001a357df3a08b865",
+      "source_sha256": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+      "parser_c_sha256": "17e9de644c8b437798be71405271787f2170416991758b423cde69f538095daf",
+      "xml_sha256": "8d44b1dc313344bc83c489705d518c4ca7a189b73c6f1f93441fd1b3c8bc0dcf",
+      "cst_sha256": "0d934b5f212a9235e53f5741a119c308f5acd3e7a88de13d1d3635b035d76804"
+    }
+  },
+  {
+    "name": "global_extra_automatic",
+    "grammar": "{\n  \"name\": \"nullable_global_extra_automatic\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"(\"\n        },\n        {\n          \"type\": \"STRING\",\n          \"value\": \")\"\n        }\n      ]\n    },\n    \"zero\": {\n      \"type\": \"TOKEN\",\n      \"content\": {\n        \"type\": \"PREC\",\n        \"value\": 0,\n        \"content\": {\n          \"type\": \"PATTERN\",\n          \"value\": \"a*\"\n        }\n      }\n    }\n  },\n  \"extras\": [\n    {\n      \"type\": \"SYMBOL\",\n      \"name\": \"zero\"\n    }\n  ]\n}\n",
+    "source": "()",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        2
+      ],
+      [
+        1,
+        "(",
+        false,
+        null,
+        0,
+        1
+      ],
+      [
+        1,
+        ")",
+        false,
+        null,
+        1,
+        2
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "e2ae9c8814c63f8b109329a2b1b28e3688c1aafeedfd36d85d9c357400dc0f1b",
+      "source_sha256": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+      "parser_c_sha256": "69fdb55e6515a95a8180ff26fde9ea32c89dd7ddc024819c4d87fdf20290f456",
+      "xml_sha256": "570dc9fda114f162adad3ee7db14c709dcb624c0861e9533438d1302ca27fbba",
+      "cst_sha256": "3def32aa174414b3e389b38696185d4a23458800c04284bc7aad44aaa79c1d93"
+    }
+  },
+  {
+    "name": "rule_extra_interior",
+    "grammar": "{\n  \"name\": \"nullable_extra_seq_positive_prefix\",\n  \"rules\": {\n    \"doc\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"x\"\n        }\n      ]\n    },\n    \"comment\": {\n      \"type\": \"SEQ\",\n      \"members\": [\n        {\n          \"type\": \"STRING\",\n          \"value\": \"#\"\n        },\n        {\n          \"type\": \"SYMBOL\",\n          \"name\": \"content\"\n        }\n      ]\n    },\n    \"content\": {\n      \"type\": \"TOKEN\",\n      \"content\": {\n        \"type\": \"PATTERN\",\n        \"value\": \"a*\"\n      }\n    }\n  },\n  \"extras\": [\n    {\n      \"type\": \"SYMBOL\",\n      \"name\": \"comment\"\n    }\n  ]\n}\n",
+    "source": "#x",
+    "expected": [
+      [
+        0,
+        "doc",
+        true,
+        null,
+        0,
+        2
+      ],
+      [
+        1,
+        "comment",
+        true,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "#",
+        false,
+        null,
+        0,
+        1
+      ],
+      [
+        2,
+        "content",
+        true,
+        null,
+        1,
+        1
+      ],
+      [
+        1,
+        "x",
+        false,
+        null,
+        1,
+        2
+      ]
+    ],
+    "oracle": {
+      "version": "tree-sitter 0.26.11",
+      "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+      "grammar_sha256": "4593cd57725e925e0af3701cd8c5767a86432c4555161025d4087be2d7e0367a",
+      "source_sha256": "acfa92747bb3b6fcdd0e61da682d2fc4fa45c96f5315faeebfd94fa2697e5a9d",
+      "parser_c_sha256": "b976e4826b87f44cc3b3794a8e6af5360226b5d5f173dfa491b4392c09673015",
+      "xml_sha256": "bbb0cf6002fdab787c47c67be74e2859480e8a32c739fd2008cabbfd1dba9339",
+      "cst_sha256": "a974b88214c9ae8390ce9c5dab8c5eddb4168ae861a315105128b9d3d5132be5"
+    }
+  }
+]

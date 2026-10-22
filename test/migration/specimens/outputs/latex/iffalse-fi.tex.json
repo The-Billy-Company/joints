@@ -1,0 +1,118 @@
+{
+  "language": "latex",
+  "mends": 0,
+  "path": "research/joinery/specimen/latex/iffalse-fi.tex",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 12,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 12
+  },
+  "tree": [
+    {
+      "end": 39,
+      "kids": [
+        {
+          "end": 26,
+          "kids": [
+            {
+              "end": 8,
+              "field": "begin",
+              "kids": [],
+              "name": "\\iffalse",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 23,
+              "field": "comment",
+              "kids": [],
+              "name": "comment",
+              "named": true,
+              "start": 8
+            },
+            {
+              "end": 26,
+              "field": "end",
+              "kids": [],
+              "name": "\\fi",
+              "named": false,
+              "start": 23
+            }
+          ],
+          "name": "block_comment",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 38,
+          "kids": [
+            {
+              "end": 35,
+              "field": "command",
+              "kids": [],
+              "name": "\\section",
+              "named": false,
+              "start": 27
+            },
+            {
+              "end": 38,
+              "field": "text",
+              "kids": [
+                {
+                  "end": 36,
+                  "kids": [],
+                  "name": "{",
+                  "named": false,
+                  "start": 35
+                },
+                {
+                  "end": 37,
+                  "kids": [
+                    {
+                      "end": 37,
+                      "field": "word",
+                      "kids": [],
+                      "name": "word",
+                      "named": true,
+                      "start": 36
+                    }
+                  ],
+                  "name": "text",
+                  "named": true,
+                  "start": 36
+                },
+                {
+                  "end": 38,
+                  "kids": [],
+                  "name": "}",
+                  "named": false,
+                  "start": 37
+                }
+              ],
+              "name": "curly_group",
+              "named": true,
+              "start": 35
+            }
+          ],
+          "name": "section",
+          "named": true,
+          "start": 27
+        }
+      ],
+      "name": "source_file",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

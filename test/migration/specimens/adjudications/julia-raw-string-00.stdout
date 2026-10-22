@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<sources>
+  <source name="/Users/griffinstrier/Billy-Company/joints/research/joinery/specimen/julia/raw-string.jl">
+    <source_file srow="0" scol="0" erow="1" ecol="0">
+      <assignment srow="0" scol="0" erow="0" ecol="12">
+        <identifier srow="0" scol="0" erow="0" ecol="1">s</identifier>
+        <operator srow="0" scol="2" erow="0" ecol="3">=</operator>
+        <prefixed_string_literal srow="0" scol="4" erow="0" ecol="12">
+          <identifier field="prefix" srow="0" scol="4" erow="0" ecol="7">raw</identifier>
+          "
+          <content srow="0" scol="8" erow="0" ecol="11">a\b</content>
+        </prefixed_string_literal>
+      </assignment>
+    </source_file>
+  </source>
+</sources>

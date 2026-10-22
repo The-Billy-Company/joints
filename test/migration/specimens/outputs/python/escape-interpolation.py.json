@@ -1,0 +1,129 @@
+{
+  "language": "python",
+  "mends": 0,
+  "path": "research/joinery/specimen/python/escape-interpolation.py",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 14,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 14
+  },
+  "tree": [
+    {
+      "end": 21,
+      "kids": [
+        {
+          "end": 20,
+          "kids": [
+            {
+              "end": 1,
+              "field": "left",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 3,
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 2
+            },
+            {
+              "end": 20,
+              "field": "right",
+              "kids": [
+                {
+                  "end": 6,
+                  "kids": [],
+                  "name": "string_start",
+                  "named": true,
+                  "start": 4
+                },
+                {
+                  "end": 16,
+                  "kids": [
+                    {
+                      "end": 8,
+                      "kids": [],
+                      "name": "escape_interpolation",
+                      "named": true,
+                      "start": 6
+                    },
+                    {
+                      "end": 15,
+                      "kids": [],
+                      "name": "escape_interpolation",
+                      "named": true,
+                      "start": 13
+                    }
+                  ],
+                  "name": "string_content",
+                  "named": true,
+                  "start": 6
+                },
+                {
+                  "end": 19,
+                  "kids": [
+                    {
+                      "end": 17,
+                      "kids": [],
+                      "name": "{",
+                      "named": false,
+                      "start": 16
+                    },
+                    {
+                      "end": 18,
+                      "field": "expression",
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 17
+                    },
+                    {
+                      "end": 19,
+                      "kids": [],
+                      "name": "}",
+                      "named": false,
+                      "start": 18
+                    }
+                  ],
+                  "name": "interpolation",
+                  "named": true,
+                  "start": 16
+                },
+                {
+                  "end": 20,
+                  "kids": [],
+                  "name": "string_end",
+                  "named": true,
+                  "start": 19
+                }
+              ],
+              "name": "string",
+              "named": true,
+              "start": 4
+            }
+          ],
+          "name": "assignment",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "module",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

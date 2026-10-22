@@ -1,0 +1,91 @@
+{
+  "language": "python",
+  "mends": 0,
+  "path": "research/joinery/specimen/python/print-with-two-arguments.py",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 12,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 9
+  },
+  "tree": [
+    {
+      "end": 12,
+      "kids": [
+        {
+          "end": 11,
+          "kids": [
+            {
+              "end": 5,
+              "field": "function",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 11,
+              "field": "arguments",
+              "kids": [
+                {
+                  "end": 6,
+                  "kids": [],
+                  "name": "(",
+                  "named": false,
+                  "start": 5
+                },
+                {
+                  "end": 7,
+                  "kids": [],
+                  "name": "identifier",
+                  "named": true,
+                  "start": 6
+                },
+                {
+                  "end": 8,
+                  "kids": [],
+                  "name": ",",
+                  "named": false,
+                  "start": 7
+                },
+                {
+                  "end": 10,
+                  "kids": [],
+                  "name": "identifier",
+                  "named": true,
+                  "start": 9
+                },
+                {
+                  "end": 11,
+                  "kids": [],
+                  "name": ")",
+                  "named": false,
+                  "start": 10
+                }
+              ],
+              "name": "argument_list",
+              "named": true,
+              "start": 5
+            }
+          ],
+          "name": "call",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "module",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "language": "bash",
+  "mends": 0,
+  "path": "research/joinery/specimen/bash/file-descriptor.sh",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 10,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 10
+  },
+  "tree": [
+    {
+      "end": 13,
+      "kids": [
+        {
+          "end": 12,
+          "kids": [
+            {
+              "end": 7,
+              "field": "body",
+              "kids": [
+                {
+                  "end": 4,
+                  "field": "name",
+                  "kids": [
+                    {
+                      "end": 4,
+                      "kids": [],
+                      "name": "word",
+                      "named": true,
+                      "start": 0
+                    }
+                  ],
+                  "name": "command_name",
+                  "named": true,
+                  "start": 0
+                },
+                {
+                  "end": 7,
+                  "field": "argument",
+                  "kids": [],
+                  "name": "word",
+                  "named": true,
+                  "start": 5
+                }
+              ],
+              "name": "command",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 12,
+              "field": "redirect",
+              "kids": [
+                {
+                  "end": 9,
+                  "field": "descriptor",
+                  "kids": [],
+                  "name": "file_descriptor",
+                  "named": true,
+                  "start": 8
+                },
+                {
+                  "end": 11,
+                  "kids": [],
+                  "name": ">&",
+                  "named": false,
+                  "start": 9
+                },
+                {
+                  "end": 12,
+                  "field": "destination",
+                  "kids": [],
+                  "name": "number",
+                  "named": true,
+                  "start": 11
+                }
+              ],
+              "name": "file_redirect",
+              "named": true,
+              "start": 8
+            }
+          ],
+          "name": "redirected_statement",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "program",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

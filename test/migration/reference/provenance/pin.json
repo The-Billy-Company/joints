@@ -1,0 +1,13 @@
+{
+  "asked": "a4ea7aefab6a3dad011dabc487633d75933075fa2504d265158dc1506f63da77",
+  "build": "709bf8c0ce4a3c9ad5deb400e42d5025439e76c45bbcfaaf0959be31cff768ec",
+  "built": 1792356994.5466533,
+  "commit": "9f5caf7bae7d370033fe55d0bcaaba7a75e9d8a6",
+  "dirty": 3,
+  "files": 141,
+  "flags": [],
+  "name": "rust-reference",
+  "newest": "src/surface/face/joints/whence.zig",
+  "touched": 1791343266.4839098,
+  "tree": "a4ea7aefab6a3dad011dabc487633d75933075fa2504d265158dc1506f63da77"
+}

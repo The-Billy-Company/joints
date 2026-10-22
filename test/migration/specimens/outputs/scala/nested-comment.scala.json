@@ -1,0 +1,114 @@
+{
+  "language": "scala",
+  "mends": 0,
+  "path": "research/joinery/specimen/scala/nested-comment.scala",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 12,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 12
+  },
+  "tree": [
+    {
+      "end": 38,
+      "kids": [
+        {
+          "end": 9,
+          "kids": [
+            {
+              "end": 3,
+              "kids": [],
+              "name": "val",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 5,
+              "field": "pattern",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 4
+            },
+            {
+              "end": 7,
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 6
+            },
+            {
+              "end": 9,
+              "field": "value",
+              "kids": [],
+              "name": "integer_literal",
+              "named": true,
+              "start": 8
+            }
+          ],
+          "name": "val_definition",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 27,
+          "kids": [],
+          "name": "block_comment",
+          "named": true,
+          "start": 10
+        },
+        {
+          "end": 37,
+          "kids": [
+            {
+              "end": 31,
+              "kids": [],
+              "name": "val",
+              "named": false,
+              "start": 28
+            },
+            {
+              "end": 33,
+              "field": "pattern",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 32
+            },
+            {
+              "end": 35,
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 34
+            },
+            {
+              "end": 37,
+              "field": "value",
+              "kids": [],
+              "name": "integer_literal",
+              "named": true,
+              "start": 36
+            }
+          ],
+          "name": "val_definition",
+          "named": true,
+          "start": 28
+        }
+      ],
+      "name": "compilation_unit",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

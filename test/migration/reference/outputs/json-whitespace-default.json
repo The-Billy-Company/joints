@@ -1,0 +1,106 @@
+{
+  "language": "json",
+  "mends": 0,
+  "path": "inputs/fixtures/json-whitespace.json",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 11,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 11
+  },
+  "tree": [
+    {
+      "end": 19,
+      "kids": [
+        {
+          "end": 16,
+          "kids": [
+            {
+              "end": 6,
+              "kids": [],
+              "name": "{",
+              "named": false,
+              "start": 5
+            },
+            {
+              "end": 15,
+              "kids": [
+                {
+                  "end": 13,
+                  "field": "key",
+                  "kids": [
+                    {
+                      "end": 7,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 6
+                    },
+                    {
+                      "end": 12,
+                      "kids": [],
+                      "name": "string_content",
+                      "named": true,
+                      "start": 7
+                    },
+                    {
+                      "end": 13,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 12
+                    }
+                  ],
+                  "name": "string",
+                  "named": true,
+                  "start": 6
+                },
+                {
+                  "end": 14,
+                  "kids": [],
+                  "name": ":",
+                  "named": false,
+                  "start": 13
+                },
+                {
+                  "end": 15,
+                  "field": "value",
+                  "kids": [],
+                  "name": "number",
+                  "named": true,
+                  "start": 14
+                }
+              ],
+              "name": "pair",
+              "named": true,
+              "start": 6
+            },
+            {
+              "end": 16,
+              "kids": [],
+              "name": "}",
+              "named": false,
+              "start": 15
+            }
+          ],
+          "name": "object",
+          "named": true,
+          "start": 5
+        }
+      ],
+      "name": "document",
+      "named": true,
+      "start": 5
+    }
+  ]
+}

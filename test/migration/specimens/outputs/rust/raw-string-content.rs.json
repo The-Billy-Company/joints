@@ -1,0 +1,153 @@
+{
+  "language": "rust",
+  "mends": 0,
+  "path": "research/joinery/specimen/rust/raw-string-content.rs",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 17,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 17
+  },
+  "tree": [
+    {
+      "end": 27,
+      "kids": [
+        {
+          "end": 26,
+          "kids": [
+            {
+              "end": 2,
+              "kids": [],
+              "name": "fn",
+              "named": false,
+              "start": 0
+            },
+            {
+              "end": 4,
+              "field": "name",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 3
+            },
+            {
+              "end": 6,
+              "field": "parameters",
+              "kids": [
+                {
+                  "end": 5,
+                  "kids": [],
+                  "name": "(",
+                  "named": false,
+                  "start": 4
+                },
+                {
+                  "end": 6,
+                  "kids": [],
+                  "name": ")",
+                  "named": false,
+                  "start": 5
+                }
+              ],
+              "name": "parameters",
+              "named": true,
+              "start": 4
+            },
+            {
+              "end": 26,
+              "field": "body",
+              "kids": [
+                {
+                  "end": 8,
+                  "kids": [],
+                  "name": "{",
+                  "named": false,
+                  "start": 7
+                },
+                {
+                  "end": 24,
+                  "kids": [
+                    {
+                      "end": 12,
+                      "kids": [],
+                      "name": "let",
+                      "named": false,
+                      "start": 9
+                    },
+                    {
+                      "end": 14,
+                      "field": "pattern",
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 13
+                    },
+                    {
+                      "end": 16,
+                      "kids": [],
+                      "name": "=",
+                      "named": false,
+                      "start": 15
+                    },
+                    {
+                      "end": 23,
+                      "field": "value",
+                      "kids": [
+                        {
+                          "end": 22,
+                          "kids": [],
+                          "name": "string_content",
+                          "named": true,
+                          "start": 19
+                        }
+                      ],
+                      "name": "raw_string_literal",
+                      "named": true,
+                      "start": 17
+                    },
+                    {
+                      "end": 24,
+                      "kids": [],
+                      "name": ";",
+                      "named": false,
+                      "start": 23
+                    }
+                  ],
+                  "name": "let_declaration",
+                  "named": true,
+                  "start": 9
+                },
+                {
+                  "end": 26,
+                  "kids": [],
+                  "name": "}",
+                  "named": false,
+                  "start": 25
+                }
+              ],
+              "name": "block",
+              "named": true,
+              "start": 7
+            }
+          ],
+          "name": "function_item",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "source_file",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

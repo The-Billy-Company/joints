@@ -1,0 +1,39 @@
+{
+  "language": "json",
+  "mends": 1,
+  "path": "inputs/fixtures/json-invalid-byte.json",
+  "roots": 1,
+  "scars": [
+    {
+      "at": 0,
+      "felled": true,
+      "heads": 1,
+      "over": 1,
+      "shifted": 0
+    }
+  ],
+  "skipped": 1,
+  "spurned": 0,
+  "stop": {
+    "at": 0,
+    "kind": "stray"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 1,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 1
+  },
+  "tree": [
+    {
+      "end": 1,
+      "kids": [],
+      "name": "document",
+      "named": true,
+      "start": 1
+    }
+  ]
+}

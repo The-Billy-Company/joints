@@ -1,0 +1,2 @@
+joints: inputs/fixtures/json-extra-comma.json: unexpected , at 13 in state 25, 3 roots, surveyed 9 of 9 nodes
+joints: json: weave on , in state 25 (4 read, 20 fold, 0 frayed): the cell is empty, and a merged lookahead is a superset of every canonical one it stands for, so it is empty under every split

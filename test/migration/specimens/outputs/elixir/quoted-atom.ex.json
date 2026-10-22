@@ -1,0 +1,130 @@
+{
+  "language": "elixir",
+  "mends": 0,
+  "path": "research/joinery/specimen/elixir/quoted-atom.ex",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 15,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 14
+  },
+  "tree": [
+    {
+      "end": 17,
+      "kids": [
+        {
+          "end": 16,
+          "kids": [
+            {
+              "end": 4,
+              "field": "left",
+              "kids": [],
+              "name": "identifier",
+              "named": true,
+              "start": 0
+            },
+            {
+              "end": 6,
+              "field": "operator",
+              "kids": [],
+              "name": "=",
+              "named": false,
+              "start": 5
+            },
+            {
+              "end": 16,
+              "field": "right",
+              "kids": [
+                {
+                  "end": 8,
+                  "kids": [],
+                  "name": ":",
+                  "named": false,
+                  "start": 7
+                },
+                {
+                  "end": 9,
+                  "field": "quoted_start",
+                  "kids": [],
+                  "name": "\"",
+                  "named": false,
+                  "start": 8
+                },
+                {
+                  "end": 10,
+                  "kids": [],
+                  "name": "quoted_content",
+                  "named": true,
+                  "start": 9
+                },
+                {
+                  "end": 14,
+                  "kids": [
+                    {
+                      "end": 12,
+                      "kids": [],
+                      "name": "#{",
+                      "named": false,
+                      "start": 10
+                    },
+                    {
+                      "end": 13,
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 12
+                    },
+                    {
+                      "end": 14,
+                      "kids": [],
+                      "name": "}",
+                      "named": false,
+                      "start": 13
+                    }
+                  ],
+                  "name": "interpolation",
+                  "named": true,
+                  "start": 10
+                },
+                {
+                  "end": 15,
+                  "kids": [],
+                  "name": "quoted_content",
+                  "named": true,
+                  "start": 14
+                },
+                {
+                  "end": 16,
+                  "field": "quoted_end",
+                  "kids": [],
+                  "name": "\"",
+                  "named": false,
+                  "start": 15
+                }
+              ],
+              "name": "quoted_atom",
+              "named": true,
+              "start": 7
+            }
+          ],
+          "name": "binary_operator",
+          "named": true,
+          "start": 0
+        }
+      ],
+      "name": "source",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

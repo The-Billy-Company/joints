@@ -1,0 +1,430 @@
+{
+  "profile_id": "regulator-go127-rust-v2",
+  "base_repo": "tree-sitter/tree-sitter-go",
+  "base_commit": "2346a3ab1bb3857b48b29d779a1ef9799a248cd7",
+  "base_sha256": "0dcc665aa521a1b73a200be13b4e376780cca037d764a165f12864babfe28000",
+  "references": [
+    "https://go.dev/doc/go1.26#language",
+    "https://go.dev/doc/go1.27#language",
+    "https://go.dev/ref/spec#Allocation",
+    "https://go.dev/ref/spec#Method_declarations",
+    "https://go.dev/ref/spec#Empty_statements",
+    "https://go.dev/ref/spec#Blocks",
+    "https://go.dev/ref/spec#Labeled_statements"
+  ],
+  "expected_grammar_sha256": "ffc8a018d1af9c45dbc2b2638a353a180d179247b9e82524cbcc3c263301ead4",
+  "rules": {
+    "call_expression": {
+      "type": "PREC",
+      "value": 7,
+      "content": {
+        "type": "CHOICE",
+        "members": [
+          {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "FIELD",
+                "name": "function",
+                "content": {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "STRING",
+                    "value": "make"
+                  },
+                  "named": true,
+                  "value": "identifier"
+                }
+              },
+              {
+                "type": "FIELD",
+                "name": "arguments",
+                "content": {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "special_argument_list"
+                  },
+                  "named": true,
+                  "value": "argument_list"
+                }
+              }
+            ]
+          },
+          {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "FIELD",
+                "name": "function",
+                "content": {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "STRING",
+                    "value": "new"
+                  },
+                  "named": true,
+                  "value": "identifier"
+                }
+              },
+              {
+                "type": "FIELD",
+                "name": "arguments",
+                "content": {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "new_argument_list"
+                  },
+                  "named": true,
+                  "value": "argument_list"
+                }
+              }
+            ]
+          },
+          {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "FIELD",
+                "name": "function",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_expression"
+                }
+              },
+              {
+                "type": "FIELD",
+                "name": "type_arguments",
+                "content": {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "type_arguments"
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "FIELD",
+                "name": "arguments",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "argument_list"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "new_argument_list": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "PREC_DYNAMIC",
+              "value": 3,
+              "content": {
+                "type": "SYMBOL",
+                "name": "_type"
+              }
+            },
+            {
+              "type": "SYMBOL",
+              "name": "_expression"
+            }
+          ]
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "STRING",
+              "value": ","
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
+    "method_declaration": {
+      "type": "PREC_RIGHT",
+      "value": 1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "func"
+          },
+          {
+            "type": "FIELD",
+            "name": "receiver",
+            "content": {
+              "type": "SYMBOL",
+              "name": "parameter_list"
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "name",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_field_identifier"
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "type_parameters",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "type_parameter_list"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "parameters",
+            "content": {
+              "type": "SYMBOL",
+              "name": "parameter_list"
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "result",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "parameter_list"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "_simple_type"
+                    }
+                  ]
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "body",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "block"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "statement_list": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "REPEAT1",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_terminated_statement"
+              }
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_non_empty_statement"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_non_empty_statement"
+        }
+      ]
+    },
+    "_non_empty_statement": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_declaration"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_simple_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "return_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "go_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "defer_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "if_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "for_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "expression_switch_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "type_switch_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "select_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "labeled_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "fallthrough_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "break_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "continue_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "goto_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "block"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "empty_labeled_statement"
+          },
+          "named": true,
+          "value": "labeled_statement"
+        }
+      ]
+    },
+    "_terminated_statement": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "empty_statement"
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_non_empty_statement"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "PATTERN",
+                  "value": "\\n"
+                },
+                {
+                  "type": "STRING",
+                  "value": ";"
+                },
+                {
+                  "type": "STRING",
+                  "value": "\u0000"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "added_conflicts": [
+    [
+      "empty_labeled_statement",
+      "labeled_statement"
+    ],
+    [
+      "type_parameter_declaration",
+      "_simple_type"
+    ]
+  ],
+  "attribution": {
+    "license": "MIT",
+    "license_url": "https://raw.githubusercontent.com/tree-sitter/tree-sitter-go/2346a3ab1bb3857b48b29d779a1ef9799a248cd7/LICENSE",
+    "license_path": "grammar/LICENSE.tree-sitter-go",
+    "license_sha256": "2e0110e07abef7c2548b26ec9d6969775617ca539a0dc8dbeeb14d6452c711d1"
+  },
+  "notes": [
+    "Go 1.26 new permits exactly one type or value expression; make retains its existing typed argument list.",
+    "The type alternative dynamic precedence compensates the upstream type-identifier precedence so existing new(any) and new(int) retain their type-node reading.",
+    "Go 1.27 concrete methods reuse function declarations type-parameter syntax; interface methods remain unchanged.",
+    "Empty statements consume their own semicolon; terminated ordinary statements and a final unterminated statement preserve separators without requiring a second semicolon after an empty statement. Empty labeled statements retain the upstream labeled_statement alias and declared ambiguity."
+  ]
+}

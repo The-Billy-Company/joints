@@ -1,0 +1,182 @@
+{
+  "language": "php",
+  "mends": 0,
+  "path": "research/joinery/specimen/php/double-quoted-string.php",
+  "roots": 1,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "accepted"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 21,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 21
+  },
+  "tree": [
+    {
+      "end": 24,
+      "kids": [
+        {
+          "end": 5,
+          "kids": [],
+          "name": "php_tag",
+          "named": true,
+          "start": 0
+        },
+        {
+          "end": 15,
+          "kids": [
+            {
+              "end": 14,
+              "kids": [
+                {
+                  "end": 8,
+                  "field": "left",
+                  "kids": [
+                    {
+                      "end": 7,
+                      "kids": [],
+                      "name": "$",
+                      "named": false,
+                      "start": 6
+                    },
+                    {
+                      "end": 8,
+                      "kids": [],
+                      "name": "name",
+                      "named": true,
+                      "start": 7
+                    }
+                  ],
+                  "name": "variable_name",
+                  "named": true,
+                  "start": 6
+                },
+                {
+                  "end": 10,
+                  "kids": [],
+                  "name": "=",
+                  "named": false,
+                  "start": 9
+                },
+                {
+                  "end": 14,
+                  "field": "right",
+                  "kids": [
+                    {
+                      "end": 12,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 11
+                    },
+                    {
+                      "end": 13,
+                      "kids": [],
+                      "name": "string_content",
+                      "named": true,
+                      "start": 12
+                    },
+                    {
+                      "end": 14,
+                      "kids": [],
+                      "name": "\"",
+                      "named": false,
+                      "start": 13
+                    }
+                  ],
+                  "name": "encapsed_string",
+                  "named": true,
+                  "start": 11
+                }
+              ],
+              "name": "assignment_expression",
+              "named": true,
+              "start": 6
+            },
+            {
+              "end": 15,
+              "kids": [],
+              "name": ";",
+              "named": false,
+              "start": 14
+            }
+          ],
+          "name": "expression_statement",
+          "named": true,
+          "start": 6
+        },
+        {
+          "end": 23,
+          "kids": [
+            {
+              "end": 22,
+              "kids": [
+                {
+                  "end": 18,
+                  "field": "left",
+                  "kids": [
+                    {
+                      "end": 17,
+                      "kids": [],
+                      "name": "$",
+                      "named": false,
+                      "start": 16
+                    },
+                    {
+                      "end": 18,
+                      "kids": [],
+                      "name": "name",
+                      "named": true,
+                      "start": 17
+                    }
+                  ],
+                  "name": "variable_name",
+                  "named": true,
+                  "start": 16
+                },
+                {
+                  "end": 20,
+                  "kids": [],
+                  "name": "=",
+                  "named": false,
+                  "start": 19
+                },
+                {
+                  "end": 22,
+                  "field": "right",
+                  "kids": [],
+                  "name": "integer",
+                  "named": true,
+                  "start": 21
+                }
+              ],
+              "name": "assignment_expression",
+              "named": true,
+              "start": 16
+            },
+            {
+              "end": 23,
+              "kids": [],
+              "name": ";",
+              "named": false,
+              "start": 22
+            }
+          ],
+          "name": "expression_statement",
+          "named": true,
+          "start": 16
+        }
+      ],
+      "name": "program",
+      "named": true,
+      "start": 0
+    }
+  ]
+}

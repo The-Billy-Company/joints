@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<sources>
+  <source name="/Users/griffinstrier/Billy-Company/joints/research/joinery/specimen/julia/command.jl">
+    <source_file srow="0" scol="0" erow="2" ecol="0">
+      <assignment srow="0" scol="0" erow="0" ecol="5">
+        <identifier srow="0" scol="0" erow="0" ecol="1">n</identifier>
+        <operator srow="0" scol="2" erow="0" ecol="3">=</operator>
+        <integer_literal srow="0" scol="4" erow="0" ecol="5">1</integer_literal>
+      </assignment>
+      <assignment srow="1" scol="0" erow="1" ecol="13">
+        <identifier srow="1" scol="0" erow="1" ecol="1">c</identifier>
+        <operator srow="1" scol="2" erow="1" ecol="3">=</operator>
+        <command_literal srow="1" scol="4" erow="1" ecol="13">
+          `
+          <content srow="1" scol="5" erow="1" ecol="10">echo </content>
+          <string_interpolation srow="1" scol="10" erow="1" ecol="12">
+            $
+            <identifier srow="1" scol="11" erow="1" ecol="12">n</identifier>
+          </string_interpolation>
+        </command_literal>
+      </assignment>
+    </source_file>
+  </source>
+</sources>

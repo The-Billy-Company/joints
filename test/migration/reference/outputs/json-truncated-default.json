@@ -1,0 +1,94 @@
+{
+  "language": "json",
+  "mends": 0,
+  "path": "inputs/fixtures/json-truncated.json",
+  "roots": 7,
+  "scars": [],
+  "skipped": 0,
+  "spurned": 0,
+  "stop": {
+    "kind": "truncated"
+  },
+  "supplied": 0,
+  "survey": {
+    "disorder": 0,
+    "held": 10,
+    "loose": 0,
+    "sound": true,
+    "torn": 0,
+    "walked": 10
+  },
+  "tree": [
+    {
+      "end": 1,
+      "kids": [],
+      "name": "{",
+      "named": false,
+      "start": 0
+    },
+    {
+      "end": 9,
+      "kids": [
+        {
+          "end": 2,
+          "kids": [],
+          "name": "\"",
+          "named": false,
+          "start": 1
+        },
+        {
+          "end": 8,
+          "kids": [],
+          "name": "string_content",
+          "named": true,
+          "start": 2
+        },
+        {
+          "end": 9,
+          "kids": [],
+          "name": "\"",
+          "named": false,
+          "start": 8
+        }
+      ],
+      "name": "string",
+      "named": true,
+      "start": 1
+    },
+    {
+      "end": 10,
+      "kids": [],
+      "name": ":",
+      "named": false,
+      "start": 9
+    },
+    {
+      "end": 11,
+      "kids": [],
+      "name": "[",
+      "named": false,
+      "start": 10
+    },
+    {
+      "end": 12,
+      "kids": [],
+      "name": "number",
+      "named": true,
+      "start": 11
+    },
+    {
+      "end": 13,
+      "kids": [],
+      "name": ",",
+      "named": false,
+      "start": 12
+    },
+    {
+      "end": 14,
+      "kids": [],
+      "name": "number",
+      "named": true,
+      "start": 13
+    }
+  ]
+}

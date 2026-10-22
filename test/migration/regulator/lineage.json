@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "status": "candidate-not-selected",
+  "profile": "regulator-python314-rust-v2",
+  "parent_profile": "regulator-python314-v1",
+  "recipe": {
+    "path": "grammar/python314-rust-v2.json",
+    "sha256": "0aa0ed97c0b9b5d770af4a3248661aa28ab724663cba69f24d0097cedbbd20c2"
+  },
+  "change": {
+    "rules_unchanged": true,
+    "parent_derived_sha256": "04bbc228d1d1cd4977b73131338261d819227c2a236f015bb5835f049e22d300",
+    "candidate_derived_sha256": "c901af1e95bfb72287491a32af098067262a194ecc123599fa512ed1c1af8d7d",
+    "added_conflicts": [
+      [
+        "primary_expression",
+        "_default_primary_expression",
+        "list_splat_pattern"
+      ],
+      [
+        "_default_primary_expression",
+        "list_splat_pattern"
+      ]
+    ]
+  },
+  "base": {
+    "repository": "tree-sitter/tree-sitter-python",
+    "commit": "26855eabccb19c6abf499fbc5b8dc7cc9ab8bc64",
+    "sha256": "d933cfea6197e57354c9ec86888adbb95971b4372efef514b82e601b5067580d"
+  },
+  "consumer_observed": {
+    "repository": "Billy-Company/billy",
+    "head": "68e54e1efa082ee8bde23a2e832dbb1095f193ea",
+    "status": [
+      " M libs/tools/regulator/crates/python-joints/ci.py",
+      " M libs/tools/regulator/crates/python-joints/grammar_profile.py"
+    ],
+    "parent_recipe_sha256": "1c2f4de3ad7dd9a17119eaa7a4134c6d4215c7258d85e0fdda7ab3eaee8d222e",
+    "preparer_sha256": "de522f50d46a3e888dbaaec49cab61090ca4f4c77af50e2be7d5857987f6065e",
+    "ci_sha256": "e843cd491a668e0e5f52b12353ef32637466a2c2a14b2995805e1f8212fa63ec"
+  },
+  "adoption": "Requires the private local-source ABI and full Regulator compatibility facets; this recipe does not change the consumer default or published-release gate.",
+  "independent_generation": {
+    "version": "tree-sitter 0.26.11",
+    "parent_exit": 1,
+    "three_party_only_exit": 1,
+    "candidate_exit": 0,
+    "abi": 14,
+    "manifest_sha256": "37b9ac11092c7f4a068b3d095f0968f1048dc9a8f90315e3d20635a3bfa29b29",
+    "full_generation_is_not_full_consumer_equivalence": true,
+    "diagnostics": {
+      "evidence/parent.stderr": "631b7501f0516b8b5bb6de55367c66c8a7850b301611262538c08a262dbaea58",
+      "evidence/reviewed.stderr": "f63c7e7016363b3305c0c945d51c7ce6648727f23159bafd28d314354e21a375",
+      "evidence/three-party-only.stderr": "3b2346cbd19d3f2fe7ee318718d7879f868fd28048e939ce04e6214cb4df865a"
+    }
+  },
+  "private_consumer_test_patch": {
+    "path": "candidate-profile.patch",
+    "sha256": "347500a0ca08e04dab57e5170b7943ba708e7163aa5d1f127410c3f8b7d1831f",
+    "scope": "Admit explicit v2 profile ID in existing modern-syntax tests only; never relabel v2 as v1. Not applied to live consumer.",
+    "applies_to_head": "68e54e1efa082ee8bde23a2e832dbb1095f193ea"
+  }
+}

@@ -1,0 +1,294 @@
+{
+  "case": "julia/nested-interpolation.jl",
+  "status": "captured",
+  "implementation": "tree-sitter",
+  "version": "0.26.11",
+  "binary_sha256": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+  "nodes": 19,
+  "errors": 0,
+  "stable": true,
+  "inputs": {
+    "research/joinery/specimen/julia/nested-interpolation.jl": "be510d64571b28b885ed8cda4332769c8633000caa7e890dba04d3a437b8f806",
+    "research/joinery/specimen/julia/nested-interpolation.jl.expect": "d65a0f551872fe6d59094540d437e591690e91f7af256b4a64354221e211f739",
+    "upstream/grammars/julia.json": "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1"
+  },
+  "source": {
+    "path": "research/joinery/specimen/julia/nested-interpolation.jl",
+    "sha256": "be510d64571b28b885ed8cda4332769c8633000caa7e890dba04d3a437b8f806",
+    "size": 20
+  },
+  "grammar": {
+    "path": "upstream/grammars/julia.json",
+    "sha256": "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1",
+    "size": 185357
+  },
+  "node_types": {
+    "path": ".local/rust-migration/native-phase3/extended-oracle/julia/lang/julia/src/node-types.json",
+    "sha256": "5fc1949fe909f615ac812a118d1b3d0a0fc48f86f8baffe4c316967157bc7e00",
+    "size": 58178
+  },
+  "scanner_closure": [
+    {
+      "path": ".local/breadth/lang/julia/src/scanner.c",
+      "sha256": "e6350a2f2725d966115d56142bf4e3e43dc13e3a3060744dd25f695363886e30",
+      "size": 6038
+    }
+  ],
+  "baseline_manifest": {
+    "path": "test/migration/specimens/manifest.json",
+    "sha256": "2b392e74f568f84620f0b47f07da4aa0e09f06bada50eb79bbbed419e7dc58e6",
+    "size": 100706
+  },
+  "baseline_output": {
+    "path": "test/migration/specimens/outputs/julia/nested-interpolation.jl.json",
+    "sha256": "5091f09a6a85c2334c64b9c9f1b009c59bca23921c3a2c3df58378c82a37f925",
+    "size": 3809
+  },
+  "reference_binary_sha256": "709bf8c0ce4a3c9ad5deb400e42d5025439e76c45bbcfaaf0959be31cff768ec",
+  "reference_manifest_sha256": "4be57bd42e493b13b6b017d75e0361a86fa2b0ad5a1a78ebc1b76e9c02d32831",
+  "tree": {
+    "path": ".local/rust-migration/native-phase3/specimen-correction-oracles/julia/nested-interpolation.jl/tree.json",
+    "sha256": "f5b01cd6abe695804297d90ee5b2b1c3fce8cf40c635d3fe4e4a0284848fcf89",
+    "size": 3608
+  },
+  "query": {
+    "path": ".local/rust-migration/native-phase3/specimen-correction-oracles/julia/nested-interpolation.jl/query.scm",
+    "sha256": "fa35c11cdbb649cbe52c6c1497e7965295ccea84121c87510be1fda42173d3a2",
+    "size": 818
+  },
+  "commands": [
+    {
+      "argv": [
+        "/Users/griffinstrier/Billy-Company/joints/.local/differential/cli/node_modules/.bin/tree-sitter",
+        "parse",
+        "-p",
+        "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase3/extended-oracle/julia/lang/julia",
+        "-x",
+        "/Users/griffinstrier/Billy-Company/joints/research/joinery/specimen/julia/nested-interpolation.jl"
+      ],
+      "cwd": ".local/differential",
+      "exit": 0,
+      "stdout": {
+        "path": ".local/rust-migration/native-phase3/specimen-correction-oracles/julia/nested-interpolation.jl/00.stdout",
+        "sha256": "2b753231ceaf6b0dc7bd8d13a7e92a917f2f79db3e94cbf86575049f8041dff6",
+        "size": 1320
+      },
+      "stderr": {
+        "path": ".local/rust-migration/native-phase3/specimen-correction-oracles/julia/nested-interpolation.jl/00.stderr",
+        "sha256": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+        "size": 202
+      }
+    },
+    {
+      "argv": [
+        "/Users/griffinstrier/Billy-Company/joints/.local/differential/cli/node_modules/.bin/tree-sitter",
+        "parse",
+        "-p",
+        "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase3/extended-oracle/julia/lang/julia",
+        "--cst",
+        "/Users/griffinstrier/Billy-Company/joints/research/joinery/specimen/julia/nested-interpolation.jl"
+      ],
+      "cwd": ".local/differential",
+      "exit": 0,
+      "stdout": {
+        "path": ".local/rust-migration/native-phase3/specimen-correction-oracles/julia/nested-interpolation.jl/01.stdout",
+        "sha256": "08a104b5763ff02971951040414544e0643e0b77f67b8177ceda11c84a90eda3",
+        "size": 605
+      },
+      "stderr": {
+        "path": ".local/rust-migration/native-phase3/specimen-correction-oracles/julia/nested-interpolation.jl/01.stderr",
+        "sha256": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+        "size": 202
+      }
+    },
+    {
+      "argv": [
+        "/Users/griffinstrier/Billy-Company/joints/.local/differential/cli/node_modules/.bin/tree-sitter",
+        "query",
+        "-p",
+        "/Users/griffinstrier/Billy-Company/joints/.local/rust-migration/native-phase3/extended-oracle/julia/lang/julia",
+        "/Users/griffinstrier/Billy-Company/joints/.local/differential/seat/rust-migration-specimen-corrections/query.scm",
+        "/Users/griffinstrier/Billy-Company/joints/research/joinery/specimen/julia/nested-interpolation.jl"
+      ],
+      "cwd": ".local/differential",
+      "exit": 0,
+      "stdout": {
+        "path": ".local/rust-migration/native-phase3/specimen-correction-oracles/julia/nested-interpolation.jl/02.stdout",
+        "sha256": "e2787946b0090af004c8a177ae2a01fb5c69e5e889e0174072a1eefa22d212a9",
+        "size": 98
+      },
+      "stderr": {
+        "path": ".local/rust-migration/native-phase3/specimen-correction-oracles/julia/nested-interpolation.jl/02.stderr",
+        "sha256": "05cb4a73e3d9af2555544cb0e9d071a47d7f0fd42157c3ab469f50610b81e1c0",
+        "size": 202
+      }
+    }
+  ],
+  "changes": [
+    {
+      "pointer": "/0/kids/1/kids/2/kids",
+      "before": [
+        {
+          "end": 18,
+          "kids": [
+            {
+              "end": 12,
+              "kids": [],
+              "name": "$",
+              "named": false,
+              "start": 11
+            },
+            {
+              "end": 13,
+              "kids": [],
+              "name": "(",
+              "named": false,
+              "start": 12
+            },
+            {
+              "end": 17,
+              "kids": [
+                {
+                  "end": 16,
+                  "kids": [
+                    {
+                      "end": 15,
+                      "kids": [],
+                      "name": "$",
+                      "named": false,
+                      "start": 14
+                    },
+                    {
+                      "end": 16,
+                      "kids": [],
+                      "name": "identifier",
+                      "named": true,
+                      "start": 15
+                    }
+                  ],
+                  "name": "string_interpolation",
+                  "named": true,
+                  "start": 14
+                }
+              ],
+              "name": "string_literal",
+              "named": true,
+              "start": 13
+            },
+            {
+              "end": 18,
+              "kids": [],
+              "name": ")",
+              "named": false,
+              "start": 17
+            }
+          ],
+          "name": "string_interpolation",
+          "named": true,
+          "start": 11
+        }
+      ],
+      "after": [
+        {
+          "name": "\"",
+          "named": false,
+          "start": 10,
+          "end": 11,
+          "kids": []
+        },
+        {
+          "name": "string_interpolation",
+          "named": true,
+          "start": 11,
+          "end": 18,
+          "kids": [
+            {
+              "name": "$",
+              "named": false,
+              "start": 11,
+              "end": 12,
+              "kids": []
+            },
+            {
+              "name": "(",
+              "named": false,
+              "start": 12,
+              "end": 13,
+              "kids": []
+            },
+            {
+              "name": "string_literal",
+              "named": true,
+              "start": 13,
+              "end": 17,
+              "kids": [
+                {
+                  "name": "\"",
+                  "named": false,
+                  "start": 13,
+                  "end": 14,
+                  "kids": []
+                },
+                {
+                  "name": "string_interpolation",
+                  "named": true,
+                  "start": 14,
+                  "end": 16,
+                  "kids": [
+                    {
+                      "name": "$",
+                      "named": false,
+                      "start": 14,
+                      "end": 15,
+                      "kids": []
+                    },
+                    {
+                      "name": "identifier",
+                      "named": true,
+                      "start": 15,
+                      "end": 16,
+                      "kids": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": ")",
+              "named": false,
+              "start": 17,
+              "end": 18,
+              "kids": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "inputs_before": {
+    "research/joinery/specimen/julia/nested-interpolation.jl": "be510d64571b28b885ed8cda4332769c8633000caa7e890dba04d3a437b8f806",
+    "research/joinery/specimen/julia/nested-interpolation.jl.expect": "d65a0f551872fe6d59094540d437e591690e91f7af256b4a64354221e211f739",
+    "upstream/grammars/julia.json": "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1",
+    "test/migration/specimens/manifest.json": "2b392e74f568f84620f0b47f07da4aa0e09f06bada50eb79bbbed419e7dc58e6",
+    "test/migration/specimens/outputs/julia/nested-interpolation.jl.json": "5091f09a6a85c2334c64b9c9f1b009c59bca23921c3a2c3df58378c82a37f925",
+    "tool/differential.py": "273ea5f77fe6bd90fa5e7fadd769c1aeb995813be185363c4c134cd5ea3c2d48",
+    ".local/differential/cli/node_modules/tree-sitter-cli/cli.js": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+    ".local/differential/cli/node_modules/tree-sitter-cli/tree-sitter": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+    ".local/rust-migration/native-phase3/extended-oracle/julia/lang/julia/src/parser.c": "3a62998fa384bb9313372347a92654a2f796fb9df2f99875f535d6fbc950ce04",
+    ".local/rust-migration/native-phase3/extended-oracle/julia/lang/julia/src/node-types.json": "5fc1949fe909f615ac812a118d1b3d0a0fc48f86f8baffe4c316967157bc7e00",
+    ".local/breadth/lang/julia/src/scanner.c": "e6350a2f2725d966115d56142bf4e3e43dc13e3a3060744dd25f695363886e30"
+  },
+  "inputs_after": {
+    "research/joinery/specimen/julia/nested-interpolation.jl": "be510d64571b28b885ed8cda4332769c8633000caa7e890dba04d3a437b8f806",
+    "research/joinery/specimen/julia/nested-interpolation.jl.expect": "d65a0f551872fe6d59094540d437e591690e91f7af256b4a64354221e211f739",
+    "upstream/grammars/julia.json": "c04f5071a65141f3ee82289756c78ad8c2b22c7e6da1bcb62e246fb1cf3fa4d1",
+    "test/migration/specimens/manifest.json": "2b392e74f568f84620f0b47f07da4aa0e09f06bada50eb79bbbed419e7dc58e6",
+    "test/migration/specimens/outputs/julia/nested-interpolation.jl.json": "5091f09a6a85c2334c64b9c9f1b009c59bca23921c3a2c3df58378c82a37f925",
+    "tool/differential.py": "273ea5f77fe6bd90fa5e7fadd769c1aeb995813be185363c4c134cd5ea3c2d48",
+    ".local/differential/cli/node_modules/tree-sitter-cli/cli.js": "7fc01626d5d44e0a6cc480e4a9379088f7a5bd42904ed5db760e97cae8fe797e",
+    ".local/differential/cli/node_modules/tree-sitter-cli/tree-sitter": "74694dbaff285e5c13b8d3fec3e77e21a9314e98d67e4bca651594d2f859dcc5",
+    ".local/rust-migration/native-phase3/extended-oracle/julia/lang/julia/src/parser.c": "3a62998fa384bb9313372347a92654a2f796fb9df2f99875f535d6fbc950ce04",
+    ".local/rust-migration/native-phase3/extended-oracle/julia/lang/julia/src/node-types.json": "5fc1949fe909f615ac812a118d1b3d0a0fc48f86f8baffe4c316967157bc7e00",
+    ".local/breadth/lang/julia/src/scanner.c": "e6350a2f2725d966115d56142bf4e3e43dc13e3a3060744dd25f695363886e30"
+  }
+}
