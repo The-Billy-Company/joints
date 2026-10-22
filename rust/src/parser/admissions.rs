@@ -1,8 +1,9 @@
-//! Exact-stack memoization of permission proofs, never of scanner answers.
+//! Dependency-complete suffix memoization of permission proofs, never scanner answers.
 use super::*;
 
 pub(super) struct AdmissionSlate {
     states: Vec<StateId>,
+    anchored: bool,
     pub(super) ordinary: Vec<SymbolId>,
     pub(super) empty: Vec<SymbolId>,
     pub(super) uncertain: Vec<SymbolId>,
@@ -19,6 +20,13 @@ struct DocumentSlate {
 }
 
 impl AdmissionSlate {
+    fn matches(&self, states: &[StateId]) -> bool {
+        if self.anchored {
+            self.states == states
+        } else {
+            states.ends_with(&self.states)
+        }
+    }
     fn retained_bytes(&self) -> Option<usize> {
         let mut bytes = size_of::<Self>().checked_add(2 * size_of::<usize>())?;
         bytes = bytes.checked_add(self.states.capacity().checked_mul(size_of::<StateId>())?)?;
@@ -46,11 +54,13 @@ impl AdmissionSlate {
     }
 }
 
-// Repeated structural stacks need the same proofs even after a shift cleared
-// the head's derived handle. This direct-mapped pool retains only immutable
-// proofs. A hash collision is a miss unless every state agrees; source reads,
-// scanner memory, offsets, and lexical transition budgets remain live.
-const POOL_SLOTS: usize = 256;
+// Each proof records every borrowed state read across all explored branches.
+// Equal dependency suffixes therefore repeat the same complete proof and work;
+// floor-sensitive proofs additionally require the complete stack. Source reads,
+// scanner memory, offsets and lexical transition budgets always remain live.
+const POOL_BUCKETS: usize = 128;
+const POOL_WAYS: usize = 8;
+const POOL_SLOTS: usize = POOL_BUCKETS * POOL_WAYS;
 const POOL_BYTES: usize = 1 << 20;
 
 struct RetainedSlate {
@@ -62,31 +72,60 @@ struct RetainedSlate {
 pub(super) struct SlatePool {
     slots: Box<[Option<RetainedSlate>]>,
     bytes: usize,
+    eviction: usize,
 }
 
 impl SlatePool {
+    #[cfg(test)]
     pub(super) fn clear(&mut self) {
         self.slots = Box::default();
         self.bytes = 0;
+        self.eviction = 0;
     }
 
     fn slot(states: &[StateId]) -> usize {
-        // This hash locates one candidate, never establishes identity. Full
-        // state equality below makes collisions ordinary bounded cache misses.
-        let mut hash = (states.len() as u64) ^ 0x9e37_79b9_7f4a_7c15;
-        for state in states {
-            hash = hash.rotate_left(5).wrapping_mul(0x517c_c1b7_2722_0a95) ^ state.index() as u64;
-        }
-        usize::try_from((hash ^ (hash >> 32)) % (POOL_SLOTS as u64))
-            .expect("bounded slate pool slot")
+        // The top state selects one bounded bucket; the complete dependency
+        // key below, including any required floor, establishes proof identity.
+        states.last().map_or(0, |state| {
+            state.index().wrapping_mul(0x517c_c1b7) % POOL_BUCKETS * POOL_WAYS
+        })
     }
 
     fn get(&self, slot: usize, states: &[StateId]) -> Option<&Arc<AdmissionSlate>> {
         self.slots
-            .get(slot)?
-            .as_ref()
-            .filter(|entry| entry.slate.states == states)
+            .get(slot..slot.checked_add(POOL_WAYS)?)?
+            .iter()
+            .filter_map(Option::as_ref)
+            .find(|entry| entry.slate.matches(states))
             .map(|entry| &entry.slate)
+    }
+
+    /// Header visits are prepaid by the caller. Charge every state comparison
+    /// before validation; unequal key lengths need only their header check.
+    fn comparison_work(&self, bucket: usize, depth: usize) -> usize {
+        self.slots
+            .get(bucket..bucket + POOL_WAYS)
+            .map_or(0, |slots| {
+                slots
+                    .iter()
+                    .filter_map(Option::as_ref)
+                    .fold(0usize, |work, entry| {
+                        let len = entry.slate.states.len();
+                        let compares = if entry.slate.anchored {
+                            depth == len
+                        } else {
+                            depth >= len
+                        };
+                        work.saturating_add(if compares { len } else { 0 })
+                    })
+            })
+    }
+
+    fn insertion_slot(&self, bucket: usize) -> usize {
+        self.slots
+            .get(bucket..bucket + POOL_WAYS)
+            .and_then(|slots| slots.iter().position(Option::is_none))
+            .map_or(bucket + self.eviction % POOL_WAYS, |at| bucket + at)
     }
 
     fn retention(&self, slot: usize, slate: &AdmissionSlate) -> Option<(usize, usize)> {
@@ -107,6 +146,7 @@ impl SlatePool {
         }
         self.slots[slot] = Some(RetainedSlate { slate, bytes });
         self.bytes = total;
+        self.eviction = self.eviction.wrapping_add(1);
     }
 }
 
@@ -130,10 +170,12 @@ pub(super) struct Stats {
 impl ParseSession {
     pub(super) fn admission_slate(
         &mut self,
+        graph: &Automaton,
         head: &mut Head,
     ) -> Result<Arc<AdmissionSlate>, Error> {
-        // Full content equality is a defensive check even though all real
+        // Validate the complete recorded dependency even though all real
         // state-stack mutations explicitly clear the head's derived cache.
+        // Retain the previous conservative full-key work charge.
         self.charge(head.states.len().saturating_add(1))?;
         #[cfg(test)]
         let reuse = !self.slate_cache_disabled;
@@ -141,7 +183,7 @@ impl ParseSession {
         let reuse = true;
         if reuse {
             if let Some(cached) = &head.slate {
-                if cached.states == head.states {
+                if cached.matches(&head.states) {
                     self.charge(1)?;
                     #[cfg(test)]
                     {
@@ -152,10 +194,11 @@ impl ParseSession {
             }
         }
         let pool_slot = if reuse {
-            // Hash the full stack, compare at most one equally long key, and
-            // share two handles only after this charge succeeds.
-            self.charge(head.states.len().saturating_mul(2).saturating_add(3))?;
+            // Prepay the bounded candidate bucket and every full dependency
+            // comparison before looking up or sharing a retained proof.
+            self.charge(POOL_WAYS * 4 + 3)?;
             let slot = SlatePool::slot(&head.states);
+            self.charge(self.slates.comparison_work(slot, head.states.len()))?;
             if let Some(cached) = self.slates.get(slot, &head.states).map(Arc::clone) {
                 head.slate = Some(Arc::clone(&cached));
                 #[cfg(test)]
@@ -169,19 +212,20 @@ impl ParseSession {
         } else {
             None
         };
-        let graph = Arc::clone(&self.grammar.automaton);
         let state = *head
             .states
             .last()
             .ok_or(Error::InvalidTable("empty state stack"))?;
+        let dependencies = recovery::ProofDepth::new(head.states.len() - 1);
         let row = graph.row_admissions(state);
         self.charge(row.len().saturating_mul(5))?;
         let mut ordinary = Vec::with_capacity(row.len());
         let mut empty = Vec::with_capacity(row.len());
-        let mut uncertain = Vec::with_capacity(row.len());
-        let mut provisional_empty = Vec::with_capacity(row.len());
+        let mut uncertain = Vec::new();
+        let mut provisional_empty = Vec::new();
         for &symbol in row {
-            let (proof, work) = recovery::admission(&graph, &head.states, symbol);
+            let (proof, work) =
+                recovery::admission_tracked(graph, &head.states, symbol, &dependencies);
             self.charge(work)?;
             #[cfg(test)]
             {
@@ -191,6 +235,9 @@ impl ParseSession {
                 ordinary.push(symbol);
             }
             if matches!(proof, Proof::Unknown(_)) {
+                if uncertain.is_empty() {
+                    uncertain.reserve_exact(row.len());
+                }
                 uncertain.push(symbol);
             }
             let spec = graph.symbol(symbol);
@@ -205,6 +252,9 @@ impl ParseSession {
                     Proof::Unknown(_) => {
                         // Eligibility to ask the real executor, never a
                         // completed proof or an extra-entry donation.
+                        if provisional_empty.is_empty() {
+                            provisional_empty.reserve_exact(row.len());
+                        }
                         provisional_empty.push(symbol);
                     }
                     Proof::Stops => {}
@@ -233,7 +283,8 @@ impl ParseSession {
         };
         self.charge(head.states.len().saturating_mul(2).saturating_add(2))?;
         let cached = Arc::new(AdmissionSlate {
-            states: head.states.clone(),
+            states: head.states[dependencies.start()..].to_vec(),
+            anchored: dependencies.anchored(),
             ordinary,
             empty,
             uncertain,
@@ -248,8 +299,9 @@ impl ParseSession {
             self.slate_stats.builds += 1;
         }
         if reuse {
-            self.charge(17)?;
-            if let Some((slot, (bytes, total))) = pool_slot.and_then(|slot| {
+            self.charge(17 + POOL_WAYS)?;
+            if let Some((slot, (bytes, total))) = pool_slot.and_then(|bucket| {
+                let slot = self.slates.insertion_slot(bucket);
                 self.slates
                     .retention(slot, &cached)
                     .map(|size| (slot, size))
@@ -270,6 +322,7 @@ impl ParseSession {
 
     pub(super) fn filtered_admissions(
         &mut self,
+        graph: &Automaton,
         slate: &AdmissionSlate,
         scope: ScanScope,
         excluded: &Exclusions,
@@ -280,7 +333,6 @@ impl ParseSession {
         let ordinary = self.slate_without(&slate.ordinary, &excluded.ordinary)?;
         let mut lexical = self.slate_union(&ordinary, &[])?;
         if scope == ScanScope::Document {
-            let graph = Arc::clone(&self.grammar.automaton);
             for &(_, entry) in graph.extra_entries() {
                 let first = self.slate_without(graph.row_admissions(entry), &excluded.auxiliary)?;
                 lexical = self.slate_union(&lexical, &first)?;
@@ -379,6 +431,70 @@ mod tests {
     use crate::{CompiledGrammar, Node, TreeSnapshot};
     use serde_json::{Value, json};
 
+    #[test]
+    fn retained_permission_pool_reasks_sources_and_preserves_results_and_products() {
+        let grammar = CompiledGrammar::compile(CONTEXT).unwrap();
+        for recovery in [
+            Recovery::None,
+            Recovery::Keep,
+            Recovery::Fell,
+            Recovery::Relent,
+        ] {
+            for supply in [Supply::Disabled, Supply::UniqueLiteral] {
+                let mut warm = grammar.session();
+                warm.set_trace_enabled(true);
+                warm.set_recovery(recovery);
+                warm.set_supply(supply);
+                for source in [
+                    b"aqrx".as_slice(),
+                    b"bqry",
+                    b" a q r x ",
+                    b"aqry",
+                    b"bqrx",
+                    b"aq\xffrx",
+                    b"",
+                    b"aqrx",
+                ] {
+                    let mut cold = grammar.session();
+                    cold.set_trace_enabled(true);
+                    cold.set_recovery(recovery);
+                    cold.set_supply(supply);
+                    let a = warm.parse_partial(source).unwrap();
+                    let b = cold.parse_partial(source).unwrap();
+                    assert_same(&a, &b);
+                    assert_eq!(warm.trace, cold.trace);
+                    assert_eq!(warm.selected_tokens(), cold.selected_tokens());
+                    assert_eq!(warm.token_reads(), cold.token_reads());
+                    let mut sa = grammar.effect_store();
+                    let mut sb = grammar.effect_store();
+                    let pa = warm.product(&mut sa).unwrap();
+                    let pb = cold.product(&mut sb).unwrap();
+                    assert_eq!(sa.describe(pa).unwrap(), sb.describe(pb).unwrap());
+                    let directory = warm.slates.slots.len() * size_of::<Option<RetainedSlate>>();
+                    assert!(warm.slates.bytes + directory <= POOL_BYTES);
+                }
+                assert!(warm.slate_stats.pooled_hits > 0);
+                assert_eq!(warm.slate_stats.builds, 0);
+                warm.limits.source_bytes = 0;
+                assert!(warm.parse_partial(b"aqrx").is_err());
+                assert!(warm.selected_tokens().is_none());
+                assert!(warm.product(&mut grammar.effect_store()).is_err());
+                warm.limits = ParseLimits::default();
+                let a = warm.parse_partial(b"bqry").unwrap();
+                assert!(a.confidence().is_strict());
+                for work in 0..256 {
+                    warm.limits.steps = work;
+                    let result = warm.parse_partial(b"aqrx");
+                    if let Ok(tree) = result {
+                        assert!(warm.steps <= work);
+                        let expected = grammar.session().parse_partial(b"aqrx").unwrap();
+                        assert_same(&tree, &expected);
+                    }
+                }
+            }
+        }
+    }
+
     const CONTEXT: &[u8] = br#"{"name":"slate_context","rules":{
       "doc":{"type":"CHOICE","members":[
         {"type":"SEQ","members":[{"type":"STRING","value":"a"},{"type":"SYMBOL","name":"item"},{"type":"STRING","value":"x"}]},
@@ -386,7 +502,7 @@ mod tests {
       "item":{"type":"SEQ","members":[{"type":"STRING","value":"q"},{"type":"STRING","value":"r"}]}},
       "extras":[{"type":"PATTERN","value":"[ ]"}]}"#;
 
-    fn prefix(grammar: &CompiledGrammar, names: &[&str]) -> Head {
+    fn prefix(grammar: &CompiledGrammar, names: &[&str]) -> Box<Head> {
         let graph = &grammar.automaton;
         let mut head = Head::new(graph.start_state(), names.len());
         for name in names {
@@ -476,14 +592,17 @@ mod tests {
         let grammar = CompiledGrammar::compile(CONTEXT).unwrap();
         let mut session = grammar.session();
         let mut head = prefix(&grammar, &["a", "q", "r"]);
-        let slate = session.admission_slate(&mut head).unwrap();
+        let slate = session
+            .admission_slate(&grammar.automaton, &mut head)
+            .unwrap();
         let slot = SlatePool::slot(&head.states);
         let mut collision = head.states.clone();
-        collision[0] = (1..10_000)
+        let changed = head.states.len() - slate.states.len();
+        collision[changed] = (1..10_000)
             .map(StateId::from_index)
             .find(|&state| {
                 let mut key = head.states.clone();
-                key[0] = state;
+                key[changed] = state;
                 key != head.states && SlatePool::slot(&key) == slot
             })
             .expect("a colliding distinct full key");
@@ -494,6 +613,7 @@ mod tests {
         ));
         let oversized = AdmissionSlate {
             states: vec![StateId::from_index(0); POOL_BYTES / size_of::<StateId>()],
+            anchored: true,
             ordinary: vec![],
             empty: vec![],
             uncertain: vec![],
@@ -513,7 +633,7 @@ mod tests {
         session.steps = 0;
         session.limits.steps = head.states.len() + 1;
         assert!(matches!(
-            session.admission_slate(&mut head),
+            session.admission_slate(&grammar.automaton, &mut head),
             Err(Error::LimitExceeded(Resource::Work))
         ));
         assert!(head.slate.is_none());
@@ -527,9 +647,9 @@ mod tests {
         assert_eq!(a.states.last(), b.states.last());
         assert_ne!(a.states, b.states);
         let mut session = grammar.session();
-        let old = session.admission_slate(&mut a).unwrap();
+        let old = session.admission_slate(&grammar.automaton, &mut a).unwrap();
         b.slate = Some(Arc::clone(&old)); // Deliberately defeat explicit clears.
-        let other = session.admission_slate(&mut b).unwrap();
+        let other = session.admission_slate(&grammar.automaton, &mut b).unwrap();
         assert!(!Arc::ptr_eq(&old, &other));
         for (head, slate, wanted, refused) in [(&a, &old, "x", "y"), (&b, &other, "y", "x")] {
             let yes = grammar.automaton.terminal_by_name(wanted).unwrap();
@@ -546,7 +666,10 @@ mod tests {
             assert!(!slate.ordinary.contains(&no));
         }
         let before = session.slate_stats;
-        assert!(Arc::ptr_eq(&old, &session.admission_slate(&mut a).unwrap()));
+        assert!(Arc::ptr_eq(
+            &old,
+            &session.admission_slate(&grammar.automaton, &mut a).unwrap()
+        ));
         assert_eq!(session.slate_stats.builds, before.builds);
         assert_eq!(session.slate_stats.proofs, before.proofs);
         assert_eq!(session.slate_stats.hits, before.hits + 1);
@@ -605,7 +728,9 @@ mod tests {
           "extras":[{"type":"SYMBOL","name":"comment"}]}"##).unwrap();
         let mut session = grammar.session();
         let mut head = Head::new(grammar.start_state(), 0);
-        let slate = session.admission_slate(&mut head).unwrap();
+        let slate = session
+            .admission_slate(&grammar.automaton, &mut head)
+            .unwrap();
         let zero = grammar.automaton.terminal_by_name("zero").unwrap();
         assert!(slate.view(ScanScope::Document).0.contains(&zero));
         assert!(!slate.view(ScanScope::Structural).0.contains(&zero));
@@ -650,7 +775,9 @@ mod tests {
             Proof::Unknown(_)
         ));
         let mut session = grammar.session();
-        let slate = session.admission_slate(&mut head).unwrap();
+        let slate = session
+            .admission_slate(&grammar.automaton, &mut head)
+            .unwrap();
         assert!(slate.ordinary.contains(&end));
         assert!(!slate.empty.contains(&end));
         assert!(compare_cached(&grammar, b"abz"));
@@ -663,7 +790,9 @@ mod tests {
         let mut session = grammar.session();
         let mut head = Head::new(graph.start_state(), 0);
         for (at, name) in ["a", "q", "r"].into_iter().enumerate() {
-            session.admission_slate(&mut head).unwrap();
+            session
+                .admission_slate(&grammar.automaton, &mut head)
+                .unwrap();
             let from = *head.states.last().unwrap();
             let symbol = graph.terminal_by_name(name).unwrap();
             let to = graph.transition(from, symbol).unwrap();
@@ -683,7 +812,9 @@ mod tests {
                 .unwrap();
             assert!(head.slate.is_none());
         }
-        let shared = session.admission_slate(&mut head).unwrap();
+        let shared = session
+            .admission_slate(&grammar.automaton, &mut head)
+            .unwrap();
         let mut branch = head.clone();
         assert!(Arc::ptr_eq(branch.slate.as_ref().unwrap(), &shared));
         let x = graph.terminal_by_name("x").unwrap();
@@ -692,10 +823,12 @@ mod tests {
         else {
             panic!("expected item reduction")
         };
-        session.reduce(&mut branch, family).unwrap();
+        session.reduce(graph, &mut branch, family).unwrap();
         assert!(branch.slate.is_none());
         assert!(Arc::ptr_eq(head.slate.as_ref().unwrap(), &shared));
-        session.admission_slate(&mut branch).unwrap();
+        session
+            .admission_slate(&grammar.automaton, &mut branch)
+            .unwrap();
         let from = *branch.states.last().unwrap();
         let to = graph.transition(from, x).unwrap();
         session
@@ -741,11 +874,13 @@ mod tests {
         let grammar = CompiledGrammar::compile(CONTEXT).unwrap();
         let mut head = prefix(&grammar, &["a", "q", "r"]);
         let mut session = grammar.session();
-        let slate = session.admission_slate(&mut head).unwrap();
+        let slate = session
+            .admission_slate(&grammar.automaton, &mut head)
+            .unwrap();
         session.steps = 0;
         session.limits.steps = head.states.len();
         assert!(matches!(
-            session.admission_slate(&mut head),
+            session.admission_slate(&grammar.automaton, &mut head),
             Err(Error::LimitExceeded(Resource::Work))
         ));
         assert!(Arc::ptr_eq(head.slate.as_ref().unwrap(), &slate));
@@ -754,10 +889,88 @@ mod tests {
         session.steps = 0;
         session.limits.steps = other.states.len() + 1;
         assert!(matches!(
-            session.admission_slate(&mut other),
+            session.admission_slate(&grammar.automaton, &mut other),
             Err(Error::LimitExceeded(Resource::Work))
         ));
         assert!(other.slate.is_none());
         assert_eq!(session.slate_stats.builds, 1);
+    }
+    #[test]
+    fn complete_anchored_bucket_keys_preserve_their_floors_across_every_way() {
+        let mut pool = SlatePool::default();
+        let top = StateId::from_index(10_000);
+        let keys = (0..POOL_WAYS)
+            .map(|index| vec![StateId::from_index(index), top])
+            .collect::<Vec<_>>();
+        let bucket = SlatePool::slot(&keys[0]);
+        for key in &keys {
+            assert_eq!(SlatePool::slot(key), bucket);
+            // Synthetic payloads isolate key storage; the executor never uses
+            // these entries as permission proofs for an actual grammar.
+            let slate = Arc::new(AdmissionSlate {
+                states: key.clone(),
+                anchored: true,
+                ordinary: vec![],
+                empty: vec![],
+                uncertain: vec![],
+                provisional_empty: vec![],
+                extras: vec![],
+                eof: false,
+                wanted: vec![],
+                document: None,
+            });
+            let slot = pool.insertion_slot(bucket);
+            let (bytes, total) = pool.retention(slot, &slate).unwrap();
+            pool.insert(slot, slate, bytes, total);
+        }
+        assert_eq!(pool.slots.len(), 1024);
+        assert_eq!(POOL_BYTES, 1 << 20);
+        assert!(pool.bytes + pool.slots.len() * size_of::<Option<RetainedSlate>>() <= POOL_BYTES);
+        for key in &keys {
+            assert!(pool.get(bucket, key).is_some());
+            let changed_floor = [StateId::from_index(20_000), key[0], top];
+            assert!(pool.get(bucket, &changed_floor).is_none());
+        }
+        let same_top = [StateId::from_index(30_000), top];
+        assert!(pool.get(bucket, &same_top).is_none());
+    }
+
+    #[test]
+    fn permission_cache_work_zero_exact_and_one_short_remains_checked() {
+        let grammar = CompiledGrammar::compile(br#"{"rules":{"doc":{"type":"REPEAT1","content":{"type":"SYMBOL","name":"item"}},"item":{"type":"STRING","value":"x"}}}"#).unwrap();
+        for observer in [false, true] {
+            for prewarm in [false, true] {
+                let make = || {
+                    let mut session = grammar.session();
+                    session.set_trace_enabled(observer);
+                    if prewarm {
+                        session.parse(b"xxxx").unwrap();
+                    }
+                    session
+                };
+                let mut measured = make();
+                let expected = measured.parse(b"xxxx").unwrap();
+                let exact = measured.steps;
+                assert!(exact > 0);
+                drop(measured);
+                for limit in [0, exact - 1, exact] {
+                    let mut session = make();
+                    session.limits.steps = limit;
+                    let answer = session.parse_partial(b"xxxx");
+                    if limit == exact {
+                        assert_same(&answer.unwrap(), &expected);
+                        assert_eq!(session.steps, exact);
+                        assert!(session.product(&mut grammar.effect_store()).is_ok());
+                    } else {
+                        assert!(matches!(answer, Err(Error::LimitExceeded(Resource::Work))));
+                        assert!(session.selected_tokens().is_none());
+                        assert_eq!(
+                            session.product(&mut grammar.effect_store()),
+                            Err(EffectError::UnfinishedRun)
+                        );
+                    }
+                }
+            }
+        }
     }
 }

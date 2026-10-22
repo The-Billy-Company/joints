@@ -32,6 +32,18 @@ class NativeBuild(unittest.TestCase):
                 "rust/ffi/tests/abi.c": "caller",
                 "include/jnt.h": "ABI",
                 "upstream/grammars/working.json": "pinned grammar",
+                "test/migration/reference/manifest.json": "runtime corpus roster",
+                "test/migration/reference/inputs/case.json": "runtime source",
+                "test/migration/reference/outputs/case.json": "runtime expected image",
+                "test/migration/specimens/manifest.json": "runtime specimen roster",
+                "test/migration/specimens/outputs/case.json": "runtime specimen image",
+                "test/migration/specimens/adjudications/manifest.json": "runtime adjudications",
+                "test/migration/specimens/adjudications/case.json": "runtime adjudicated image",
+                "research/joinery/specimen/swift/case.swift": "runtime scanner subject",
+                "research/joinery/specimen/swift/case.swift.expect": "runtime subject selector",
+                "research/joinery/corpus/ledger.py": "runtime corpus source",
+                "upstream/grammars/runtime-only.json": "runtime grammar",
+                "upstream/sources/sample.rs": "runtime working witness",
                 "rust/target/generated.rs": "must not enter the source snapshot",
             }
             for relative, content in files.items():
@@ -42,6 +54,16 @@ class NativeBuild(unittest.TestCase):
                 self.assertEqual(set(got), set(files) - {"rust/target/generated.rs"})
                 (root / "rust/ffi/src/lib.rs").write_text("changed boundary")
                 self.assertNotEqual(got, rust.rust_inputs())
+                (root / "research/joinery/specimen/swift/new.swift").write_text("new runtime input")
+                self.assertIn("research/joinery/specimen/swift/new.swift", rust.rust_inputs())
+                image = root / "test/migration/specimens/outputs/new.json"
+                image.write_text("new runtime image")
+                captured = rust.rust_inputs()
+                self.assertIn(str(image.relative_to(root)), captured)
+                image.write_text("changed runtime image")
+                self.assertNotEqual(captured, rust.rust_inputs())
+                image.unlink()
+                self.assertNotIn(str(image.relative_to(root)), rust.rust_inputs())
 
     def test_every_literal_compile_time_include_is_retained(self):
         files = rust.rust_inputs()

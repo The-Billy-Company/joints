@@ -4,6 +4,7 @@
 //! also survives table resolution: effects ask about symbol transitions, not
 //! merely the terminal action selected for a cell.
 
+use std::borrow::Cow;
 use std::cell::Cell;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt;
@@ -997,33 +998,33 @@ impl Automaton {
         use crate::artifact::ArtifactError as E;
         // Intern suffix and whole-tree recipes once, avoiding a quadratic scan
         // of every long production for every cursor position in that production.
-        let mut shaping = BTreeMap::<ShapingRecipe, usize>::new();
+        let mut shaping = BTreeMap::<ShapingRecipe<'_>, usize>::new();
         let mut shape_ids = Vec::with_capacity(self.productions.len());
-        let mut tails = BTreeMap::<(Step, usize), usize>::new();
+        let mut tails = BTreeMap::<(&Step, usize), usize>::new();
         let mut suffixes = Vec::with_capacity(self.productions.len());
         for p in &self.productions {
             r.charge(p.steps.len().saturating_add(1))?;
-            let key = (
-                p.lhs,
-                p.dynamic_precedence,
-                p.steps
-                    .iter()
-                    .map(|s| (s.field, s.alias.clone(), s.alias_recipe, s.reserved.clone()))
-                    .collect(),
-            );
             let next = shaping.len();
-            shape_ids.push(*shaping.entry(key).or_insert(next));
+            shape_ids.push(*shaping.entry(ShapingRecipe(p)).or_insert(next));
             let mut ids = vec![0; p.steps.len() + 1];
             for dot in (0..p.steps.len()).rev() {
                 let next = tails.len() + 1;
-                ids[dot] = *tails
-                    .entry((p.steps[dot].clone(), ids[dot + 1]))
-                    .or_insert(next);
+                ids[dot] = *tails.entry((&p.steps[dot], ids[dot + 1])).or_insert(next);
             }
             suffixes.push(ids);
         }
-        let mut membership = BTreeMap::new();
-        for (&item, members) in &self.cursor_histories {
+        drop(shaping);
+        drop(tails);
+        // Production IDs and dots already have dense, finite domains. A slot
+        // retains the representative key itself; no copied recipe or tree node
+        // is needed for every concrete cursor in the validation scratch.
+        let mut membership: Vec<Vec<Option<&StateItem>>> = self
+            .productions
+            .iter()
+            .map(|p| vec![None; p.steps.len() + 1])
+            .collect();
+        let mut member_count = 0;
+        for (item, members) in &self.cursor_histories {
             if item.production.index() >= self.productions.len() {
                 return Err(E::Invalid("cursor production ID"));
             }
@@ -1058,38 +1059,39 @@ impl Automaton {
                 {
                     return Err(E::Invalid("cursor history recipe"));
                 }
-                if membership.insert((id, item.dot), item).is_some() {
+                if membership[id.index()][item.dot].replace(item).is_some() {
                     return Err(E::Invalid("duplicate concrete cursor"));
                 }
+                member_count += 1;
             }
         }
+        drop(shape_ids);
+        drop(suffixes);
         let expected = self
             .productions
             .iter()
             .try_fold(0usize, |n, p| n.checked_add(p.steps.len() + 1))
             .ok_or(E::Invalid("cursor count overflow"))?;
-        if membership.len() != expected {
+        if member_count != expected {
             return Err(E::Invalid("missing concrete cursor"));
         }
         for (&item, members) in &self.cursor_histories {
             if item.dot == self.production(item.production).steps.len() {
                 continue;
             }
-            let next = membership
-                .get(&(item.production, item.dot + 1))
+            let next = membership[item.production.index()][item.dot + 1]
                 .ok_or(E::Invalid("missing next cursor"))?;
             for &id in members {
                 r.charge(1)?;
-                if membership.get(&(id, item.dot + 1)) != Some(next) {
+                if membership[id.index()][item.dot + 1] != Some(next) {
                     return Err(E::Invalid("cursor forward congruence"));
                 }
             }
         }
         for f in &self.reductions {
             let first = f.productions[0];
-            let item = membership
-                .get(&(first, f.width))
-                .ok_or(E::Invalid("missing completed cursor"))?;
+            let item =
+                membership[first.index()][f.width].ok_or(E::Invalid("missing completed cursor"))?;
             if self.cursor_histories.get(item) != Some(&f.productions) {
                 return Err(E::Invalid("reduction cursor histories"));
             }
@@ -1105,7 +1107,12 @@ impl Automaton {
                     return Err(E::Invalid("kernel item order"));
                 }
                 previous = Some(item);
-                if !self.cursor_histories.contains_key(&item) {
+                let representative = membership
+                    .get(item.production.index())
+                    .and_then(|row| row.get(item.dot))
+                    .copied()
+                    .flatten();
+                if representative != Some(&item) {
                     return Err(E::Invalid("kernel cursor ID"));
                 }
             }
@@ -1220,7 +1227,8 @@ impl Automaton {
                 }
             }
         }
-        let mut histories = BTreeSet::new();
+        let mut histories = vec![false; self.productions.len()];
+        let mut history_count = 0;
         for f in &self.reductions {
             symbol(f.lhs)?;
             if f.productions.is_empty() {
@@ -1234,9 +1242,12 @@ impl Automaton {
                 if id.index() >= self.productions.len() {
                     return Err(E::Invalid("production ID"));
                 }
-                if previous.is_some_and(|p| p >= id) || !histories.insert(id) {
+                if previous.is_some_and(|p| p >= id)
+                    || std::mem::replace(&mut histories[id.index()], true)
+                {
                     return Err(E::Invalid("reduction history order or ownership"));
                 }
+                history_count += 1;
                 previous = Some(id);
                 let p = self.production(id);
                 if p.lhs != f.lhs
@@ -1246,15 +1257,10 @@ impl Automaton {
                     return Err(E::Invalid("reduction family common metadata"));
                 }
                 r.charge(p.steps.len())?;
-                let current = p
-                    .steps
-                    .iter()
-                    .map(|s| (&s.field, &s.alias, s.alias_recipe, &s.reserved))
-                    .collect::<Vec<_>>();
-                if recipe.as_ref().is_some_and(|old| old != &current) {
+                if recipe.is_some_and(|old| !same_tree_recipe(old, p)) {
                     return Err(E::Invalid("reduction family tree recipe"));
                 }
-                recipe = Some(current);
+                recipe = Some(p);
                 let current_vote = p
                     .steps
                     .last()
@@ -1265,7 +1271,7 @@ impl Automaton {
                 vote = Some(current_vote);
             }
         }
-        if histories.len() != self.productions.len() {
+        if history_count != self.productions.len() {
             return Err(E::Invalid("missing concrete reduction history"));
         }
         self.validate_cursor_histories(r)?;
@@ -3544,13 +3550,48 @@ pub struct StateItem {
 
 type Item = StateItem;
 
-type ShapingStep = (
+// An exact borrowed ordering over the immutable tree recipe. The projected
+// sequence is the same key used by cursor construction and native validation;
+// borrowing avoids allocating and cloning a second recipe for every production.
+struct ShapingRecipe<'a>(&'a Production);
+
+type ShapingStep<'a> = (
     Option<FieldId>,
-    Option<Alias>,
+    &'a Option<Alias>,
     AliasRecipe,
-    Option<Arc<str>>,
+    &'a Option<Arc<str>>,
 );
-type ShapingRecipe = (SymbolId, i32, Vec<ShapingStep>);
+
+fn tree_recipe(p: &Production) -> impl Iterator<Item = ShapingStep<'_>> {
+    p.steps
+        .iter()
+        .map(|s| (s.field, &s.alias, s.alias_recipe, &s.reserved))
+}
+
+fn same_tree_recipe(a: &Production, b: &Production) -> bool {
+    tree_recipe(a).eq(tree_recipe(b))
+}
+
+impl PartialEq for ShapingRecipe<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other).is_eq()
+    }
+}
+impl Eq for ShapingRecipe<'_> {}
+impl PartialOrd for ShapingRecipe<'_> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for ShapingRecipe<'_> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0
+            .lhs
+            .cmp(&other.0.lhs)
+            .then_with(|| self.0.dynamic_precedence.cmp(&other.0.dynamic_precedence))
+            .then_with(|| tree_recipe(self.0).cmp(tree_recipe(other.0)))
+    }
+}
 
 /// Once consumed, an earlier precedence vote cannot affect a later cell. Keep
 /// the current previous-step vote and every future step, plus the entire tree
@@ -3564,7 +3605,7 @@ struct CursorTable {
 
 impl CursorTable {
     fn build(productions: &[Production], shared: &CompileWork) -> Result<Self, CompileError> {
-        let mut recipes = BTreeMap::<ShapingRecipe, Vec<usize>>::new();
+        let mut recipes = BTreeMap::<ShapingRecipe<'_>, Vec<usize>>::new();
         let mut table: Vec<Vec<Item>> = Vec::with_capacity(productions.len());
         let mut work = 0;
         for (id, p) in productions.iter().enumerate() {
@@ -3574,15 +3615,7 @@ impl CursorTable {
                     dot,
                 })
                 .collect();
-            let key = (
-                p.lhs,
-                p.dynamic_precedence,
-                p.steps
-                    .iter()
-                    .map(|s| (s.field, s.alias.clone(), s.alias_recipe, s.reserved.clone()))
-                    .collect(),
-            );
-            let prior = recipes.entry(key).or_default();
+            let prior = recipes.entry(ShapingRecipe(p)).or_default();
             for &other in prior.iter() {
                 charge_work(&mut work, 1 + p.steps.len(), shared, "item cursor work")?;
                 let last = p
@@ -4002,6 +4035,17 @@ fn first_sets(
 type LookSet = Arc<BTreeSet<usize>>;
 type Lr1Kernel = Vec<(Item, LookSet)>;
 
+// FIRST sets remain immutable throughout construction. A tail ending at one
+// nonnullable symbol can donate that set directly; only a real union needs an
+// owned copy. Callers still charge every visited suffix and donated member.
+fn donate_first<'a>(donated: &mut Cow<'a, BTreeSet<usize>>, first: &'a BTreeSet<usize>) {
+    if donated.is_empty() {
+        *donated = Cow::Borrowed(first);
+    } else if !first.is_empty() {
+        donated.to_mut().extend(first.iter().copied());
+    }
+}
+
 struct CanonicalCollection {
     states: Vec<StateItems>,
     graph: Graph,
@@ -4037,7 +4081,7 @@ impl Lr1Builder<'_> {
             let Some(step) = p.steps.get(item.dot) else {
                 continue;
             };
-            let mut donated = BTreeSet::new();
+            let mut donated: Cow<'_, BTreeSet<usize>> = Cow::Owned(BTreeSet::new());
             let mut empty = true;
             for suffix in &p.steps[item.dot + 1..] {
                 charge_work(
@@ -4046,14 +4090,15 @@ impl Lr1Builder<'_> {
                     &self.gr.work,
                     "LR(1) construction work",
                 )?;
-                donated.extend(self.first[suffix.symbol.index()].iter().copied());
+                let first = &self.first[suffix.symbol.index()];
+                donate_first(&mut donated, first);
                 if !self.nullable[suffix.symbol.index()] {
                     empty = false;
                     break;
                 }
             }
             if empty {
-                donated.extend(look.iter().copied());
+                donated.to_mut().extend(look.iter().copied());
             }
             if donated.is_empty() {
                 continue;
@@ -4248,7 +4293,7 @@ fn lalr(gr: &Builder, states: &[StateItems], graph: &Graph) -> Result<LalrTables
 
             // Only queued, reachable LR(1) items can donate spontaneous FIRST.
             // An LR(0) closure can also contain unproductive paths with no LA.
-            let mut donated = BTreeSet::new();
+            let mut donated: Cow<'_, BTreeSet<usize>> = Cow::Owned(BTreeSet::new());
             let mut tail_empty = true;
             for suffix in &p.steps[item.dot + 1..] {
                 charge_work(
@@ -4257,14 +4302,15 @@ fn lalr(gr: &Builder, states: &[StateItems], graph: &Graph) -> Result<LalrTables
                     &gr.work,
                     "lookahead work",
                 )?;
-                donated.extend(first[suffix.symbol.index()].iter().copied());
+                let first = &first[suffix.symbol.index()];
+                donate_first(&mut donated, first);
                 if !nullable[suffix.symbol.index()] {
                     tail_empty = false;
                     break;
                 }
             }
             if tail_empty {
-                donated.extend(source.iter().copied());
+                donated.to_mut().extend(source.iter().copied());
             }
             for &rule in &rules[step.symbol.index()] {
                 charge_work(&mut work, 1 + donated.len(), &gr.work, "lookahead work")?;
@@ -5005,6 +5051,31 @@ mod tests {
     use super::*;
 
     const JSON: &[u8] = include_bytes!("../../test/grammar/json.json");
+
+    #[test]
+    fn first_donations_borrow_single_sets_and_preserve_exact_nullable_unions() {
+        let sets: Vec<BTreeSet<usize>> = (0..8)
+            .map(|mask| (0..3).filter(|bit| mask & (1 << bit) != 0).collect())
+            .collect();
+        for first in &sets {
+            let mut borrowed = Cow::Owned(BTreeSet::new());
+            donate_first(&mut borrowed, first);
+            assert!(matches!(borrowed, Cow::Borrowed(value) if std::ptr::eq(value, first)));
+            for second in &sets {
+                let mut donated = Cow::Owned(BTreeSet::new());
+                donate_first(&mut donated, first);
+                donate_first(&mut donated, second);
+                let expected: BTreeSet<_> = first.union(second).copied().collect();
+                assert_eq!(&*donated, &expected);
+                for look in &sets {
+                    let mut nullable = donated.clone();
+                    nullable.to_mut().extend(look.iter().copied());
+                    let expected: BTreeSet<_> = expected.union(look).copied().collect();
+                    assert_eq!(&*nullable, &expected);
+                }
+            }
+        }
+    }
 
     fn accepts(a: &Automaton, tokens: &[SymbolId]) -> bool {
         accepts_from(a, a.start_state(), tokens)
@@ -6113,6 +6184,319 @@ mod artifact_contract {
     use super::*;
     use crate::artifact::{ArtifactError, ArtifactLimits, Reader, Writer};
     const SOURCE:&[u8]=br#"{"name":"checks","rules":{"doc":{"type":"CHOICE","members":[{"type":"SEQ","members":[{"type":"STRING","value":"a"},{"type":"STRING","value":"x"}]},{"type":"SEQ","members":[{"type":"STRING","value":"b"},{"type":"STRING","value":"x"}]}]}}}"#;
+
+    // Independent pre-optimization oracle: its owned keys and ordered sparse
+    // membership preserve the original validation and work-limit semantics.
+    fn legacy_validate_cursor_histories(
+        grammar: &Automaton,
+        r: &mut Reader<'_>,
+    ) -> Result<(), ArtifactError> {
+        use crate::artifact::ArtifactError as E;
+        // Intern suffix and whole-tree recipes once, avoiding a quadratic scan
+        // of every long production for every cursor position in that production.
+        type OwnedShapingStep = (
+            Option<FieldId>,
+            Option<Alias>,
+            AliasRecipe,
+            Option<Arc<str>>,
+        );
+        let mut shaping = BTreeMap::<(SymbolId, i32, Vec<OwnedShapingStep>), usize>::new();
+        let mut shape_ids = Vec::with_capacity(grammar.productions.len());
+        let mut tails = BTreeMap::<(Step, usize), usize>::new();
+        let mut suffixes = Vec::with_capacity(grammar.productions.len());
+        for p in &grammar.productions {
+            r.charge(p.steps.len().saturating_add(1))?;
+            let key = (
+                p.lhs,
+                p.dynamic_precedence,
+                p.steps
+                    .iter()
+                    .map(|s| (s.field, s.alias.clone(), s.alias_recipe, s.reserved.clone()))
+                    .collect(),
+            );
+            let next = shaping.len();
+            shape_ids.push(*shaping.entry(key).or_insert(next));
+            let mut ids = vec![0; p.steps.len() + 1];
+            for dot in (0..p.steps.len()).rev() {
+                let next = tails.len() + 1;
+                ids[dot] = *tails
+                    .entry((p.steps[dot].clone(), ids[dot + 1]))
+                    .or_insert(next);
+            }
+            suffixes.push(ids);
+        }
+        let mut membership = BTreeMap::new();
+        for (&item, members) in &grammar.cursor_histories {
+            if item.production.index() >= grammar.productions.len() {
+                return Err(E::Invalid("cursor production ID"));
+            }
+            let p = grammar.production(item.production);
+            if item.dot > p.steps.len() {
+                return Err(E::Invalid("cursor dot"));
+            }
+            if members.first() != Some(&item.production) {
+                return Err(E::Invalid("cursor representative"));
+            }
+            let vote = |p: &Production| {
+                p.steps
+                    .get(item.dot.wrapping_sub(1))
+                    .map(|s| (s.prec.clone(), s.assoc, s.region, s.spliced))
+            };
+            let expected_vote = vote(p);
+            let mut previous = None;
+            for &id in members {
+                r.charge(1)?;
+                if id.index() >= grammar.productions.len() {
+                    return Err(E::Invalid("cursor history production ID"));
+                }
+                if previous.is_some_and(|p| p >= id) {
+                    return Err(E::Invalid("cursor member order"));
+                }
+                previous = Some(id);
+                let q = grammar.production(id);
+                if item.dot > q.steps.len()
+                    || shape_ids[id.index()] != shape_ids[item.production.index()]
+                    || suffixes[id.index()][item.dot] != suffixes[item.production.index()][item.dot]
+                    || vote(q) != expected_vote
+                {
+                    return Err(E::Invalid("cursor history recipe"));
+                }
+                if membership.insert((id, item.dot), item).is_some() {
+                    return Err(E::Invalid("duplicate concrete cursor"));
+                }
+            }
+        }
+        let expected = grammar
+            .productions
+            .iter()
+            .try_fold(0usize, |n, p| n.checked_add(p.steps.len() + 1))
+            .ok_or(E::Invalid("cursor count overflow"))?;
+        if membership.len() != expected {
+            return Err(E::Invalid("missing concrete cursor"));
+        }
+        for (&item, members) in &grammar.cursor_histories {
+            if item.dot == grammar.production(item.production).steps.len() {
+                continue;
+            }
+            let next = membership
+                .get(&(item.production, item.dot + 1))
+                .ok_or(E::Invalid("missing next cursor"))?;
+            for &id in members {
+                r.charge(1)?;
+                if membership.get(&(id, item.dot + 1)) != Some(next) {
+                    return Err(E::Invalid("cursor forward congruence"));
+                }
+            }
+        }
+        for f in &grammar.reductions {
+            let first = f.productions[0];
+            let item = membership
+                .get(&(first, f.width))
+                .ok_or(E::Invalid("missing completed cursor"))?;
+            if grammar.cursor_histories.get(item) != Some(&f.productions) {
+                return Err(E::Invalid("reduction cursor histories"));
+            }
+        }
+        for row in &grammar.kernels {
+            if row.is_empty() {
+                return Err(E::Invalid("empty state kernel"));
+            }
+            let mut previous = None;
+            for &item in row {
+                r.charge(1)?;
+                if previous.is_some_and(|p| p >= item) {
+                    return Err(E::Invalid("kernel item order"));
+                }
+                previous = Some(item);
+                if !grammar.cursor_histories.contains_key(&item) {
+                    return Err(E::Invalid("kernel cursor ID"));
+                }
+            }
+        }
+        if !grammar.kernels[0].contains(&StateItem {
+            production: ProductionId::from_index(0),
+            dot: 0,
+        }) {
+            return Err(E::Invalid("start kernel"));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn cursor_validation_preserves_reference_errors_and_work_boundaries() {
+        let compare = |grammar: &Automaton| {
+            for work in 0..256 {
+                let limits = ArtifactLimits {
+                    work,
+                    ..ArtifactLimits::default()
+                };
+                let mut reference_reader = Reader::new(&[], limits);
+                let mut optimized_reader = Reader::new(&[], limits);
+                let reference = legacy_validate_cursor_histories(grammar, &mut reference_reader);
+                let optimized = grammar.validate_cursor_histories(&mut optimized_reader);
+                let spent = |reader: &mut Reader<'_>| {
+                    let mut remaining = 0;
+                    while reader.charge(1).is_ok() {
+                        remaining += 1;
+                    }
+                    work - remaining
+                };
+                assert_eq!(
+                    (
+                        reference.map_err(|e| e.to_string()),
+                        spent(&mut reference_reader)
+                    ),
+                    (
+                        optimized.map_err(|e| e.to_string()),
+                        spent(&mut optimized_reader)
+                    ),
+                    "work={work}"
+                );
+            }
+        };
+        let fresh = || Automaton::from_tree_sitter(SOURCE).unwrap();
+        compare(&fresh());
+        let mut grammar = fresh();
+        let (&item, members) = grammar
+            .cursor_histories
+            .iter()
+            .find(|(_, members)| members.len() > 1)
+            .unwrap();
+        let duplicate = StateItem {
+            production: members[1],
+            dot: item.dot,
+        };
+        grammar
+            .cursor_histories
+            .insert(duplicate, vec![duplicate.production]);
+        compare(&grammar);
+        let mut grammar = fresh();
+        grammar.cursor_histories.pop_last();
+        compare(&grammar);
+        let mut grammar = fresh();
+        let (mut item, members) = grammar.cursor_histories.pop_last().unwrap();
+        item.dot = u32::MAX as usize;
+        grammar.cursor_histories.insert(item, members);
+        compare(&grammar);
+        let mut grammar = fresh();
+        let (mut item, members) = grammar.cursor_histories.pop_last().unwrap();
+        item.production = ProductionId::from_index(u32::MAX as usize);
+        grammar.cursor_histories.insert(item, members);
+        compare(&grammar);
+        let mut grammar = fresh();
+        let members = grammar.cursor_histories.values_mut().next().unwrap();
+        members.push(ProductionId::from_index(u32::MAX as usize));
+        compare(&grammar);
+        let mut grammar = fresh();
+        let members = grammar.cursor_histories.values_mut().next().unwrap();
+        members.clear();
+        compare(&grammar);
+        let mut grammar = fresh();
+        let members = grammar
+            .cursor_histories
+            .values_mut()
+            .find(|m| m.len() > 1)
+            .unwrap();
+        members.reverse();
+        compare(&grammar);
+        let mut grammar = fresh();
+        let (&representative, members) = grammar
+            .cursor_histories
+            .iter()
+            .find(|(_, members)| members.len() > 1)
+            .unwrap();
+        let nonrepresentative = StateItem {
+            production: members[1],
+            dot: representative.dot,
+        };
+        assert!(!grammar.cursor_histories.contains_key(&nonrepresentative));
+        grammar.kernels[0] = vec![nonrepresentative];
+        assert!(matches!(
+            legacy_validate_cursor_histories(
+                &grammar,
+                &mut Reader::new(&[], ArtifactLimits::default())
+            ),
+            Err(ArtifactError::Invalid("kernel cursor ID"))
+        ));
+        compare(&grammar);
+        let mut grammar = fresh();
+        grammar.kernels[0][0].production =
+            ProductionId::from_index(usize::try_from(u32::MAX).unwrap());
+        compare(&grammar);
+        let mut grammar = fresh();
+        grammar.kernels[0][0].dot = usize::MAX;
+        compare(&grammar);
+        let mut grammar = fresh();
+        grammar.kernels[0].clear();
+        compare(&grammar);
+        let mut grammar = fresh();
+        let duplicate = grammar.kernels[0][0];
+        grammar.kernels[0].push(duplicate);
+        compare(&grammar);
+    }
+
+    #[test]
+    fn borrowed_shaping_recipes_match_owned_keys_for_every_recipe_field() {
+        let original = Automaton::from_tree_sitter(SOURCE).unwrap();
+        let base = original
+            .productions
+            .iter()
+            .find(|p| !p.steps.is_empty())
+            .unwrap()
+            .clone();
+        let mut cases = vec![base.clone()];
+        let mut add = |change: fn(&mut Production)| {
+            let mut p = base.clone();
+            change(&mut p);
+            cases.push(p);
+        };
+        add(|p| p.lhs = SymbolId::from_index(p.lhs.index() + 1));
+        add(|p| p.dynamic_precedence += 1);
+        add(|p| p.steps[0].field = Some(FieldId::from_index(0)));
+        add(|p| {
+            p.steps[0].alias = Some(Alias {
+                name: "alias".into(),
+                named: false,
+            })
+        });
+        add(|p| {
+            p.steps[0].alias = Some(Alias {
+                name: "alias".into(),
+                named: true,
+            })
+        });
+        add(|p| p.steps[0].alias_recipe = AliasRecipe::Local);
+        add(|p| p.steps[0].reserved = Some("reserved".into()));
+        add(|p| {
+            p.steps.pop();
+        });
+        add(|p| p.steps.push(p.steps[0].clone()));
+        // These affect cursor suffix/rank comparison, but not the tree recipe.
+        add(|p| p.steps[0].symbol = SymbolId::from_index(p.steps[0].symbol.index() + 1));
+        add(|p| p.steps[0].prec = Prec::Level(1));
+        add(|p| p.steps[0].assoc = Assoc::Left);
+        add(|p| p.steps[0].region += 1);
+        add(|p| p.steps[0].spliced = true);
+        let owned = |p: &Production| {
+            (
+                p.lhs,
+                p.dynamic_precedence,
+                p.steps
+                    .iter()
+                    .map(|s| (s.field, s.alias.clone(), s.alias_recipe, s.reserved.clone()))
+                    .collect::<Vec<_>>(),
+            )
+        };
+        for a in &cases {
+            for b in &cases {
+                assert_eq!(
+                    ShapingRecipe(a).cmp(&ShapingRecipe(b)),
+                    owned(a).cmp(&owned(b))
+                );
+            }
+        }
+    }
+
     fn prove_refusal(label: &str, change: impl FnOnce(&mut Automaton)) {
         let mut a = Automaton::from_tree_sitter(SOURCE).unwrap();
         change(&mut a);

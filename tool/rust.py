@@ -64,7 +64,13 @@ def rust_inputs() -> dict:
             if not member.resolve().is_relative_to(crate.resolve()):
                 raise ValueError(f"Rust workspace member is outside retained source: {spec}")
             members.add(member)
-    roots = [root / "customary", root / "test/grammar", root / "include"]
+    # Default tests and explicit working witnesses read manifests, expected
+    # trees, grammar/source rosters and scanner specimens at runtime. Literal
+    # include discovery alone cannot retain or guard those inventories.
+    roots = [root / "customary", root / "test/grammar", root / "include",
+             root / "test/migration/reference", root / "test/migration/specimens",
+             root / "research/joinery/specimen", root / "research/joinery/corpus",
+             root / "upstream/grammars", root / "upstream/sources"]
     paths = {crate / "Cargo.toml", crate / "Cargo.lock", root / "grammars.toml"}
     for member in members:
         paths.add(member / "Cargo.toml")

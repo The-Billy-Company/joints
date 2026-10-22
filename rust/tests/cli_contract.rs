@@ -622,11 +622,14 @@ fn amend_reports_real_leaf_costs_for_unchanged_and_whole_policies() {
                 "{stderr}"
             );
             assert!(change.contains(", 0 tokens read, "), "{stderr}");
-        } else {
+        } else if flag == "--cold" {
             assert!(
                 change.starts_with(&format!("{leaves}/{leaves} leaves reminted at 0, ")),
                 "{stderr}"
             );
+            assert!(!change.contains(", 0 tokens read, "), "{stderr}");
+        } else {
+            assert!(!change.starts_with("0/"), "{stderr}");
             assert!(!change.contains(", 0 tokens read, "), "{stderr}");
         }
     }

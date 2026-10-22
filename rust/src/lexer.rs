@@ -4,6 +4,7 @@ use crate::compiler::{Automaton, Lexis, Pattern};
 use crate::ids::SymbolId;
 use crate::scanner::ScannerProgram;
 use irgx::{Munch, Pick};
+use std::sync::Arc;
 use thiserror::Error;
 
 mod recipe;
@@ -79,12 +80,76 @@ pub(crate) struct ScanBudget<'a> {
     /// New ordinary empty-token election visits use the parser work budget.
     pub selection: &'a mut usize,
 }
-/// Worker-owned ordinal buffers. They carry no lexical answers between calls;
-/// the native scan clears and replaces the winners for every question.
+/// Reusable worker state. Every native question replaces its winners, and
+/// every admitted question rebuilds its bounded symbol membership marks.
 #[derive(Default)]
 pub(crate) struct ScanScratch {
     allow: Vec<u32>,
     winners: Vec<u32>,
+    workers: WorkerSlates,
+    admitted: Vec<bool>,
+}
+// A held identity token prevents address reuse when scratch outlives a lexer.
+// Native programs stay immutable and shared; each local Munch owns its pool.
+#[derive(Default)]
+struct WorkerSlates {
+    owner: Option<Arc<()>>,
+    slates: Vec<Option<Munch>>,
+}
+impl WorkerSlates {
+    fn slate<'a>(&'a mut self, lexer: &'a Lexer, tier: usize) -> Result<&'a Munch, irgx::Error> {
+        self.slate_with(lexer, tier, Munch::try_clone)
+    }
+    fn cloned_tier(
+        lexer: &Lexer,
+        tier: usize,
+        clone: impl FnOnce(&Munch) -> Result<Munch, irgx::Error>,
+    ) -> Result<Vec<Option<Munch>>, irgx::Error> {
+        let mut slates = Vec::new();
+        slates
+            .try_reserve_exact(lexer.tiers.len())
+            .map_err(|_| irgx::Error::OutOfMemory { detail: None })?;
+        slates.resize_with(lexer.tiers.len(), || None);
+        slates[tier] = Some(clone(&lexer.tiers[tier].slate)?);
+        Ok(slates)
+    }
+    fn slate_with<'a>(
+        &'a mut self,
+        lexer: &'a Lexer,
+        tier: usize,
+        clone: impl FnOnce(&Munch) -> Result<Munch, irgx::Error>,
+    ) -> Result<&'a Munch, irgx::Error> {
+        let bound = self
+            .owner
+            .as_ref()
+            .is_some_and(|owner| Arc::ptr_eq(owner, &lexer.worker_identity));
+        if !bound {
+            let owner = Arc::clone(&lexer.worker_identity);
+            // One lexer and this scratch account for two identity owners.
+            // The count is only a performance hint. Both routes always use
+            // safe Munch pools; no exclusivity depends on this racing snapshot.
+            let slates = if Arc::strong_count(&owner) > 2 {
+                Self::cloned_tier(lexer, tier, clone)?
+            } else {
+                Vec::new()
+            };
+            self.slates = slates;
+            self.owner = Some(owner);
+        } else if self.slates.is_empty() {
+            if Arc::strong_count(&lexer.worker_identity) > 2 {
+                self.slates = Self::cloned_tier(lexer, tier, clone)?;
+            }
+        } else if self.slates[tier].is_none() {
+            self.slates[tier] = Some(clone(&lexer.tiers[tier].slate)?);
+        }
+        Ok(if self.slates.is_empty() {
+            &lexer.tiers[tier].slate
+        } else {
+            self.slates[tier]
+                .as_ref()
+                .expect("successful local slate publication")
+        })
+    }
 }
 impl<'a> LexicalQuestion<'a> {
     pub(crate) fn positive(admitted: Option<&'a [SymbolId]>) -> Self {
@@ -244,6 +309,8 @@ impl Choice {
 #[derive(Debug)]
 pub(crate) struct Lexer {
     tiers: Vec<Tier>,
+    worker_identity: Arc<()>,
+    admission_slots: usize,
     word: Option<SymbolId>,
     scan_transitions: usize,
 }
@@ -484,11 +551,39 @@ impl Lexer {
             return Ok(Scan::End);
         }
         let admitted = question.admitted;
+        let ScanScratch {
+            allow,
+            winners,
+            workers,
+            admitted: marks,
+        } = scratch;
+        if let Some(ids) = admitted {
+            if self.admission_slots > marks.len() {
+                marks
+                    .try_reserve_exact(self.admission_slots - marks.len())
+                    .map_err(|_| LexError::Allocation("admitted symbol marks"))?;
+            }
+            marks.resize(self.admission_slots, false);
+            marks.fill(false);
+            for id in ids {
+                if let Some(mark) = marks.get_mut(id.index()) {
+                    *mark = true;
+                }
+            }
+        }
+        let named = |entry: &Entry| {
+            admitted.is_some_and(|ids| {
+                marks
+                    .get(entry.symbol.index())
+                    .copied()
+                    .unwrap_or_else(|| ids.contains(&entry.symbol))
+            })
+        };
         let permits_empty = |entry: &Entry| {
             !entry.provided
                 && !entry.external
                 && !entry.literal
-                && admitted.is_some_and(|set| set.contains(&entry.symbol))
+                && named(entry)
                 && (question.empty_permit.binary_search(&entry.symbol).is_ok()
                     || question
                         .provisional_empty
@@ -501,16 +596,15 @@ impl Lexer {
         let mut best_length = None;
         let mut plain = None;
         let mut keyword = None;
-        let ScanScratch { allow, winners } = scratch;
-        for tier in &self.tiers {
+        for (tier_index, tier) in self.tiers.iter().enumerate() {
             allow.clear();
             allow.extend(
                 tier.entries
                     .iter()
                     .enumerate()
                     .filter(|(_, entry)| {
-                        let named = admitted.is_some_and(|set| set.contains(&entry.symbol));
-                        (admitted.is_none() || entry.extra || named) && (!entry.immediate || fresh)
+                        (admitted.is_none() || entry.extra || named(entry))
+                            && (!entry.immediate || fresh)
                     })
                     .map(|(i, _)| u32::try_from(i).expect("bounded lexer tier entries")),
             );
@@ -529,14 +623,12 @@ impl Lexer {
                 budget,
                 *work.selection,
             );
-            let result = tier.slate.scan_bytes_metered_into(
-                source,
-                at,
-                Some(allow),
-                pick,
-                &mut budget,
-                winners,
-            );
+            // Acquiring a local native worker can fail before Munch clears its output.
+            // Preserve the same empty-winner error state for that earlier failure.
+            winners.clear();
+            let result = workers.slate(self, tier_index).and_then(|slate| {
+                slate.scan_bytes_metered_into(source, at, Some(allow), pick, &mut budget, winners)
+            });
             #[cfg(all(test, feature = "munch-image"))]
             working_image_trial::native_after(observed, &result, winners, budget, *work.selection);
             // Reconcile consumption even on failure. A refused scan has no winner.
@@ -622,7 +714,7 @@ impl Lexer {
                 if len == 0 && !permits_empty(entry) {
                     continue;
                 }
-                let extra = entry.extra && !admitted.is_some_and(|set| set.contains(&entry.symbol));
+                let extra = entry.extra && !named(entry);
                 let standing = if extra {
                     0
                 } else {
@@ -1168,3 +1260,9 @@ mod tests {
         shareable::<Lexer>();
     }
 }
+
+#[cfg(test)]
+mod worker_tests;
+
+#[cfg(test)]
+mod admission_tests;

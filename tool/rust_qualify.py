@@ -4,7 +4,7 @@
 First create a checked native context with tool/rust.py. Then run, for example:
   mise exec python@3.12.15 -- python -B tool/rust_qualify.py --native-context .local/rust-native/last-cargo-munch-image1.json \
     --output .local/rust-migration/current/qualification-1 --toolchain 1.96.0 --toolchain 1.85.0 \
-    --sdkroot /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk
+    --sdkroot /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk --jobs 2
 
 All targets and logs are new. The default tests remain default tests: ignored
 witnesses and corpora are not silently enabled. An optional gate plan can run
@@ -97,6 +97,7 @@ def environment(toolchain, target, library, sdkroot):
     result = {key: value for key, value in os.environ.items()
               if key not in exact and not key.startswith(prefixes)}
     result.update(RUSTC=toolchain["rustc"]["path"], RUSTDOC=toolchain["rustdoc"]["path"],
+                  CARGO=toolchain["cargo"]["path"], RUSTUP_TOOLCHAIN=toolchain["version"],
                   PATH=str(Path(toolchain["cargo"]["path"]).parent) + os.pathsep + os.defpath,
                   IRGX_LIB_DIR=str(library), CARGO_TARGET_DIR=str(target), CARGO_NET_OFFLINE="true",
                   CARGO_INCREMENTAL="0", RUST_BACKTRACE="0", PYTHONDONTWRITEBYTECODE="1",
@@ -105,6 +106,16 @@ def environment(toolchain, target, library, sdkroot):
         result.update(SDKROOT=str(sdkroot), MACOSX_DEPLOYMENT_TARGET="13.0",
                       DEVELOPER_DIR="/Library/Developer/CommandLineTools")
         result["PATH"] += ":/Library/Developer/CommandLineTools/usr/bin"
+    return result
+
+
+def qualification_environment(toolchain, target, library, sdkroot, jobs):
+    result = environment(toolchain, target, library, sdkroot)
+    if jobs is not None:
+        require(jobs > 0, "jobs must be positive")
+        # Inherited CARGO_BUILD_* overrides remain scrubbed. Only this explicit
+        # process-local qualification option can select Cargo parallelism.
+        result["CARGO_BUILD_JOBS"] = str(jobs)
     return result
 
 
@@ -121,8 +132,8 @@ def config_inputs(crate):
 def command(argv, cwd, env, out, label, timeout, report, report_path):
     row = {"label": label, "argv": list(map(str, argv)), "cwd": str(cwd), "started": time.time(),
            "environment": {key: value for key, value in env.items() if key in
-                           ("RUSTC", "RUSTDOC", "PATH", "SDKROOT", "MACOSX_DEPLOYMENT_TARGET", "DEVELOPER_DIR", "IRGX_LIB_DIR",
-                            "CARGO_TARGET_DIR", "CARGO_NET_OFFLINE", "CARGO_INCREMENTAL", "PCRE2_SYS_STATIC",
+                           ("RUSTC", "RUSTDOC", "CARGO", "RUSTUP_TOOLCHAIN", "PATH", "SDKROOT", "MACOSX_DEPLOYMENT_TARGET", "DEVELOPER_DIR", "IRGX_LIB_DIR",
+                            "CARGO_TARGET_DIR", "CARGO_NET_OFFLINE", "CARGO_INCREMENTAL", "CARGO_BUILD_JOBS", "PCRE2_SYS_STATIC",
                             "LIBPCRE2_8_NO_PKG_CONFIG", "HOME", "CARGO_HOME", "RUSTUP_HOME")}}
     report["commands"].append(row)
     save(report_path, report)
@@ -161,6 +172,18 @@ def selected_toolchain(version, primary=False):
         result[tool]["version"] = subprocess.run([result[tool]["path"], "-Vv"], check=True,
                                                   capture_output=True, text=True).stdout
     return result
+
+
+def cargo_command(toolchain, cargo_args, manifest):
+    # Cargo searches CARGO_HOME/bin before PATH for external subcommands. Invoke
+    # our pinned executable directly so rustup's default cannot choose a driver
+    # from another compiler, even when the selected cargo itself is absolute.
+    kind = cargo_args[0]
+    executable = "cargo-" + kind if kind in ("fmt", "clippy") else "cargo"
+    argv = [toolchain[executable]["path"], kind, "--manifest-path", str(manifest)]
+    if kind != "fmt":
+        argv.extend(["--locked", "--offline"])
+    return argv + cargo_args[1:]
 
 
 def package_inputs(packages):
@@ -258,7 +281,7 @@ def run(args):
                 for path, expected in gate["input_files"].items():
                     require(path not in files or files[path] == expected, "conflicting gate input hash")
                     files[path] = expected
-        report.update(toolchains=toolchains, rust_inputs=before, native=native, native_link=selection,
+        report.update(toolchains=toolchains, rust_inputs=before, native=native, native_link=selection, build_jobs=args.jobs,
                       inputs=files, caller_homes={key: os.environ.get(key) for key in ("HOME", "CARGO_HOME", "RUSTUP_HOME")})
 
         def check():
@@ -272,7 +295,7 @@ def run(args):
         check()
         save(report_path, report)
         crate = SOURCE / "rust"
-        env = environment(toolchains[0], out / ("target-" + versions[0]), selection["library_dir"], args.sdkroot)
+        env = qualification_environment(toolchains[0], out / ("target-" + versions[0]), selection["library_dir"], args.sdkroot, args.jobs)
         metadata = command([toolchains[0]["cargo"]["path"], "metadata", "--manifest-path", str(crate / "Cargo.toml"),
                             "--locked", "--offline", "--format-version", "1"], crate, env, out, "metadata",
                            args.timeout, report, report_path)
@@ -305,11 +328,8 @@ def run(args):
             check()
             toolchain = toolchains[index]
             label = kind + "-" + versions[index]
-            env = environment(toolchain, out / ("target-" + versions[index]), selection["library_dir"], args.sdkroot)
-            argv = [toolchain["cargo"]["path"], cargo_args[0], "--manifest-path", str(crate / "Cargo.toml")]
-            if kind != "fmt":
-                argv.extend(["--locked", "--offline"])
-            argv.extend(cargo_args[1:])
+            env = qualification_environment(toolchain, out / ("target-" + versions[index]), selection["library_dir"], args.sdkroot, args.jobs)
+            argv = cargo_command(toolchain, cargo_args, crate / "Cargo.toml")
             print(label, flush=True)
             row = command(argv, crate, env, out, label, args.timeout, report, report_path)
             if kind == "test":
@@ -373,9 +393,11 @@ def main():
     parser.add_argument("--sdkroot", type=Path)
     parser.add_argument("--irgx-abi-family", choices=("irgx-abi2-105", ABI), default=ABI)
     parser.add_argument("--timeout", type=int, default=900)
+    parser.add_argument("--jobs", type=int, help="positive process-local Cargo build job limit; inherited overrides remain scrubbed")
     parser.add_argument("--gate-plan", type=Path)
     args = parser.parse_args()
     require(args.timeout > 0, "timeout must be positive")
+    require(args.jobs is None or args.jobs > 0, "jobs must be positive")
     with rust.build_lock():
         return run(args)
 

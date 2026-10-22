@@ -1,7 +1,44 @@
 # Rust candidate activation and rollback
 
-The current workspace contains Image1 V3/S4 and native108 support, plus further
-parser/table allocation changes. Fresh `qualification-3` passes 381 default
+The workspace is receiving further performance and memory-safety changes.
+The current Q7 source reclaims unpublished effects after rejected document
+edits. It passes 443 default tests on each Rust version, strict checks and the
+release build with a stable 564-file source/runtime-fixture closure. The same
+source passes 443 ASan tests with instrumentation verified in 33 binaries.
+Its complete working replay also passes: all 31 grammars, 14 extended
+witnesses, 55 functional checks, 24 ABI checks, and all 6,216 Go and 102,906
+Python consumer inputs. Fresh installed checks pass 40/40 on the current Mac
+and 40/40 under Linux amd64 emulation, with both Linux compiler versions also
+passing 443 default tests and 16 ignores. The complete 1,546-command cost run
+finishes with stable inputs but still fails the 1.10 ceiling. Cold median
+Rust/Zig latency ratios are 1.208/2.436/2.134/2.312 for JSON/large JSON/Go/Python;
+median RSS ratios are 1.080/1.522/1.642/1.531. Edit and worker costs also remain
+open. The local compatibility join is
+`.local/rust-migration/performance-2026-10-21/final-candidate-evidence-6.json`;
+Linux execution is separately recorded under `linux-preflight/run-6/`.
+Neither the contended-host cost result nor emulation establishes a physical
+target floor. Zig remains the default. See
+[the current result](PERFORMANCE.md#current-packaged-q7-result-2026-10-22).
+The Q6 results below remain attached to their retained predecessor snapshot.
+The latest combined Q6 snapshot passes 440 default tests on each of Rust
+1.85 and 1.96, formatting, all-target checks, strict Clippy and a release build.
+Its complete 562-file source/runtime-fixture closure repairs the omissions
+identified in Q4. Q6 includes the selected adaptive effect memo. The same
+selected source passes 440 AddressSanitizer tests with instrumentation verified
+in 33 binaries, plus a native ReleaseSafe replay with complete build-package
+custody. Native Zig/C and the prebuilt standard library remain outside Rust
+ASan; leak detection is disabled. The Q6 development comparison still exceeds
+the performance ceiling: cold median Rust/Zig ratios are
+1.116/2.607/2.248/2.372 for JSON/large JSON/Go/Python, with RSS ratios
+1.063/1.514/1.645/1.535. The full cost matrix was pending at that Q6
+checkpoint; the current Q7 result is recorded above.
+Its exact workspace report is
+`.local/rust-migration/performance-2026-10-21/qualification-6/report.json`.
+Performance acceptance, target-floor, sealed, and release gates remain open for this follow-on. Zig
+remains the default. See [the intermediate checkpoint](PERFORMANCE.md#intermediate-performance-checkpoint-2026-10-22).
+
+The retained 2026-10-21 candidate below contains Image1 V3/S4 and native108 support, plus
+parser/table allocation changes. Its `qualification-3` passes 381 default
 tests with 16 declared ignores on each of Rust 1.85 and 1.96, both all-target
 checks, formatting, Clippy and a release build. The fresh 31-grammar gate also
 passes all 124 CLI calls and preserves the exact prior Image1 artifact bytes.
@@ -13,7 +50,7 @@ Fresh local qualification additionally passes the 14 working witnesses,
 compatibility join is `final-candidate-evidence.json`, candidate identity
 `8cb7ab23d553ed392dd0c9d0e8b07d3d376055fa80a5b4c495aa335b302f2c55`.
 
-The current full 1,546-command cost run completed with stable inputs. The
+That candidate's full 1,546-command cost run completed with stable inputs. The
 1.10 latency/RSS acceptance ceiling remains failed: cold CLI median ratios
 are 1.292 for JSON, 4.655 for large JSON, 2.831 for Go and 3.057 for Python.
 Process RSS and incremental/worker costs also need work. This is a contended
@@ -26,9 +63,10 @@ predecessor passes cannot qualify edited sources. No default switch is
 authorized by a workspace or installed-package pass alone. Target-floor
 execution, the late sealed aggregate, real installed-consumer adoption and
 release/rollback qualification remain separate gates. The 10,000-line goal
-is separate design debt, with 24,225 production Rust lines currently counted.
+is separate design debt, with 24,225 production Rust lines counted for that
+retained candidate.
 
-The fresh late sealed attempt now retains aggregate projections for both
+The retained late sealed attempt has aggregate projections for both
 backends, with 0 of 20 entries measured in each. Pins and control files remain
 stable; neither comparative correctness nor a cause follows from those
 incomplete measurements. Raw diagnosis remains sealed. The record is

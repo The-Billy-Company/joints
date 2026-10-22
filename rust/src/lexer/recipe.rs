@@ -226,6 +226,8 @@ where
     }
     budget.tier_count(count)?;
     let mut tiers = vector(count, "tiers", budget)?;
+    let mut lexical_count = 0usize;
+    let mut symbol_end = 0usize;
     let mut below = None;
     while let Some(precedence) = next_precedence(&rules, below, budget)? {
         let mut count = 0usize;
@@ -253,6 +255,8 @@ where
                     break;
                 }
             }
+            lexical_count = lexical_count.saturating_add(1);
+            symbol_end = symbol_end.max(symbol.index().saturating_add(1));
             patterns.push(pattern);
             entries.push(Entry {
                 symbol,
@@ -275,6 +279,10 @@ where
     }
     Ok(Lexer {
         tiers,
+        worker_identity: std::sync::Arc::new(()),
+        // Keep question marks bounded by lexical entries, even for sparse IDs.
+        // Entries beyond this fast range retain linear membership semantics.
+        admission_slots: symbol_end.min(lexical_count.saturating_mul(8)),
         word,
         scan_transitions: limits.scan_transitions,
     })

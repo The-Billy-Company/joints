@@ -168,7 +168,7 @@ impl std::fmt::Debug for Probe {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
 
     fn root() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..")
@@ -178,7 +178,7 @@ mod tests {
         let mut found = Vec::new();
         for file in std::fs::read_dir(root().join("customary")).unwrap() {
             let path = file.unwrap().path();
-            if path.extension().and_then(|x| x.to_str()) != Some("json") {
+            if !path.is_file() || path.extension().and_then(|x| x.to_str()) != Some("json") {
                 continue;
             }
             let book: serde_json::Value =
@@ -204,6 +204,46 @@ mod tests {
         }
         found.sort();
         found
+    }
+
+    fn is_specimen_subject(path: &Path) -> bool {
+        path.is_file()
+            && path
+                .extension()
+                .and_then(|value| value.to_str())
+                .is_some_and(|extension| {
+                    path.with_extension(format!("{extension}.expect")).is_file()
+                })
+    }
+
+    #[test]
+    fn only_regular_files_with_regular_expectations_are_probe_subjects() {
+        let home = std::env::temp_dir().join(format!(
+            "joints-probe-subjects-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&home).unwrap();
+        let selected = home.join("selected.scala");
+        std::fs::write(&selected, b"subject").unwrap();
+        std::fs::write(home.join("selected.scala.expect"), b"claim").unwrap();
+        let unselected = home.join("unselected.scala");
+        std::fs::write(&unselected, b"subject").unwrap();
+        std::fs::create_dir(home.join("unselected.scala.expect")).unwrap();
+        std::fs::create_dir(home.join("empty")).unwrap();
+        std::fs::create_dir(home.join("directory.scala")).unwrap();
+        std::fs::write(home.join("directory.scala.expect"), b"claim").unwrap();
+        std::fs::write(home.join("no-extension"), b"subject").unwrap();
+        let actual: Vec<_> = std::fs::read_dir(&home)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| is_specimen_subject(path))
+            .collect();
+        assert_eq!(actual, [selected]);
+        std::fs::remove_dir_all(home).unwrap();
     }
 
     #[test]
@@ -235,13 +275,7 @@ mod tests {
                 std::fs::read_dir(root().join("research/joinery/specimen").join(language)).unwrap()
             {
                 let path = file.unwrap().path();
-                if path
-                    .with_extension(format!(
-                        "{}.expect",
-                        path.extension().unwrap().to_str().unwrap()
-                    ))
-                    .exists()
-                {
+                if is_specimen_subject(&path) {
                     subjects.push(std::fs::read(path).unwrap());
                 }
             }

@@ -16,7 +16,8 @@ ABI and governed consumer gates. Its cold Go/Python costs still exceeded the
 agreed 1.10 Rust/Zig latency and memory ceiling. The current workspace adds
 flat immutable parser tables, bounded full-stack permission-proof reuse,
 worker-owned lexical buffers, and deterministic parser allocation reductions.
-Fresh workspace qualification passes 381 default tests with 16 declared ignores
+The retained 2026-10-21 candidate's workspace qualification passes 381 default
+tests with 16 declared ignores
 on each of Rust 1.85 and 1.96, formatting, all-target checks, Clippy with warnings
 denied, and a release build. The exact report is
 `.local/rust-migration/native-phase6/execution-2026-10-21/qualification-3/report.json`.
@@ -28,16 +29,45 @@ witnesses, 55 classified CLI cases, 24 ABI commands, 64 default consumer tests,
 It identifies the immutable source export and installed candidate; historical
 candidate passes do not qualify edited sources.
 
-The fresh 1,546-command benchmark completed with stable inputs, but the 1.10
-latency/RSS ceiling still fails. Cold CLI median Rust/Zig ratios are 1.292 for
-JSON, 4.655 for large JSON, 2.831 for Go and 3.057 for Python. Incremental and
-worker costs also remain open. See the [current measurements](PERFORMANCE.md#fresh-public-candidate-full-cost-matrix).
+The current performance follow-on changes parser ownership, permission reuse,
+prefix validation, native image decoding, and bounded table storage. Its
+combined Q7 snapshot passes 443 default tests on both Rust versions, formatting,
+all-target checks, strict Clippy and a release build with a complete 564-file
+source/runtime-fixture closure. It includes the adaptive effect memo and
+reclaims unpublished runs after failed edits without invalidating old IDs or
+versions. The selected source also passes 443 AddressSanitizer
+tests, with instrumentation checked in 33 binaries, and focused native
+ReleaseSafe controls. The prebuilt standard library and native Zig/C remain
+outside Rust ASan, and leak detection is disabled. In the complete packaged
+measurement, all four cold-latency medians still exceed the ceiling; large JSON, Go and
+Python also exceed the median RSS ceiling. Later source edits require fresh
+combined correctness, cost and safety checks.
+A reconstruction found missing runtime fixture
+capture in Q4; the repaired full input closure passes Q6 workspace qualification.
+The same Q7 source passes the complete working replay, including all 31 grammars,
+14 extended witnesses, 55 functional checks, 24 ABI checks, and all 6,216 Go and
+102,906 Python consumer inputs. Fresh installed checks pass all 40 commands on
+the current Mac and all 40 under Linux amd64 emulation. Both Linux compiler
+versions also pass the complete 443/16 release test roster. See the
+[current measurements](PERFORMANCE.md#current-packaged-q7-result-2026-10-22)
+and [memory and ownership
+contracts](SAFETY.md) for the exercised safety boundaries and their limits.
 
-One fresh late sealed attempt produced stable but incomplete aggregates:
+The fresh Q7 1,546-command benchmark completed with stable inputs, but the 1.10
+latency/RSS ceiling still fails. Cold CLI median Rust/Zig ratios are 1.208 for
+JSON, 2.436 for large JSON, 2.134 for Go and 2.312 for Python; median RSS ratios
+are 1.080, 1.522, 1.642 and 1.531 respectively. Incremental and worker costs
+also remain open. This is a contended current-host comparison, with a separate
+source-attestation limit for the diagnostic Zig ABI library. The exact current
+Mac compatibility join is
+`.local/rust-migration/performance-2026-10-21/final-candidate-evidence-6.json`;
+Linux evidence is separately recorded under `linux-preflight/run-6/`.
+
+The retained late sealed attempt produced stable but incomplete aggregates:
 0 of 20 entries measured on each backend. This establishes no comparative
 correctness result. Raw diagnosis remains sealed; the gate remains open.
 
-The same source export also passes both full release-profile suites and all
+The retained 2026-10-21 source export also passes both full release-profile suites and all
 40 extracted installed checks under Linux amd64 emulation. A distinct read-only
 audit completes custody verification after a private producer path-type error;
 the original failed run is retained. This establishes emulated release delivery,
@@ -210,17 +240,26 @@ bytes. `document.cost()` separates validated prefix reuse, source copying,
 materialized nodes, and measured-sequence work; `document.product()` returns
 values comparable with a separate cold effect store. A partial or ambiguous
 run conservatively falls back to cold parsing. Proof-cache metadata is capped
-at 32 MiB; the additional permission pool retains at most 256 exact-stack
-slates within a 1 MiB payload-and-directory bound and resets on each parse.
-Lexical ordinal scratch is worker-owned and bounded by the grammar. These caches
-never retain scanner answers. The prefix-cache count excludes source, snapshots,
-move traces, and the effect store.
+at 32 MiB; the additional permission pool retains at most 1,024 slates within
+a 1 MiB payload-and-directory bound across this grammar-bound session. Each proof records
+all state-stack dependencies across its explored branches. Reuse checks the
+complete recorded suffix, or the full stack when the proof reached its floor.
+Lexical ordinal scratch is worker-owned and bounded by the grammar. Permission
+proofs and ordinal scratch retain no scanner answers. The prefix cache retains
+lossless observations for exact replay comparison; pure regex events may instead
+use a conservative bound covering every source read. That shortcut requires the
+complete prefix through the edit to remain byte-equal and the bound to precede
+the edit. Program scanners retain exact replay. An unknown pure-regex bound
+stops validation before that event and selects an earlier checkpoint. The 32 MiB
+count excludes source, snapshots, move traces, the effect store, allocator
+overhead, and transient allocations during buffer growth.
 The effect store retains every distinct interned run until the document or
 store is dropped, including runs created during unsuccessful edit attempts.
 Operation limits do not bound that cumulative storage over a document's lifetime.
 
-`DocumentOptions.policy` selects the exact proof used by `Prove` and `Snap`, or
-an executed cold baseline with `Whole`. Costs report source copies, actual
+`DocumentOptions.policy` selects the exact proof used by `Prove` and `Snap`.
+`Whole` retains a proved prefix and re-derives the suffix, matching the C policy;
+`Cold` and the CLI's `--cold` reparse from the beginning. Costs report source copies, actual
 token reads, output materialization, and sequence work separately. The changed
 sequence window starts at a leaf index, rather than a byte offset.
 

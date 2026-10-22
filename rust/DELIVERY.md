@@ -5,6 +5,31 @@ do not publish a release, change the default engine, or establish support on
 a host that has not executed the candidate. See [CUTOVER.md](CUTOVER.md) for
 activation, artifact re-minting, and rollback.
 
+The current Q7 source completes fresh native108 V3/S4 delivery on 2026-10-22.
+All 40 extracted installed checks pass on the current Mac and under Linux
+amd64 emulation. Both Rust 1.85 and 1.96 pass 443 default tests with 16 ignores
+in the Linux release replay. The same 564-file compiled-source/runtime-fixture
+closure joins the current workspace and complete working-consumer results.
+The Mac compatibility receipt is
+`.local/rust-migration/performance-2026-10-21/final-candidate-evidence-6.json`;
+the separate Linux receipt is `linux-preflight/run-6/execution.json` under
+that directory. Both executions finish naturally with stable inputs; the Linux
+client, parent and exact container are confirmed gone.
+
+The preceding delivery attempt is preserved as a failure: export requested an
+optional unrelated image that was no longer present. The orchestration now
+includes that exclusion only when the file exists. Interruption, timeout and
+post-spawn callback cleanup also use the reviewed owned-process guard, with
+exact-ID container cleanup for Linux. All 21 prior preparation controls plus
+six new cleanup controls pass. This does not relax source-export, native ABI,
+installed-consumer or artifact-refusal checks. No engine source changed during
+this packaging repair.
+
+The complete packaged benchmark still fails the 1.10 latency/RSS ceiling;
+see [the current measurements](PERFORMANCE.md#current-packaged-q7-result-2026-10-22).
+These remain private local packages. Physical target floors, adoption,
+sealed qualification and release/rollback remain separate.
+
 The local candidate deliberately preserves the current version authorities:
 
 | Component | Recorded version |

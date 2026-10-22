@@ -109,7 +109,7 @@ pub(super) fn execute<'t>(
                 root,
             };
             if matches!(step.kind, Kind::Group) {
-                let kids = &tree.children[tree.nodes[root.index()].children.clone()];
+                let kids = &tree.children[tree.nodes[root.index()].child_range()];
                 let mut frame = Frame::new(&step.children, 0);
                 if !step.captures.is_empty() || step.field.is_some() {
                     c.budget.charge(1)?;
@@ -125,7 +125,7 @@ pub(super) fn execute<'t>(
             }
             c.found.clear();
         }
-        let children = &tree.children[tree.nodes[root.index()].children.clone()];
+        let children = &tree.children[tree.nodes[root.index()].child_range()];
         c.budget.charge(children.len())?;
         frontier.extend(children.iter().rev().copied());
     }
@@ -189,13 +189,13 @@ impl<'q, 't> Cursor<'q, 't> {
         let query = self.query;
         let step = &query.steps[id];
         let data = &self.tree.nodes[node.index()];
-        if step.field.is_some() && step.field != data.field {
+        if step.field.is_some() && step.field != data.field() {
             return Ok(false);
         }
         let mut inherited = bindings.as_deref();
         while let Some(binding) = inherited {
             self.budget.charge(1)?;
-            if binding.field.is_some() && binding.field != data.field {
+            if binding.field.is_some() && binding.field != data.field() {
                 return Ok(false);
             }
             inherited = binding.parent.as_deref();
@@ -224,12 +224,12 @@ impl<'q, 't> Cursor<'q, 't> {
                 if !self.fits(step, node)? {
                     return Ok(false);
                 }
-                let kids = &self.tree.children[data.children.clone()];
+                let kids = &self.tree.children[data.child_range()];
                 if !step.absent.is_empty() {
                     for child in kids {
                         self.budget.charge(1 + step.absent.len())?;
                         if self.tree.nodes[child.index()]
-                            .field
+                            .field()
                             .is_some_and(|field| step.absent.contains(&field))
                         {
                             return Ok(false);

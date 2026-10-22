@@ -17,14 +17,16 @@ pub struct DocumentOptions {
     pub policy: DocumentPolicy,
 }
 
-/// Snap uses the same exact proof as Prove. Whole is a cold baseline,
-/// rebuilding measurements even for byte-equal replacements.
+/// Snap uses the same exact proof as Prove. Whole retains a proved prefix and
+/// re-derives everything after it, even for byte-equal replacements. Cold
+/// reparses and rebuilds measurements from the beginning.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum DocumentPolicy {
     #[default]
     Prove,
     Snap,
     Whole,
+    Cold,
 }
 
 /// Reusing the measured sequence and resuming the parser are separate costs.
@@ -109,7 +111,7 @@ impl Document {
         let mut session = ParseSession::with_limits(Arc::clone(&grammar), options.limits);
         session.set_recovery(options.recovery);
         session.set_supply(options.supply);
-        session.set_document_reuse(options.policy != DocumentPolicy::Whole);
+        session.set_document_reuse(options.policy != DocumentPolicy::Cold);
         let mut store = grammar.effect_store();
         let parsed = session.parse_document(Arc::from(source), None, &mut store)?;
         let sequence = Sequence::from_segments(&mut store, &parsed.segments)?;
@@ -157,7 +159,7 @@ impl Document {
     pub fn set_policy(&mut self, policy: DocumentPolicy) {
         self.options.policy = policy;
         self.session
-            .set_document_reuse(policy != DocumentPolicy::Whole);
+            .set_document_reuse(policy != DocumentPolicy::Cold);
     }
 
     /// Canonical values can be compared across documents' private intern spaces.
@@ -172,14 +174,31 @@ impl Document {
         span: ByteSpan,
         replacement: &[u8],
     ) -> Result<&TreeSnapshot, DocumentError> {
+        let mark = self.store.document_mark();
+        // The inner call returns no Effect-bearing candidate on failure, so
+        // its local segments and partial sequences drop before suffix reuse.
+        match self.edit_inner(span, replacement) {
+            Ok(()) => Ok(&self.snapshot),
+            Err(error) => {
+                self.store
+                    .discard_document_suffix(mark)
+                    .expect("a Document mark belongs to its unchanged private store");
+                Err(error)
+            }
+        }
+    }
+
+    fn edit_inner(&mut self, span: ByteSpan, replacement: &[u8]) -> Result<(), DocumentError> {
         if span.end() > self.source().len() {
             return Err(DocumentError::InvalidSpan {
                 span,
                 source_bytes: self.source().len(),
             });
         }
-        if self.options.policy != DocumentPolicy::Whole
-            && &self.source()[span.range()] == replacement
+        if matches!(
+            self.options.policy,
+            DocumentPolicy::Prove | DocumentPolicy::Snap
+        ) && &self.source()[span.range()] == replacement
         {
             self.cost = DocumentCost {
                 reuse: Reuse::Unchanged,
@@ -197,7 +216,7 @@ impl Document {
                 sequence_compositions: 0,
                 sequence_nodes_created: 0,
             };
-            return Ok(&self.snapshot);
+            return Ok(());
         }
         let new_len = self
             .source()
@@ -213,7 +232,7 @@ impl Document {
         let parsed =
             self.session
                 .parse_document(Arc::from(bytes), Some(span.start()), &mut self.store)?;
-        let measured = self.splice_sequence(&parsed.segments)?;
+        let measured = self.splice_sequence(&parsed.segments, parsed.stats.resumed_at)?;
         check_coverage(&measured.sequence, new_len)?;
         let cost = DocumentCost {
             reuse: if parsed.stats.resumed_at == 0 {
@@ -241,11 +260,15 @@ impl Document {
         self.sequence = measured.sequence;
         self.snapshot = Arc::new(parsed.tree);
         self.cost = cost;
-        Ok(&self.snapshot)
+        Ok(())
     }
 
-    fn splice_sequence(&mut self, segments: &[Segment]) -> Result<MeasuredChange, SequenceError> {
-        if self.options.policy == DocumentPolicy::Whole {
+    fn splice_sequence(
+        &mut self,
+        segments: &[Segment],
+        resumed_at: usize,
+    ) -> Result<MeasuredChange, SequenceError> {
+        if self.options.policy == DocumentPolicy::Cold {
             let sequence = Sequence::from_segments(&mut self.store, segments)?;
             return Ok(MeasuredChange {
                 work: sequence.cost(),
@@ -255,20 +278,27 @@ impl Document {
                 minted: segments.len(),
             });
         }
+        let mut bytes = 0;
         let prefix = self
             .sequence
             .iter()
             .zip(segments)
-            .take_while(|(old, new)| old == *new)
+            .take_while(|(old, new)| {
+                bytes += new.bytes; // segments cover the already checked source length
+                old == *new && (self.options.policy != DocumentPolicy::Whole || bytes <= resumed_at)
+            })
             .count();
-        let suffix = self
-            .sequence
-            .iter()
-            .rev()
-            .zip(segments.iter().rev())
-            .take(self.sequence.len().min(segments.len()) - prefix)
-            .take_while(|(old, new)| old == *new)
-            .count();
+        let suffix = if self.options.policy == DocumentPolicy::Whole {
+            0
+        } else {
+            self.sequence
+                .iter()
+                .rev()
+                .zip(segments.iter().rev())
+                .take(self.sequence.len().min(segments.len()) - prefix)
+                .take_while(|(old, new)| old == *new)
+                .count()
+        };
         if prefix == self.sequence.len() && prefix == segments.len() {
             return Ok(MeasuredChange {
                 sequence: self.sequence.clone(),
@@ -365,12 +395,13 @@ mod tests {
     }
 
     #[test]
-    fn policies_keep_the_same_results_and_whole_is_an_executed_cold_baseline() {
+    fn policies_keep_the_same_results_and_cold_rebuilds_everything() {
         let grammar = grammar();
         let mut documents: Vec<_> = [
             DocumentPolicy::Prove,
             DocumentPolicy::Snap,
             DocumentPolicy::Whole,
+            DocumentPolicy::Cold,
         ]
         .into_iter()
         .map(|policy| {
@@ -389,7 +420,7 @@ mod tests {
             (ByteSpan::new(3, 4).unwrap(), b"4".as_slice()),
             (ByteSpan::new(3, 4).unwrap(), b"4".as_slice()),
         ] {
-            let previous = Arc::clone(documents[2].snapshot());
+            let previous = Arc::clone(documents[3].snapshot());
             for document in &mut documents {
                 document.edit(span, replacement).unwrap();
             }
@@ -399,12 +430,12 @@ mod tests {
                 assert_eq!(document.product().unwrap(), product);
                 assert!(document.snapshot().confidence().is_strict());
             }
-            let baseline = documents[2].cost();
+            let baseline = documents[3].cost();
             assert_eq!(baseline.reuse, Reuse::Cold);
             assert_eq!(baseline.sequence_leaves_kept, 0);
             assert_eq!(baseline.sequence_minted, baseline.sequence_leaves);
             assert!(baseline.read_events > 0);
-            assert!(!Arc::ptr_eq(&previous, documents[2].snapshot()));
+            assert!(!Arc::ptr_eq(&previous, documents[3].snapshot()));
         }
         assert_eq!(documents[0].cost().reuse, Reuse::Unchanged);
         assert_eq!(documents[1].cost().reuse, Reuse::Unchanged);
@@ -413,6 +444,61 @@ mod tests {
             .edit(ByteSpan::new(3, 4).unwrap(), b"4")
             .unwrap();
         assert_eq!(documents[2].cost().reuse, Reuse::Unchanged);
+    }
+
+    #[test]
+    fn whole_rederives_the_suffix_and_retains_only_the_proved_prefix() {
+        let grammar = grammar();
+        let source = format!("[{}]", vec!["1"; 128].join(","));
+        let mut document = Document::with_options(
+            Arc::clone(&grammar),
+            source.as_bytes(),
+            DocumentOptions {
+                policy: DocumentPolicy::Whole,
+                ..DocumentOptions::default()
+            },
+        )
+        .unwrap();
+        let at = source.len() - 2;
+        for replacement in [b"2".as_slice(), b"2".as_slice(), b"333".as_slice()] {
+            let old = Arc::clone(document.snapshot());
+            let width = document.source().len() - at - 1;
+            document
+                .edit(ByteSpan::new(at, at + width).unwrap(), replacement)
+                .unwrap();
+            let cost = document.cost();
+            let Reuse::Prefix {
+                bytes,
+                validated_events,
+            } = cost.reuse
+            else {
+                panic!("expected a proved prefix: {cost:?}");
+            };
+            assert!(bytes > 0 && bytes <= at && validated_events > 0);
+            assert!(cost.sequence_leaves_kept > 0);
+            assert!(cost.sequence_minted > 0);
+            assert_eq!(cost.sequence_leaves_kept, cost.sequence_start);
+            assert_eq!(
+                cost.sequence_leaves_kept + cost.sequence_minted,
+                cost.sequence_leaves
+            );
+            assert!(cost.read_events > 0);
+            assert!(!Arc::ptr_eq(&old, document.snapshot()));
+            assert_eq!(old.root().unwrap().text(), old.source());
+            let mut cold = grammar.session();
+            let expected = cold.parse(document.source()).unwrap();
+            assert_eq!(document.snapshot().survey(), expected.survey());
+            assert_eq!(
+                document.snapshot().root().unwrap().text(),
+                expected.root().unwrap().text()
+            );
+            let mut store = grammar.effect_store();
+            let product = cold.product(&mut store).unwrap();
+            assert_eq!(
+                document.product().unwrap(),
+                store.describe(product).unwrap()
+            );
+        }
     }
 
     #[test]
@@ -447,3 +533,6 @@ mod tests {
         assert!(document.snapshot().confidence().is_strict());
     }
 }
+
+#[cfg(test)]
+mod rollback_contract_tests;

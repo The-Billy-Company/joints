@@ -597,38 +597,106 @@ is requested, avoiding a second full payload copy while retaining the directory
 path for explicit name selection. Tree, corruption, retry, lifetime, concurrency
 and named-selection checks cover these paths.
 
-The current source has 24,225 first-party production Rust lines under the same
+That retained source has 24,225 first-party production Rust lines under the same
 retained scope: 20,731 engine, 2,090 CLI and 1,404 C adapter. That is 417 more
 than Image1 and 14,225 above the 10,000-line goal. Tests and the separate IRGX
 dependency are excluded consistently; formatting was not compressed. The
 source-bound count is retained at
 `.local/rust-migration/native-phase6/execution-2026-10-21/current-production-count-final-source.json`.
 
-### Remaining work after the fresh cost run
+### Performance follow-on checkpoint, 2026-10-22
+
+The latest Q7 source reclaims unpublished effects after rejected document edits
+while preserving old versions and handles. It passes 443 default tests with
+16 ignores on each Rust version, strict checks and a release build, with a
+stable 564-file source/runtime-fixture closure. The same source passes 443
+ASan tests with instrumentation verified in 33 binaries. Its report is
+`qualification-7/report.json`. Its complete working replay passes all 31
+grammars, 14 extended witnesses, 55 functional checks, 24 ABI checks and all
+6,216 Go and 102,906 Python consumer inputs. The stable report is
+`working-5/report.json`. Fresh installed checks pass 40/40 on the current Mac
+and 40/40 under Linux amd64 emulation; both Linux compiler versions pass the
+complete 443/16 release roster. The current compatibility join is
+`final-candidate-evidence-6.json`, with Linux execution recorded separately at
+`linux-preflight/run-6/execution.json`, under the performance directory below.
+The full 1,546-command benchmark completes with stable inputs but still fails
+the 1.10 ceiling: cold median Rust/Zig latency ratios are
+1.208/2.436/2.134/2.312 for JSON/large JSON/Go/Python; median RSS ratios are
+1.080/1.522/1.642/1.531. All 180 metric groups and 244 review triggers remain
+in `full-matrix/run-6/`. This is a contended current-host diagnostic, with
+separate Zig ABI provenance limits. Physical floors, sealed qualification,
+real adoption, release/rollback and the 10,000-line goal remain open.
+
+The combined Q6 snapshot passes 440 default tests with 16 ignores on each
+of Rust 1.85 and 1.96, strict checks, and a release build. Its complete 562-file
+source/runtime-fixture closure repairs omissions found during Q4 reconstruction.
+The report is `qualification-6/report.json` under the performance directory
+below. Q6 selects charge arithmetic, eight-way permission buckets, and the
+adaptive bounded successful-effect memo. The same selected source passes
+440 ASan tests with 17 ignores and instrumentation verified in 33 binaries;
+native Zig/C and the prebuilt standard library are outside that instrumentation,
+and leak detection is disabled. Native image controls additionally pass a
+ReleaseSafe replay with complete expanded build-package custody. See
+[the safety contracts and receipts](rust/SAFETY.md).
+
+Separate stable Q4 development runs complete 540 cold-CLI/admission commands and
+693 native commands. Cold median Rust/Zig ratios are
+1.141/3.034/2.076/2.238 for JSON/large JSON/Go/Python, and median peak RSS ratios
+are 1.063/1.400/1.714/1.579. The 1.10 ceiling remains failed. Four-worker
+per-document medians improve approximately 79–81 percent against prior Rust,
+with retained tail regressions and diagnostic ABI provenance limits. These
+runs do not replace the full 1,546-command protocol, installed qualification,
+or the complete consumer inventories. See [the checkpoint and source-bound
+receipts](rust/PERFORMANCE.md#intermediate-performance-checkpoint-2026-10-22).
+
+The later Q6 development comparison completes the same 540/693 command rosters
+with exact images and stable qualified inputs. Cold median Rust/Zig ratios are
+1.116/2.607/2.248/2.372; median peak RSS ratios are
+1.063/1.514/1.645/1.535. The ceiling still fails. The later native adjacent-target
+and sparse-lexer metadata trials remain unselected after mixed or slower costs.
+The fresh full acceptance matrix and installed-consumer checks remain separate.
+
+The Q7 count is 25,737 production Rust lines: 22,235 engine, 2,093 CLI and
+1,409 C adapter, 15,737 above the independent 10,000-line goal. Its stable
+receipt is `production-count-current-4/receipt.json` under the performance
+directory.
+
+The retained Q6 count is 25,684 production Rust lines: 22,182 engine, 2,093 CLI and
+1,409 C adapter, using the same exclusions and formatting convention. This
+is 15,684 above the independent 10,000-line goal. The count receipt is
+`.local/rust-migration/performance-2026-10-21/production-count-current-3/receipt.json`.
+
+### Remaining work after the follow-on checkpoint
 
 The core feature and local compatibility implementation is present. The main
 remaining engineering risk is total cost, followed by target execution and
 release adoption. A percentage based on ported files would hide that risk.
 
-1. Reduce cold latency and peak memory. The current CPU sample justifies
-   experiments on wide parser-head ownership transfers, lexical/admission work,
-   allocation churn and ordered table access. Artifact decode/validation and
-   repeated kernel/table metadata also need separate load/RSS measurements,
-   distinguishing transient validation allocations from retained runtime data.
-   Carrying heads behind stable ownership may reduce copying, but must account
-   for allocation overhead, checkpoint payloads, replay-created heads, exact
-   branch order and every existing work/head limit. No savings are established.
+1. Reduce cold latency and peak memory. Stable parser-head ownership transfers,
+   worker-owned lexical buffers, bounded permission reuse, compact tree/table
+   metadata, and checked native image loading are selected in Q4. Fresh CPU
+   samples still identify lexing, permission proofs, table decode/validation,
+   and native loading as material costs. Further changes need separate
+   measurements that preserve validation, work/head limits, and exact branches.
 2. Preserve the unaffected prefix during edits. Both adapters use `prove=0`
-   and `whole=2`; the public Whole contract re-derives past the edit. Rust's
-   current Whole path instead cold-parses the full file and rebuilds its
-   measured sequence. Zig retains prefix/subtree reuse. The fresh diagnostic
-   edit comparison produces equal trees but exposes substantial total-cost
-   debt. Prefix reuse and proof validity require their own controls and costs.
-3. Measure worker contention. Separate parser sessions exist, but the Rust ABI
+   and `whole=2`; the public Whole contract re-derives past the edit. Rust now
+   proves and reuses a bounded prefix, including approximately 93 percent of
+   the large-JSON late-edit case. Effect-sequence reconstruction and complete
+   tree materialization remain substantial costs. The Q5 memo reduces isolated
+   late large-JSON edit medians by about 70–74 percent in two runs, with retained
+   parse/worker/tail flags. Its warmed tiny-store memory cost motivates a private
+   adaptive table, subsequently selected for 128-fold smaller one-key table
+   buffers; its mixed latency flags remain retained and combined workspace
+   qualification passes Q6. Further reuse must preserve
+   source/read proofs, effect ownership, refusal atomicity, and bounded storage.
+3. Reduce worker overhead. Separate parser sessions exist, but the Rust ABI
    has a process-wide handle-registry mutex, including possible final tree
-   destruction while guarded. Shared native tiers also pop/return workers
-   through scratch-pool mutexes on each scan. These are justified lock-profile
-   targets; source inspection does not establish their contribution. The worker
+   destruction while guarded. Parsing runs outside that registry lock and
+   uses its own session lock. The current four-worker median per-document
+   Rust/Zig ratios are 2.290/5.894/3.167/3.845 for JSON/large JSON/Go/Python.
+   Q4 clones safe native workers for concurrent
+   sessions and keeps their mutable buffers separate. Further lock changes
+   require measured contribution and explicit owner/lifetime checks. The worker
    throughput timer includes Python/ctypes, strict validation and tree teardown,
    and its frozen Zig library still lacks source-to-library attestation.
    Build and pin a source-attested Zig ABI baseline before using those

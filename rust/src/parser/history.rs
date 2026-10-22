@@ -76,7 +76,7 @@ impl<T: Copy> History<T> {
 
     pub(super) fn push_work(&self) -> usize {
         if self.tail.len() == CHUNK {
-            // Seal one buffer, allocate its Arc and the new small tail.
+            // Seal one buffer, allocate its Arc and the new bounded tail.
             CHUNK + 6
         } else if self.tail.len() == self.tail.capacity() {
             self.tail
@@ -95,6 +95,10 @@ impl<T: Copy> History<T> {
                 previous: self.previous.take(),
                 values: std::mem::take(&mut self.tail),
             }));
+            // The sealing bill already includes one bounded CHUNK allocation.
+            // Long histories avoid regrowing the next tail through five buffers.
+            // Initial and short histories keep their small incremental storage.
+            self.tail = Vec::with_capacity(CHUNK);
         }
         if self.tail.len() == self.tail.capacity() {
             let capacity = self.next_capacity();
@@ -233,6 +237,28 @@ mod tests {
             expected.extend([usize::MAX, len + 1]);
             assert_eq!(fork.into_vec(), expected);
         }
+    }
+
+    #[test]
+    fn sealed_tails_reserve_one_bounded_buffer_without_growing_short_histories() {
+        let mut history = History::default();
+        assert_eq!(history.tail.capacity(), 0);
+        history.push(0usize).unwrap();
+        assert_eq!(history.tail.capacity(), 4);
+        for n in 1..CHUNK {
+            history.push(n).unwrap();
+        }
+        let retained = history.clone();
+        assert_eq!(history.push_work(), CHUNK + 6);
+        history.push(CHUNK).unwrap();
+        assert_eq!(history.tail.capacity(), CHUNK);
+        for n in CHUNK + 1..2 * CHUNK {
+            assert_eq!(history.push_work(), 1);
+            history.push(n).unwrap();
+            assert_eq!(history.tail.capacity(), CHUNK);
+        }
+        assert_eq!(retained.into_vec(), (0..CHUNK).collect::<Vec<_>>());
+        assert_eq!(history.into_vec(), (0..2 * CHUNK).collect::<Vec<_>>());
     }
 
     #[test]

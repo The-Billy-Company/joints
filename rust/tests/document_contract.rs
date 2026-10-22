@@ -4,9 +4,9 @@
 use std::sync::Arc;
 
 use joints_engine::{
-    ByteSpan, CompiledGrammar, Confidence, Document, DocumentError, DocumentOptions, Error,
-    LexError, Node, ParseLimits, ParseSession, Point, Recovery, Repair, Reuse, Stop, Supply,
-    Survey, TreeSnapshot,
+    ByteSpan, CompiledGrammar, Confidence, Document, DocumentError, DocumentOptions,
+    DocumentPolicy, Error, LexError, Node, ParseLimits, ParseSession, Point, Recovery, Repair,
+    Reuse, Stop, Supply, Survey, TreeSnapshot,
 };
 use serde_json::{Value, json};
 
@@ -175,6 +175,47 @@ fn a_real_prefix_resume_preserves_snapshots_fields_spans_and_products() {
     assert_eq!(document.cost().reuse, Reuse::Cold);
     let len = document.source().len();
     edit(&mut document, &grammar, options, len, len, b"\r\n");
+    assert_eq!(tree_image(&retained), retained_image);
+}
+
+#[test]
+fn whole_policy_keeps_a_proved_prefix_and_matches_independent_cold_images() {
+    let grammar = json_grammar();
+    let options = DocumentOptions {
+        policy: DocumentPolicy::Whole,
+        ..DocumentOptions::default()
+    };
+    let mut document = Document::with_options(Arc::clone(&grammar), &long_json(), options).unwrap();
+    let retained = Arc::clone(document.snapshot());
+    let retained_image = tree_image(&retained);
+    let last = document.source().len() - 7;
+    for replacement in [b"I".as_slice(), b"I".as_slice(), b"item".as_slice()] {
+        edit(
+            &mut document,
+            &grammar,
+            options,
+            last,
+            last + 1,
+            replacement,
+        );
+        let cost = document.cost();
+        assert!(
+            matches!(cost.reuse, Reuse::Prefix { bytes, validated_events }
+            if bytes > 0 && bytes <= last && validated_events > 0)
+        );
+        assert!(cost.sequence_leaves_kept > 0 && cost.sequence_minted > 0);
+        assert_eq!(cost.sequence_leaves_kept, cost.sequence_start);
+        assert_eq!(
+            cost.sequence_leaves_kept + cost.sequence_minted,
+            cost.sequence_leaves
+        );
+        assert_eq!(tree_image(&retained), retained_image);
+    }
+    // A malformed suffix must discard the attempted resume and publish the
+    // same diagnostic tree as an independent cold parse.
+    let end = document.source().len();
+    edit(&mut document, &grammar, options, end - 1, end, b"\xff");
+    assert_eq!(document.cost().reuse, Reuse::Cold);
     assert_eq!(tree_image(&retained), retained_image);
 }
 

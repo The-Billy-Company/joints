@@ -191,12 +191,18 @@ fn resumed_generic_call_selection_and_measurement_equal_a_cold_document() {
 #[test]
 fn a_work_refusal_keeps_the_published_document_snapshot_product_and_cost() {
     let grammar = repeated_grammar();
+    // Bound the successful setup by its actual complete parser work. Cache
+    // accounting can change without weakening the larger-edit refusal below.
+    let steps = Document::new(Arc::clone(&grammar), b"f(\"a\");")
+        .unwrap()
+        .cost()
+        .parser_work;
     let mut document = Document::with_options(
         grammar,
         b"f(\"a\");",
         DocumentOptions {
             limits: ParseLimits {
-                steps: 2_000,
+                steps,
                 ..ParseLimits::default()
             },
             ..DocumentOptions::default()

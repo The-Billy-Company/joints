@@ -1586,7 +1586,7 @@ fn amend_command(args: &[String]) -> Result<u8> {
     let grammar = load_grammar(grammar_path, language)?;
     let source = read(path, ParseLimits::default().source_bytes)?;
     if cold {
-        policy = DocumentPolicy::Whole;
+        policy = DocumentPolicy::Cold;
     }
     let opened = Instant::now();
     let mut document = Document::with_options(

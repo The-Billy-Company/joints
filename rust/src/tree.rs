@@ -1,4 +1,4 @@
-use std::{ops::Range, sync::Arc};
+use std::{num::NonZeroU32, ops::Range, sync::Arc};
 
 use crate::{CompiledGrammar, FieldId, ProductionId, StateId, SymbolId};
 
@@ -64,12 +64,77 @@ impl NodeId {
 pub(crate) struct NodeData {
     pub symbol: SymbolId,
     // The alias itself remains in immutable grammar metadata.
-    pub alias: Option<(ProductionId, usize)>,
+    alias_production: Option<NonZeroU32>,
+    alias_step: u32,
     pub span: ByteSpan,
-    pub field: Option<FieldId>,
-    pub parent: Option<NodeId>,
-    pub children: Range<usize>,
+    field: Option<NonZeroU32>,
+    parent: Option<NonZeroU32>,
+    children: Range<u32>,
     pub extra: bool,
+}
+
+impl NodeData {
+    pub(crate) fn new(
+        symbol: SymbolId,
+        alias: Option<(ProductionId, usize)>,
+        span: ByteSpan,
+        field: Option<FieldId>,
+        parent: Option<NodeId>,
+        children: Range<usize>,
+        extra: bool,
+    ) -> Result<Self, crate::Error> {
+        let index = |value: usize| {
+            u32::try_from(value)
+                .map_err(|_| crate::Error::InvalidTable("tree index exceeds its integer range"))
+        };
+        let optional = |value: Option<usize>| {
+            value
+                .map(|value| {
+                    index(value)?
+                        .checked_add(1)
+                        .and_then(NonZeroU32::new)
+                        .ok_or(crate::Error::InvalidTable(
+                            "tree index exceeds its integer range",
+                        ))
+                })
+                .transpose()
+        };
+        if children.start > children.end {
+            return Err(crate::Error::InvalidTable("invalid tree child range"));
+        }
+        Ok(Self {
+            symbol,
+            alias_production: optional(alias.map(|(production, _)| production.index()))?,
+            alias_step: index(alias.map_or(0, |(_, step)| step))?,
+            span,
+            field: optional(field.map(FieldId::index))?,
+            parent: optional(parent.map(NodeId::index))?,
+            children: index(children.start)?..index(children.end)?,
+            extra,
+        })
+    }
+
+    fn alias(&self) -> Option<(ProductionId, usize)> {
+        self.alias_production.map(|production| {
+            (
+                ProductionId::from_index((production.get() - 1) as usize),
+                self.alias_step as usize,
+            )
+        })
+    }
+
+    pub(crate) fn field(&self) -> Option<FieldId> {
+        self.field
+            .map(|field| FieldId::from_index((field.get() - 1) as usize))
+    }
+
+    fn parent(&self) -> Option<NodeId> {
+        self.parent.map(|parent| NodeId(parent.get() - 1))
+    }
+
+    pub(crate) fn child_range(&self) -> Range<usize> {
+        self.children.start as usize..self.children.end as usize
+    }
 }
 
 /// A stop describes parse evidence rather than an operational failure.
@@ -270,7 +335,7 @@ impl TreeSnapshot {
         let mut found = None;
         while let Some(id) = self.covering_in(run, span) {
             found = Some(Node { tree: self, id });
-            run = &self.children[self.nodes[id.index()].children.clone()];
+            run = &self.children[self.nodes[id.index()].child_range()];
         }
         found
     }
@@ -321,13 +386,13 @@ impl TreeSnapshot {
                 continue;
             }
             out.walked += 1;
-            if node.parent != parent {
+            if node.parent() != parent {
                 out.torn += 1;
             }
             if node.span.end() > self.source.len() {
                 out.loose += 1;
             }
-            let Some(children) = self.children.get(node.children.clone()) else {
+            let Some(children) = self.children.get(node.child_range()) else {
                 out.torn += 1;
                 continue;
             };
@@ -381,7 +446,7 @@ impl<'tree> Node<'tree> {
     }
 
     fn alias(self) -> Option<&'tree crate::compiler::Alias> {
-        let (production, step) = self.data().alias?;
+        let (production, step) = self.data().alias()?;
         self.tree.grammar.automaton.production(production).steps[step]
             .alias
             .as_ref()
@@ -437,19 +502,19 @@ impl<'tree> Node<'tree> {
 
     pub fn field(self) -> Option<&'tree str> {
         self.data()
-            .field
+            .field()
             .map(|id| self.tree.grammar.automaton.field_name(id))
     }
 
     pub fn parent(self) -> Option<Self> {
-        self.data().parent.map(|id| Self {
+        self.data().parent().map(|id| Self {
             tree: self.tree,
             id,
         })
     }
 
     pub fn children(self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + 'tree {
-        self.tree.children[self.data().children.clone()]
+        self.tree.children[self.data().child_range()]
             .iter()
             .map(move |&id| Self {
                 tree: self.tree,
@@ -463,9 +528,9 @@ impl<'tree> Node<'tree> {
 
     fn sibling_run(self) -> &'tree [NodeId] {
         self.data()
-            .parent
+            .parent()
             .map_or(self.tree.roots.as_slice(), |parent| {
-                &self.tree.children[self.tree.nodes[parent.index()].children.clone()]
+                &self.tree.children[self.tree.nodes[parent.index()].child_range()]
             })
     }
 
@@ -523,7 +588,7 @@ impl<'tree> Node<'tree> {
         let mut count = 0;
         while let Some(id) = pending.pop() {
             count += 1;
-            let children = &self.tree.children[self.tree.nodes[id.index()].children.clone()];
+            let children = &self.tree.children[self.tree.nodes[id.index()].child_range()];
             pending.try_reserve(children.len())?;
             pending.extend_from_slice(children);
         }
@@ -534,6 +599,74 @@ impl<'tree> Node<'tree> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compact_node_metadata_preserves_boundary_ids_and_rejects_overflow() {
+        let maximum = u32::MAX as usize;
+        let symbol = SymbolId::from_index(0);
+        let alias = Some((ProductionId::from_index(maximum - 1), maximum));
+        let field = Some(FieldId::from_index(maximum - 1));
+        let parent = Some(NodeId(u32::MAX - 1));
+        let span = ByteSpan::new(0, maximum).unwrap();
+        let node = NodeData::new(symbol, alias, span, field, parent, 0..maximum, true).unwrap();
+        assert_eq!(node.alias(), alias);
+        assert_eq!(node.field(), field);
+        assert_eq!(node.parent(), parent);
+        assert_eq!(node.child_range(), 0..maximum);
+        assert_eq!(node.span, span);
+        assert!(node.extra);
+        assert!(
+            NodeData::new(
+                symbol,
+                None,
+                span,
+                None,
+                Some(NodeId(u32::MAX)),
+                0..0,
+                false
+            )
+            .is_err()
+        );
+        assert!(
+            NodeData::new(
+                symbol,
+                None,
+                span,
+                Some(FieldId::from_index(maximum)),
+                None,
+                0..0,
+                false
+            )
+            .is_err()
+        );
+        assert!(
+            NodeData::new(
+                symbol,
+                Some((ProductionId::from_index(maximum), 0)),
+                span,
+                None,
+                None,
+                0..0,
+                false
+            )
+            .is_err()
+        );
+        if let Some(oversized) = maximum.checked_add(1) {
+            assert!(NodeData::new(symbol, None, span, None, None, 0..oversized, false).is_err());
+            assert!(
+                NodeData::new(
+                    symbol,
+                    Some((ProductionId::from_index(0), oversized)),
+                    span,
+                    None,
+                    None,
+                    0..0,
+                    false
+                )
+                .is_err()
+            );
+        }
+    }
 
     #[test]
     fn navigation_preserves_wide_boundaries_named_extras_and_forest_gaps() {

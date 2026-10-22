@@ -1,6 +1,277 @@
 # Rust migration performance review
 
-Phase 6 remains open. The current public-workspace Rust candidate passes its
+Further performance and memory-safety work is in progress on 2026-10-22.
+The completed qualification and full-matrix results identify retained
+source snapshots. Later runtime or qualification-input changes require fresh combined correctness,
+installed-package, and cost runs;
+their individual ratios must not be multiplied into a predicted result.
+The 1.10 latency/RSS ceiling and default cutover remain open.
+
+## Current packaged Q7 result, 2026-10-22
+
+The selected source completes fresh installed checks and the full fixed cost
+protocol. Both Rust 1.85 and 1.96 pass 443 default tests with 16 ignores on the
+Mac and under Linux amd64 emulation. All 40 extracted installed checks pass
+on each platform. The full working replay, all 6,216 Go and 102,906 Python
+inputs, and the separate 443-test Rust ASan run remain tied to this same
+564-file compiled-source/runtime-fixture closure. No later trial is selected.
+
+All 1,546 benchmark commands exit successfully without a timeout, with 1,420
+measured rows, 180 metric groups, and unchanged inputs. All known team build
+and profiling jobs finished before timing. Other host work was uncontrolled;
+this remains a contended current-host diagnostic. Cold CLI means a fresh
+process with ordinary warm filesystem caches.
+
+| Case | Cold median Rust/Zig | Cold p95 Rust/Zig | Median peak RSS Rust/Zig |
+|---|---:|---:|---:|
+| JSON | 1.208 | 1.021 | 1.080 |
+| Large JSON | 2.436 | 2.286 | 1.522 |
+| Go | 2.134 | 1.853 | 1.642 |
+| Python | 2.312 | 2.241 | 1.531 |
+
+All four cold-latency medians fail 1.10. Only small JSON meets the cold RSS
+ceiling; its RSS p95 ratio is 1.067. Large JSON, Go and Python RSS p95 ratios
+are 1.367, 1.665 and 1.589. The complete result retains 244 review triggers,
+including 38 RSS and three artifact-size facets. Individual trial gains are
+not multiplied into these results.
+At these measured ratios, reaching 1.10 would require approximately another
+49–55 percent reduction in cold latency for large JSON, Go and Python, with
+the measured Zig costs held fixed.
+
+The unchanged native worker also retains substantial gaps. Its one/two/four
+worker per-document median Rust/Zig ratios are:
+
+| Case | One worker | Two workers | Four workers |
+|---|---:|---:|---:|
+| JSON | 3.278 | 3.719 | 2.290 |
+| Large JSON | 3.545 | 4.335 | 5.894 |
+| Go | 3.493 | 3.823 | 3.167 |
+| Python | 4.118 | 4.072 | 3.845 |
+
+Late large-JSON Whole insert/delete median ratios are 41.086/38.789; Prove
+ratios are 37.834/34.722. All tails remain in the report. Parse/edit timing
+includes ctypes call overhead; strict and full-image validation occurs outside
+those timed ABI calls. Throughput timing also includes Python orchestration,
+strict validation and tree teardown. The immutable
+Zig library lacks source-to-library attestation, so these ABI comparisons are
+diagnostic. Each native peak-RSS series has five whole-worker samples and no
+reported p95. The cold CLI baseline has separate source attestation. Artifacts
+also remain much larger: Rust/Zig byte ratios are 14.669 for JSON, 27.210 for
+Go and 19.054 for Python.
+
+Evidence under `.local/rust-migration/performance-2026-10-21/`:
+
+- `final-candidate-evidence-6.json` joins current workspace, working-consumer,
+  source export, package and installed Mac results; SHA-256
+  `7652f84f389d10afdcf1f5fb91b300380fd17ab8ea5766b358727f99e4da7ff8`.
+- `linux-preflight/run-6/execution.json` separately records positive emulated
+  Linux execution and custody; SHA-256
+  `6e1580ec797b2cdc4f12912009e27723371eab3d67a6c0cf6f97d819c6688107`.
+- `full-matrix/run-6/raw.json` has SHA-256
+  `c6cfa1d6a24645c438c386d8d805538e168af464c858ec101ab2dccd3a8c58e8`;
+  `summary.json` has SHA-256
+  `0ce60c47e127c7fa850be9c012922c9ff674ea6b9c17f6e970696e4048402b94`.
+
+The source count remains 25,737 production Rust lines. Performance acceptance,
+physical target floors, the sealed aggregate, installed-consumer adoption and
+release/rollback remain open. Zig remains the default.
+The checked native decoder changes are recorded in the sibling IRGX repository
+at commit `59dede3d8ac5a280ca5addc8d5ceefe3aa9917f9`.
+
+## Intermediate performance checkpoint, 2026-10-22
+
+The current Q7 source additionally reclaims unpublished effect runs after failed
+document edits. It passes 443 default tests with 16 ignores on each compiler,
+formatting, strict Clippy, all-target checks and a release build, with a stable
+564-file source/runtime-fixture closure. Its report is
+`qualification-7/report.json` (SHA-256
+`34bdb7a92e931ffcbd7743e6844240fdeb14f2657f40fe6183297d870f8029b8`).
+The same source passes 443 ASan tests with instrumentation verified in 33
+binaries. The refusal comparison preserves all 408 outcomes and work counters;
+none of its 204 measurement-time refusals retains newly created runs after
+cleanup. Collection capacities can retain their high-water marks. The same
+Q7 source passes all five working stages: 31 grammars, 14 extended witnesses,
+55 functional checks, 24 ABI checks, and the complete consumer replay. All
+6,216 Go and 102,906 Python inputs agree, with 12 paired deterministic artifact
+profiles. The stable report is `working-5/report.json` (SHA-256
+`4528b2ee5cd94a711ec77fa5de7b71fe3acdf8dbbd214e73fdae419554f15cf0`).
+The installed and complete cost runs are recorded above; the Q6 figures below
+describe the retained predecessor.
+The stopped Q6 working run passed grammar, extended-witness, functional and ABI
+stages, but its consumer replay was intentionally cancelled for this fix and
+does not qualify the final source.
+
+The selected combined Q6 snapshot passes 440 default tests with 16 declared
+ignores on each of Rust 1.85 and 1.96, formatting, all-target/all-feature checks,
+strict Clippy, and a release build. The complete 562-file closure is stable.
+Its report is `qualification-6/report.json` in the performance directory below
+(SHA-256 `89c36cc678baac691ad90c9d57ef3ce0acd8ac9c52a6b2a79657aeb2c2a48258`).
+This includes the adaptive memo described below. The same selected source has
+a separate 440-test ASan pass with instrumentation verified in 33 binaries,
+plus native ReleaseSafe controls with expanded dependency custody. See
+[the safety boundaries and receipts](SAFETY.md#validation). Fresh working-consumer
+inventories, installed delivery, and the full cost matrix were pending at that
+Q6 checkpoint; the current Q7 results are recorded above.
+
+The Q6 development comparison completes 540 cold/admission commands and 693
+native commands with stable qualified inputs and exact full-tree checks. Its
+receipt is `combined-q6-diagnostic-1/receipt.json` in the performance directory
+below (SHA-256 `c800e4b479befb7a2daffe2d5fd2f6882e7514be95b764490537e1be4c21c65c`).
+Concurrent host activity remains present, so this is not an acceptance run.
+
+| Case | Cold median Q6/prior Rust | Cold median Q6/Zig | Median peak RSS Q6/Zig |
+|---|---:|---:|---:|
+| JSON | 0.910 | 1.116 | 1.063 |
+| Large JSON | 0.536 | 2.607 | 1.514 |
+| Go | 0.775 | 2.248 | 1.645 |
+| Python | 0.786 | 2.372 | 1.535 |
+
+All four cold-latency medians still exceed 1.10. Warm parse medians improve by
+about 56–79 percent and four-worker per-document medians by about 83–86 percent
+against the retained Rust baseline, but remain above the diagnostic Zig ABI
+baseline. Late large-JSON Whole edit medians fall to about 9 percent of prior
+Rust, while remaining about 35–37 times the diagnostic Zig result. The full raw
+rows retain all tails; none of these improvements passes the acceptance gate.
+
+Two later candidates remain unselected after exact controls and measurements:
+native adjacent-target proof reuse made loading 1–3 percent slower; sparse lexer
+metadata improved Python warm parsing but regressed Go edits and added code and
+scratch space. Their complete results, including tails and failed preparation
+attempts, remain under `next-load-1/native-adjacent-targets/` and
+`../performance-work/parser/sparse-allow/` respectively. Neither changes Q6.
+
+A later private Q7 checkpoint-summary trial also remains unselected. Its
+19 focused controls, strict checks on both compilers, and 354-command paired
+comparison pass with unchanged inputs and complete syntax/cost agreement.
+Whole late-edit medians improve only 1–2 percent, while cold medians and edit
+worker RSS rise slightly. The complete evidence is retained under
+`../performance-work/parser/checkpoint-read-max/`; it does not change Q7.
+
+A private exact-kernel-sharing trial also remains unselected. Its simplified
+variant preserves the original scalar decoder, all logical state identities,
+full S4 bytes and validation. Focused controls and strict checks pass on both
+Rust versions, including allocation refusal and metadata-header accounting.
+Owned storage falls by 528,776 bytes for Go and 412,312 bytes for Python.
+However, its 442-command paired diagnostic observes only about 3.5 and 2.1
+percent lower cold CLI RSS respectively, while all four cold medians rise
+about 2–4 percent. Loaded Go/Python parse medians rise about 5/8 percent, with
+mixed worker and tail results. This does not justify the added code and CPU
+cost. All raw results, rejected preparation attempts and scope limits remain
+under `kernel-row-sharing-1/`; `final-handoff.json` has SHA-256
+`62b32d05b06f9c809ba275efef4fd7fa5bc50c86057e82c0461222563708b901`.
+Q7 remains unchanged.
+
+A three-arm arena-growth trial also remains unselected. All 885 workload
+commands and 240 owned RSS probes complete with unchanged inputs, complete
+tree agreement and equal exposed work counters. Growing only the output-node
+arena in smaller steps reduces repeated large-JSON process peak RSS by about
+22 percent and resident memory after tree drop by about 15 percent. However,
+cold large-JSON RSS rises 5.6 percent, its cold median rises 2 percent, and
+several warm, edit and worker latency series regress. The large-JSON warm
+parse p95 rises 64 percent; Python warm median/p95 rise 8/23 percent.
+Changing both node and draft growth also has mixed or adverse results.
+The complete 81-row comparison is retained at
+`../performance-work/parser/arena-growth/measure-1/summary.json`, with raw
+SHA-256 `c1d5ee1e1e7ecaf7a93e9d697a5ce5f49ff6e03f9b308b9837bd81365b0c8a76`.
+Native workers include Python inspection and allocator retention; their RSS
+cannot be attributed solely to Rust vector capacity or treated as a leak
+measurement. Their five process peak-RSS samples have no reported p95.
+Neither policy changes the selected source.
+
+The later combined Q5 snapshot passes 436 default tests with 16 declared ignores
+on each of Rust 1.85 and 1.96, formatting, all-target/all-feature checks, strict
+Clippy, and a release build. Its complete 562-file source/runtime-fixture closure
+includes the repaired inventories described below. The stable report is
+`.local/rust-migration/performance-2026-10-21/qualification-5/report.json`
+(SHA-256 `4eec744a1421d354eaa577bd303787d05352a98cc105fd3cfcc1ca795356704f`).
+Its native provenance refresh preserves both raw and selected archive bytes.
+Fresh sanitizer, working, installed, consumer, and complete cost checks remain
+separate; this is a combined workspace correctness result.
+
+Q5 additionally selects checked charge arithmetic without eager error dropping,
+eight-way permission buckets within the existing storage cap, and a bounded
+successful-effect memo. Two isolated memo comparisons reduce late large-JSON
+edit medians by about 70–74 percent against their unchanged baseline. They also
+retain regressions in some parse, drop, worker, and tail observations; no cold
+or worker gain is claimed. The raw controls and both cost runs are under
+`effect-memo-delay32/` in the performance directory above. The memo currently
+allocated its fixed table after 32 successful eligible misses. A separate
+many-store census found about 80 MiB of table buffers for 512 warmed one-key
+stores, motivating the subsequently selected adaptive table. That table begins
+with 64 slots and grows transactionally to the same maximum. The 512 warmed
+one-key stores use 640 KiB of table buffers, a 128-fold reduction; corpus entry
+and hit counts remain equal. Two comparisons retain mixed latency and tail
+results, so selection is for memory rather than speed. Its controls and raw
+costs are under `effect-memo-adaptive/`; Q6 completes combined qualification.
+Q5 qualifies the preceding fixed-table snapshot. The census observed payload and
+grammar owners releasing after drop; it did not measure allocator RSS.
+
+The combined Q4 snapshot passes 425 default tests with 16 declared ignores on
+each of Rust 1.85 and 1.96, formatting, all-target/all-feature checks, strict
+Clippy, and a release build. Its report is
+`.local/rust-migration/performance-2026-10-21/qualification-4/report.json`
+(SHA-256 `eb1b063c4d8c58a4af0ce31cf1c283fc21cfa8319838bb2d14a7d1a96bcbcc01`).
+A separate stable run passes 425 AddressSanitizer tests with 17 ignores and
+checks instrumentation in 33 test binaries. It instruments Rust engine/adapter
+code; the prebuilt standard library and native Zig/C archive remain outside
+ASan. Native image controls also pass in ReleaseSafe. The exact safety receipt
+is `perf-safety-2026-10-21/selected-final-attempt-4/receipt.json` under
+`.local/rust-migration/`. These are observed Q4 passes before subsequent trials.
+
+A later private reconstruction found omitted runtime fixtures in the retained
+input closure: specimen exports and runtime-only grammar/source inventories.
+The live-checkout tests executed successfully, but that incomplete snapshot
+cannot independently reproduce every default test. The inventory helper and
+its regression test are repaired, and Q5 completes fresh combined workspace
+qualification with the full closure. The repair receipt is
+`runtime-custody-followon-2/receipt.json` under the performance directory above.
+The development benchmark inputs have their own independent file guards.
+
+Two development comparisons bind the same Q4 CLI/library and unchanged inputs:
+`combined-cold-development-4` (540 commands) and
+`combined-native-development-4` (693 commands), under the performance directory
+above. They use the frozen four cases and retained full-image admissions.
+Other host work remains present. These diagnostics are separate from the
+complete 1,546-command acceptance protocol and cannot pass that protocol.
+
+| Case | Cold median Q4/prior Rust | Cold median Q4/Zig | Median peak RSS Q4/Zig |
+|---|---:|---:|---:|
+| JSON | 0.956 | 1.141 | 1.063 |
+| Large JSON | 0.646 | 3.034 | 1.400 |
+| Go | 0.813 | 2.076 | 1.714 |
+| Python | 0.811 | 2.238 | 1.579 |
+
+All four cold-latency medians still exceed 1.10. Cold p95 ratios are
+1.863/2.774/1.548/2.656 in the same order. Four-worker per-document medians
+improve by approximately 79–81 percent against prior Rust, but remain
+3.21/8.15/4.51/4.97 times the diagnostic Zig ABI baseline. The large-JSON
+two-worker p95 regresses against prior Rust by 1.670 times; Python drop median
+and p95 also regress by 1.117 and 1.141 times. These observations remain in
+the raw report. Late edits still spend substantial time reconstructing effects
+and materializing the complete tree despite retained-prefix reuse.
+
+Qualitative profiles identify automaton decoding/validation, native image
+loading, and envelope integrity checking as the largest loading costs. Hardware
+SHA-256 is already active; the per-input seal remains required. Parsing spends
+substantial time in lexing, advancement, and permission proofs. Component trials
+must preserve complete images, resource/refusal behavior, ownership, and input
+custody. Their gains are not multiplied into a prediction for the combined build.
+Q5 completed combined correctness for the selected follow-on changes; their
+safety, delivery, working-consumer and complete cost checks were pending at
+that checkpoint. The current Q7 results are recorded above.
+The Q7 source count is 25,737 production Rust lines: 22,235 engine, 2,093 CLI
+and 1,409 C adapter, 15,737 above the independent 10,000-line goal. The same
+retained counting convention excludes the two new test-only modules; its stable
+receipt is `production-count-current-4/receipt.json` (SHA-256
+`04a363745bac8ce000b465aa464e0293e357d6f9212fe896c7ce24f7f116894f`).
+
+The retained Q6 source count is 25,684 production Rust lines, 15,684 above the separate
+size goal, under the unchanged approximate counting convention. Its receipt is
+`production-count-current-3/receipt.json` in the performance directory above.
+
+## Retained full-matrix results
+
+Phase 6 remains open. The retained public-workspace Rust candidate passes its
 fresh local compatibility and installed Mac package checks, but the complete
 cost matrix still exceeds the agreed 1.10 latency/memory ceiling. These results
 do not justify switching consumer or release defaults. Candidate F has

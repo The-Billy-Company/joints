@@ -3,7 +3,7 @@
 //! Construction keeps its mutable maps. Publication and artifact decoding own
 //! flat columns; terminal keys double as each row's lexical admission slate.
 
-use std::ops::Range;
+use std::{num::NonZeroU32, ops::Range};
 
 use super::{Action, CompileError, Graph, Lookahead, Rows, StateId, SymbolId};
 use crate::artifact::{ArtifactError, Reader};
@@ -19,7 +19,7 @@ struct StateRow {
 pub(super) struct FrozenTables {
     rows: Box<[StateRow]>,
     terminals: Box<[SymbolId]>,
-    action_offsets: Box<[usize]>,
+    action_ranges: FrozenCells,
     actions: Box<[Action]>,
     transition_symbols: Box<[SymbolId]>,
     transition_states: Box<[StateId]>,
@@ -78,13 +78,16 @@ impl FrozenTables {
         }
         for (index, (row, admission)) in rows.into_iter().zip(admissions).enumerate() {
             let terminal_start = columns.terminals.len();
-            let cell_start = columns.action_offsets.len() - 1;
+            let cell_start = columns.action_ranges.len();
             for (at, cell) in row {
                 if let Lookahead::Terminal(symbol) = at {
                     columns.terminals.push(symbol);
                 }
+                let start = columns.actions.len();
                 columns.actions.extend(cell);
-                columns.action_offsets.push(columns.actions.len());
+                columns
+                    .finish_cell(start)
+                    .map_err(|_| CompileError::Limit("frozen table action allocation"))?;
             }
             let terminals = terminal_start..columns.terminals.len();
             if columns.terminals[terminals.clone()] != admission {
@@ -93,7 +96,7 @@ impl FrozenTables {
                 ));
             }
             columns.rows[index].terminals = terminals;
-            columns.rows[index].cells = cell_start..columns.action_offsets.len() - 1;
+            columns.rows[index].cells = cell_start..columns.action_ranges.len();
         }
         let result = columns.finish();
         // Keep the old construction rows as an independent test-only oracle.
@@ -146,9 +149,9 @@ impl FrozenTables {
             let n = r.count(limits.symbols.saturating_add(1), 6, "action row")?;
             super::artifact_budget(table_entries, n, limits.table_entries, "table entries")?;
             reserve(&mut columns.terminals, n)?;
-            reserve(&mut columns.action_offsets, n)?;
+            columns.action_ranges.reserve(n)?;
             let terminal_start = columns.terminals.len();
-            let cell_start = columns.action_offsets.len() - 1;
+            let cell_start = columns.action_ranges.len();
             let mut previous = None;
             for _ in 0..n {
                 let at = super::read_lookahead(r)?;
@@ -159,11 +162,12 @@ impl FrozenTables {
                 if let Lookahead::Terminal(symbol) = at {
                     columns.terminals.push(symbol);
                 }
+                let start = columns.actions.len();
                 super::read_actions_into(r, action_count, &mut columns.actions)?;
-                columns.action_offsets.push(columns.actions.len());
+                columns.finish_cell(start)?;
             }
             columns.rows[index].terminals = terminal_start..columns.terminals.len();
-            columns.rows[index].cells = cell_start..columns.action_offsets.len() - 1;
+            columns.rows[index].cells = cell_start..columns.action_ranges.len();
         }
         Ok(columns.finish())
     }
@@ -185,7 +189,8 @@ impl FrozenTables {
     }
 
     fn cell(&self, index: usize) -> &[Action] {
-        &self.actions[self.action_offsets[index]..self.action_offsets[index + 1]]
+        let range = self.action_ranges.range(index);
+        &self.actions[range.start as usize..range.end as usize]
     }
 
     pub(super) fn transition(&self, state: StateId, symbol: SymbolId) -> Option<StateId> {
@@ -261,10 +266,155 @@ impl FrozenTables {
     }
 }
 
+const INDIRECT: u32 = 1 << 31;
+// Eight side ranges permit at most 64 bytes of prefix overhead. Beyond that,
+// side capacity must fit the four bytes saved by every visited descriptor.
+const SIDE_PREFIX_RANGES: usize = 8;
+
+fn side_capacity_limit(cells: usize) -> usize {
+    cells / 2 + SIDE_PREFIX_RANGES
+}
+
+fn next_side_capacity(len: usize, capacity: usize, cells: usize) -> Option<usize> {
+    let needed = len.checked_add(1)?;
+    let target = if needed <= capacity {
+        capacity
+    } else {
+        capacity.checked_mul(2)?.max(needed).max(4)
+    };
+    (target <= side_capacity_limit(cells)).then_some(target)
+}
+
+#[derive(Debug, Eq, PartialEq)]
+enum CellIndexes<C, R> {
+    Packed { cells: C, ranges: R },
+    Wide(R),
+}
+
+type CellColumns = CellIndexes<Vec<u32>, Vec<Range<u32>>>;
+type FrozenCells = CellIndexes<Box<[u32]>, Box<[Range<u32>]>>;
+
+fn indirect_index(index: usize) -> Option<u32> {
+    u32::try_from(index).ok().filter(|&id| id < INDIRECT)
+}
+
+fn packed_range(cell: u32, ranges: &[Range<u32>]) -> Range<u32> {
+    if cell == 0 {
+        0..0
+    } else if cell < INDIRECT {
+        cell - 1..cell
+    } else {
+        ranges[(cell & !INDIRECT) as usize].clone()
+    }
+}
+
+impl FrozenCells {
+    fn range(&self, index: usize) -> Range<u32> {
+        match self {
+            Self::Packed { cells, ranges } => packed_range(cells[index], ranges),
+            Self::Wide(ranges) => ranges[index].clone(),
+        }
+    }
+}
+
+impl CellColumns {
+    fn new() -> Self {
+        Self::Packed {
+            cells: Vec::new(),
+            ranges: Vec::new(),
+        }
+    }
+
+    fn len(&self) -> usize {
+        match self {
+            Self::Packed { cells, .. } => cells.len(),
+            Self::Wide(ranges) => ranges.len(),
+        }
+    }
+
+    fn reserve(&mut self, additional: usize) -> Result<(), ArtifactError> {
+        match self {
+            Self::Packed { cells, .. } => reserve(cells, additional),
+            Self::Wide(ranges) => reserve(ranges, additional),
+        }
+    }
+
+    // Every original range remains representable. Large payload indexes,
+    // side indexes, or a side capacity that would erase the saving promote
+    // transactionally, once, to the original wide form. finish_cell has
+    // reserved one descriptor before forming or reusing its range.
+    fn push(&mut self, range: Range<u32>) -> Result<(), ArtifactError> {
+        if let Self::Packed { cells, ranges } = self {
+            let next_len = cells.len().checked_add(1).ok_or(ArtifactError::Length)?;
+            let descriptor = if range.start == range.end {
+                Some(0)
+            } else if range.end - range.start == 1 && range.end < INDIRECT {
+                Some(range.end)
+            } else if range.end - range.start > 1 {
+                indirect_index(ranges.len()).map(|index| index | INDIRECT)
+            } else {
+                None
+            };
+            if let Some(descriptor) = descriptor {
+                if descriptor & INDIRECT == 0 {
+                    cells.push(descriptor);
+                    return Ok(());
+                }
+                // Predict growth before allocating it. A new owned buffer
+                // keeps the previous binding intact on allocation failure.
+                if let Some(target) = next_side_capacity(ranges.len(), ranges.capacity(), next_len)
+                {
+                    if target > ranges.capacity() {
+                        let mut grown = Vec::new();
+                        grown
+                            .try_reserve_exact(target)
+                            .map_err(|_| ArtifactError::Allocation("parser tables"))?;
+                        if grown.capacity() <= side_capacity_limit(next_len) {
+                            grown.extend(ranges.iter().cloned());
+                            *ranges = grown;
+                        }
+                    }
+                    if ranges.capacity() > ranges.len()
+                        && ranges.capacity() <= side_capacity_limit(next_len)
+                    {
+                        ranges.push(range);
+                        cells.push(descriptor);
+                        return Ok(());
+                    }
+                }
+            }
+            let mut wide = Vec::new();
+            // Match the descriptor's existing row reservation rather than
+            // repeatedly growing from a short prefix of that same row.
+            wide.try_reserve_exact(cells.capacity())
+                .map_err(|_| ArtifactError::Allocation("parser tables"))?;
+            wide.extend(cells.iter().map(|&cell| packed_range(cell, ranges)));
+            *self = Self::Wide(wide);
+        }
+        if let Self::Wide(ranges) = self {
+            reserve(ranges, 1)?;
+            ranges.push(range);
+        }
+        Ok(())
+    }
+
+    fn finish(self) -> FrozenCells {
+        match self {
+            Self::Packed { cells, ranges } => FrozenCells::Packed {
+                cells: cells.into_boxed_slice(),
+                ranges: ranges.into_boxed_slice(),
+            },
+            Self::Wide(ranges) => FrozenCells::Wide(ranges.into_boxed_slice()),
+        }
+    }
+}
+
 struct Columns {
     rows: Vec<StateRow>,
     terminals: Vec<SymbolId>,
-    action_offsets: Vec<usize>,
+    action_ranges: CellColumns,
+    singletons: Vec<[Option<NonZeroU32>; 2]>,
+    accept: Option<NonZeroU32>,
     actions: Vec<Action>,
     transition_symbols: Vec<SymbolId>,
     transition_states: Vec<StateId>,
@@ -275,18 +425,60 @@ impl Columns {
         Self {
             rows: Vec::with_capacity(states),
             terminals: Vec::new(),
-            action_offsets: vec![0],
+            action_ranges: CellColumns::new(),
+            singletons: vec![[None; 2]; states],
+            accept: None,
             actions: Vec::new(),
             transition_symbols: Vec::new(),
             transition_states: Vec::new(),
         }
     }
 
+    // Deduplicate only singletons through bounded construction scratch.
+    // Decoding appends directly, so a large ordered conflict needs no second
+    // complete payload allocation. All encoded actions retain their debits.
+    fn finish_cell(&mut self, start: usize) -> Result<(), ArtifactError> {
+        self.action_ranges.reserve(1)?;
+        let width = self.actions.len() - start;
+        if width == 0 {
+            self.action_ranges.push(0..0)?;
+            return Ok(());
+        }
+        let singleton = if width == 1 {
+            match self.actions[start] {
+                Action::Accept => Some(&mut self.accept),
+                Action::Shift(state) => self
+                    .singletons
+                    .get_mut(state.index())
+                    .map(|ids| &mut ids[0]),
+                Action::Reduce(reduction) => self
+                    .singletons
+                    .get_mut(reduction.index())
+                    .map(|ids| &mut ids[1]),
+            }
+        } else {
+            None
+        };
+        if let Some(end) = singleton.as_ref().and_then(|id| **id) {
+            self.actions.truncate(start);
+            self.action_ranges.push(end.get() - 1..end.get())?;
+            return Ok(());
+        }
+        let range = u32::try_from(start).map_err(|_| ArtifactError::Length)?
+            ..u32::try_from(self.actions.len()).map_err(|_| ArtifactError::Length)?;
+        if let Some(slot) = singleton {
+            // A singleton's nonzero end is exactly its start plus one.
+            *slot = NonZeroU32::new(range.end);
+        }
+        self.action_ranges.push(range)?;
+        Ok(())
+    }
+
     fn finish(self) -> FrozenTables {
         FrozenTables {
             rows: self.rows.into_boxed_slice(),
             terminals: self.terminals.into_boxed_slice(),
-            action_offsets: self.action_offsets.into_boxed_slice(),
+            action_ranges: self.action_ranges.finish(),
             actions: self.actions.into_boxed_slice(),
             transition_symbols: self.transition_symbols.into_boxed_slice(),
             transition_states: self.transition_states.into_boxed_slice(),
@@ -312,6 +504,92 @@ mod tests {
     };
     use super::*;
     use crate::artifact::{ArtifactLimits, Writer};
+
+    #[test]
+    fn packed_cells_preserve_empty_singleton_and_ordered_side_ranges() {
+        let expected = [0..0, 2..3, 3..6, INDIRECT - 2..INDIRECT - 1];
+        let mut columns = CellColumns::new();
+        columns.reserve(expected.len()).unwrap();
+        for range in &expected {
+            columns.push(range.clone()).unwrap();
+        }
+        assert!(matches!(columns, CellColumns::Packed { .. }));
+        let frozen = columns.finish();
+        for (index, range) in expected.into_iter().enumerate() {
+            assert_eq!(frozen.range(index), range);
+        }
+    }
+
+    #[test]
+    fn packed_cells_promote_to_wide_without_limiting_original_u32_ranges() {
+        let expected = [
+            0..0,
+            2..3,
+            3..6,
+            INDIRECT - 1..INDIRECT,
+            u32::MAX - 1..u32::MAX,
+            5..8,
+        ];
+        let mut columns = CellColumns::new();
+        for range in &expected {
+            columns.reserve(1).unwrap();
+            columns.push(range.clone()).unwrap();
+        }
+        assert!(matches!(columns, CellColumns::Wide(_)));
+        let frozen = columns.finish();
+        for (index, range) in expected.into_iter().enumerate() {
+            assert_eq!(frozen.range(index), range);
+        }
+        assert_eq!(
+            indirect_index(usize::try_from(INDIRECT - 1).unwrap()),
+            Some(INDIRECT - 1)
+        );
+        assert_eq!(indirect_index(usize::try_from(INDIRECT).unwrap()), None);
+        assert_eq!(indirect_index(usize::MAX), None);
+    }
+
+    #[test]
+    fn adaptive_side_storage_obeys_fixed_prefix_bound_and_promotes_only_once() {
+        assert_eq!(size_of::<Range<u32>>(), 2 * size_of::<u32>());
+        let n = 65536;
+        for shape in 0..4 {
+            let range_at = |index| {
+                let multi = match shape {
+                    0 => true,
+                    1 => index >= n / 3,
+                    2 => index % 5 != 0,
+                    _ => index % 100 == 0,
+                };
+                let start = u32::try_from(index * 3).unwrap();
+                start..start + if multi { 2 } else { 1 }
+            };
+            let mut columns = CellColumns::new();
+            let mut wide_seen = false;
+            for index in 0..n {
+                if index % 256 == 0 {
+                    columns.reserve(256).unwrap();
+                }
+                columns.reserve(1).unwrap();
+                columns.push(range_at(index)).unwrap();
+                match &columns {
+                    CellColumns::Packed { cells, ranges } => {
+                        assert!(!wide_seen);
+                        assert!(ranges.capacity() <= side_capacity_limit(cells.len()));
+                        assert!(ranges.len() <= side_capacity_limit(cells.len()));
+                    }
+                    CellColumns::Wide(_) => wide_seen = true,
+                }
+            }
+            assert_eq!(wide_seen, shape != 3);
+            let frozen = columns.finish();
+            for index in 0..n {
+                assert_eq!(frozen.range(index), range_at(index));
+            }
+        }
+        assert_eq!(next_side_capacity(16, 16, 17), None);
+        assert_eq!(next_side_capacity(15, 16, 16), Some(16));
+        assert_eq!(next_side_capacity(usize::MAX, usize::MAX, usize::MAX), None);
+    }
 
     fn symbol(index: usize) -> SymbolId {
         SymbolId::from_index(index)
@@ -574,6 +852,66 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn singleton_payloads_share_ranges_and_ordered_conflicts_stay_complete() {
+        let (graph, rows) = example();
+        let graph: Graph = graph.into_iter().cycle().take(64).collect();
+        let rows: Rows = rows.into_iter().cycle().take(64).collect();
+        let expected = (graph.clone(), rows.clone());
+        let tables = FrozenTables::from_maps(graph, rows.clone(), admissions(&rows)).unwrap();
+        assert_eq!(tables.maps(), expected);
+        assert_eq!(
+            tables.rows.iter().map(|row| row.cells.len()).sum::<usize>(),
+            80
+        );
+        assert_eq!(tables.actions.len(), 35);
+        assert_eq!(tables.action_ranges.range(0), tables.action_ranges.range(5));
+        assert_ne!(tables.action_ranges.range(1), tables.action_ranges.range(6));
+        assert_eq!(tables.cell(1), tables.cell(6));
+        assert!(
+            tables
+                .actions(state(2), Lookahead::Terminal(symbol(400)))
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn singleton_ids_outside_scratch_bounds_preserve_the_original_payload_and_reads() {
+        let graph: Graph = vec![Default::default()];
+        let rows: Rows = vec![
+            [
+                (
+                    Lookahead::Terminal(symbol(0)),
+                    vec![Action::Shift(state(u32::MAX as usize))],
+                ),
+                (
+                    Lookahead::Terminal(symbol(1)),
+                    vec![Action::Reduce(ReductionId::from_index(u32::MAX as usize))],
+                ),
+                (
+                    Lookahead::End,
+                    vec![Action::Reduce(ReductionId::from_index(9))],
+                ),
+            ]
+            .into(),
+        ];
+        let tables =
+            FrozenTables::from_maps(graph.clone(), rows.clone(), admissions(&rows)).unwrap();
+        assert_eq!(tables.maps(), (graph.clone(), rows.clone()));
+        assert_eq!(tables.actions.len(), 3);
+        let bytes = wire(&graph, &rows);
+        for work in 0..100 {
+            compare_decode(
+                &bytes,
+                ArtifactLimits {
+                    work,
+                    ..Default::default()
+                },
+            );
+        }
+        compare_decode(&bytes, ArtifactLimits::default());
     }
 
     #[test]

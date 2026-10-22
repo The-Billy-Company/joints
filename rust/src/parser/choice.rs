@@ -596,7 +596,7 @@ mod tests {
     use crate::parser::Frame;
     use crate::{ByteSpan, CompiledGrammar};
 
-    fn complete() -> (ParseSession, Head) {
+    fn complete() -> (ParseSession, Box<Head>) {
         let grammar = CompiledGrammar::compile(br#"{"rules":{
           "doc":{"type":"CHOICE","members":[{"type":"SYMBOL","name":"a"},{"type":"SYMBOL","name":"b"}]},
           "a":{"type":"SEQ","members":[{"type":"STRING","value":"x"},{"type":"STRING","value":"y"}]},
@@ -610,7 +610,7 @@ mod tests {
             symbol: grammar.start_symbol(),
             span: ByteSpan::new(0, 2).unwrap(),
             lead: vec![],
-            body: vec![],
+            body: crate::parser::Body::Empty,
             unproven: false,
         });
         head.declared = true;
@@ -797,11 +797,21 @@ mod tests {
         let mut session = grammar.session();
         session.reset_run();
         let mut a = session
-            .extra_reading(b"#x#", Head::new(entries[0].1, 0), first)
+            .extra_reading(
+                &grammar.automaton,
+                b"#x#",
+                Head::new(entries[0].1, 0),
+                first,
+            )
             .unwrap()
             .unwrap();
         let mut b = session
-            .extra_reading(b"#x#", Head::new(entries[1].1, 0), first)
+            .extra_reading(
+                &grammar.automaton,
+                b"#x#",
+                Head::new(entries[1].1, 0),
+                first,
+            )
             .unwrap()
             .unwrap();
         a.declared = true;

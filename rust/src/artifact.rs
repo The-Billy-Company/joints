@@ -575,13 +575,50 @@ impl<B: AsRef<[u8]>> VerifiedPayload<B> {
         &self.bytes.as_ref()[self.body.clone()]
     }
 }
-impl VerifiedPayload<&[u8]> {
-    fn into_owned(self) -> VerifiedPayload<Arc<[u8]>> {
-        let bytes: Arc<[u8]> = Arc::from(self.payload());
-        let end = bytes.len();
-        VerifiedPayload {
-            bytes,
-            body: 0..end,
+#[derive(Clone)]
+enum OwnedBytes {
+    Copied(Arc<[u8]>),
+    Read(Arc<Vec<u8>>),
+}
+impl AsRef<[u8]> for OwnedBytes {
+    fn as_ref(&self) -> &[u8] {
+        match self {
+            Self::Copied(bytes) => bytes,
+            Self::Read(bytes) => bytes,
+        }
+    }
+}
+
+enum SourceBytes<'a> {
+    Borrowed(&'a [u8]),
+    Read(Vec<u8>),
+}
+impl AsRef<[u8]> for SourceBytes<'_> {
+    fn as_ref(&self) -> &[u8] {
+        match self {
+            Self::Borrowed(bytes) => bytes,
+            Self::Read(bytes) => bytes,
+        }
+    }
+}
+impl SourceBytes<'_> {
+    // Called only with a range already established by envelope verification.
+    // Borrowed callers get an immutable copy. File-owned buffers transfer their
+    // allocation; no second complete encoded artifact is live during opening.
+    fn freeze(self, body: Range<usize>) -> VerifiedPayload<OwnedBytes> {
+        match self {
+            Self::Borrowed(bytes) => {
+                let bytes: Arc<[u8]> = Arc::from(&bytes[body]);
+                let end = bytes.len();
+                VerifiedPayload {
+                    bytes: OwnedBytes::Copied(bytes),
+                    body: 0..end,
+                }
+            }
+            Self::Read(bytes) => VerifiedPayload {
+                bytes: OwnedBytes::Read(Arc::new(bytes)),
+                body,
+            },
         }
     }
 }
@@ -591,7 +628,7 @@ enum Member {
     Native(Mutex<NativeMember>),
 }
 enum NativeMember {
-    Pending(VerifiedPayload<Arc<[u8]>>),
+    Pending(VerifiedPayload<OwnedBytes>),
     Ready(Arc<CompiledGrammar>),
 }
 /// A checked language directory. Members are decoded and validated when selected,
@@ -611,6 +648,10 @@ impl Bank {
         bytes: &[u8],
         limits: ArtifactLimits,
     ) -> Result<Self, ArtifactError> {
+        Self::from_source(SourceBytes::Borrowed(bytes), limits)
+    }
+    fn from_source(source: SourceBytes<'_>, limits: ArtifactLimits) -> Result<Self, ArtifactError> {
+        let bytes = source.as_ref();
         if bytes.len() > limits.bytes {
             return Err(ArtifactError::Limit {
                 resource: "artifact bytes",
@@ -634,10 +675,12 @@ impl Bank {
             let payload = VerifiedPayload::check(bytes, 0..bytes.len(), limits)?;
             let mut r = Reader::new(payload.payload(), limits);
             let title = r.text()?;
+            let body = payload.body;
+            let payload = source.freeze(body);
             let mut members = BTreeMap::new();
             members.insert(
                 title,
-                Member::Native(Mutex::new(NativeMember::Pending(payload.into_owned()))),
+                Member::Native(Mutex::new(NativeMember::Pending(payload))),
             );
             return Ok(Self { members, limits });
         }
@@ -658,9 +701,10 @@ impl Bank {
             directory.push((title, r.size()?, r.size()?));
         }
         let arena_at = payload.len() - r.remaining();
-        let arena = &payload[arena_at..];
+        let arena_len = payload.len() - arena_at;
+        let encoded_len = bytes.len();
         let mut next = 0;
-        let owned: Arc<[u8]> = Arc::from(bytes);
+        let owned = source.freeze(0..encoded_len).bytes;
         let mut members = BTreeMap::new();
         for (title, off, len) in directory {
             if off != next {
@@ -669,9 +713,11 @@ impl Bank {
             let end = off.checked_add(len).ok_or(ArtifactError::Length)?;
             // Validate the owned member itself, tying the proof to the exact
             // immutable Arc later decoded by get().
-            arena.get(off..end).ok_or(ArtifactError::Length)?;
+            if end > arena_len {
+                return Err(ArtifactError::Length);
+            }
             let member = VerifiedPayload::check(
-                Arc::clone(&owned),
+                owned.clone(),
                 HEADER + arena_at + off..HEADER + arena_at + end,
                 limits,
             )?;
@@ -687,7 +733,7 @@ impl Bank {
             );
             next = end;
         }
-        if next != arena.len() {
+        if next != arena_len {
             return Err(ArtifactError::Length);
         }
         Ok(Self { members, limits })
@@ -700,16 +746,20 @@ impl Bank {
         limits: ArtifactLimits,
     ) -> Result<Self, ArtifactError> {
         let file = File::open(path)?;
-        if file.metadata()?.len() > limits.bytes as u64 {
+        let length = file.metadata()?.len();
+        if length > limits.bytes as u64 {
             return Err(ArtifactError::Limit {
                 resource: "artifact bytes",
                 limit: limits.bytes,
             });
         }
         let mut bytes = Vec::new();
+        bytes
+            .try_reserve_exact(usize::try_from(length).map_err(|_| ArtifactError::Length)?)
+            .map_err(|_| ArtifactError::Allocation("artifact input"))?;
         file.take((limits.bytes as u64).saturating_add(1))
             .read_to_end(&mut bytes)?;
-        Self::from_bytes_with_limits(&bytes, limits)
+        Self::from_source(SourceBytes::Read(bytes), limits)
     }
     pub fn languages(&self) -> impl ExactSizeIterator<Item = &str> {
         self.members.keys().map(String::as_str)
@@ -852,7 +902,23 @@ mod tests {
         let NativeMember::Pending(payload) = &*slot else {
             panic!("expected a pending native proof");
         };
-        Arc::downgrade(&payload.bytes)
+        let OwnedBytes::Copied(bytes) = &payload.bytes else {
+            panic!("expected copied caller-owned bytes");
+        };
+        Arc::downgrade(bytes)
+    }
+    fn pending_read_bytes(bank: &Bank, name: &str) -> std::sync::Weak<Vec<u8>> {
+        let Member::Native(cache) = &bank.members[name] else {
+            panic!("expected a native member");
+        };
+        let slot = cache.lock().unwrap();
+        let NativeMember::Pending(payload) = &*slot else {
+            panic!("expected a pending native proof");
+        };
+        let OwnedBytes::Read(bytes) = &payload.bytes else {
+            panic!("expected transferred file buffer");
+        };
+        Arc::downgrade(bytes)
     }
     fn two_tiers() -> Arc<CompiledGrammar> {
         let source = serde_json::json!({"name":"two_tiers","rules":{
@@ -1176,6 +1242,130 @@ mod tests {
         let direct = CompiledGrammar::from_artifact(&original).unwrap();
         assert_eq!(ENVELOPE_HASHES.with(|n| n.get()), 1);
         parity(&grammar, &direct, b"[2]");
+    }
+    #[test]
+    fn owned_file_buffers_transfer_without_copy_and_release_after_all_members_load() {
+        let one = json();
+        let two = CompiledGrammar::compile(
+            br#"{"name":"letters","rules":{"doc":{"type":"PATTERN","value":"[a-z]+"}}}"#,
+        )
+        .unwrap();
+        for bytes in [
+            one.artifact().unwrap(),
+            Bank::pack(&[Arc::clone(&one), two]).unwrap(),
+        ] {
+            let pointer = bytes.as_ptr();
+            let capacity = bytes.capacity();
+            ENVELOPE_HASHES.with(|n| n.set(0));
+            let bank =
+                Bank::from_source(SourceBytes::Read(bytes), ArtifactLimits::default()).unwrap();
+            let retained = pending_read_bytes(&bank, "json");
+            {
+                let bytes = retained.upgrade().unwrap();
+                assert_eq!(bytes.as_ptr(), pointer, "file buffer was copied");
+                assert_eq!(bytes.capacity(), capacity);
+            }
+            let hashes = ENVELOPE_HASHES.with(|n| n.get());
+            let loaded = bank.get("json").unwrap().unwrap();
+            parity(&one, &loaded, b"[true,null,4]");
+            assert_eq!(loaded.artifact().unwrap(), one.artifact().unwrap());
+            if bank.languages().len() > 1 {
+                assert!(retained.upgrade().is_some());
+                assert!(std::sync::Weak::ptr_eq(
+                    &retained,
+                    &pending_read_bytes(&bank, "letters")
+                ));
+                bank.get("letters")
+                    .unwrap()
+                    .unwrap()
+                    .session()
+                    .parse(b"abc")
+                    .unwrap();
+            }
+            assert!(
+                retained.upgrade().is_none(),
+                "ready bank retained the file buffer"
+            );
+            assert_eq!(ENVELOPE_HASHES.with(|n| n.get()), hashes);
+        }
+    }
+    #[test]
+    fn owned_and_borrowed_dispatch_preserve_rejections_limits_and_failed_decode_retries() {
+        let original = json().artifact().unwrap();
+        let compare = |bytes: &[u8], limits: ArtifactLimits| {
+            let result = |bank: Result<Bank, ArtifactError>| {
+                bank.and_then(|bank| bank.get("json").map(|g| g.map(|g| g.name().to_owned())))
+                    .map_err(|e| e.to_string())
+            };
+            assert_eq!(
+                result(Bank::from_bytes_with_limits(bytes, limits)),
+                result(Bank::from_source(SourceBytes::Read(bytes.to_vec()), limits))
+            );
+        };
+        for end in [
+            0,
+            1,
+            7,
+            8,
+            HEADER - 1,
+            HEADER,
+            original.len() - 1,
+            original.len(),
+        ] {
+            compare(&original[..end], ArtifactLimits::default());
+        }
+        for at in [
+            0,
+            8,
+            12,
+            HEADER,
+            original.len() / 2,
+            original.len() - SEAL,
+            original.len() - 1,
+        ] {
+            let mut bytes = original.clone();
+            bytes[at] ^= 1;
+            compare(&bytes, ArtifactLimits::default());
+        }
+        for limits in [
+            ArtifactLimits {
+                bytes: original.len() - 1,
+                ..ArtifactLimits::default()
+            },
+            ArtifactLimits {
+                languages: 0,
+                ..ArtifactLimits::default()
+            },
+            ArtifactLimits {
+                work: 0,
+                ..ArtifactLimits::default()
+            },
+            ArtifactLimits {
+                work: 20,
+                ..ArtifactLimits::default()
+            },
+            ArtifactLimits {
+                symbols: 1,
+                ..ArtifactLimits::default()
+            },
+        ] {
+            compare(&original, limits);
+        }
+        let mut body = envelope(&original, GRAMMAR_MAGIC, ArtifactLimits::default())
+            .unwrap()
+            .to_vec();
+        let mut r = Reader::new(&body, ArtifactLimits::default());
+        r.text().unwrap();
+        let scanner_at = r.at;
+        body[scanner_at] ^= 1;
+        let invalid = seal(GRAMMAR_MAGIC, body);
+        let bank =
+            Bank::from_source(SourceBytes::Read(invalid), ArtifactLimits::default()).unwrap();
+        let retained = pending_read_bytes(&bank, "json");
+        for _ in 0..2 {
+            assert!(matches!(bank.get("json"), Err(ArtifactError::Schema)));
+            assert!(retained.upgrade().is_some());
+        }
     }
     #[test]
     fn concurrent_native_getters_publish_one_owned_grammar_and_release_the_proof() {

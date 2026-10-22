@@ -2,7 +2,7 @@
 use crate::{
     ByteSpan, CompiledGrammar, Error, FieldId, ProductionId, Resource, StateId, Stop, Survey,
     SymbolId, TreeSnapshot,
-    compiler::{Action, Lookahead},
+    compiler::{Action, Automaton, Lookahead},
     effects::{Effect, EffectError, EffectStore},
     ids::ReductionId,
     lexer::{Lexeme, Scan},
@@ -45,8 +45,8 @@ enum Boundary {
     Extra { accepted: bool },
 }
 enum Reading {
-    Aside(Head),
-    Extra(Head, Lexeme),
+    Aside(Box<Head>),
+    Extra(Box<Head>, Lexeme),
     Advanced(Advanced),
 }
 
@@ -104,8 +104,8 @@ pub struct ParsedToken {
 /// Alias and field are use-site facts. Branches never mutate shared draft nodes.
 #[derive(Clone, Copy, Debug)]
 struct Use {
-    draft: usize,
-    alias: Option<(ProductionId, usize)>,
+    draft: u32,
+    alias: Option<(ProductionId, u32)>,
     field: Option<FieldId>,
 }
 #[derive(Debug)]
@@ -115,12 +115,127 @@ struct Draft {
     children: Vec<Use>,
     extra: bool,
 }
+/// Stack-owned uses avoid a heap allocation for the common singleton.
+/// Existing vector buffers remain vectors, even when their length is one.
+#[derive(Clone, Debug, Default)]
+enum Body {
+    #[default]
+    Empty,
+    One(Use),
+    Many(Vec<Use>),
+}
+impl Body {
+    fn as_slice(&self) -> &[Use] {
+        match self {
+            Self::Empty => &[],
+            Self::One(value) => std::slice::from_ref(value),
+            Self::Many(values) => values,
+        }
+    }
+    fn as_mut_slice(&mut self) -> &mut [Use] {
+        match self {
+            Self::Empty => &mut [],
+            Self::One(value) => std::slice::from_mut(value),
+            Self::Many(values) => values,
+        }
+    }
+    fn heap_len(&self) -> usize {
+        match self {
+            Self::Many(values) => values.len(),
+            _ => 0,
+        }
+    }
+    fn into_vec(self) -> Vec<Use> {
+        match self {
+            Self::Empty => Vec::new(),
+            Self::One(value) => vec![value],
+            Self::Many(values) => values,
+        }
+    }
+    fn push(&mut self, value: Use) {
+        match self {
+            Self::Empty => *self = Self::One(value),
+            Self::One(first) => *self = Self::Many(vec![*first, value]),
+            Self::Many(values) => values.push(value),
+        }
+    }
+    fn extend(&mut self, values: impl Into<Self>) {
+        match values.into() {
+            Self::Empty => {}
+            Self::One(value) => self.push(value),
+            Self::Many(mut other) => match self {
+                Self::Empty => *self = Self::Many(other),
+                Self::One(first) => {
+                    if !other.is_empty() {
+                        let mut values = vec![*first];
+                        values.append(&mut other);
+                        *self = Self::Many(values);
+                    }
+                }
+                Self::Many(values) => values.append(&mut other),
+            },
+        }
+    }
+}
+impl From<Vec<Use>> for Body {
+    fn from(values: Vec<Use>) -> Self {
+        Self::Many(values)
+    }
+}
+impl std::ops::Deref for Body {
+    type Target = [Use];
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
+    }
+}
+impl std::ops::DerefMut for Body {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_mut_slice()
+    }
+}
+enum BodyIntoIter {
+    One(std::option::IntoIter<Use>),
+    Many(std::vec::IntoIter<Use>),
+}
+impl Iterator for BodyIntoIter {
+    type Item = Use;
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::One(values) => values.next(),
+            Self::Many(values) => values.next(),
+        }
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self {
+            Self::One(values) => values.size_hint(),
+            Self::Many(values) => values.size_hint(),
+        }
+    }
+}
+impl IntoIterator for Body {
+    type Item = Use;
+    type IntoIter = BodyIntoIter;
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            Self::Empty => BodyIntoIter::One(None.into_iter()),
+            Self::One(value) => BodyIntoIter::One(Some(value).into_iter()),
+            Self::Many(values) => BodyIntoIter::Many(values.into_iter()),
+        }
+    }
+}
+impl<'a> IntoIterator for &'a mut Body {
+    type Item = &'a mut Use;
+    type IntoIter = std::slice::IterMut<'a, Use>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.as_mut_slice().iter_mut()
+    }
+}
 #[derive(Clone, Debug)]
 struct Frame {
     symbol: SymbolId,
     span: ByteSpan,
     lead: Vec<Use>,
-    body: Vec<Use>,
+    body: Body,
     unproven: bool,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -135,6 +250,9 @@ enum Move {
     },
     Hole,
 }
+// A live reading keeps one heap address while ownership moves between
+// scanners, advancement results and frontiers. Large scanner/history payloads
+// are copied only when the parser actually forks.
 #[derive(Clone)]
 struct Head {
     slate: Option<Arc<AdmissionSlate>>,
@@ -158,8 +276,8 @@ struct Head {
     kept: bool,
 }
 impl Head {
-    fn new(start: StateId, at: usize) -> Self {
-        Self {
+    fn new(start: StateId, at: usize) -> Box<Self> {
+        Box::new(Self {
             slate: None,
             states: vec![start],
             frames: vec![],
@@ -179,7 +297,7 @@ impl Head {
             declared: false,
             shifted: 0,
             kept: false,
-        }
+        })
     }
     fn record_work(&self) -> usize {
         self.trace
@@ -233,7 +351,7 @@ impl Head {
     }
 }
 struct Failure {
-    head: Head,
+    head: Box<Head>,
     stop: Stop,
     token: Option<Lexeme>,
 }
@@ -246,9 +364,18 @@ fn failure_order(a: &Failure, b: &Failure) -> std::cmp::Ordering {
 }
 
 struct Advanced {
-    shifted: Vec<Head>,
-    accepted: Vec<Head>,
+    // Frontier transfers move pointers while each 656-byte Head stays in place.
+    #[allow(clippy::vec_box)]
+    shifted: Vec<Box<Head>>,
+    #[allow(clippy::vec_box)]
+    accepted: Vec<Box<Head>>,
     failures: Vec<Failure>,
+}
+// A cursor remains only while its parent owns an unvisited sibling.
+struct MaterializeCursor {
+    draft: u32,
+    parent: NodeId,
+    next_child: usize,
 }
 struct Materialized {
     nodes: Vec<NodeData>,
@@ -268,7 +395,9 @@ pub struct ParseSession {
     choices: choice::Policies,
     slates: admissions::SlatePool,
     lexer_scratch: crate::lexer::ScanScratch,
-    shifted_scratch: Vec<Head>,
+    // Reuse frontier slots without moving the large Head payloads.
+    #[allow(clippy::vec_box)]
+    shifted_scratch: Vec<Box<Head>>,
     recovery: Recovery,
     supply: Supply,
     drafts: Vec<Draft>,
@@ -281,7 +410,9 @@ pub struct ParseSession {
     cache: Option<cache::ParseCache>,
     recording: Option<cache::Recording>,
     document_reuse: bool,
-    resume: Option<Head>,
+    #[cfg(test)]
+    force_cache_replay: bool,
+    resume: Option<Box<Head>>,
     steps: usize,
     lexical_remaining: usize,
     run: RunState,
@@ -311,6 +442,8 @@ impl ParseSession {
             cache: None,
             recording: None,
             document_reuse: true,
+            #[cfg(test)]
+            force_cache_replay: false,
             resume: None,
             steps: 0,
             lexical_remaining: 0,
@@ -378,7 +511,8 @@ impl ParseSession {
         self.parse_inner(source)
     }
     fn reset_run(&mut self) {
-        self.slates.clear();
+        // These bounded proofs depend on this immutable grammar and recorded
+        // stack states. Source and scanner answers are always asked again.
         #[cfg(test)]
         {
             self.slate_stats = admissions::Stats::default();
@@ -403,6 +537,8 @@ impl ParseSession {
         if self.limits.heads == 0 {
             return Err(Error::LimitExceeded(Resource::Heads));
         }
+        // This operation owns the grammar while its executor borrows the graph.
+        let graph = Arc::clone(&self.grammar.automaton);
         let mut first = self
             .resume
             .take()
@@ -417,7 +553,7 @@ impl ParseSession {
             first.ends = Some(History::default());
         }
         let mut active = vec![first];
-        let mut accepted: Vec<Head> = vec![];
+        let mut accepted: Vec<Box<Head>> = vec![];
         let mut failures: Vec<Failure> = vec![];
         let mut forest = vec![];
         let mut repairs: Vec<Repair> = vec![];
@@ -431,6 +567,7 @@ impl ParseSession {
             for head in active.drain(..) {
                 self.charge(1)?;
                 match self.read_and_advance(
+                    &graph,
                     source,
                     head,
                     ScanScope::Document,
@@ -525,7 +662,7 @@ impl ParseSession {
                                 shifted: mut planted,
                                 accepted: won,
                                 failures: refused,
-                            } = self.advance(failed.head, Some(ghost), true)?;
+                            } = self.advance(&graph, failed.head, Some(ghost), true)?;
                             if planted.len() != 1 || !won.is_empty() || !refused.is_empty() {
                                 return Err(Error::InvalidTable("proved insertion did not shift"));
                             }
@@ -542,7 +679,7 @@ impl ParseSession {
                                 shifted: moved,
                                 accepted: won,
                                 failures: refused,
-                            } = self.advance(planted.remove(0), Some(token), false)?;
+                            } = self.advance(&graph, planted.remove(0), Some(token), false)?;
                             active = moved;
                             accepted = won;
                             failures = refused;
@@ -703,21 +840,22 @@ impl ParseSession {
 
     fn document_scan_inner(
         &mut self,
+        graph: &Automaton,
         source: &[u8],
         head: &mut Head,
         excluded: &Exclusions,
         prebuilt: Option<&AdmissionSlate>,
     ) -> Result<Option<Scanned>, Error> {
-        let graph = Arc::clone(&self.grammar.automaton);
         let before = if graph.extra_entries().is_empty() {
             None
         } else {
             self.charge(head.scanner.clone_work())?;
             Some(head.scanner.clone())
         };
-        let mut scanned = self.scan(source, head, ScanScope::Document, excluded, prebuilt)?;
+        let mut scanned =
+            self.scan(graph, source, head, ScanScope::Document, excluded, prebuilt)?;
         if let Scan::Token(first) = scanned.scan {
-            if !first.extra && self.rule_extra(source, head, first)? {
+            if !first.extra && self.rule_extra(graph, source, head, first)? {
                 return Ok(None);
             }
             let auxiliary_start = graph.extra_entries().iter().any(|&(_, entry)| {
@@ -726,7 +864,7 @@ impl ParseSession {
                     .is_empty()
             });
             if !first.extra && auxiliary_start {
-                let (proof, work) = recovery::admission(&graph, &head.states, first.symbol);
+                let (proof, work) = recovery::admission(graph, &head.states, first.symbol);
                 self.charge(work)?;
                 self.charge(admissions::search_work(excluded.ordinary.len()))?;
                 if matches!(proof, Proof::Stops)
@@ -736,9 +874,16 @@ impl ParseSession {
                     // document's own slate from its exact pre-scan context.
                     head.scanner =
                         before.ok_or(Error::InvalidTable("missing scanner checkpoint"))?;
-                    scanned = self.scan(source, head, ScanScope::Structural, excluded, prebuilt)?;
+                    scanned = self.scan(
+                        graph,
+                        source,
+                        head,
+                        ScanScope::Structural,
+                        excluded,
+                        prebuilt,
+                    )?;
                     if let Scan::Token(token) = scanned.scan {
-                        if !token.extra && self.rule_extra(source, head, token)? {
+                        if !token.extra && self.rule_extra(graph, source, head, token)? {
                             return Ok(None);
                         }
                     }
@@ -751,8 +896,13 @@ impl ParseSession {
     /// A rule extra is a separate LR reading over the same immutable grammar.
     /// Its scanner state commits only with a whole derivation; its moves never
     /// become structural parse moves or alter the document's stack.
-    fn rule_extra(&mut self, source: &[u8], head: &mut Head, first: Lexeme) -> Result<bool, Error> {
-        let graph = Arc::clone(&self.grammar.automaton);
+    fn rule_extra(
+        &mut self,
+        graph: &Automaton,
+        source: &[u8],
+        head: &mut Head,
+        first: Lexeme,
+    ) -> Result<bool, Error> {
         for &(symbol, entry) in graph.extra_entries() {
             if graph
                 .actions(entry, Lookahead::Terminal(first.symbol))
@@ -766,7 +916,7 @@ impl ParseSession {
             extra.repaired = head.repaired;
             extra.fresh = head.fresh;
             extra.after_node = head.after_node;
-            let Some(mut complete) = self.extra_reading(source, extra, first)? else {
+            let Some(mut complete) = self.extra_reading(graph, source, extra, first)? else {
                 continue;
             };
             if complete.at <= head.at {
@@ -780,10 +930,10 @@ impl ParseSession {
             let frame = complete.frames.pop().unwrap();
             let visible = !frame.body.is_empty();
             for use_ in frame.body {
-                let draft = &self.drafts[use_.draft];
+                let draft = &self.drafts[use_.draft as usize];
                 let (symbol, extent, count) = (draft.symbol, draft.span, draft.children.len());
                 self.charge(count)?;
-                let children = self.drafts[use_.draft].children.clone();
+                let children = self.drafts[use_.draft as usize].children.clone();
                 let mut aside = self.mint(symbol, extent, children, true)?;
                 aside.alias = use_.alias;
                 aside.field = use_.field;
@@ -800,20 +950,21 @@ impl ParseSession {
 
     fn extra_reading(
         &mut self,
+        graph: &Automaton,
         source: &[u8],
-        head: Head,
+        head: Box<Head>,
         first: Lexeme,
-    ) -> Result<Option<Head>, Error> {
+    ) -> Result<Option<Box<Head>>, Error> {
         let Advanced {
             shifted: mut active,
             ..
-        } = self.advance(head, Some(first), false)?;
-        let mut best: Option<Head> = None;
+        } = self.advance(graph, head, Some(first), false)?;
+        let mut best: Option<Box<Head>> = None;
         while !active.is_empty() {
             let mut next = Vec::new();
             for head in active {
                 self.charge(head.clone_work().saturating_add(1))?;
-                let Advanced { accepted, .. } = self.advance(head.clone(), None, false)?;
+                let Advanced { accepted, .. } = self.advance(graph, head.clone(), None, false)?;
                 let completed = !accepted.is_empty();
                 for accepted in accepted {
                     let replace = match &best {
@@ -829,6 +980,7 @@ impl ParseSession {
                     }
                 }
                 match self.read_and_advance(
+                    graph,
                     source,
                     head,
                     ScanScope::Extra,
@@ -874,10 +1026,10 @@ impl ParseSession {
     }
 
     fn charge(&mut self, amount: usize) -> Result<(), Error> {
-        self.steps = self
-            .steps
-            .checked_add(amount)
-            .ok_or(Error::LimitExceeded(Resource::Work))?;
+        let Some(next) = self.steps.checked_add(amount) else {
+            return Err(Error::LimitExceeded(Resource::Work));
+        };
+        self.steps = next;
         if self.steps > self.limits.steps {
             Err(Error::LimitExceeded(Resource::Work))
         } else {
@@ -887,6 +1039,7 @@ impl ParseSession {
 
     fn scan(
         &mut self,
+        graph: &Automaton,
         source: &[u8],
         head: &mut Head,
         scope: ScanScope,
@@ -900,11 +1053,11 @@ impl ParseSession {
         let slate: &AdmissionSlate = match prebuilt {
             Some(slate) => slate,
             None => {
-                owned = self.admission_slate(head)?;
+                owned = self.admission_slate(graph, head)?;
                 &owned
             }
         };
-        let scan = self.scan_inner(source, head, scope, slate, excluded)?;
+        let scan = self.scan_inner(graph, source, head, scope, slate, excluded)?;
         let provisional = match scan {
             Scan::Token(token) => {
                 self.token_reads = self
@@ -947,6 +1100,7 @@ impl ParseSession {
 
     fn scan_inner(
         &mut self,
+        graph: &Automaton,
         source: &[u8],
         head: &mut Head,
         scope: ScanScope,
@@ -964,12 +1118,11 @@ impl ParseSession {
             "retry_filtered": excluded.end || !excluded.ordinary.is_empty() || !excluded.auxiliary.is_empty(),
             "parser_steps": self.steps, "lexical_remaining": self.lexical_remaining,
         }));
-        let graph = Arc::clone(&self.grammar.automaton);
         let state = *head
             .states
             .last()
             .ok_or(Error::InvalidTable("empty state stack"))?;
-        let filtered = self.filtered_admissions(slate, scope, excluded)?;
+        let filtered = self.filtered_admissions(graph, slate, scope, excluded)?;
         let (base_lexical, base_wanted) = slate.view(scope);
         let (ordinary, lexical, wanted, empty, provisional_empty) = match &filtered {
             Some(view) => (
@@ -1084,12 +1237,13 @@ impl ParseSession {
 
     fn read_and_advance(
         &mut self,
+        graph: &Automaton,
         source: &[u8],
-        mut head: Head,
+        mut head: Box<Head>,
         scope: ScanScope,
         boundary: Boundary,
     ) -> Result<Reading, Error> {
-        let slate = self.admission_slate(&mut head)?;
+        let slate = self.admission_slate(graph, &mut head)?;
         let possible = !slate.uncertain.is_empty()
             || (!source.is_empty()
                 && head.at == source.len()
@@ -1110,9 +1264,9 @@ impl ParseSession {
         let mut first_failure: Option<Failure> = None;
         loop {
             let scanned = if scope == ScanScope::Document {
-                self.document_scan(source, &mut head, &excluded, Some(&slate))?
+                self.document_scan(graph, source, &mut head, &excluded, Some(&slate))?
             } else {
-                Some(self.scan(source, &mut head, scope, &excluded, Some(&slate))?)
+                Some(self.scan(graph, source, &mut head, scope, &excluded, Some(&slate))?)
             };
             let Some(scanned) = scanned else {
                 return Ok(Reading::Aside(head));
@@ -1154,7 +1308,7 @@ impl ParseSession {
                 Scan::Token(token) => Some(token),
                 _ => None,
             };
-            let advanced = self.advance(head, token, false)?;
+            let advanced = self.advance(graph, head, token, false)?;
             if !advanced.shifted.is_empty() || !advanced.accepted.is_empty() {
                 // Use the actual branches, histories and token receipts once.
                 return Ok(Reading::Advanced(advanced));
@@ -1216,7 +1370,8 @@ impl ParseSession {
 
     fn advance(
         &mut self,
-        head: Head,
+        graph: &Automaton,
+        head: Box<Head>,
         token: Option<Lexeme>,
         supplied: bool,
     ) -> Result<Advanced, Error> {
@@ -1231,7 +1386,6 @@ impl ParseSession {
         } else {
             None
         };
-        let graph = Arc::clone(&self.grammar.automaton);
         let lookahead = token.map_or(Lookahead::End, |t| Lookahead::Terminal(t.symbol));
         // Forks retain birth order. Canonical derivations arbitrate declared
         // ties; only structurally equal final ties retain the later reading,
@@ -1253,7 +1407,8 @@ impl ParseSession {
                 let action = if let Some(action) = forced.take() {
                     Some(action)
                 } else {
-                    let actions = self.action_order(&head, graph.actions(state, lookahead))?;
+                    let actions =
+                        self.action_order(graph, &head, graph.actions(state, lookahead))?;
                     let declared = actions.len() > 1 && self.declared_choice(state, lookahead)?;
                     if actions.len() > 1 {
                         self.disable_recording();
@@ -1310,7 +1465,9 @@ impl ParseSession {
                         moved.push(head);
                         break;
                     }
-                    Some(Action::Reduce(production)) => self.reduce(&mut head, production)?,
+                    Some(Action::Reduce(production)) => {
+                        self.reduce(graph, &mut head, production)?
+                    }
                     Some(Action::Accept) if token.is_none() => {
                         accepted.push(head);
                         break;
@@ -1335,11 +1492,13 @@ impl ParseSession {
         })
     }
 
-    fn collapse(&mut self, heads: &mut Vec<Head>) -> Result<(), Error> {
+    // Deduplication moves handles, preserving each large Head's heap address.
+    #[allow(clippy::vec_box)]
+    fn collapse(&mut self, heads: &mut Vec<Box<Head>>) -> Result<(), Error> {
         if heads.len() < 2 {
             return Ok(());
         }
-        let mut kept: Vec<Head> = vec![];
+        let mut kept: Vec<Box<Head>> = vec![];
         for head in heads.drain(..) {
             if let Some(previous) = kept.iter_mut().find(|old| old.twins(&head)) {
                 if !self.compare_heads(&head, previous)?.is_lt() {
@@ -1356,11 +1515,13 @@ impl ParseSession {
     // A completed reading has no future transitions. Preserve the same
     // representative the final comparison would choose, including its
     // incumbent-wins exact tie, while other readings are still progressing.
-    fn retain_acceptance(&mut self, heads: &mut Vec<Head>) -> Result<(), Error> {
+    // Acceptance arbitration likewise transfers ownership through small handles.
+    #[allow(clippy::vec_box)]
+    fn retain_acceptance(&mut self, heads: &mut Vec<Box<Head>>) -> Result<(), Error> {
         if heads.len() < 2 {
             return Ok(());
         }
-        let mut winner: Option<Head> = None;
+        let mut winner: Option<Box<Head>> = None;
         for head in heads.drain(..) {
             if let Some(old) = &winner {
                 if !self.compare_heads(&head, old)?.is_gt() {
@@ -1387,9 +1548,9 @@ impl ParseSession {
         }
         let extent = span(token.start, token.end)?;
         let body = if self.grammar.automaton.symbol(token.symbol).shape.visible() {
-            vec![self.mint(token.symbol, extent, vec![], false)?]
+            Body::One(self.mint(token.symbol, extent, vec![], false)?)
         } else {
-            vec![]
+            Body::Empty
         };
         head.frames.push(Frame {
             symbol: token.symbol,
@@ -1425,10 +1586,10 @@ impl ParseSession {
 
     fn concrete_production(
         &mut self,
+        graph: &Automaton,
         head: &Head,
         family: ReductionId,
     ) -> Result<ProductionId, Error> {
-        let graph = Arc::clone(&self.grammar.automaton);
         if family.index() >= graph.reduction_count() {
             return Err(Error::InvalidTable("invalid reduction family"));
         }
@@ -1466,6 +1627,7 @@ impl ParseSession {
 
     fn action_order<'a>(
         &mut self,
+        graph: &Automaton,
         head: &Head,
         actions: &'a [Action],
     ) -> Result<Cow<'a, [Action]>, Error> {
@@ -1477,11 +1639,10 @@ impl ParseSession {
         {
             return Ok(Cow::Borrowed(actions));
         }
-        let graph = Arc::clone(&self.grammar.automaton);
         let mut reductions = Vec::new();
         for &action in actions {
             if let Action::Reduce(family) = action {
-                let production = self.concrete_production(head, family)?;
+                let production = self.concrete_production(graph, head, family)?;
                 reductions.push((
                     (
                         std::cmp::Reverse(graph.reduction(family).dynamic_precedence),
@@ -1502,9 +1663,13 @@ impl ParseSession {
         Ok(Cow::Owned(ordered))
     }
 
-    fn reduce(&mut self, head: &mut Head, family: ReductionId) -> Result<(), Error> {
-        let graph = Arc::clone(&self.grammar.automaton);
-        let id = self.concrete_production(head, family)?;
+    fn reduce(
+        &mut self,
+        graph: &Automaton,
+        head: &mut Head,
+        family: ReductionId,
+    ) -> Result<(), Error> {
+        let id = self.concrete_production(graph, head, family)?;
         let rule = graph.production(id);
         let count = rule.steps.len();
         self.charge(count)?;
@@ -1522,7 +1687,7 @@ impl ParseSession {
             .transition(under, rule.lhs)
             .ok_or(Error::InvalidTable("missing reduction goto"))?;
         let mut extent: Option<ByteSpan> = None;
-        let (mut body, mut lead) = (vec![], vec![]);
+        let (mut body, mut lead) = (Body::Empty, vec![]);
         for (index, (mut frame, step)) in frames.into_iter().zip(&rule.steps).enumerate() {
             if frame.symbol != step.symbol {
                 return Err(Error::InvalidTable("reduction symbol mismatch"));
@@ -1537,18 +1702,20 @@ impl ParseSession {
                 body.extend(frame.lead);
             }
             if step.alias.is_some() {
+                let alias_step =
+                    u32::try_from(index).map_err(|_| Error::LimitExceeded(Resource::Nodes))?;
                 if graph.symbol(frame.symbol).shape.visible() && frame.body.len() == 1 {
-                    frame.body[0].alias = Some((id, index));
+                    frame.body[0].alias = Some((id, alias_step));
                 } else {
                     let mut wrapper = self.mint(step.symbol, frame.span, frame.body, false)?;
-                    wrapper.alias = Some((id, index));
-                    frame.body = vec![wrapper];
+                    wrapper.alias = Some((id, alias_step));
+                    frame.body = Body::One(wrapper);
                 }
             }
             if let Some(field) = step.field {
                 self.charge(frame.body.len())?;
                 for child in &mut frame.body {
-                    if !self.drafts[child.draft].extra {
+                    if !self.drafts[child.draft as usize].extra {
                         child.field.get_or_insert(field);
                     }
                 }
@@ -1561,16 +1728,16 @@ impl ParseSession {
             }
         }
         if let Some(first) = body.first() {
-            let child = self.drafts[first.draft].span;
+            let child = self.drafts[first.draft as usize].span;
             extent = Some(extent.map_or(child, |old| old.covering(child)));
         }
         if let Some(last) = body.last() {
-            let child = self.drafts[last.draft].span;
+            let child = self.drafts[last.draft as usize].span;
             extent = Some(extent.map_or(child, |old| old.covering(child)));
         }
         let extent = extent.unwrap_or(span(head.last_end, head.last_end)?);
         if graph.symbol(rule.lhs).shape.visible() {
-            body = vec![self.mint(rule.lhs, extent, body, false)?];
+            body = Body::One(self.mint(rule.lhs, extent, body, false)?);
         }
         if head.frames.len() >= self.limits.stack {
             return Err(Error::LimitExceeded(Resource::Stack));
@@ -1602,14 +1769,17 @@ impl ParseSession {
         &mut self,
         symbol: SymbolId,
         extent: ByteSpan,
-        children: Vec<Use>,
+        children: impl Into<Body>,
         extra: bool,
     ) -> Result<Use, Error> {
+        let children = children.into();
         if self.drafts.len() >= self.limits.nodes.min(u32::MAX as usize) {
             return Err(Error::LimitExceeded(Resource::Nodes));
         }
         self.charge(children.len() + 1)?;
-        let draft = self.drafts.len();
+        let draft =
+            u32::try_from(self.drafts.len()).map_err(|_| Error::LimitExceeded(Resource::Nodes))?;
+        let children = children.into_vec();
         self.drafts.push(Draft {
             symbol,
             span: extent,
@@ -1644,7 +1814,7 @@ impl ParseSession {
     fn finish(
         &mut self,
         source: &[u8],
-        head: Head,
+        head: Box<Head>,
         mut forest: Vec<Use>,
         stop: Stop,
         accepted: bool,
@@ -1675,7 +1845,7 @@ impl ParseSession {
         {
             let frame = &head.frames[0];
             let root = frame.body[0];
-            let draft = &self.drafts[root.draft];
+            let draft = &self.drafts[root.draft as usize];
             let symbol = draft.symbol;
             self.charge(
                 frame
@@ -1687,7 +1857,7 @@ impl ParseSession {
             let children: Vec<_> = frame
                 .lead
                 .iter()
-                .chain(&self.drafts[root.draft].children)
+                .chain(&self.drafts[root.draft as usize].children)
                 .chain(&head.pending)
                 .copied()
                 .collect();
@@ -1697,7 +1867,7 @@ impl ParseSession {
                 frame.span.start()
             };
             if let Some(first) = children.first() {
-                from = from.min(self.drafts[first.draft].span.start());
+                from = from.min(self.drafts[first.draft as usize].span.start());
             }
             forest.push(self.mint(symbol, span(from, source.len())?, children, false)?);
         } else {
@@ -1744,6 +1914,78 @@ impl ParseSession {
     }
 
     fn materialize(&mut self, forest: &[Use]) -> Result<Materialized, Error> {
+        let mut nodes = Vec::<NodeData>::new();
+        let mut children = vec![];
+        let mut roots = vec![NodeId(0); forest.len()];
+        let mut cursors = Vec::<MaterializeCursor>::new();
+        for (root_index, root) in forest.iter().copied().enumerate() {
+            let mut next = Some((root, None, root_index));
+            while let Some((node, parent, slot)) = next.take() {
+                if nodes.len() >= self.limits.nodes.min(u32::MAX as usize) {
+                    return Err(Error::LimitExceeded(Resource::Nodes));
+                }
+                self.charge(1)?;
+                let draft = &self.drafts[node.draft as usize];
+                let id = NodeId(
+                    u32::try_from(nodes.len())
+                        .map_err(|_| Error::LimitExceeded(Resource::Nodes))?,
+                );
+                match parent {
+                    None => roots[slot] = id,
+                    Some(_) => children[slot] = id,
+                }
+                let start = children.len();
+                let end = start
+                    .checked_add(draft.children.len())
+                    .ok_or(Error::LimitExceeded(Resource::Nodes))?;
+                let data = NodeData::new(
+                    draft.symbol,
+                    node.alias
+                        .map(|(production, step)| (production, step as usize)),
+                    draft.span,
+                    node.field,
+                    parent,
+                    start..end,
+                    draft.extra,
+                )?;
+                children.resize(end, NodeId(0));
+                nodes.push(data);
+                if let Some(&child) = draft.children.first() {
+                    if draft.children.len() > 1 {
+                        cursors.push(MaterializeCursor {
+                            draft: node.draft,
+                            parent: id,
+                            next_child: 1,
+                        });
+                    }
+                    // Unary chains require no resume storage.
+                    next = Some((child, Some(id), start));
+                    continue;
+                }
+                if let Some(cursor) = cursors.last_mut() {
+                    let siblings = &self.drafts[cursor.draft as usize].children;
+                    let child = siblings[cursor.next_child];
+                    let parent = cursor.parent;
+                    let slot = nodes[parent.index()].child_range().start + cursor.next_child;
+                    cursor.next_child += 1;
+                    if cursor.next_child == siblings.len() {
+                        // Last-child descent never retains a completed ancestor.
+                        cursors.pop();
+                    }
+                    next = Some((child, Some(parent), slot));
+                }
+            }
+            debug_assert!(cursors.is_empty());
+        }
+        Ok(Materialized {
+            nodes,
+            children,
+            roots,
+        })
+    }
+
+    #[cfg(test)]
+    fn materialize_original(&mut self, forest: &[Use]) -> Result<Materialized, Error> {
         enum Slot {
             Root(usize),
             Child(usize),
@@ -1763,7 +2005,7 @@ impl ParseSession {
                 return Err(Error::LimitExceeded(Resource::Nodes));
             }
             self.charge(1)?;
-            let draft = &self.drafts[node.draft];
+            let draft = &self.drafts[node.draft as usize];
             let id = NodeId(
                 u32::try_from(nodes.len()).map_err(|_| Error::LimitExceeded(Resource::Nodes))?,
             );
@@ -1772,16 +2014,21 @@ impl ParseSession {
                 Slot::Child(i) => children[i] = id,
             }
             let start = children.len();
-            children.resize(start + draft.children.len(), NodeId(0));
-            nodes.push(NodeData {
-                symbol: draft.symbol,
-                alias: node.alias,
-                span: draft.span,
-                field: node.field,
+            let end = start
+                .checked_add(draft.children.len())
+                .ok_or(Error::LimitExceeded(Resource::Nodes))?;
+            let data = NodeData::new(
+                draft.symbol,
+                node.alias
+                    .map(|(production, step)| (production, step as usize)),
+                draft.span,
+                node.field,
                 parent,
-                children: start..children.len(),
-                extra: draft.extra,
-            });
+                start..end,
+                draft.extra,
+            )?;
+            children.resize(end, NodeId(0));
+            nodes.push(data);
             for (i, child) in draft.children.iter().copied().enumerate().rev() {
                 pending.push((child, Some(id), Slot::Child(start + i)));
             }
@@ -1810,6 +2057,22 @@ fn word_end(source: &[u8], at: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compact_tree_uses_preserve_the_full_supported_index_domains() {
+        let use_ = Use {
+            draft: u32::MAX,
+            alias: Some((ProductionId::from_index(u32::MAX as usize), u32::MAX)),
+            field: Some(FieldId::from_index(u32::MAX as usize)),
+        };
+        assert_eq!(use_.draft as usize, u32::MAX as usize);
+        assert_eq!(
+            use_.alias.map(|(id, step)| (id.index(), step as usize)),
+            Some((u32::MAX as usize, u32::MAX as usize))
+        );
+        assert_eq!(use_.field.unwrap().index(), u32::MAX as usize);
+        assert_eq!(size_of::<Use>(), 24);
+    }
 
     #[test]
     fn a_fork_shares_both_history_prefixes_without_changing_their_move_ordinals() {
@@ -1951,14 +2214,14 @@ mod tests {
                 symbol: impossible,
                 span: span(0, 0).unwrap(),
                 lead: vec![],
-                body: vec![],
+                body: Body::Empty,
                 unproven: false,
             });
             head.states.push(graph.start_state());
         }
         let mut session = grammar.session();
         assert!(matches!(
-            session.reduce(&mut head, family),
+            session.reduce(&grammar.automaton, &mut head, family),
             Err(Error::InvalidTable(
                 "no concrete reduction matches the actual stack"
             ))
@@ -1967,6 +2230,7 @@ mod tests {
         assert_eq!(head.frames.len(), width);
         assert!(matches!(
             session.reduce(
+                &grammar.automaton,
                 &mut head,
                 ReductionId::from_index(grammar.automaton.reduction_count())
             ),
@@ -2166,5 +2430,45 @@ mod tests {
             pending.extend(node.children());
         }
         assert_eq!(bodies, vec![b" RISCV_FORMAL".as_slice()]);
+    }
+}
+
+#[cfg(test)]
+mod materialize_cursor_tests;
+
+#[cfg(test)]
+mod frame_body_tests;
+
+#[cfg(test)]
+mod charge_limit_tests {
+    use super::*;
+    #[test]
+    fn charge_checked_overflow_and_limit_assignment_order() {
+        let grammar =
+            CompiledGrammar::compile(br#"{"rules":{"doc":{"type":"STRING","value":"x"}}}"#)
+                .unwrap();
+        let mut session = grammar.session();
+        session.limits.steps = usize::MAX;
+        session.steps = usize::MAX - 1;
+        assert!(session.charge(1).is_ok());
+        assert_eq!(session.steps, usize::MAX);
+        assert!(matches!(
+            session.charge(1),
+            Err(Error::LimitExceeded(Resource::Work))
+        ));
+        assert_eq!(session.steps, usize::MAX);
+        assert!(session.charge(0).is_ok());
+        session.steps = 3;
+        session.limits.steps = 4;
+        assert!(session.charge(1).is_ok());
+        assert_eq!(session.steps, 4);
+        assert!(matches!(
+            session.charge(1),
+            Err(Error::LimitExceeded(Resource::Work))
+        ));
+        assert_eq!(session.steps, 5);
+        session.limits.steps = 9;
+        assert!(session.charge(4).is_ok());
+        assert_eq!(session.steps, 9);
     }
 }

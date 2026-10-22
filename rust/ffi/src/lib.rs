@@ -114,8 +114,11 @@ unsafe fn input<'a>(data: *const c_char, len: usize) -> Result<&'a [u8]> {
     if data.is_null() || isize::try_from(len).is_err() {
         return Err(invalid("NULL or oversized byte buffer"));
     }
-    // SAFETY: the caller guarantees one readable, immutable allocation for len bytes;
-    // the checks above reject NULL and lengths exceeding the slice limit.
+    if data.addr().checked_add(len).is_none() {
+        return Err(invalid("byte buffer address wraps"));
+    }
+    // SAFETY: the caller guarantees a single readable, immutable allocation.
+    // The checks above establish a non-NULL pointer, valid slice length, and no address wrap.
     Ok(unsafe { std::slice::from_raw_parts(data.cast(), len) })
 }
 unsafe fn c_string<'a>(data: *const c_char) -> Result<&'a CStr> {

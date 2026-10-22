@@ -115,24 +115,75 @@ struct Run {
     push: Vec<SymbolId>,
 }
 
+mod memo;
+
 /// Owns all canonical effects and working storage for one document or worker.
 ///
 /// Whole runs are interned initially. A handle comparison stays constant time;
 /// hashing and constructing a new product may walk its sequences. This avoids
 /// introducing persistent prefix machinery before its cost has been measured.
 pub struct EffectStore {
+    memo: memo::Memo,
     owner: u64,
     graph: Arc<Automaton>,
     runs: Vec<Arc<Run>>,
     interned: HashMap<Arc<Run>, u32>,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct DocumentMark {
+    owner: u64,
+    runs: usize,
+}
+
 impl EffectStore {
+    /// A private Document edit may discard only its unpublished suffix.
+    pub(crate) fn document_mark(&self) -> DocumentMark {
+        DocumentMark {
+            owner: self.owner,
+            runs: self.runs.len(),
+        }
+    }
+
+    /// All local candidate effects must have dropped before this is called.
+    /// This is not an operation on public EffectStore history: those handles
+    /// may have escaped. Document owns its store and exposes descriptions only.
+    pub(crate) fn discard_document_suffix(
+        &mut self,
+        mark: DocumentMark,
+    ) -> Result<usize, EffectError> {
+        if mark.owner != self.owner {
+            return Err(EffectError::ForeignStore);
+        }
+        if mark.runs > self.runs.len() {
+            return Err(EffectError::InvalidHandle);
+        }
+        let removed = self.runs.len() - mark.runs;
+        if removed == 0 {
+            return Ok(0);
+        }
+        // Validate the complete suffix before changing any map or cache state.
+        for (index, run) in self.runs.iter().enumerate().skip(mark.runs) {
+            if self.interned.get(run.as_ref()).copied() != u32::try_from(index).ok() {
+                return Err(EffectError::InvalidHandle);
+            }
+        }
+        // Compose keys and cached Zero answers can reference removed IDs too.
+        // Invalidate all answers before allowing a suffix index to be reused.
+        self.memo.discard_answers();
+        for run in &self.runs[mark.runs..] {
+            let _ = self.interned.remove(run.as_ref());
+        }
+        self.runs.truncate(mark.runs);
+        Ok(removed)
+    }
+
     pub(crate) fn new(graph: Arc<Automaton>) -> Self {
         let owner = NEXT_STORE
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
             .expect("effect-store identifiers exhausted");
         Self {
+            memo: memo::Memo::default(),
             owner,
             graph,
             runs: Vec::new(),
@@ -200,11 +251,20 @@ impl EffectStore {
     pub fn shift(&mut self, at: StateId, symbol: SymbolId) -> Result<Effect, EffectError> {
         self.check_state(at)?;
         self.check_symbol(symbol)?;
-        self.intern(Run {
+        let memo_key = memo::Key::shift(at, symbol);
+        if let Some(effect) = self.memo.get(memo_key, self.owner) {
+            return Ok(effect);
+        }
+        let result = self.intern(Run {
             entry: at,
             ledger: Vec::new(),
             push: vec![symbol],
-        })
+        });
+        if let Ok(effect) = &result {
+            self.memo
+                .remember_after_warmup(memo_key, *effect, self.owner);
+        }
+        result
     }
 
     pub fn reduce(
@@ -215,6 +275,10 @@ impl EffectStore {
         self.check_state(under)?;
         if production.index() >= self.graph.production_count() {
             return Err(EffectError::InvalidProduction(production));
+        }
+        let memo_key = memo::Key::reduce(under, production);
+        if let Some(effect) = self.memo.get(memo_key, self.owner) {
+            return Ok(effect);
         }
         let rule = self.graph.production(production);
         let mut entry = under;
@@ -234,11 +298,16 @@ impl EffectStore {
             deepest.states = Constraint::finite(vec![under]);
         }
         ledger.reverse();
-        self.intern(Run {
+        let result = self.intern(Run {
             entry,
             ledger,
             push: vec![rule.lhs],
-        })
+        });
+        if let Ok(effect) = &result {
+            self.memo
+                .remember_after_warmup(memo_key, *effect, self.owner);
+        }
+        result
     }
 
     /// Compose in source order. An impossible pairing produces absorbing zero.
@@ -251,6 +320,10 @@ impl EffectStore {
             (Repr::Identity, _) => return Ok(right),
             (_, Repr::Identity) => return Ok(left),
             _ => {}
+        }
+        let memo_key = memo::Key::compose(left, right);
+        if let Some(effect) = self.memo.get(memo_key, self.owner) {
+            return Ok(effect);
         }
         let a = Arc::clone(self.run(left)?);
         let b = Arc::clone(self.run(right)?);
@@ -266,10 +339,14 @@ impl EffectStore {
                 .filter(|&from| self.survives(&a.push, &b, from))
                 .collect();
             if survivors.is_empty() {
+                self.memo
+                    .remember_after_warmup(memo_key, Effect::ZERO, self.owner);
                 return Ok(Effect::ZERO);
             }
             deepest.states = Constraint::Finite(survivors);
         } else if !self.survives(&a.push, &b, a.entry) {
+            self.memo
+                .remember_after_warmup(memo_key, Effect::ZERO, self.owner);
             return Ok(Effect::ZERO);
         }
 
@@ -285,11 +362,16 @@ impl EffectStore {
             ledger.extend_from_slice(&b.ledger[left_depth..]);
             b.push.clone()
         };
-        self.intern(Run {
+        let result = self.intern(Run {
             entry: a.entry,
             ledger,
             push,
-        })
+        });
+        if let Ok(effect) = &result {
+            self.memo
+                .remember_after_warmup(memo_key, *effect, self.owner);
+        }
+        result
     }
 
     pub fn fold(
@@ -850,3 +932,9 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod memo_contract_tests;
+
+#[cfg(test)]
+mod document_rollback_tests;

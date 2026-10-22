@@ -428,9 +428,14 @@ fn weave_borrowed_handle_survives_edits_and_warp_with_atomic_failures() {
             assert_eq!(cost.carried, 0);
             assert_eq!(cost.nodes, jnt_node_spread(tree, jnt_tree_root(tree, 0)));
             if policy == 2 {
-                assert_eq!(cost.stood, 0);
-                assert_eq!(cost.kept, 0);
+                assert!(cost.stood <= 1);
                 assert!(cost.minted > 0);
+                assert_eq!(cost.kept + cost.minted, cost.leaves);
+                let cold = f.parse(b"[3,22]");
+                let edited = bytes(jnt_tree_sexp(tree, 1, &mut len), len).to_vec();
+                assert_eq!(bytes(jnt_tree_sexp(cold, 1, &mut len), len), edited);
+                assert_eq!(jnt_tree_stop(cold), jnt_tree_stop(tree));
+                jnt_tree_free(cold);
             }
         }
         assert_eq!(jnt_weave_policy(weave, 99), JNT_INVALID);
@@ -649,5 +654,167 @@ fn operational_resource_failures_leave_weave_version_and_parser_outputs_atomic()
             b"[2]"
         );
         jnt_weave_free(weave);
+    }
+}
+
+#[test]
+fn oversized_foreign_lengths_refuse_before_reading_or_publishing() {
+    // SAFETY: input checks reject oversized or wrapping spans before reading them; all output
+    // pointers address writable locals.
+    unsafe {
+        let f = Fixture::new();
+        let oversized = usize::try_from(isize::MAX).unwrap() + 1;
+        // These deliberately unaddressable spans must fail the length check
+        // before any byte is read. The pointer itself remains live throughout.
+        let source = c"1".as_ptr();
+        let mut tree = ptr::dangling_mut::<JntTree>();
+        assert_eq!(
+            jnt_parse(f.parser, source, oversized, &mut tree),
+            JNT_INVALID
+        );
+        assert!(tree.is_null());
+        let mut query = ptr::dangling_mut::<JntQuery>();
+        assert_eq!(
+            jnt_query_compile(f.parser, source, oversized, &mut query),
+            JNT_INVALID
+        );
+        assert!(query.is_null());
+        let tree = f.parse(b"1");
+        let query = f.query(b"(number) @n");
+        let mut result = ptr::dangling_mut::<JntQueryResult>();
+        assert_eq!(
+            jnt_query_exec(query, tree, source, oversized, 0, &mut result),
+            JNT_INVALID
+        );
+        assert!(result.is_null());
+        assert_eq!(jnt_node_by_field(tree, 0, source, oversized), JNT_NONE);
+        assert!(error().contains("oversized"));
+        let wrapping = usize::MAX as *const c_char;
+        assert_eq!(
+            jnt_query_exec(query, tree, wrapping, 1, 0, &mut result),
+            JNT_INVALID
+        );
+        assert!(result.is_null());
+        assert!(error().contains("wraps"));
+        let mut weave = ptr::null_mut();
+        assert_eq!(jnt_weave_new(f.parser, &mut weave), JNT_OK);
+        assert_eq!(jnt_weave_warp(weave, source, 1), JNT_OK);
+        assert_eq!(jnt_weave_warp(weave, source, oversized), JNT_INVALID);
+        assert_eq!(jnt_weave_amend(weave, 0, 1, source, oversized), JNT_INVALID);
+        assert_eq!(jnt_weave_len(weave), 1);
+        assert_eq!(jnt_tree_stop(jnt_weave_tree(weave)), 0);
+        jnt_weave_free(weave);
+        jnt_query_free(query);
+        jnt_tree_free(tree);
+    }
+}
+
+#[test]
+fn binary_edit_lifecycle_matches_cold_trees_and_retains_failed_edit_views() {
+    // SAFETY: input slices remain live for each call; returned views are consumed before
+    // mutation or retained only across failed edits.
+    unsafe {
+        let f = Fixture::new();
+        let query = f.query(b"(number) @n");
+        let mut random = 0x2b96_30e1_6f50_781du64;
+        let mut next = |bound: usize| {
+            random ^= random << 13;
+            random ^= random >> 7;
+            random ^= random << 17;
+            usize::try_from(random % u64::try_from(bound).unwrap()).unwrap()
+        };
+        for policy in 0..=2 {
+            let mut weave = ptr::null_mut();
+            assert_eq!(jnt_weave_new(f.parser, &mut weave), JNT_OK);
+            assert_eq!(jnt_weave_policy(weave, policy), JNT_OK);
+            let mut source = b"{\"a\":[1,2],\"b\":true}".to_vec();
+            assert_eq!(
+                jnt_weave_warp(weave, source.as_ptr().cast(), source.len()),
+                JNT_OK
+            );
+            let tree = jnt_weave_tree(weave);
+            for step in 0..160 {
+                let from = next(source.len() + 1);
+                let to = from + next(source.len() - from + 1);
+                let replacements: &[&[u8]] = &[
+                    b"",
+                    b"1",
+                    b"[1,2]",
+                    b"true",
+                    b"\"x\"",
+                    b"\x00\xff\x80",
+                    b"{}",
+                    b"\r\n",
+                ];
+                let insert = replacements[next(replacements.len())];
+                assert_eq!(
+                    jnt_weave_amend(
+                        weave,
+                        u32::try_from(from).unwrap(),
+                        u32::try_from(to).unwrap(),
+                        insert.as_ptr().cast(),
+                        insert.len()
+                    ),
+                    JNT_OK,
+                    "policy {policy}, step {step}: {}",
+                    error()
+                );
+                source.splice(from..to, insert.iter().copied());
+                assert_eq!(jnt_weave_tree(weave), tree);
+                assert_eq!(jnt_weave_len(weave), source.len());
+                let cold = f.parse(&source);
+                assert_eq!(jnt_tree_stop(tree), jnt_tree_stop(cold));
+                assert_eq!(jnt_tree_stop_at(tree), jnt_tree_stop_at(cold));
+                assert_eq!(jnt_tree_sound(tree), 1);
+                assert_eq!(jnt_tree_scars(tree), jnt_tree_scars(cold));
+                for i in 0..jnt_tree_scars(tree) {
+                    let mut edited = JntScar::default();
+                    let mut baseline = JntScar::default();
+                    assert_eq!(jnt_tree_scar(tree, i, &mut edited), JNT_OK);
+                    assert_eq!(jnt_tree_scar(cold, i, &mut baseline), JNT_OK);
+                    assert_eq!(edited, baseline);
+                }
+                for all in 0..=1 {
+                    let mut len = 0;
+                    let rendered = jnt_tree_sexp(tree, all, &mut len);
+                    let expected = bytes(rendered, len).to_vec();
+                    let mut cold_len = 0;
+                    assert_eq!(
+                        bytes(jnt_tree_sexp(cold, all, &mut cold_len), cold_len),
+                        expected
+                    );
+                    assert_eq!(
+                        jnt_weave_amend(weave, u32::MAX, u32::MAX, ptr::null(), 0),
+                        JNT_INVALID
+                    );
+                    assert_eq!(bytes(rendered, len), expected);
+                    assert_eq!(jnt_tree_sexp(tree, all, ptr::null_mut()), rendered);
+                }
+                let mut result = ptr::null_mut();
+                assert_eq!(
+                    jnt_query_exec(
+                        query,
+                        tree,
+                        source.as_ptr().cast(),
+                        source.len(),
+                        0,
+                        &mut result
+                    ),
+                    JNT_OK
+                );
+                assert_eq!(jnt_weave_warp(weave, ptr::null(), 0), JNT_INVALID);
+                assert_eq!(jnt_weave_len(weave), source.len());
+                for i in 0..jnt_query_result_count(result) {
+                    let node = jnt_query_result_capture_node(result, i, 0);
+                    assert!(jnt_node_start(tree, node) <= jnt_node_end(tree, node));
+                    assert!(jnt_node_end(tree, node) as usize <= source.len());
+                }
+                jnt_query_result_free(result);
+                jnt_tree_free(cold);
+            }
+            jnt_weave_free(weave);
+            assert_eq!(jnt_tree_stop(tree), JNT_INVALID);
+        }
+        jnt_query_free(query);
     }
 }
