@@ -7,6 +7,116 @@ installed-package, and cost runs;
 their individual ratios must not be multiplied into a predicted result.
 The 1.10 latency/RSS ceiling and default cutover remain open.
 
+## Safe public-API profiling follow-on, 2026-10-22
+
+The development checkout adds checked sibling lookup over preorder IDs,
+allocation-free subtree counting, full-tier native lexer admission, a single
+newline-index search, and effect compatibility checks before ledger copying.
+No unsafe engine code, unchecked indexing, new per-node fields, relaxed
+validation, or larger resource ceilings are introduced. The parser child-arena
+trial remains private: its paired run regressed large-JSON parse medians by
+11–15 percent and one whole-process edit RSS measurement by 36 percent.
+
+The new `rust/benches/runtime.rs` exercises 15 public API workloads: grammar
+compilation, artifact writing/loading, bank loading, lexical walks, fresh/reused
+parsing, effect products, query compilation/execution, sibling navigation,
+covering nodes, subtree size, document opening, and paired end edits. Setup,
+complete output checks and SHA calculation are outside timed regions;
+allocations and destruction are included. An edit row contains two edits.
+Standalone lexical walks report coverage because they can stop before the end
+of a contextual language. This is workload coverage, not a claim to time every
+internal function or every scanner, recovery policy, input size and worker count.
+
+`tool/rust_perf.py` alternates before/after process order, retains raw samples
+and p95 values, and refuses mismatched source/grammar, full tree, lexical,
+query or effect digests. It also checks sample coverage, iteration counts and
+unchanged executable/input hashes. Four portable regression tests exercise
+these refusal paths. It records the requested 5×/10× median targets per
+workload without treating one fast component as a whole-program improvement.
+The comparison baseline is the starting Rust checkout; the separate Rust/Zig
+cutover ceiling remains unchanged.
+
+With the checked native archive selected as described in [README.md](README.md),
+build the benchmark with `cargo bench --manifest-path rust/Cargo.toml --bench
+runtime --no-run`. The resulting executable accepts `--grammar`, `--source`,
+`--samples`, `--iterations`, `--entries` and `--only`. Retain one executable per
+revision, then compare them:
+
+```sh
+python3 tool/rust_perf.py --baseline /absolute/path/before-runtime \
+  --candidate /absolute/path/after-runtime \
+  --output /absolute/path/new-comparison --rounds 3 --samples 15
+```
+
+Development evidence is retained under
+`.local/rust-optimization-2026-10-22/`. The isolated full-permission native
+kernel improves 1.22–7.82× for 8–512 patterns. An uncached incompatible
+eight-claim effect composition improves 19.14× by avoiding discarded copies;
+accepted calls and warm memo hits show much smaller or mixed changes.
+These synthetic results supply no parser-wide gain. Fresh qualitative CPU
+samples still identify lexical scanning, parser advancement, native image
+validation and integrity hashing as substantial remaining costs. The samples
+are inclusive diagnostics and cannot be added into a predicted speedup.
+
+The combined diagnostic compares the same benchmark source against the captured
+starting engine and the edited engine. Three alternating rounds retain 45
+samples per backend/workload/case and matching complete output digests. All
+60 workload groups retain their p95 values in `measure/*/summary.json`;
+several tails regress substantially under uncontrolled host activity. Median
+speedups below are **before / after**, so values below one are regressions.
+
+| Workload | Wide JSON | Ledger JSON | Go | Python |
+|---|---:|---:|---:|---:|
+| Sibling navigation | 117.475 | 1.117 | 1.025 | 0.959 |
+| Root subtree size | 57.886 | 11.014 | 8.135 | 11.832 |
+| Lexical walk | 1.048 | 0.950 | 0.987 | 1.593 |
+| Fresh-session parse | 1.057 | 0.974 | 0.797 | 0.906 |
+| Reused-session parse | 1.076 | 0.991 | 0.820 | 0.780 |
+| Paired end edits | 1.000 | 1.001 | 0.954 | 1.158 |
+
+The subtree operation becomes very short. Separate controls with 1,024 calls
+per sample confirm its improvement beyond single-call clock granularity;
+`subtree-batched/` retains those repeated-call results. The wide sibling
+workload visits every node and asks for both ordinary and named neighbors.
+Its large gain does not describe a small sibling list or parsing throughput.
+
+Focused parse controls use five alternating rounds, 21 samples and 16 calls
+per sample. Go fresh/reused speedups are 0.788/1.082, and Python fresh/reused
+are 0.928/1.062. A separate one-file lexer ablation changes Go fresh parsing by
+about 3 percent, with mixed round directions; it does not attribute the earlier
+large gap to that shortcut. The general parsing target remains open rather
+than treating these conflicting diagnostic results as a pass.
+
+Three whole-process peak-RSS observations per backend/case give edited/starting
+median ratios of 1.022 for wide JSON, 1.020 for ledger JSON, 1.044 for Go and
+0.987 for Python. These include setup, validation, all workloads and allocator
+retention. They establish no per-function memory reduction or leak result.
+Raw observations are under `memory/`.
+
+The development source passes 446 release-profile tests with 16 declared
+ignores and the same 446-test AddressSanitizer roster; ASan instrumentation is
+verified in 34 binaries. The Rust standard library and native archive remain
+outside Rust ASan, with leak detection disabled. Strict all-target/all-feature
+checks pass on Rust 1.85 and 1.96. The exact Rust 1.85 source closure contains
+565 files. Formatting, the separate four-test recorder controls and focused
+tree checks supplement these results; the final local receipt identifies their
+sources and logs. Historical package qualification is not inherited.
+
+The final source-backed build refreshes stale producer metadata for the checked
+native boundary. Its archive container and private symbol namespace differ from
+the measured archive, while the complete raw `irgx.o` payload is byte-identical
+(SHA-256 `d492698c84ebf7a4e60983cd2da12f174d257bb0a41d815d82d2b8fbebe141e7`).
+Both checked transforms retain the same runtime sections, relocation counts,
+public exports and unresolved imports. Fresh JSON/Go/Python smoke runs with the
+refreshed native boundary preserve every tree, lexical, query and effect digest
+and artifact size. `native-object-join.json` and `final-native-context.json`
+retain that join; complete performance figures still identify their original
+immutable benchmark executables.
+
+The 5–10× target across all functions remains unmet. These development checks
+do not replace the complete fixed cost matrix, working consumers, installed
+delivery, physical platforms, sealed aggregate or rollback gates below.
+
 ## Current packaged Q7 result, 2026-10-22
 
 The selected source completes fresh installed checks and the full fixed cost

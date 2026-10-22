@@ -325,10 +325,9 @@ impl EffectStore {
         if let Some(effect) = self.memo.get(memo_key, self.owner) {
             return Ok(effect);
         }
-        let a = Arc::clone(self.run(left)?);
-        let b = Arc::clone(self.run(right)?);
-        let mut ledger = a.ledger.clone();
-        if let Some(deepest) = ledger.last_mut() {
+        let a = self.run(left)?;
+        let b = self.run(right)?;
+        let mut ledger = if let Some(deepest) = a.ledger.last() {
             let Constraint::Finite(floors) = &deepest.states else {
                 // All constructors retain a finite, nonempty live floor.
                 return Err(EffectError::InvalidHandle);
@@ -336,19 +335,30 @@ impl EffectStore {
             let survivors: Vec<_> = floors
                 .iter()
                 .copied()
-                .filter(|&from| self.survives(&a.push, &b, from))
+                .filter(|&from| self.survives(&a.push, b, from))
                 .collect();
             if survivors.is_empty() {
                 self.memo
                     .remember_after_warmup(memo_key, Effect::ZERO, self.owner);
                 return Ok(Effect::ZERO);
             }
-            deepest.states = Constraint::Finite(survivors);
-        } else if !self.survives(&a.push, &b, a.entry) {
-            self.memo
-                .remember_after_warmup(memo_key, Effect::ZERO, self.owner);
-            return Ok(Effect::ZERO);
-        }
+            // Prove compatibility before copying any interior claims. The
+            // deepest state set is replaced, so do not clone its old buffer.
+            let mut ledger = Vec::with_capacity(a.ledger.len());
+            ledger.extend_from_slice(&a.ledger[..a.ledger.len() - 1]);
+            ledger.push(Claim {
+                states: Constraint::Finite(survivors),
+                symbols: deepest.symbols.clone(),
+            });
+            ledger
+        } else {
+            if !self.survives(&a.push, b, a.entry) {
+                self.memo
+                    .remember_after_warmup(memo_key, Effect::ZERO, self.owner);
+                return Ok(Effect::ZERO);
+            }
+            Vec::new()
+        };
 
         let left_depth = a.push.len();
         let eaten = b.ledger.len();

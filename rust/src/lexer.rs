@@ -598,25 +598,35 @@ impl Lexer {
         let mut keyword = None;
         for (tier_index, tier) in self.tiers.iter().enumerate() {
             allow.clear();
-            allow.extend(
-                tier.entries
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, entry)| {
-                        (admitted.is_none() || entry.extra || named(entry))
-                            && (!entry.immediate || fresh)
-                    })
-                    .map(|(i, _)| u32::try_from(i).expect("bounded lexer tier entries")),
-            );
-            if allow.is_empty() {
-                continue;
-            }
+            // A fresh, unrestricted question admits the entire tier. Keeping
+            // that fact as None avoids constructing the same ordinal list in
+            // Rust and then rebuilding it as a native permission mask.
+            let native_allow = if admitted.is_none() && fresh {
+                None
+            } else {
+                allow.extend(
+                    tier.entries
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, entry)| {
+                            (admitted.is_none() || entry.extra || named(entry))
+                                && (!entry.immediate || fresh)
+                        })
+                        .map(|(i, _)| u32::try_from(i).expect("bounded lexer tier entries")),
+                );
+                if allow.is_empty() {
+                    continue;
+                }
+                // The list contains distinct, in-order tier ordinals. Its
+                // length proves full admission without trusting caller IDs.
+                (allow.len() != tier.entries.len()).then_some(allow.as_slice())
+            };
             #[cfg(all(test, feature = "munch-image"))]
             let observed = working_image_trial::native_before(
                 &tier.slate,
                 source,
                 at,
-                Some(allow),
+                native_allow,
                 pick,
                 fresh,
                 question,
@@ -627,7 +637,7 @@ impl Lexer {
             // Preserve the same empty-winner error state for that earlier failure.
             winners.clear();
             let result = workers.slate(self, tier_index).and_then(|slate| {
-                slate.scan_bytes_metered_into(source, at, Some(allow), pick, &mut budget, winners)
+                slate.scan_bytes_metered_into(source, at, native_allow, pick, &mut budget, winners)
             });
             #[cfg(all(test, feature = "munch-image"))]
             working_image_trial::native_after(observed, &result, winners, budget, *work.selection);

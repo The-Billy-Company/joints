@@ -21,6 +21,15 @@ arena positions. Alias, parent, field, child-range, and source-offset narrowing
 uses checked conversions. Speculative branches share immutable draft nodes and
 keep alias and field choices at their individual use sites.
 
+Published node IDs follow a complete source-ordered preorder traversal. Each
+sibling run is strictly increasing, including empty spans, and every subtree
+occupies one contiguous ID interval. Wide sibling lookup can therefore use a
+checked binary search, and subtree size can follow the final child chain without
+allocating a traversal stack. Nodes continue to borrow their owning snapshot;
+these shortcuts add no indexes, unsafe access, or retained storage. Independent
+linear navigation and explicit descendant walks check the results on complete
+trees and partial forests.
+
 Advancement borrows an immutable automaton from an operation-owned `Arc`.
 The borrow never escapes the operation. Singleton stack bodies keep their
 use inline; persistent draft children remain independently owned vectors.
@@ -92,6 +101,12 @@ further growth. Rejected allocator overdelivery remains outside that transient
 bound. This is not a per-document RSS guarantee. Cache probes and rehashes do
 not change the existing abstract parser work units.
 
+Effect composition checks both handles before memoization and borrows its
+immutable input runs while proving compatibility. Incompatible floor sets
+return Zero before copying interior ledger claims. Surviving claims retain the
+same order, guards, interning, and publication rules; this removes temporary
+copies without changing effect identities or resource accounting.
+
 Public effect stores retain every distinct interned effect until the store is
 dropped, because callers may have copied their handles. A document owns a private
 store and exposes descriptions rather than handles. It marks the store before
@@ -121,6 +136,11 @@ Native lexer workers use the binding's exclusive pool leases. Immutable native
 program sharing and cloning have their own checked ownership rules. Each
 worker's mutable buffers are separate. The core does not infer native exclusive
 access from a reference count or bypass the binding's synchronization.
+An unrestricted fresh lexical question, or a filtered permission list proved to
+contain every tier ordinal, can use the binding's all-admitted representation.
+The native machine, transition meter, winner checks and empty-token rules are
+unchanged. Differential controls cover mask-word boundaries, tied winners,
+invalid input offsets, binary inputs and exhausted budgets.
 
 ## Validation
 

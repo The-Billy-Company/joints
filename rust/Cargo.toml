@@ -57,6 +57,10 @@ path = "src/lib.rs"
 name = "joints-rs"
 path = "src/bin/joints.rs"
 
+[[bench]]
+name = "runtime"
+harness = false
+
 [features]
 munch-image = ["irgx/munch-image"]
 

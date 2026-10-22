@@ -6,6 +6,12 @@ Rust C binding. Grammar compilation, parsing, trees, and guarded effects execute
 in Rust. Regex services reuse the sibling `irgx` safe Rust binding and its
 native library; production parsing does not use tree-sitter.
 
+The 2026-10-22 development follow-on adds safe tree-navigation and allocation
+optimizations plus a repeatable 15-workload public API benchmark. It does not
+achieve the requested 5–10× gain across every function or qualify a default
+switch. See the [profiling follow-on](PERFORMANCE.md#safe-public-api-profiling-follow-on-2026-10-22).
+The retained package results below identify their earlier immutable sources.
+
 The workspace now includes the Image1 implementation: cold and incremental
 parsing, scanner programs, guarded effects, queries, all eight CLI verbs, the
 ABI 2 adapter, and checked native lexer images in V3/S4 artifacts. Regex image

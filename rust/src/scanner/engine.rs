@@ -120,7 +120,11 @@ impl SourceIndex {
         }
     }
     fn broke(&self, from: usize, to: usize) -> bool {
-        self.breaks.partition_point(|&i| i < from) != self.breaks.partition_point(|&i| i < to)
+        if from == to {
+            return false;
+        }
+        let first = self.breaks.partition_point(|&i| i < from.min(to));
+        self.breaks.get(first).is_some_and(|&i| i < from.max(to))
     }
 }
 fn soak(
@@ -773,6 +777,24 @@ mod tests {
     use super::*;
     use crate::compiler::Automaton;
     use serde_json::{Value, json};
+
+    #[test]
+    fn gap_break_queries_match_both_partition_points_for_every_interval() {
+        for source in [b"".as_slice(), b"one line", b"\r\none\n\n \t\rtwo\n"] {
+            let mut remaining = usize::MAX;
+            let index = SourceIndex::build(source, 4, &mut remaining).unwrap();
+            for from in 0..=source.len() + 2 {
+                for to in 0..=source.len() + 2 {
+                    let expected = index.breaks.partition_point(|&i| i < from)
+                        != index.breaks.partition_point(|&i| i < to);
+                    assert_eq!(index.broke(from, to), expected);
+                }
+            }
+            assert_eq!(index.broke(0, usize::MAX), !index.breaks.is_empty());
+            assert_eq!(index.broke(usize::MAX, 0), !index.breaks.is_empty());
+            assert!(!index.broke(usize::MAX, usize::MAX));
+        }
+    }
     fn graph() -> Automaton {
         Automaton::from_tree_sitter(&serde_json::to_vec(&json!({"name":"engine-test","externals":[{"type":"SYMBOL","name":"answer"},{"type":"SYMBOL","name":"other"}],"rules":{"doc":{"type":"STRING","value":"x"}}})).unwrap()).unwrap()
     }

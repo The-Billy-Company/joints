@@ -536,7 +536,16 @@ impl<'tree> Node<'tree> {
 
     fn neighbor(self, forward: bool, named: bool) -> Option<Self> {
         let run = self.sibling_run();
-        let at = run.iter().position(|&id| id == self.id)?;
+        // Materialization assigns IDs in source-ordered preorder, so each
+        // sibling run is strictly increasing even when spans are empty or
+        // several nodes start at the same byte. Avoid rescanning wide lists
+        // from the beginning for each step of a sibling traversal.
+        let at = if run.len() <= 16 {
+            run.iter().position(|&id| id == self.id)?
+        } else {
+            run.binary_search_by_key(&self.id.index(), |id| id.index())
+                .ok()?
+        };
         let make = |id| Self {
             tree: self.tree,
             id,
@@ -580,19 +589,17 @@ impl<'tree> Node<'tree> {
         depth
     }
 
-    /// Count without recursive host-stack use; allocation refusal stays explicit.
+    /// Count from the final descendant in the immutable preorder arena.
+    /// No recursive host-stack use or temporary allocation is needed. The
+    /// fallible return type is retained for compatibility with existing callers.
     pub fn subtree_size(self) -> Result<usize, std::collections::TryReserveError> {
-        let mut pending = Vec::new();
-        pending.try_reserve(1)?;
-        pending.push(self.id);
-        let mut count = 0;
-        while let Some(id) = pending.pop() {
-            count += 1;
-            let children = &self.tree.children[self.tree.nodes[id.index()].child_range()];
-            pending.try_reserve(children.len())?;
-            pending.extend_from_slice(children);
+        let mut last = self;
+        while let Some(child) = last.children().next_back() {
+            last = child;
         }
-        Ok(count)
+        // Every subtree occupies one contiguous preorder interval. IDs are
+        // bounded by the source tree's validated u32-sized node arena.
+        Ok(last.index() - self.index() + 1)
     }
 }
 
@@ -742,6 +749,47 @@ mod tests {
                 .index(),
             comment.index()
         );
+    }
+
+    #[test]
+    fn sibling_search_matches_linear_navigation_for_every_published_node() {
+        let grammar =
+            CompiledGrammar::compile(include_bytes!("../../test/grammar/json.json")).unwrap();
+        for width in [1, 7, 8, 16, 17, 64, 257] {
+            for element in ["1", "[1,2]", "{\"a\":[],\"b\":true}"] {
+                let source = format!("[{}]", vec![element; width].join(","));
+                for source in [source.as_bytes(), &source.as_bytes()[..source.len() - 1]] {
+                    let tree = grammar.session().parse_partial(source).unwrap();
+                    for index in 0..tree.nodes.len() {
+                        let node = tree.node_at(index).unwrap();
+                        let mut pending = vec![node];
+                        let mut expected_count = 0;
+                        while let Some(descendant) = pending.pop() {
+                            expected_count += 1;
+                            pending.extend(descendant.children());
+                        }
+                        assert_eq!(node.subtree_size().unwrap(), expected_count);
+                        let siblings: Vec<_> = node.sibling_run().to_vec();
+                        assert!(siblings.windows(2).all(|w| w[0].index() < w[1].index()));
+                        let at = siblings.iter().position(|&id| id == node.id).unwrap();
+                        for named in [false, true] {
+                            let expected = |id| {
+                                let sibling = Node { tree: &tree, id };
+                                (!named || sibling.is_named()).then_some(id.index())
+                            };
+                            assert_eq!(
+                                node.neighbor(true, named).map(Node::index),
+                                siblings[at + 1..].iter().copied().find_map(expected)
+                            );
+                            assert_eq!(
+                                node.neighbor(false, named).map(Node::index),
+                                siblings[..at].iter().rev().copied().find_map(expected)
+                            );
+                        }
+                    }
+                }
+            }
+        }
     }
 
     #[test]
