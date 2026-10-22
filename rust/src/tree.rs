@@ -876,16 +876,26 @@ mod tests {
                         assert!(siblings.windows(2).all(|w| w[0].index() < w[1].index()));
                         let at = siblings.iter().position(|&id| id == node.id).unwrap();
                         for named in [false, true] {
+                            let next = if named {
+                                node.next_named_sibling()
+                            } else {
+                                node.next_sibling()
+                            };
+                            let previous = if named {
+                                node.prev_named_sibling()
+                            } else {
+                                node.prev_sibling()
+                            };
                             let expected = |id| {
                                 let sibling = Node { tree: &tree, id };
                                 (!named || sibling.is_named()).then_some(id.index())
                             };
                             assert_eq!(
-                                node.neighbor(true, named).map(Node::index),
+                                next.map(Node::index),
                                 siblings[at + 1..].iter().copied().find_map(expected)
                             );
                             assert_eq!(
-                                node.neighbor(false, named).map(Node::index),
+                                previous.map(Node::index),
                                 siblings[..at].iter().rev().copied().find_map(expected)
                             );
                         }
