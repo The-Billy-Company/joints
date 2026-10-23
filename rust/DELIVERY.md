@@ -5,7 +5,13 @@ do not publish a release, change the default engine, or establish support on
 a host that has not executed the candidate. See [CUTOVER.md](CUTOVER.md) for
 activation, artifact re-minting, and rollback.
 
-The current Q7 source completes fresh native108 V3/S4 delivery on 2026-10-22.
+The fixed cutover runtime is `c54221b`, with native source `bf19d6b`. Its
+workspace and actual-host source checks pass; installed packages and full
+consumer results for this candidate must be recorded separately. See
+[the fixed candidate](PERFORMANCE.md#fixed-cutover-candidate-2026-10-22).
+The Q7 receipts below remain attached to their earlier source.
+
+The retained Q7 source completes fresh native108 V3/S4 delivery on 2026-10-22.
 All 40 extracted installed checks pass on the current Mac and under Linux
 amd64 emulation. Both Rust 1.85 and 1.96 pass 443 default tests with 16 ignores
 in the Linux release replay. The same 564-file compiled-source/runtime-fixture
@@ -359,19 +365,35 @@ upload, or default-engine switch is performed by this tool.
 
 The opt-in [candidate workflow](../.github/workflows/rust-candidate.yml) checks
 installed archives on Ubuntu 24.04 x86-64 and macOS 14 ARM64. It requires an exact
-helper-present commit and HTTPS archive URLs with independently supplied SHA-256
-digests. The verifier bootstrap is pinned separately from the candidate archive.
+helper-present commit and independently supplied archive SHA-256 digests. Select
+either HTTPS archive URLs or exact asset IDs in an unpublished draft release
+of this repository. The verifier bootstrap is pinned separately from the candidate archive.
 No workflow is dispatched by editing this file or by an ordinary push.
+
+Draft mode binds `release_id`, `candidate_commit`, `linux_asset_id` and
+`macos_asset_id`, with both target digests. The fixed asset names are
+`candidate-linux-x86_64.tar.gz` and `candidate-macos-arm64.tar.gz`.
+`candidate_commit` identifies the runtime source independently from
+`helper_ref`. The GET-only helper checks release membership, unpublished
+status, source commit, metadata and actual downloaded bytes before installed
+verification. Signed storage requests receive no GitHub bearer token.
+
+The optional `transport_only` mode downloads just the selected Linux asset on
+Ubuntu with `contents: read`. It proves only transport access and SHA-256, and
+skips the installed matrix. Draft visibility with that token must be proved;
+an access refusal neither publishes the draft nor grants a broader token.
 
 Keep the workflow's three verifier SHA-256 pins synchronized when changing
 `tool/rust_delivery.py`, `tool/rust_archive.py`, or
 `tool/rust_static_boundary.py`. Its separate Python bootstrap pin must match
-`tool/rust_python_bootstrap.py`. Before preparing a helper commit, run the
+`tool/rust_python_bootstrap.py`; both draft-download pins must match
+`tool/rust_candidate_download.py`. Before preparing a helper commit, run the
 offline delivery and bootstrap controls with Python 3.12 or newer:
 
 ```sh
 python3.12 -B -m unittest discover -s tool -p test_rust_delivery.py
 python3.12 -B -m unittest discover -s tool -p test_rust_python_bootstrap.py
+python3.12 -B -m unittest discover -s tool -p test_rust_candidate_download.py
 ```
 
 The controls check those exact workflow pins as well as package and input
@@ -504,8 +526,8 @@ macOS 26.6 ARM64 and SDK 26.5 and does not establish macOS 14 execution.
 The opt-in `.github/workflows/rust-candidate.yml` validates actual Ubuntu 24.04
 x86-64 and macOS 14 ARM64 before installed verification. Its actions and helper
 hashes are pinned, and actionlint passes. It still requires a helper-present
-commit and accessible HTTPS candidate archives with independent hashes. It
-has not been committed, pushed or dispatched. A newer Mac, Linux emulation,
+commit and accessible candidate archives with independent hashes. At this
+historical checkpoint it had not been committed, pushed or dispatched. A newer Mac, Linux emulation,
 or binary deployment metadata cannot establish those execution floors.
 
 The same immutable source2 closure also completed fresh native108 compilation,

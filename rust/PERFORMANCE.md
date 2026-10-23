@@ -7,6 +7,70 @@ installed-package, and cost runs;
 their individual ratios must not be multiplied into a predicted result.
 The 1.10 latency/RSS ceiling and default cutover remain open.
 
+## Fixed cutover candidate, 2026-10-22
+
+The selected runtime is `c54221b`, with native source `bf19d6b`. It removes
+the optional permission-cache trial. Fresh local qualification passes all
+457 default tests, with 16 declared ignores, on Rust 1.85 and 1.96, plus
+formatting, both strict all-target/all-feature checks and Clippy, and a fresh
+release build. The complete compiled-source/runtime-fixture closure contains
+568 files. Sanitizer, full working-consumer and installed-package runs for
+this candidate are separate from that workspace result.
+
+[Source CI run 39873594325](https://github.com/The-Billy-Company/joints/actions/runs/39873594325)
+also passes the complete 457/16 roster on both compilers on actual macOS
+14.8.9 ARM64 and Ubuntu 24.04.5 x86-64 hosts. It executes PR merge `b2a38ec`
+whose candidate parent is `c54221b`. Both hosts produce the same byte-identical
+starting/current JSON, Go and Python artifacts before timing. Standard CI
+and CodeQL pass for the same candidate.
+
+The unchanged benchmark covers 15 public API workloads and four cases per
+host. It does not time every internal function. Three alternating rounds
+retain 45 observations per backend/workload/case, complete output digests,
+raw samples and p95 values. Ranges below are starting-Rust (`9881c96`) /
+selected median time across the four cases; values below one are regressions.
+
+| Workload | macOS speedup range | Linux speedup range |
+|---|---:|---:|
+| Artifact load | 0.956–1.378 | 1.014–1.269 |
+| Artifact write | 0.899–1.150 | 0.958–1.228 |
+| Bank load | 0.929–1.129 | 1.009–1.255 |
+| Compile | 0.685–1.035 | 0.895–1.027 |
+| Paired end edits | 0.926–1.654 | 1.002–1.151 |
+| Document open | 0.830–1.155 | 0.996–1.031 |
+| Fresh-store effect product | 3.706–74.463 | 5.036–72.255 |
+| Lexical walk | 0.913–1.007 | 0.984–1.077 |
+| Fresh-session parse | 0.936–1.220 | 1.001–1.022 |
+| Reused-session parse | 0.856–1.038 | 1.001–1.024 |
+| Query compile | 1.091–1.487 | 1.130–1.217 |
+| Query execute | 1.232–1.610 | 1.161–1.309 |
+| Covering node | 0.975–1.071 | 0.970–1.009 |
+| Sibling navigation | 1.067–4.267 | 1.131–4.763 |
+| Root subtree size | 0.803–1.000 | 0.953–1.111 |
+
+Only 3/60 macOS groups and 4/60 Linux groups meet 5×. Parsing on Linux is
+near its starting baseline; macOS retains adverse reused-parse and compile
+results. Some adverse directions recur across rounds. The reports preserve
+them rather than attributing every regression to host noise. These results
+establish neither the requested general 5–10× gain nor the separate fixed
+Rust/Zig cost ceiling. Exact reports and custody are under
+`.local/rust-cutover-2026-10-22/source-ci-c54221b-{macos-arm64,linux-x86_64}/`;
+`source-ci-c54221b-summary.json` joins both hosts.
+
+One same-source tree-validation ablation compares this candidate with its
+unchanged full-walk fallback forced on. The normal/full median-time ratios
+are 0.995 for JSON reused parsing, 1.017 for JSON fresh parsing, 1.016 for
+Python reused parsing and 0.943 for Go reused parsing. Round directions are
+mixed; Go whole-child CPU favors the normal path in every round. This does
+not identify the shortcut as the cause of the larger hosted regressions, so
+it is retained. The experiment restores its source and preserves exact
+binaries, native selection, semantic digests, tails and child CPU under
+`.local/tree-measure-ablation-20261022/`. Whole-child CPU includes setup and
+validation and does not supply per-function CPU timings.
+
+All earlier results below remain attached to their recorded sources. They
+are not passes for `c54221b`.
+
 ## Cutover follow-on against starting Rust, 2026-10-22
 
 The requested baseline is commit `9881c96`. A fresh benchmark executable was

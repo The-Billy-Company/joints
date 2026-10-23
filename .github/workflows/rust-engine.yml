@@ -71,6 +71,7 @@ jobs:
           python -B -m unittest discover -s tool -p test_rust_engine_ci.py
           python -B -m unittest discover -s tool -p test_rust_python_bootstrap.py
           python -B -m unittest discover -s tool -p test_rust_perf_ci.py
+          python -B -m unittest discover -s tool -p test_rust_candidate_download.py
           mkdir -p .local/rust-engine-ci-bootstrap
           python -B tool/grammars.py fetch --set=all 2>&1 | tee .local/rust-engine-ci-bootstrap/fetch.log
           python -B tool/grammars.py verify --set=all 2>&1 | tee .local/rust-engine-ci-bootstrap/verify.log

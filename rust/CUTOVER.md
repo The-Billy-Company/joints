@@ -9,8 +9,14 @@ The existing local sequence is `tool/rust_qualify.py`, then
 identities. See [delivery](DELIVERY.md) for the exact
 arguments and the native108 selection required by the current source.
 
-The workspace is receiving further performance and memory-safety changes.
-The current Q7 source reclaims unpublished effects after rejected document
+The fixed cutover candidate is `c54221b` with native source `bf19d6b`. Its
+fresh local workspace qualification and actual-host source CI pass 457 default
+tests with 16 ignores on both Rust versions. The general 5–10× performance
+target remains unmet. See [the fixed candidate](PERFORMANCE.md#fixed-cutover-candidate-2026-10-22)
+for exact source identities and all 15 workload ranges. The older results
+below qualify their own snapshots only.
+
+The retained Q7 source reclaims unpublished effects after rejected document
 edits. It passes 443 default tests on each Rust version, strict checks and the
 release build with a stable 564-file source/runtime-fixture closure. The same
 source passes 443 ASan tests with instrumentation verified in 33 binaries.
