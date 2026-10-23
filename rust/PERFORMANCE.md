@@ -17,14 +17,28 @@ release build. The complete compiled-source/runtime-fixture closure contains
 568 files. The same candidate passes all 457 default tests under Rust ASan,
 with instrumentation verified in 33 test binaries; the native archive and
 prebuilt standard library remain outside it and leak detection is disabled.
-Full working-consumer and installed-package results are separate gates.
+The complete working replay also passes with stable inputs: all 31 grammars,
+14 extended witnesses and the construction census, 55 functional checks, 24 ABI
+checks, 64 default consumer tests, and all 6,216 Go and 102,906 Python inputs.
+The final consumer custody covers 110,014 source hashes. Exact receipts are
+under `.local/rust-cutover-2026-10-22/`: `qualification-2/report.json`
+(SHA-256 `09f62afd3046a2fd173c2c6a658fbef76570ad0e65a55843539006c1d4c17529`),
+`asan-2/receipt.json`
+(`9745d081c83d362f113a258465c7d1e30d264293b1b606d31f0bda9b740b029b`),
+and `working-2/report.json`
+(`43ba2f979eb635343f592ab56f9e9c9a366738ba97d24872ceee43238b504036`).
+The fresh Mac package passes all 40 extracted installed checks and the 457/16
+default roster. Its private final-candidate aggregate is SHA-256
+`e182268cea6119cbfb5478e20c10d270278b52b923bf99a8ca97099de962a3d6`;
+Linux package, installed platform floors, profile, cost and sealed gates remain open.
 
 The next fixed Rust/Zig comparison uses a fresh source-attested incumbent
 CLI/library pair, recovered from exact Joints `9f5caf7` and IRGX `fc7a852`
 sources and the retained reference overlay. Complete source, dependency,
 compiler, build-log and output custody passes, with an independent recheck
 of 21,816 proof files. Its receipt is
-`.local/zig-source-attested-baseline-20261022/attempt-3/report.json`.
+`.local/zig-source-attested-baseline-20261022/attempt-3/report.json`
+(SHA-256 `e51c400487c3359ce4937dd78611f4820dd36d5e46412e26dd2a4116ae316ba4`).
 This closes the old library-provenance gap for the new comparison; it neither
 attests the old library retroactively nor reuses its measured ratios. The
 unchanged 1,486 scheduled commands plus 60 admissions and 1.10 ceiling remain
@@ -37,9 +51,9 @@ whose candidate parent is `c54221b`. Both hosts produce the same byte-identical
 starting/current JSON, Go and Python artifacts before timing. Standard CI
 and CodeQL pass for the same candidate.
 
-The unchanged benchmark covers 15 public API workloads and four cases per
-host. It does not time every internal function. Three alternating rounds
-retain 45 observations per backend/workload/case, complete output digests,
+That source CI run's unchanged benchmark covers 15 public API workloads and
+four cases per host. It does not time every internal function. Three alternating
+rounds retain 45 observations per backend/workload/case, complete output digests,
 raw samples and p95 values. Ranges below are starting-Rust (`9881c96`) /
 selected median time across the four cases; values below one are regressions.
 
@@ -69,6 +83,18 @@ establish neither the requested general 5–10× gain nor the separate fixed
 Rust/Zig cost ceiling. Exact reports and custody are under
 `.local/rust-cutover-2026-10-22/source-ci-c54221b-{macos-arm64,linux-x86_64}/`;
 `source-ci-c54221b-summary.json` joins both hosts.
+
+The later [source CI run 39882081890](https://github.com/The-Billy-Company/joints/actions/runs/39882081890)
+also completes successfully on both actual hosts, with the full 457/16 roster
+on both compilers and byte-identical starting/current JSON, Go and Python
+artifacts. It executes merge `ac3810c` for tooling commit `4cecfd8`; its compiled
+source maps remain exactly `c54221b` and native `bf19d6b`. Standard CI and CodeQL
+also pass for that tooling commit. This separate hosted diagnostic reaches
+5× in 6/120 groups, three on each host, compared with 7/120 in the earlier run
+above. The observations are separate replicates and establish no isolated
+cause for their differences. The general 5–10× target remains unmet. Its join
+is `.local/rust-cutover-2026-10-22/source-ci-4cecfd8-summary.json`
+(SHA-256 `90b39cd692c5741d7055c4f57489687677c5868d973ad3ac7d5fcd2050655340`).
 
 One same-source tree-validation ablation compares this candidate with its
 unchanged full-walk fallback forced on. The normal/full median-time ratios

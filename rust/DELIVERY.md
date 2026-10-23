@@ -6,8 +6,13 @@ a host that has not executed the candidate. See [CUTOVER.md](CUTOVER.md) for
 activation, artifact re-minting, and rollback.
 
 The fixed cutover runtime is `c54221b`, with native source `bf19d6b`. Its
-workspace and actual-host source checks pass; installed packages and full
-consumer results for this candidate must be recorded separately. See
+workspace, actual-host source checks and full working consumers pass. Its
+fresh Mac archive passes all 40 extracted installed checks, including the
+457-test default suite and native/static coexistence. The private aggregate is
+`final-candidate-evidence-1.json` under the isolated qualification worktree's
+`.local/rust-migration/performance-2026-10-21/` (SHA-256
+`e182268cea6119cbfb5478e20c10d270278b52b923bf99a8ca97099de962a3d6`).
+Linux packaging and actual installed platform-floor execution remain open. See
 [the fixed candidate](PERFORMANCE.md#fixed-cutover-candidate-2026-10-22).
 The Q7 receipts below remain attached to their earlier source.
 
@@ -386,7 +391,16 @@ job with `contents: write`; that job never extracts or executes candidate
 bytes. It uploads immutable same-run artifacts for separate installed jobs
 with `contents: read` and `actions: read`, which independently check the archive
 SHA-256 and transport receipt. A transport-only pass supplies no installed
-qualification. No workflow step publishes or edits a release.
+qualification. The isolated transfer passes in
+[run 39882119855](https://github.com/The-Billy-Company/joints/actions/runs/39882119855)
+for a 213-byte transport-only probe; all installed jobs are skipped. This
+checks transport only and supplies no installed package or platform-floor
+proof. No workflow step publishes or edits a release.
+
+Installed evidence retains generated Rust client sources and lockfiles, C
+consumer source, Cargo configuration and old-format refusal inputs alongside
+the reports and logs. The explicit hidden configuration path is included;
+build caches are excluded from these selected artifact paths.
 
 Keep the workflow's three verifier SHA-256 pins synchronized when changing
 `tool/rust_delivery.py`, `tool/rust_archive.py`, or

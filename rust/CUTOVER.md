@@ -11,10 +11,18 @@ arguments and the native108 selection required by the current source.
 
 The fixed cutover candidate is `c54221b` with native source `bf19d6b`. Its
 fresh local workspace qualification and actual-host source CI pass 457 default
-tests with 16 ignores on both Rust versions. The general 5–10× performance
-target remains unmet. See [the fixed candidate](PERFORMANCE.md#fixed-cutover-candidate-2026-10-22)
-for exact source identities and all 15 workload ranges. The older results
-below qualify their own snapshots only.
+tests with 16 ignores on both Rust versions. The same 457/16 roster passes Rust
+ASan with instrumentation verified in 33 binaries, and the complete working
+replay passes with stable final custody, including all 6,216 Go and 102,906
+Python inputs. Completed source CI for tooling `4cecfd8` retains the same
+compiled `c54221b`/`bf19d6b` maps; its separate hosted diagnostic reaches 5× in
+6/120 groups, compared with 7/120 in the earlier source-CI run. The general
+5–10× performance target remains unmet. The fresh Mac package passes all 40
+installed checks. Linux packaging, profiles, Rust/Zig costs, installed platform
+floors and sealed qualification remain open. See
+[the fixed candidate](PERFORMANCE.md#fixed-cutover-candidate-2026-10-22) for
+exact source identities, receipts and the earlier 15 workload ranges. The
+older results below qualify their own snapshots only.
 
 The retained Q7 source reclaims unpublished effects after rejected document
 edits. It passes 443 default tests on each Rust version, strict checks and the

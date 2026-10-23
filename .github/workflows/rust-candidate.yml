@@ -238,6 +238,7 @@ jobs:
         if: always()
         with:
           name: local-candidate-${{ matrix.target }}-evidence
+          include-hidden-files: true
           path: |
             python-source-bootstrap/
             bootstrap-tools.txt
@@ -246,6 +247,18 @@ jobs:
             installed-check/logs
             installed-check/platform-logs
             installed-check/deployment-logs
+            installed-check/scratch/native-api-consumer/Cargo.toml
+            installed-check/scratch/native-api-consumer/Cargo.lock
+            installed-check/scratch/native-api-consumer/src/main.rs
+            installed-check/scratch/version1.jnt
+            installed-check/scratch/version2.jnt
+            installed-check/scratch/schema2.jnt
+            installed-check/scratch/schema3.jnt
+            installed-check/scratch/static-*/Cargo.toml
+            installed-check/scratch/static-*/Cargo.lock
+            installed-check/scratch/static-*/src/main.rs
+            installed-check/scratch/.cargo/config.toml
+            installed-check/scratch/consumer.c
           if-no-files-found: error
   transport:
     # A prior exact-ID contents:read probe was refused by GitHub (HTTP 403).

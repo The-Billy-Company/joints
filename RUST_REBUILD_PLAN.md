@@ -413,8 +413,9 @@ The user has now selected a cutover budget of key latency and peak process
 memory costs within 10 percent of Zig. This is an acceptance ceiling, separate
 from the earlier 10-percent review trigger; candidate F has not met it. Continue
 with profiled, independently checked changes and fresh qualification for any
-selected combined candidate. Existing Zig ABI cost rows remain diagnostic
-until their library has matching source attestation.
+selected combined candidate. Historical Zig ABI cost rows remain diagnostic
+because their frozen library lacks source attestation. The fresh attested
+baseline recorded below applies only to a new comparison.
 
 The isolated SHA dependency successor passes its Rust 1.85/1.96 checks on the
 current Mac and emulated Ubuntu, and retains all 31 working artifact bytes.
@@ -606,7 +607,31 @@ source-bound count is retained at
 
 ### Performance follow-on checkpoint, 2026-10-22
 
-The latest Q7 source reclaims unpublished effects after rejected document edits
+The fixed runtime is now `c54221b` with native source `bf19d6b`. Fresh Q2
+qualification passes all 457 default tests with 16 ignores on Rust 1.85 and
+1.96, strict checks and a release build, with a complete 568-file input closure.
+The same 457/16 named roster passes Rust ASan, with instrumentation verified in
+33 launched binaries; native Zig/C and the prebuilt standard library remain
+outside that instrumentation and leak detection is disabled. The complete
+working replay also passes with stable custody: all 31 grammars, 14 extended
+witnesses and construction census, 55 functional cases, 24 ABI checks, 64
+default consumer tests, and all 6,216 Go and 102,906 Python inputs. Its report
+is `.local/rust-cutover-2026-10-22/working-2/report.json` (SHA-256
+`43ba2f979eb635343f592ab56f9e9c9a366738ba97d24872ceee43238b504036`).
+Exact Q2 and ASan receipts are joined in the
+[fixed-candidate review](rust/PERFORMANCE.md#fixed-cutover-candidate-2026-10-22).
+
+Completed actual-host source CI for tooling commit `4cecfd8` retains the exact
+compiled `c54221b`/`bf19d6b` maps and passes 457/16 on both compilers and hosts.
+Its separate diagnostic reaches 5× in 6/120 groups; the earlier `c54221b`
+source-CI run reached 7/120. These are distinct hosted replicates. The latest
+summary is `.local/rust-cutover-2026-10-22/source-ci-4cecfd8-summary.json`
+(SHA-256 `90b39cd692c5741d7055c4f57489687677c5868d973ad3ac7d5fcd2050655340`).
+The general 5–10× target remains unmet. The fresh Mac package passes all 40
+installed checks; Linux package, profile, fixed-cost, installed-floor and sealed
+results remain open, as do adoption and rollback.
+
+The retained Q7 source reclaims unpublished effects after rejected document edits
 while preserving old versions and handles. It passes 443 default tests with
 16 ignores on each Rust version, strict checks and a release build, with a
 stable 564-file source/runtime-fixture closure. The same source passes 443
@@ -616,7 +641,7 @@ grammars, 14 extended witnesses, 55 functional checks, 24 ABI checks and all
 6,216 Go and 102,906 Python consumer inputs. The stable report is
 `working-5/report.json`. Fresh installed checks pass 40/40 on the current Mac
 and 40/40 under Linux amd64 emulation; both Linux compiler versions pass the
-complete 443/16 release roster. The current compatibility join is
+complete 443/16 release roster. The Q7 compatibility join is
 `final-candidate-evidence-6.json`, with Linux execution recorded separately at
 `linux-preflight/run-6/execution.json`, under the performance directory below.
 The full 1,546-command benchmark completes with stable inputs but still fails
@@ -692,20 +717,27 @@ release adoption. A percentage based on ported files would hide that risk.
 3. Reduce worker overhead. Separate parser sessions exist, but the Rust ABI
    has a process-wide handle-registry mutex, including possible final tree
    destruction while guarded. Parsing runs outside that registry lock and
-   uses its own session lock. The current four-worker median per-document
+   uses its own session lock. The retained Q7 four-worker median per-document
    Rust/Zig ratios are 2.290/5.894/3.167/3.845 for JSON/large JSON/Go/Python.
    Q4 clones safe native workers for concurrent
    sessions and keeps their mutable buffers separate. Further lock changes
    require measured contribution and explicit owner/lifetime checks. The worker
-   throughput timer includes Python/ctypes, strict validation and tree teardown,
-   and its frozen Zig library still lacks source-to-library attestation.
-   Build and pin a source-attested Zig ABI baseline before using those
-   diagnostics as release acceptance measurements.
+   throughput timer includes Python/ctypes, strict validation and tree teardown.
+   That historical frozen Zig library remains unattested. A fresh CLI/ABI pair
+   from exact Joints `9f5caf7` and IRGX `fc7a852` now passes source attestation
+   and final custody, independently rechecked across 21,816 proof files. The
+   receipt is `.local/zig-source-attested-baseline-20261022/attempt-3/report.json`
+   (SHA-256 `e51c400487c3359ce4937dd78611f4820dd36d5e46412e26dd2a4116ae316ba4`).
+   This closes the baseline-preparation gap for a fresh comparison only; it
+   neither attests the historical library nor qualifies its measured ratios.
+   The unchanged 1,486 scheduled commands, 60 admissions and 1.10 ceiling still
+   require a fresh installed candidate and complete cost run.
 4. Execute installed candidates on actual Ubuntu 24.04 x86-64 and macOS 14
    ARM64 hosts. The opt-in workflow requires a committed helper closure and
    accessible immutable archives/hashes before dispatch. Current-Mac execution,
    emulation and deployment metadata do not replace those runs. Recheck runner
-   availability when arranging execution.
+   availability when arranging execution. The successful 213-byte transport
+   probe in run `39882119855` skips installed jobs and supplies no floor proof.
 5. Complete the late sealed aggregate, then qualify real installed-consumer
    adoption and release/rollback. Keep diagnosis sealed, transition V3/S4
    artifacts with the executable, carry or publish the exact IRGX dependency,
