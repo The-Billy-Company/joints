@@ -21,6 +21,24 @@ arena positions. Alias, parent, field, child-range, and source-offset narrowing
 uses checked conversions. Speculative branches share immutable draft nodes and
 keep alias and field choices at their individual use sites.
 
+Published node IDs follow a complete source-ordered preorder traversal. Each
+sibling run is strictly increasing, including empty spans, and every subtree
+occupies one contiguous ID interval. Wide sibling lookup can therefore use a
+direct step between adjacent leaves, falling back to checked binary search
+when a subtree intervenes. Subtree size can follow the final child chain without
+allocating a traversal stack. Nodes continue to borrow their owning snapshot;
+these shortcuts add no indexes, unsafe access, or retained storage. Independent
+linear navigation and explicit descendant walks check the results on complete
+trees and partial forests.
+
+Structural validation first checks ordered root/child runs, exact parent links,
+parent-before-child IDs, spans, and the total edge count. Unique incoming edges,
+acyclic parents and one edge per node prove complete reachability without a
+visited bitmap or width-sized frontier. A failed proof uses the original full
+walk, preserving its exact diagnostic counters for malformed storage. Query
+execution also uses the materializer's preorder arena directly; result capture
+vectors are allocated once while retaining match order and work debits.
+
 Advancement borrows an immutable automaton from an operation-owned `Arc`.
 The borrow never escapes the operation. Singleton stack bodies keep their
 use inline; persistent draft children remain independently owned vectors.
@@ -92,6 +110,22 @@ further growth. Rejected allocator overdelivery remains outside that transient
 bound. This is not a per-document RSS guarantee. Cache probes and rehashes do
 not change the existing abstract parser work units.
 
+Effect composition checks both handles before memoization and borrows its
+immutable input runs while proving compatibility. Incompatible floor sets
+return Zero before copying interior ledger claims. Surviving claims retain the
+same order, guards, interning, and publication rules; this removes temporary
+copies without changing effect identities or resource accounting.
+
+Full selected-trace products may prove a concrete stack from the grammar's
+start state before interning a single final grounded run. Stored LR links,
+exact reduction RHS symbols/floors and every appended transition establish the
+same guards as primitive folding. Empty traces remain Identity. Holes or any
+failed proof use the original fold with an untouched store, including validation
+after absorbing Zero. The optimized path retains fewer intermediate runs and
+does not reproduce their opaque allocation order or memo warmup. Final runs
+still obey the original interner capacity. Bounded move-range products retain
+their existing general guarded fold and work accounting.
+
 Public effect stores retain every distinct interned effect until the store is
 dropped, because callers may have copied their handles. A document owns a private
 store and exposes descriptions rather than handles. It marks the store before
@@ -121,8 +155,30 @@ Native lexer workers use the binding's exclusive pool leases. Immutable native
 program sharing and cloning have their own checked ownership rules. Each
 worker's mutable buffers are separate. The core does not infer native exclusive
 access from a reference count or bypass the binding's synchronization.
+An unrestricted fresh lexical question, or a filtered permission list proved to
+contain every tier ordinal, can use the binding's all-admitted representation.
+The native machine, transition meter, winner checks and empty-token rules are
+unchanged. Differential controls cover mask-word boundaries, tied winners,
+invalid input offsets, binary inputs and exhausted budgets.
+
+Filtered native permission ordinals are recomputed from the current lexical
+question. The optional permission-cache trial was withdrawn after controlled
+performance measurements; the existing exclusive native worker pool remains.
+
+The scanner-book artifact seal is computed once per process from the complete
+ordered embedded sources. This immutable identity cache skips no artifact
+envelope hash, native image check or source/roster validation.
 
 ## Validation
+
+The fixed `c54221b` candidate passes all 457 default tests with 16 declared
+ignores under Rust AddressSanitizer, matching the named qualification roster
+on both Rust compilers. Instrumentation is verified in all 33 launched test
+binaries, including engine/adapter load and store report imports. The exact
+receipt is `.local/rust-cutover-2026-10-22/asan-2/receipt.json`.
+The selected native `bf19d6b` archive and prebuilt Rust standard library are
+outside Rust ASan, with leak detection disabled. This run does not include a
+native ReleaseSafe replay or qualify a later source revision.
 
 The default workspace tests and strict Clippy checks run on both Rust 1.85 and
 the selected current compiler. All-target/all-feature checks include the C
@@ -147,7 +203,7 @@ repeated lifecycle runs supplement these checks. Passing these tests supplies
 evidence for the exercised inputs and lifecycles, not a guarantee that all
 possible bugs or data races are absent. Miri cannot execute the native FFI path.
 
-The selected Q7 source, including failed-edit suffix rollback, passes 443 ASan
+The retained Q7 source, including failed-edit suffix rollback, passes 443 ASan
 tests with 17 declared ignores; instrumentation is verified in 33 test binaries.
 The receipt is
 `.local/rust-migration/perf-safety-2026-10-21/selected-final-attempt-6/receipt.json`.

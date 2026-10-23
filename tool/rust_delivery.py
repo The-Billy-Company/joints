@@ -853,6 +853,11 @@ def default_test_summary(stdout: bytes, toolchain: str) -> dict:
             "ignored": sum(int(i) for _, _, i, _, _ in counts), "filtered": 0, "summaries": counts}
 
 
+def check_cli_identity(stdout: bytes) -> None:
+    expected = f"joints-rs {VERSIONS['cli']} (native Rust)\n".encode()
+    require(stdout == expected, "candidate CLI version/backend identity differs")
+
+
 def verify_candidate(archive: Path, output: Path, execution_scope: str, *, python: str = sys.executable,
                      rust_toolchain: str = "1.85.0", sdkroot: Path | None = None) -> dict:
     """Install and execute only the extracted candidate in retained scratch.
@@ -918,11 +923,12 @@ def verify_candidate(archive: Path, output: Path, execution_scope: str, *, pytho
         run(["rustup", "run", rust_toolchain, "rustc", "-Vv"])
         run([python, "--version"])
         cli = root / "bin/joints-rs";grammar = root / "grammar/json.json"
-        version = run([cli, "--version"]).stdout.decode()
-        require("0.0.0" in version and "native Rust" in version, "candidate CLI version differs")
+        check_cli_identity(run([cli, "--version"]).stdout)
         data = scratch / "source.json";data.write_bytes('{"café":[1,2]}'.encode())
         parsed = run([cli, "parse", grammar, data, "--all", "--json", "--mend=none", "--no-supply"])
         answer = json.loads(parsed.stdout)
+        # sole: installed parse JSON proves strictness from stop/repair fields;
+        # stamp owns human stderr verdict parsing, not this structured evidence.
         require(answer["stop"]["kind"] == "accepted" and answer["roots"] == 1
                 and answer["mends"] == answer["supplied"] == answer["skipped"] == 0,
                 "installed CLI did not strictly parse")

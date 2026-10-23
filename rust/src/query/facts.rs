@@ -71,16 +71,11 @@ impl Facts {
                     } else {
                         let rhs = step.symbol.index();
                         budget.charge(visible[rhs].len() + carried[rhs].len())?;
-                        // Each relation grows monotonically; snapshots avoid an alias
-                        // between source and target for recursive productions.
-                        let kids: Vec<_> = visible[rhs].iter().copied().collect();
-                        let fields: Vec<_> = carried[rhs].iter().copied().collect();
-                        for kid in kids {
-                            changed |= visible[lhs].insert(kid);
-                        }
-                        for field in fields {
-                            changed |= carried[lhs].insert(field);
-                        }
+                        // Distinct symbols borrow disjoint relation sets. A
+                        // self-edge cannot add anything, so neither case needs
+                        // a temporary snapshot on every fixed-point pass.
+                        changed |= extend_relation(&mut visible, lhs, rhs);
+                        changed |= extend_relation(&mut carried, lhs, rhs);
                     }
                 }
             }
@@ -268,5 +263,52 @@ impl Facts {
             }
         }
         Ok(None)
+    }
+}
+
+fn extend_relation<T: Ord + Copy>(sets: &mut [BTreeSet<T>], lhs: usize, rhs: usize) -> bool {
+    let (target, source) = match lhs.cmp(&rhs) {
+        std::cmp::Ordering::Less => {
+            let (left, right) = sets.split_at_mut(rhs);
+            (&mut left[lhs], &right[0])
+        }
+        std::cmp::Ordering::Greater => {
+            let (left, right) = sets.split_at_mut(lhs);
+            (&mut right[0], &left[rhs])
+        }
+        std::cmp::Ordering::Equal => return false,
+    };
+    let mut changed = false;
+    for &value in source {
+        changed |= target.insert(value);
+    }
+    changed
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn disjoint_relation_unions_match_snapshots_in_both_directions_and_self_edges() {
+        for left in 0..16u8 {
+            for right in 0..16u8 {
+                let set = |bits: u8| -> BTreeSet<u8> {
+                    (0..4).filter(|bit| bits & (1 << bit) != 0).collect()
+                };
+                let initial = vec![set(left), set(right)];
+                for (lhs, rhs) in [(0, 1), (1, 0), (0, 0), (1, 1)] {
+                    let mut expected = initial.clone();
+                    let source = expected[rhs].clone();
+                    let mut changed = false;
+                    for value in source {
+                        changed |= expected[lhs].insert(value);
+                    }
+                    let mut actual = initial.clone();
+                    assert_eq!(extend_relation(&mut actual, lhs, rhs), changed);
+                    assert_eq!(actual, expected);
+                }
+            }
+        }
     }
 }

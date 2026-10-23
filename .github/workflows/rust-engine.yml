@@ -1,0 +1,102 @@
+# Source correctness is independent of the installed candidate URL workflow.
+# No release, publication, consumer switch or performance verdict is implied.
+# IRGX native108 must be published at this exact revision before this can run.
+# macos-14 retires 2026-11-02; do not silently replace its execution floor.
+name: Rust engine source correctness
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rust-engine-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source:
+    name: source (${{ matrix.target }})
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {target: linux-x86_64, runner: ubuntu-24.04}
+          - {target: macos-arm64, runner: macos-14}
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: joints
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      CARGO_INCREMENTAL: '0'
+      PCRE2_SYS_STATIC: '1'
+      LIBPCRE2_8_NO_PKG_CONFIG: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: joints
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: The-Billy-Company/irregex
+          ref: bf19d6b6d4d2417cf5a2c8c92f2613e739a5c02f
+          path: irregex
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        if: matrix.target == 'linux-x86_64'
+        with: {python-version: '3.12.15'}
+      # Python 3.12 security releases are source-only; setup-python does not
+      # publish 3.12.15 for this retired macOS image. Keep the actual OS floor.
+      - name: Build the exact official Python on macOS 14
+        if: matrix.target == 'macos-arm64'
+        run: >-
+          python3 -B tool/rust_python_bootstrap.py build
+          --workflow .github/workflows/rust-engine.yml
+          --output .local/rust-engine-ci-bootstrap/python-source
+          --work "$RUNNER_TEMP/joints-python-3.12.15"
+          --receipt-environment ENGINE_CI_PYTHON_BOOTSTRAP
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29
+        with:
+          version: 0.16.0
+          use-cache: false
+      - name: Install exact Rust compilers and native boundary tools
+        run: |
+          for version in 1.96.0 1.85.0; do
+            rustup toolchain install "$version" --profile minimal --component rustfmt --component clippy
+          done
+          rustup component add llvm-tools-preview --toolchain 1.96.0
+      - name: Check offline CI controls and fetch public grammar pins
+        run: |
+          python -B -m unittest discover -s tool -p test_rust_engine_ci.py
+          python -B -m unittest discover -s tool -p test_rust_python_bootstrap.py
+          python -B -m unittest discover -s tool -p test_rust_perf_ci.py
+          python -B -m unittest discover -s tool -p test_rust_candidate_download.py
+          mkdir -p .local/rust-engine-ci-bootstrap
+          python -B tool/grammars.py fetch --set=all 2>&1 | tee .local/rust-engine-ci-bootstrap/fetch.log
+          python -B tool/grammars.py verify --set=all 2>&1 | tee .local/rust-engine-ci-bootstrap/verify.log
+      - name: Build native108 and check the complete default Rust roster
+        env:
+          ENGINE_CI_TARGET: ${{ matrix.target }}
+        run: |
+          python -B tool/rust_engine_ci.py --target "$ENGINE_CI_TARGET" --output .local/rust-engine-ci --performance-baseline 9881c9687a5211a4088c36f44d1f4b08cc90b97f
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: rust-engine-source-${{ matrix.target }}
+          include-hidden-files: true
+          if-no-files-found: error
+          path: |
+            joints/.local/rust-engine-ci-bootstrap/
+            joints/.local/rust-engine-ci/report.json
+            joints/.local/rust-engine-ci/native-boundary.json
+            joints/.local/rust-engine-ci/*.stdout
+            joints/.local/rust-engine-ci/*.stderr
+            joints/.local/rust-engine-ci/performance/report.json
+            joints/.local/rust-engine-ci/performance/binaries/
+            joints/.local/rust-engine-ci/performance/artifacts/
+            joints/.local/rust-engine-ci/performance/*.stdout
+            joints/.local/rust-engine-ci/performance/*.stderr
+            joints/.local/rust-engine-ci/performance/*/*.json
+            joints/.local/rust-engine-ci/performance/*/*.stdout
+            joints/.local/rust-engine-ci/performance/*/*.stderr

@@ -188,6 +188,7 @@ def unpack_native(archive, destination, version, target=None):
     target = target or host()
     root = unpack(archive, destination, f"joints-{version}-{target}")
     manifest = json.loads((root / "manifest.json").read_bytes())
+    require(manifest.get("backend", "zig") == "zig", "unsupported native backend")
     require(
         manifest["schema"] == 1 and manifest["version"] == version,
         "native metadata version mismatch",

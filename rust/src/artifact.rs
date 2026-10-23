@@ -15,7 +15,7 @@ use std::{
     io::Read,
     ops::Range,
     path::Path,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, OnceLock},
 };
 
 mod image;
@@ -416,12 +416,17 @@ fn envelope<'a>(
     Ok(&bytes[HEADER..end])
 }
 fn scanner_seal() -> [u8; 32] {
-    let mut hash = Sha256::new();
-    for source in ScannerProgram::artifact_sources() {
-        hash.update((source.len() as u64).to_le_bytes());
-        hash.update(source.as_bytes());
-    }
-    hash.finalize().into()
+    // The books are compiled into this executable. Their identity is shared by
+    // every grammar and never depends on artifact-supplied data.
+    static SEAL: OnceLock<[u8; 32]> = OnceLock::new();
+    *SEAL.get_or_init(|| {
+        let mut hash = Sha256::new();
+        for source in ScannerProgram::artifact_sources() {
+            hash.update((source.len() as u64).to_le_bytes());
+            hash.update(source.as_bytes());
+        }
+        hash.finalize().into()
+    })
 }
 fn write_options(w: &mut Writer, o: CompileOptions) {
     for n in [
@@ -862,6 +867,23 @@ fn pack_members(
 mod tests {
     use super::*;
     use crate::{CompileOptions, Node, ProbeLimits, TreeSnapshot};
+
+    #[test]
+    fn shared_scanner_seal_keeps_the_complete_ordered_book_identity() {
+        let mut reference = Sha256::new();
+        for source in ScannerProgram::artifact_sources() {
+            reference.update((source.len() as u64).to_le_bytes());
+            reference.update(source.as_bytes());
+        }
+        let expected: [u8; 32] = reference.finalize().into();
+        std::thread::scope(|scope| {
+            let readers: Vec<_> = (0..8).map(|_| scope.spawn(scanner_seal)).collect();
+            for reader in readers {
+                assert_eq!(reader.join().unwrap(), expected);
+            }
+        });
+    }
+
     fn json() -> Arc<CompiledGrammar> {
         CompiledGrammar::compile(include_bytes!("../../test/grammar/json.json")).unwrap()
     }

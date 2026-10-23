@@ -270,6 +270,8 @@ def answer(got: dict) -> tuple[dict, bool]:
         node(limb)
     if value["roots"] != len(value["tree"]):
         raise ValueError("root count and tree disagree")
+    # sole: structured parse JSON proves strict replay evidence; stamp owns the
+    # human stderr verdict vocabulary, not these stop, repair and tree fields.
     strict = (value["stop"]["kind"] == "accepted" and value["survey"]["sound"]
               and value["roots"] == 1 and not value["scars"]
               and value["mends"] == value["skipped"] == value["supplied"] == 0)

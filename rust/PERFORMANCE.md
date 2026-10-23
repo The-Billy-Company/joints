@@ -7,6 +7,423 @@ installed-package, and cost runs;
 their individual ratios must not be multiplied into a predicted result.
 The 1.10 latency/RSS ceiling and default cutover remain open.
 
+## Fixed cutover candidate, 2026-10-22
+
+The selected runtime is `c54221b`, with native source `bf19d6b`. It removes
+the optional permission-cache trial. Fresh local qualification passes all
+457 default tests, with 16 declared ignores, on Rust 1.85 and 1.96, plus
+formatting, both strict all-target/all-feature checks and Clippy, and a fresh
+release build. The complete compiled-source/runtime-fixture closure contains
+568 files. The same candidate passes all 457 default tests under Rust ASan,
+with instrumentation verified in 33 test binaries; the native archive and
+prebuilt standard library remain outside it and leak detection is disabled.
+The complete working replay also passes with stable inputs: all 31 grammars,
+14 extended witnesses and the construction census, 55 functional checks, 24 ABI
+checks, 64 default consumer tests, and all 6,216 Go and 102,906 Python inputs.
+The final consumer custody covers 110,014 source hashes. Exact receipts are
+under `.local/rust-cutover-2026-10-22/`: `qualification-2/report.json`
+(SHA-256 `09f62afd3046a2fd173c2c6a658fbef76570ad0e65a55843539006c1d4c17529`),
+`asan-2/receipt.json`
+(`9745d081c83d362f113a258465c7d1e30d264293b1b606d31f0bda9b740b029b`),
+and `working-2/report.json`
+(`43ba2f979eb635343f592ab56f9e9c9a366738ba97d24872ceee43238b504036`).
+Fresh packages pass all 40 extracted installed checks on the current Mac and
+all 40 under Linux amd64 emulation. Both Linux Rust compilers pass the complete
+457/16 roster. The Mac archive SHA-256 is
+`5c0bc72b6bc905595528d483891c64ff514701cde3fe5767349ee9f3e18bc4a1`;
+the Linux archive is
+`a59b0e62fe348bc51bcbaa23bb7e5fe2eff4a63b5dde410a0a4d2d7e70fd9b81`.
+The private Mac aggregate is
+`e182268cea6119cbfb5478e20c10d270278b52b923bf99a8ca97099de962a3d6`;
+the positive stable Linux outer receipt, `linux-preflight/run-1/execution.json`
+under the isolated checkout's performance directory, is
+`2c2a452132bca384f01b4757c95ecbc1631799869861bf58b82acf4ec44617db`.
+The same exact archives also pass all 40 installed checks and the 457/16 default
+roster on actual macOS 14.8.9 ARM64 and Ubuntu 24.04 x86-64 hosts in
+[run 39890987250](https://github.com/The-Billy-Company/joints/actions/runs/39890987250),
+helper `9327b86`. Independent GET-only collection verifies both host floors,
+package/source/native identities, logs and complete retained proof custody:
+138 Mac and 119 Linux evidence files, with 138/112 resolved references and no
+unresolved proofs. A separate audit rehashes all six inputs and 287 retained
+outputs. The receipt is
+`.local/rust-cutover-2026-10-22/candidate-platform-1/collection-3/report.json`
+(SHA-256 `c59bdfff18531fe0fcbd51566e33adb8e2b9d3abc440e05a152108beb1debd94`).
+Linux's original emulated package scope remains recorded separately from this
+native-host verification. The final sealed attempt below accepts no complete
+aggregate; sealed, adoption and release/rollback gates remain open.
+
+### Fresh Rust/Zig cost result
+
+The fresh fixed Rust/Zig comparison uses a source-attested incumbent
+CLI/library pair, recovered from exact Joints `9f5caf7` and IRGX `fc7a852`
+sources and the retained reference overlay. Complete source, dependency,
+compiler, build-log and output custody passes, with an independent recheck
+of 21,816 proof files. Its receipt is
+`.local/zig-source-attested-baseline-20261022/attempt-3/report.json`
+(SHA-256 `e51c400487c3359ce4937dd78611f4820dd36d5e46412e26dd2a4116ae316ba4`).
+This closes the old library-provenance gap for this comparison; it neither
+attests the old library retroactively nor reuses its measured ratios. The
+unchanged 1,486 scheduled commands plus 60 admissions complete, with all exit
+codes zero and stable custody of 146,994 input hashes. Completion does not
+establish cost acceptance: the unwaived 1.10 latency/RSS ceiling still fails.
+The 180 metric rows retain 249 review triggers. Cold CLI median Rust/Zig ratios are:
+
+| Case | Latency | Peak process RSS |
+|---|---:|---:|
+| JSON | 1.106 | 1.068 |
+| Large JSON | 2.364 | 1.463 |
+| Go | 2.043 | 1.638 |
+| Python | 2.215 | 1.565 |
+
+All four cold-latency medians exceed the ceiling; large JSON, Go and Python
+also exceed the median RSS ceiling. Four-worker median per-document latency
+ratios are 1.995/4.871/3.618/4.253 for JSON/large JSON/Go/Python, with p95 ratios
+2.908/4.636/4.779/5.844. Edit, load and compile rows retain further adverse
+results. These current-host diagnostics keep every sample and tail; they
+establish no platform floor or cutover pass. No protocol or ceiling changed.
+The exact files are `.local/rust-cutover-2026-10-22/cost-matrix-3/run-1/raw.json`
+(SHA-256 `8036278075fafb9148feb1b62995ba81499fb7257e8aadd534789f0ccfe68ee2`)
+and `summary.json`
+(`935b53ac3ebc98323b9f27daa958dc2bdc6abc0dd58b8541ca1fb0f3e7bb9310`).
+This Rust/Zig acceptance comparison is separate from the starting-Rust 5–10×
+diagnostics below.
+
+### Current ready-load profile
+
+Two owned three-second Go/Python samples complete with stable custody and a
+positive current-Q2 profile receipt. They use the raw qualified Q2 shared
+library, distinct from the installed Mach-O metadata derivative, joined to the
+fresh working and package evidence. The principal sampled stack locations are
+automaton decoding/validation, native lexer image loading and envelope
+integrity. Their disjoint qualitative sample weights are:
+
+| Stack location | Go | Python |
+|---|---:|---:|
+| Automaton decode and validation | 1,165 | 1,192 |
+| Native lexer image load | 687 | 505 |
+| Envelope integrity | 556 | 473 |
+
+These integer weights describe stack locations, not CPU percentages, wall
+latency, throughput or engine RSS. Stripped native frames limit finer native
+attribution. The receipt is
+`.local/rust-cutover-2026-10-22/current-ready-load-profile-1/run-1/receipt.json`
+(SHA-256 `eb6ac85273b3f1006268bea2bd76c8961bc22e9682aacf293818873242458b10`);
+`sample-summary.json` is
+`f8a13b65fa9d73d6c37b8001a723a68b56e281cacb00d13ad7eaf6bdb23b5512`.
+
+### Final sealed aggregate attempt
+
+The single authorized attempt ends with exit code 1 and stable inputs. No
+complete aggregate is accepted. Its strict global projections are:
+
+| Backend | Measured entries | Reported `trued` | `measurement_complete` |
+|---|---:|---:|---|
+| Rust | 16/20 | 0.4024 | false |
+| Zig | 19/20 | 0.2855 | false |
+
+The measured subsets differ and both have incomplete coverage, so these
+`trued` values establish no comparative correctness gain. Original control
+files and pins remain stable, with `no_unsealing: true`. The sealed gate stays
+open. The authoritative receipt is
+`.local/rust-cutover-2026-10-22/sealed-aggregate-3/attempt-3/report.json`
+(SHA-256 `1fcf93ec3757433424fad356b879ed46369c5311161f365e3cf44cc1a820aa37`).
+
+A separate authored C++ external-scanner control generates successfully but
+fails linking through the pinned automatic oracle loader. Its inputs remain
+stable and owned processes are reaped. The retained refusal is
+`sealed-cxx-authored-control-2/report.json` under the same evidence directory
+(SHA-256 `e54dd6692e43bcaae8e153ccb84b1ab751cc1cea81b8a020f4527bbae06e19a0`).
+This control supplies no cause for the sealed incompleteness, and no retry or
+diagnosis is performed.
+
+### Starting-Rust source-CI diagnostics
+
+[Source CI run 39873594325](https://github.com/The-Billy-Company/joints/actions/runs/39873594325)
+also passes the complete 457/16 roster on both compilers on actual macOS
+14.8.9 ARM64 and Ubuntu 24.04.5 x86-64 hosts. It executes PR merge `b2a38ec`
+whose candidate parent is `c54221b`. Both hosts produce the same byte-identical
+starting/current JSON, Go and Python artifacts before timing. Standard CI
+and CodeQL pass for the same candidate.
+
+That source CI run's unchanged benchmark covers 15 public API workloads and
+four cases per host. It does not time every internal function. Three alternating
+rounds retain 45 observations per backend/workload/case, complete output digests,
+raw samples and p95 values. Ranges below are starting-Rust (`9881c96`) /
+selected median time across the four cases; values below one are regressions.
+
+| Workload | macOS speedup range | Linux speedup range |
+|---|---:|---:|
+| Artifact load | 0.956–1.378 | 1.014–1.269 |
+| Artifact write | 0.899–1.150 | 0.958–1.228 |
+| Bank load | 0.929–1.129 | 1.009–1.255 |
+| Compile | 0.685–1.035 | 0.895–1.027 |
+| Paired end edits | 0.926–1.654 | 1.002–1.151 |
+| Document open | 0.830–1.155 | 0.996–1.031 |
+| Fresh-store effect product | 3.706–74.463 | 5.036–72.255 |
+| Lexical walk | 0.913–1.007 | 0.984–1.077 |
+| Fresh-session parse | 0.936–1.220 | 1.001–1.022 |
+| Reused-session parse | 0.856–1.038 | 1.001–1.024 |
+| Query compile | 1.091–1.487 | 1.130–1.217 |
+| Query execute | 1.232–1.610 | 1.161–1.309 |
+| Covering node | 0.975–1.071 | 0.970–1.009 |
+| Sibling navigation | 1.067–4.267 | 1.131–4.763 |
+| Root subtree size | 0.803–1.000 | 0.953–1.111 |
+
+Only 3/60 macOS groups and 4/60 Linux groups meet 5×. Parsing on Linux is
+near its starting baseline; macOS retains adverse reused-parse and compile
+results. Some adverse directions recur across rounds. The reports preserve
+them rather than attributing every regression to host noise. These results
+establish neither the requested general 5–10× gain nor the separate fixed
+Rust/Zig cost ceiling. Exact reports and custody are under
+`.local/rust-cutover-2026-10-22/source-ci-c54221b-{macos-arm64,linux-x86_64}/`;
+`source-ci-c54221b-summary.json` joins both hosts.
+
+The later [source CI run 39882081890](https://github.com/The-Billy-Company/joints/actions/runs/39882081890)
+also completes successfully on both actual hosts, with the full 457/16 roster
+on both compilers and byte-identical starting/current JSON, Go and Python
+artifacts. It executes merge `ac3810c` for tooling commit `4cecfd8`; its compiled
+source maps remain exactly `c54221b` and native `bf19d6b`. Standard CI and CodeQL
+also pass for that tooling commit. This separate hosted diagnostic reaches
+5× in 6/120 groups, three on each host, compared with 7/120 in the earlier run
+above. The observations are separate replicates and establish no isolated
+cause for their differences. The general 5–10× target remains unmet. Its join
+is `.local/rust-cutover-2026-10-22/source-ci-4cecfd8-summary.json`
+(SHA-256 `90b39cd692c5741d7055c4f57489687677c5868d973ad3ac7d5fcd2050655340`).
+
+Source-CI jobs on both host targets and standard CI are also green for later
+tooling `9327b86`. This is an API-status observation pending artifact custody;
+no newly checked compiled-map join or replicate counts are claimed. The 6/120
+diagnostic above belongs to the earlier `4cecfd8` run. The separately collected
+actual installed-platform result is recorded above; it establishes no new
+performance ratio or default-cutover pass.
+
+One same-source tree-validation ablation compares this candidate with its
+unchanged full-walk fallback forced on. The normal/full median-time ratios
+are 0.995 for JSON reused parsing, 1.017 for JSON fresh parsing, 1.016 for
+Python reused parsing and 0.943 for Go reused parsing. Round directions are
+mixed; Go whole-child CPU favors the normal path in every round. This does
+not identify the shortcut as the cause of the larger hosted regressions, so
+it is retained. The experiment restores its source and preserves exact
+binaries, native selection, semantic digests, tails and child CPU under
+`.local/tree-measure-ablation-20261022/`. Whole-child CPU includes setup and
+validation and does not supply per-function CPU timings.
+
+All earlier results below remain attached to their recorded sources. They
+are not passes for `c54221b`.
+
+## Cutover follow-on against starting Rust, 2026-10-22
+
+The requested baseline is commit `9881c96`. A fresh benchmark executable was
+captured from that checkout before these edits. The following diagnostic uses
+the same benchmark source against runtime commit `26f48be`, with the same
+checked native archive. It includes the concrete selected-trace product,
+bounded lexer permission cache, compiler/artifact changes and query/tree paths.
+Later CI-only changes and the equivalent MSRV comparison-expression rewrite
+are qualified separately; these measurements do not claim their exact bytes.
+
+Three alternating rounds retain 45 samples per backend/workload/case and
+matching complete tree, lexical, query and effect digests. All team builds and
+profiling jobs finished before timing. Other host processes remained heavily
+active, and both medians and tails fluctuate. Values are starting/edited;
+below one is a regression. Every p95 and raw sample is retained under
+`.local/rust-optimization-followup-2026-10-22/measure-final/`.
+
+| Workload | Wide JSON | Ledger JSON | Go | Python |
+|---|---:|---:|---:|---:|
+| Artifact load | 1.330 | 1.355 | 1.230 | 1.056 |
+| Artifact write | 1.148 | 1.353 | 1.855 | 1.209 |
+| Bank load | 1.250 | 1.154 | 0.821 | 0.778 |
+| Compile | 1.121 | 1.209 | 2.000 | 1.519 |
+| Paired end edits | 1.250 | 1.082 | 0.886 | 1.442 |
+| Document open | 0.970 | 1.156 | 0.751 | 1.633 |
+| Fresh-store effect product | 2.670 | 49.450 | 59.962 | 113.841 |
+| Lexical walk | 1.002 | 0.923 | 0.947 | 0.945 |
+| Fresh-session parse | 0.987 | 1.164 | 0.667 | 1.366 |
+| Reused-session parse | 0.992 | 0.959 | 0.788 | 0.916 |
+| Query compile | 1.353 | 1.361 | 1.125 | 1.497 |
+| Query execute | 1.318 | 1.307 | 1.389 | 1.296 |
+| Covering node | 1.031 | 1.000 | 0.968 | 0.953 |
+| Sibling navigation | 3.915 | 0.900 | 0.875 | 0.859 |
+| Root subtree size | 1.000 | 1.000 | 1.000 | 1.000 |
+
+Only three of 60 groups meet 5×. Fresh-store products avoid the original
+intermediate effect interning, so their gain varies with trace diversity and
+does not describe parsing throughput. No broad parsing or lexical gain is
+established. Single-call subtree timings are near clock granularity.
+The general 5–10× target remains unmet.
+
+A separately rebuilt starting CLI and the current runtime CLI produce
+byte-identical JSON, Go and Python folios with the same fresh native108
+selection. The three sizes are 161,950, 4,008,638 and 4,649,374 bytes;
+`artifact-comparison/report.json` retains source/native identities, executable
+hashes, mint commands and artifact hashes. This checks the compiler and seal
+changes without inferring wire equivalence from equal file sizes.
+
+The initial combined candidate had alarming Go compile wall-time regressions.
+Separate whole-process CPU controls did not reproduce those regressions:
+baseline/edited median child CPU ratios were 1.035 for the first candidate
+and 1.091 after kernel-directory/product changes. Those controls include setup,
+validation and destruction; they are diagnostics, not per-function CPU times
+or a reason to discard adverse wall samples. Raw controls and inclusive CPU
+profiles remain in the same evidence directory.
+
+The combined local release suite passes 460 tests with 16 declared ignores,
+including independent compiler, cache-accounting, selected-product and
+malformed-tree controls. The source CI workflow now repeats strict checks and
+the complete default roster on both Rust compilers and actual target hosts,
+then separately retains starting-Rust benchmark executables, artifact-byte
+comparisons, raw samples and summaries. Installed delivery, full working
+consumers, fixed Rust/Zig cost acceptance, sealed validation and rollback
+remain separate gates. Earlier receipts below are historical snapshots.
+
+The same comparison also completed on the actual macOS ARM64 and Ubuntu
+x86_64 CI hosts in [source CI run 39867510800](https://github.com/The-Billy-Company/joints/actions/runs/39867510800).
+Both hosts passed the full 460-test roster, with 16 declared ignores, on Rust
+1.85 and 1.96. This run identifies PR merge source `792e67d` and native
+`0e74778`; it does not qualify subsequent source or dependency revisions.
+Its performance jobs retain 45 observations per backend/workload/case.
+
+| Workload | macOS speedup range | Linux speedup range |
+|---|---:|---:|
+| Artifact load | 0.997–1.191 | 1.013–1.266 |
+| Compile | 1.020–1.037 | 0.919–1.074 |
+| Fresh-store effect product | 3.429–72.411 | 5.278–72.568 |
+| Fresh-session parse | 0.937–1.073 | 0.967–1.028 |
+| Reused-session parse | 0.860–1.007 | 0.933–1.040 |
+| Query execute | 1.270–1.335 | 1.138–1.235 |
+| Sibling navigation | 0.907–3.571 | 0.973–4.062 |
+
+Each range covers the four retained cases, using starting/edited median time.
+Go fresh/reused parsing is 0.937/0.860 on macOS and 0.967/0.933 on Linux;
+Python is 0.983/0.946 and 0.983/0.957 respectively. These actual-host results
+confirm that broad parsing improvements and the general 5–10× target have
+not been achieved. They do not isolate a responsible change. Exact reports,
+binary hashes, p95 values and raw observations are retained under
+`source-ci-a63830d-{macos-arm64,linux-x86_64}/rust-engine-ci/` in the same
+local evidence directory.
+
+The optional permission cache in `26f48be` was subsequently withdrawn. A
+same-source activation ablation retained identical native/archive/binding and
+569 source/fixture identities, exact output digests and 45 observations per
+backend/group. Cache-off/cache-on median speedups were 1.067/1.207 for Go
+fresh/reused parsing and 1.060/0.969 for Python. Whole-child CPU includes grammar
+setup and validation, so these wall-time ratios alone do not identify equivalent
+per-function CPU gains. Exact binaries, patch, rounds, tails and CPU observations
+are retained under `.local/permission-cache-ablation-20261022/`. The final source
+also removes redundant tree-proof checks and specializes sibling direction/name
+flags at compile time; it requires fresh qualification and measurement.
+
+
+## Earlier safe public-API profiling trial, 2026-10-22
+
+The development checkout adds checked sibling lookup over preorder IDs,
+allocation-free subtree counting, full-tier native lexer admission, a single
+newline-index search, and effect compatibility checks before ledger copying.
+No unsafe engine code, unchecked indexing, new per-node fields, relaxed
+validation, or larger resource ceilings are introduced. The parser child-arena
+trial remains private: its paired run regressed large-JSON parse medians by
+11–15 percent and one whole-process edit RSS measurement by 36 percent.
+
+The new `rust/benches/runtime.rs` exercises 15 public API workloads: grammar
+compilation, artifact writing/loading, bank loading, lexical walks, fresh/reused
+parsing, effect products, query compilation/execution, sibling navigation,
+covering nodes, subtree size, document opening, and paired end edits. Setup,
+complete output checks and SHA calculation are outside timed regions;
+allocations and destruction are included. An edit row contains two edits.
+Standalone lexical walks report coverage because they can stop before the end
+of a contextual language. This is workload coverage, not a claim to time every
+internal function or every scanner, recovery policy, input size and worker count.
+
+`tool/rust_perf.py` alternates before/after process order, retains raw samples
+and p95 values, and refuses mismatched source/grammar, full tree, lexical,
+query or effect digests. It also checks sample coverage, iteration counts and
+unchanged executable/input hashes. Four portable regression tests exercise
+these refusal paths. It records the requested 5×/10× median targets per
+workload without treating one fast component as a whole-program improvement.
+The comparison baseline is the starting Rust checkout; the separate Rust/Zig
+cutover ceiling remains unchanged.
+
+With the checked native archive selected as described in [README.md](README.md),
+build the benchmark with `cargo bench --manifest-path rust/Cargo.toml --bench
+runtime --no-run`. The resulting executable accepts `--grammar`, `--source`,
+`--samples`, `--iterations`, `--entries` and `--only`. Retain one executable per
+revision, then compare them:
+
+```sh
+python3 tool/rust_perf.py --baseline /absolute/path/before-runtime \
+  --candidate /absolute/path/after-runtime \
+  --output /absolute/path/new-comparison --rounds 3 --samples 15
+```
+
+Development evidence is retained under
+`.local/rust-optimization-2026-10-22/`. The isolated full-permission native
+kernel improves 1.22–7.82× for 8–512 patterns. An uncached incompatible
+eight-claim effect composition improves 19.14× by avoiding discarded copies;
+accepted calls and warm memo hits show much smaller or mixed changes.
+These synthetic results supply no parser-wide gain. Fresh qualitative CPU
+samples still identify lexical scanning, parser advancement, native image
+validation and integrity hashing as substantial remaining costs. The samples
+are inclusive diagnostics and cannot be added into a predicted speedup.
+
+The combined diagnostic compares the same benchmark source against the captured
+starting engine and the edited engine. Three alternating rounds retain 45
+samples per backend/workload/case and matching complete output digests. All
+60 workload groups retain their p95 values in `measure/*/summary.json`;
+several tails regress substantially under uncontrolled host activity. Median
+speedups below are **before / after**, so values below one are regressions.
+
+| Workload | Wide JSON | Ledger JSON | Go | Python |
+|---|---:|---:|---:|---:|
+| Sibling navigation | 117.475 | 1.117 | 1.025 | 0.959 |
+| Root subtree size | 57.886 | 11.014 | 8.135 | 11.832 |
+| Lexical walk | 1.048 | 0.950 | 0.987 | 1.593 |
+| Fresh-session parse | 1.057 | 0.974 | 0.797 | 0.906 |
+| Reused-session parse | 1.076 | 0.991 | 0.820 | 0.780 |
+| Paired end edits | 1.000 | 1.001 | 0.954 | 1.158 |
+
+The subtree operation becomes very short. Separate controls with 1,024 calls
+per sample confirm its improvement beyond single-call clock granularity;
+`subtree-batched/` retains those repeated-call results. The wide sibling
+workload visits every node and asks for both ordinary and named neighbors.
+Its large gain does not describe a small sibling list or parsing throughput.
+
+Focused parse controls use five alternating rounds, 21 samples and 16 calls
+per sample. Go fresh/reused speedups are 0.788/1.082, and Python fresh/reused
+are 0.928/1.062. A separate one-file lexer ablation changes Go fresh parsing by
+about 3 percent, with mixed round directions; it does not attribute the earlier
+large gap to that shortcut. The general parsing target remains open rather
+than treating these conflicting diagnostic results as a pass.
+
+Three whole-process peak-RSS observations per backend/case give edited/starting
+median ratios of 1.022 for wide JSON, 1.020 for ledger JSON, 1.044 for Go and
+0.987 for Python. These include setup, validation, all workloads and allocator
+retention. They establish no per-function memory reduction or leak result.
+Raw observations are under `memory/`.
+
+The development source passes 446 release-profile tests with 16 declared
+ignores and the same 446-test AddressSanitizer roster; ASan instrumentation is
+verified in 34 binaries. The Rust standard library and native archive remain
+outside Rust ASan, with leak detection disabled. Strict all-target/all-feature
+checks pass on Rust 1.85 and 1.96. The exact Rust 1.85 source closure contains
+565 files. Formatting, the separate four-test recorder controls and focused
+tree checks supplement these results; the final local receipt identifies their
+sources and logs. Historical package qualification is not inherited.
+
+The final source-backed build refreshes stale producer metadata for the checked
+native boundary. Its archive container and private symbol namespace differ from
+the measured archive, while the complete raw `irgx.o` payload is byte-identical
+(SHA-256 `d492698c84ebf7a4e60983cd2da12f174d257bb0a41d815d82d2b8fbebe141e7`).
+Both checked transforms retain the same runtime sections, relocation counts,
+public exports and unresolved imports. Fresh JSON/Go/Python smoke runs with the
+refreshed native boundary preserve every tree, lexical, query and effect digest
+and artifact size. `native-object-join.json` and `final-native-context.json`
+retain that join; complete performance figures still identify their original
+immutable benchmark executables.
+
+The 5–10× target across all functions remains unmet. These development checks
+do not replace the complete fixed cost matrix, working consumers, installed
+delivery, physical platforms, sealed aggregate or rollback gates below.
+
 ## Current packaged Q7 result, 2026-10-22
 
 The selected source completes fresh installed checks and the full fixed cost

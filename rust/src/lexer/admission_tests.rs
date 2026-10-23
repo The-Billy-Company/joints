@@ -1,5 +1,43 @@
 use super::*;
 
+#[test]
+fn full_native_permissions_preserve_winners_errors_and_exact_transition_work() {
+    let spellings = ["a*", "a+", "ab", "if", "[a-z]+", "β+", "[0-9]+", "[ ]+"];
+    // Repeated spellings exercise tied winners across native mask words.
+    for count in [8, 64, 65, 128] {
+        let patterns: Vec<_> = spellings.into_iter().cycle().take(count).collect();
+        let slate = Munch::new(patterns).unwrap();
+        assert!(slate.declined().is_empty());
+        let ordinals: Vec<_> = (0..count).map(|i| u32::try_from(i).unwrap()).collect();
+        let draw = |body: &[u8], at, allow, pick, mut remaining| {
+            let mut winners = Vec::new();
+            let result = slate
+                .scan_bytes_metered_into(body, at, allow, pick, &mut remaining, &mut winners)
+                .map_err(|error| error.to_string());
+            (result, winners, remaining)
+        };
+        for body in [
+            b"".as_slice(),
+            b"a",
+            b"ab12",
+            b"if aa",
+            b"\xff",
+            "ββ".as_bytes(),
+        ] {
+            for at in 0..=body.len() + 1 {
+                for pick in [Pick::Longest, Pick::Shortest] {
+                    for remaining in [0, 1, 2, 3, 8, 64, 1024] {
+                        assert_eq!(
+                            draw(body, at, None, pick, remaining),
+                            draw(body, at, Some(ordinals.as_slice()), pick, remaining)
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn fixture(sparse: bool) -> Lexer {
     let rules: Vec<_> = ["[a-z]+", "if", "[ ]+", "a*", "b", "β+", "z+"]
         .iter()

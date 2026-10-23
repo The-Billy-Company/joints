@@ -3,9 +3,10 @@
 # Package build/execution declarations stay immutable, including emulated builds.
 # This later verification records native-host separately after exact host checks.
 # Dispatch requires a helper-present commit containing
-# the exact three native108 verifier hashes below, and runner-accessible HTTPS archive URLs with
-# independently supplied SHA256s. No storage endpoint or authentication flow is
-# invented here. The historical HEAD without these tools is not a bootstrap.
+# the exact pinned helper hashes below. Independently supplied SHA256s select
+# either public HTTPS archives or exact assets in an unpublished draft of this
+# repository. A transport-only probe makes no installed qualification claim.
+# The historical HEAD without these tools is not a bootstrap.
 # macos-14 is presently documented as ARM64, but retires 2026-11-02 and has
 # brownouts. Recheck availability before authorized execution; if unavailable,
 # use an explicitly authorized actual macOS14 ARM64 runner, never a newer floor.
@@ -19,43 +20,104 @@ on:
         description: Exact 40-hex helper-present commit; must match pinned tool hashes below
         required: true
         type: string
-      linux_url: {required: true, type: string}
-      linux_sha256: {required: true, type: string}
-      macos_url: {required: true, type: string}
-      macos_sha256: {required: true, type: string}
+      linux_url: {required: false, type: string}
+      linux_sha256: {required: false, type: string}
+      macos_url: {required: false, type: string}
+      macos_sha256: {required: false, type: string}
+      candidate_commit:
+        description: Exact candidate commit selected by the draft release; separate from helper_ref
+        required: false
+        type: string
+      release_id:
+        description: Exact unpublished draft release ID; leave blank for public HTTPS archives
+        required: false
+        type: string
+      linux_asset_id: {required: false, type: string}
+      macos_asset_id: {required: false, type: string}
+      transport_only:
+        description: Only prove exact Linux draft asset download access; no installed checks
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
 jobs:
   installed:
+    needs: transport
+    if: ${{ always() && !cancelled() && !inputs.transport_only && (inputs.release_id == '' || needs.transport.result == 'success') }}
+    permissions:
+      contents: read
+      actions: read
     strategy:
       fail-fast: false
       matrix:
         include:
-          - {target: linux-x86_64, runner: ubuntu-24.04, url: linux_url, sha: linux_sha256}
-          - {target: macos-arm64, runner: macos-14, url: macos_url, sha: macos_sha256}
+          - {target: linux-x86_64, runner: ubuntu-24.04, url: linux_url, sha: linux_sha256, asset: linux_asset_id}
+          - {target: macos-arm64, runner: macos-14, url: macos_url, sha: macos_sha256, asset: macos_asset_id}
     runs-on: ${{ matrix.runner }}
     env:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
-        with: {python-version: '3.12.15'}
       - name: Validate explicit helper and candidate inputs
         env:
           HELPER_REF: ${{ inputs.helper_ref }}
           CANDIDATE_URL: ${{ inputs[matrix.url] }}
           CANDIDATE_SHA256: ${{ inputs[matrix.sha] }}
+          CANDIDATE_COMMIT: ${{ inputs.candidate_commit }}
+          CANDIDATE_RELEASE_ID: ${{ inputs.release_id }}
+          CANDIDATE_ASSET_ID: ${{ inputs[matrix.asset] }}
+          LINUX_ASSET_ID: ${{ inputs.linux_asset_id }}
+          MACOS_ASSET_ID: ${{ inputs.macos_asset_id }}
         run: |
-          python - <<'PY'
+          python3 - <<'PY'
           import os, re, urllib.parse
           assert re.fullmatch('[0-9a-f]{40}', os.environ['HELPER_REF']), 'exact helper commit required'
-          url = urllib.parse.urlsplit(os.environ['CANDIDATE_URL'])
-          assert url.scheme == 'https' and url.hostname and not url.username and not url.password
           assert re.fullmatch('[0-9a-f]{64}', os.environ['CANDIDATE_SHA256'])
+          if os.environ['CANDIDATE_RELEASE_ID']:
+              assert re.fullmatch('[1-9][0-9]*', os.environ['CANDIDATE_RELEASE_ID'])
+              assert re.fullmatch('[1-9][0-9]*', os.environ['CANDIDATE_ASSET_ID'])
+              assert re.fullmatch('[0-9a-f]{40}', os.environ['CANDIDATE_COMMIT']), 'exact candidate commit required'
+              assert not os.environ['CANDIDATE_URL'], 'select one candidate transport'
+          else:
+              url = urllib.parse.urlsplit(os.environ['CANDIDATE_URL'])
+              assert url.scheme == 'https' and url.hostname and not url.username and not url.password
+              assert not any(os.environ[name] for name in ('CANDIDATE_COMMIT', 'LINUX_ASSET_ID', 'MACOS_ASSET_ID')), 'draft inputs require release_id'
           PY
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ inputs.helper_ref }}
           persist-credentials: false
+      - name: Pin the shared Python source bootstrap
+        env:
+          HELPER_REF: ${{ inputs.helper_ref }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, os, pathlib, subprocess
+          assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == os.environ['HELPER_REF']
+          helper = pathlib.Path('tool/rust_python_bootstrap.py')
+          expected = 'b79012ecf1def4f60f4e747188454204abb5aeaeffc9e9aaa36b2fcae2f1061e'
+          assert helper.is_file() and not helper.is_symlink(), 'helper-present commit required'
+          assert hashlib.sha256(helper.read_bytes()).hexdigest() == expected, 'Python bootstrap helper differs'
+          PY
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        if: matrix.target == 'linux-x86_64'
+        with: {python-version: '3.12.15'}
+      # Use the same source-only security release recipe as Rust source CI;
+      # setup-python has no 3.12.15 package for the actual macOS 14 floor.
+      - name: Build the exact official Python on macOS 14
+        if: matrix.target == 'macos-arm64'
+        run: >-
+          python3 -B tool/rust_python_bootstrap.py build
+          --workflow .github/workflows/rust-candidate.yml
+          --output python-source-bootstrap
+          --work "$RUNNER_TEMP/joints-candidate-python-3.12.15"
+          --receipt-environment CANDIDATE_PYTHON_BOOTSTRAP
+      - name: Check the retained Python source bootstrap
+        if: matrix.target == 'macos-arm64'
+        run: >-
+          python -B tool/rust_python_bootstrap.py check
+          --workflow .github/workflows/rust-candidate.yml
+          --receipt "$CANDIDATE_PYTHON_BOOTSTRAP"
       - name: Pin the shipped verifier bootstrap
         env:
           HELPER_REF: ${{ inputs.helper_ref }}
@@ -64,9 +126,9 @@ jobs:
           import hashlib, os, pathlib, subprocess
           assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == os.environ['HELPER_REF']
           expected = {
-              'tool/rust_delivery.py': '803a7205997aeee6d236695d18f4fb692ba7cd01a6e32d42b9720d41da851806',
-              'tool/rust_archive.py': '21d89b26bac4ce393a32f689e9ff9d3e1bce444ecb63c7c7c6081e313998c426',
-              'tool/rust_static_boundary.py': '73b547872eb08ac06f6a426779c3b5268326a9556e964cb594062db7b60b035a',
+              'tool/rust_delivery.py': '2442ded521baed3e55cafdb173144c3cfe9820c15c1b70c43e05cd80a6b938b9',
+              'tool/rust_archive.py': '4208ca8629eaabe02d7ddce34fd94c296bfa5196613193c67df01238f5d7c5ff',
+              'tool/rust_static_boundary.py': '6741fad343a6d1289942c32f8eb65c27b0596ad2febca68dcebb459332da8bc2',
           }
           for name, sha in expected.items():
               path = pathlib.Path(name)
@@ -79,6 +141,7 @@ jobs:
           CANDIDATE_URL: ${{ inputs[matrix.url] }}
           CANDIDATE_SHA256: ${{ inputs[matrix.sha] }}
           EXPECTED_TARGET: ${{ matrix.target }}
+          CANDIDATE_RELEASE_ID: ${{ inputs.release_id }}
         run: |
           python - <<'PY'
           import hashlib, os, pathlib, platform, re, urllib.parse, urllib.request
@@ -92,19 +155,64 @@ jobs:
               assert release.get('ID', '').strip('"') == 'ubuntu'
               assert release.get('VERSION_ID', '').strip('"') == '24.04'
               assert not pathlib.Path('/.dockerenv').exists()
-          url, sha = os.environ['CANDIDATE_URL'], os.environ['CANDIDATE_SHA256']
-          assert url.startswith('https://') and re.fullmatch('[0-9a-f]{64}', sha)
-          with urllib.request.urlopen(url) as response, open('candidate.tar.gz', 'wb') as output:
-              assert urllib.parse.urlsplit(response.geturl()).scheme == 'https', 'HTTPS redirect required'
-              total = 0
-              while block := response.read(1 << 20):
-                  total += len(block)
-                  assert total <= 2 << 30, 'candidate download exceeds archive byte budget'
-                  output.write(block)
-          with open('candidate.tar.gz','rb') as source:
-              assert hashlib.file_digest(source,'sha256').hexdigest() == sha
+          if not os.environ['CANDIDATE_RELEASE_ID']:
+              url, sha = os.environ['CANDIDATE_URL'], os.environ['CANDIDATE_SHA256']
+              assert url.startswith('https://') and re.fullmatch('[0-9a-f]{64}', sha)
+              with urllib.request.urlopen(url) as response, open('candidate.tar.gz', 'xb') as output:
+                  assert urllib.parse.urlsplit(response.geturl()).scheme == 'https', 'HTTPS redirect required'
+                  total = 0
+                  while block := response.read(1 << 20):
+                      total += len(block)
+                      assert total <= 2 << 30, 'candidate download exceeds archive byte budget'
+                      output.write(block)
+              with open('candidate.tar.gz','rb') as source:
+                  assert hashlib.file_digest(source,'sha256').hexdigest() == sha
           print('actual native host', platform.platform(), platform.machine(), platform.libc_ver())
-          print('candidate sha256', sha)
+          print('candidate sha256', os.environ['CANDIDATE_SHA256'])
+          PY
+      - name: Fetch the same-run immutable candidate transport artifact
+        if: inputs.release_id != ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: candidate-transport-${{ matrix.target }}
+          path: candidate-transfer
+      - name: Independently check the transported candidate identity and bytes
+        if: inputs.release_id != ''
+        env:
+          CANDIDATE_COMMIT: ${{ inputs.candidate_commit }}
+          CANDIDATE_RELEASE_ID: ${{ inputs.release_id }}
+          CANDIDATE_ASSET_ID: ${{ inputs[matrix.asset] }}
+          CANDIDATE_ASSET_NAME: candidate-${{ matrix.target }}.tar.gz
+          CANDIDATE_SHA256: ${{ inputs[matrix.sha] }}
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, pathlib
+          home = pathlib.Path('candidate-transfer')
+          assert sorted(path.name for path in home.iterdir()) == ['candidate-transport.json', 'candidate.tar.gz']
+          archive, receipt = home / 'candidate.tar.gz', home / 'candidate-transport.json'
+          assert all(path.is_file() and not path.is_symlink() for path in (archive, receipt))
+          expected = os.environ['CANDIDATE_SHA256']
+          with archive.open('rb') as source:
+              assert hashlib.file_digest(source, 'sha256').hexdigest() == expected, 'transported candidate SHA256 differs'
+          value = json.loads(receipt.read_bytes())
+          assert value['schema'] == 1 and value['status'] == 'complete' and value['pass'] is True
+          assert value['repository'] == 'The-Billy-Company/joints' and value['method'] == 'GET'
+          assert value['producer_sha256'] == '5be67ba4fbe6da6d2257441f4adc6f29505693d8543ea7537d4f474d1deaeda9'
+          assert value['mode'] == 'download-only' and value['transport_only'] is True
+          assert value['installed_qualified'] is False and value['cutover_authorized'] is False
+          assert value['selection'] == {
+              'release_id': int(os.environ['CANDIDATE_RELEASE_ID']),
+              'asset_id': int(os.environ['CANDIDATE_ASSET_ID']),
+              'target_commit': os.environ['CANDIDATE_COMMIT'],
+              'asset_name': os.environ['CANDIDATE_ASSET_NAME'], 'sha256': expected,
+          }
+          assert value['before'] == value['after']
+          assert value['output']['sha256'] == value['download']['sha256'] == expected
+          assert value['output']['bytes'] == value['download']['bytes'] == archive.stat().st_size
+          assert not pathlib.Path('candidate.tar.gz').exists()
+          archive.rename('candidate.tar.gz')
+          receipt.rename('candidate-transport.json')
+          print('independently verified same-run candidate SHA256', expected)
           PY
       - name: Make both required Rust toolchains available
         shell: bash
@@ -130,10 +238,106 @@ jobs:
         if: always()
         with:
           name: local-candidate-${{ matrix.target }}-evidence
+          include-hidden-files: true
           path: |
+            python-source-bootstrap/
             bootstrap-tools.txt
+            candidate-transport.json
             installed-check/report.json
             installed-check/logs
             installed-check/platform-logs
             installed-check/deployment-logs
+            installed-check/scratch/native-api-consumer/Cargo.toml
+            installed-check/scratch/native-api-consumer/Cargo.lock
+            installed-check/scratch/native-api-consumer/src/main.rs
+            installed-check/scratch/version1.jnt
+            installed-check/scratch/version2.jnt
+            installed-check/scratch/schema2.jnt
+            installed-check/scratch/schema3.jnt
+            installed-check/scratch/static-*/Cargo.toml
+            installed-check/scratch/static-*/Cargo.lock
+            installed-check/scratch/static-*/src/main.rs
+            installed-check/scratch/.cargo/config.toml
+            installed-check/scratch/consumer.c
+          if-no-files-found: error
+  transport:
+    # A prior exact-ID contents:read probe was refused by GitHub (HTTP 403).
+    # Only this opaque GET/download job receives contents:write. It never
+    # extracts, installs, imports or executes any candidate bytes.
+    if: inputs.release_id != '' || inputs.transport_only
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.transport_only && '[{"target":"linux-x86_64","asset":"linux_asset_id","sha":"linux_sha256","url":"linux_url"}]' || '[{"target":"linux-x86_64","asset":"linux_asset_id","sha":"linux_sha256","url":"linux_url"},{"target":"macos-arm64","asset":"macos_asset_id","sha":"macos_sha256","url":"macos_url"}]') }}
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Validate the exact opaque transport selection
+        env:
+          HELPER_REF: ${{ inputs.helper_ref }}
+          CANDIDATE_COMMIT: ${{ inputs.candidate_commit }}
+          CANDIDATE_RELEASE_ID: ${{ inputs.release_id }}
+          CANDIDATE_ASSET_ID: ${{ inputs[matrix.asset] }}
+          CANDIDATE_SHA256: ${{ inputs[matrix.sha] }}
+          CANDIDATE_URL: ${{ inputs[matrix.url] }}
+          TRANSPORT_ONLY: ${{ inputs.transport_only }}
+          LINUX_URL: ${{ inputs.linux_url }}
+          MACOS_URL: ${{ inputs.macos_url }}
+          MACOS_ASSET_ID: ${{ inputs.macos_asset_id }}
+          MACOS_SHA256: ${{ inputs.macos_sha256 }}
+        run: |
+          python3 -I - <<'PY'
+          import os, re
+          for name in ('HELPER_REF', 'CANDIDATE_COMMIT'):
+              assert re.fullmatch('[0-9a-f]{40}', os.environ[name]), 'exact commit required'
+          for name in ('CANDIDATE_RELEASE_ID', 'CANDIDATE_ASSET_ID'):
+              assert re.fullmatch('[1-9][0-9]*', os.environ[name]), 'positive draft ID required'
+          assert re.fullmatch('[0-9a-f]{64}', os.environ['CANDIDATE_SHA256'])
+          assert not os.environ['CANDIDATE_URL'], 'select one candidate transport'
+          if os.environ['TRANSPORT_ONLY'] == 'true':
+              assert not any(os.environ[name] for name in ('LINUX_URL', 'MACOS_URL', 'MACOS_ASSET_ID', 'MACOS_SHA256')), 'probe selects one Linux draft asset'
+          PY
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.helper_ref }}
+          persist-credentials: false
+      - name: Pin the opaque transport helper
+        env:
+          HELPER_REF: ${{ inputs.helper_ref }}
+        run: |
+          python3 -I - <<'PY'
+          import hashlib, os, pathlib, subprocess
+          assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == os.environ['HELPER_REF']
+          helper = pathlib.Path('tool/rust_candidate_download.py')
+          expected = '5be67ba4fbe6da6d2257441f4adc6f29505693d8543ea7537d4f474d1deaeda9'
+          assert helper.is_file() and not helper.is_symlink(), 'helper-present commit required'
+          assert hashlib.sha256(helper.read_bytes()).hexdigest() == expected, 'draft download helper differs'
+          PY
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with: {python-version: '3.12.15'}
+      - name: Transfer only the exact opaque unpublished draft asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_COMMIT: ${{ inputs.candidate_commit }}
+          CANDIDATE_RELEASE_ID: ${{ inputs.release_id }}
+          CANDIDATE_ASSET_ID: ${{ inputs[matrix.asset] }}
+          CANDIDATE_ASSET_NAME: candidate-${{ matrix.target }}.tar.gz
+          CANDIDATE_SHA256: ${{ inputs[matrix.sha] }}
+        run: >-
+          python -I -B tool/rust_candidate_download.py
+          --release-id "$CANDIDATE_RELEASE_ID" --asset-id "$CANDIDATE_ASSET_ID"
+          --target-commit "$CANDIDATE_COMMIT" --asset-name "$CANDIDATE_ASSET_NAME"
+          --sha256 "$CANDIDATE_SHA256" --out candidate.tar.gz --receipt candidate-transport.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: candidate-transport-${{ matrix.target }}
+          path: |
+            candidate.tar.gz
+            candidate-transport.json
+          overwrite: false
           if-no-files-found: error
