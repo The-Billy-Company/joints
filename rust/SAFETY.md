@@ -171,6 +171,15 @@ envelope hash, native image check or source/roster validation.
 
 ## Validation
 
+The fixed `c54221b` candidate passes all 457 default tests with 16 declared
+ignores under Rust AddressSanitizer, matching the named qualification roster
+on both Rust compilers. Instrumentation is verified in all 33 launched test
+binaries, including engine/adapter load and store report imports. The exact
+receipt is `.local/rust-cutover-2026-10-22/asan-2/receipt.json`.
+The selected native `bf19d6b` archive and prebuilt Rust standard library are
+outside Rust ASan, with leak detection disabled. This run does not include a
+native ReleaseSafe replay or qualify a later source revision.
+
 The default workspace tests and strict Clippy checks run on both Rust 1.85 and
 the selected current compiler. All-target/all-feature checks include the C
 adapter. The separate working gates exercise all 31 grammars, explicit scanner
@@ -194,7 +203,7 @@ repeated lifecycle runs supplement these checks. Passing these tests supplies
 evidence for the exercised inputs and lifecycles, not a guarantee that all
 possible bugs or data races are absent. Miri cannot execute the native FFI path.
 
-The selected Q7 source, including failed-edit suffix rollback, passes 443 ASan
+The retained Q7 source, including failed-edit suffix rollback, passes 443 ASan
 tests with 17 declared ignores; instrumentation is verified in 33 test binaries.
 The receipt is
 `.local/rust-migration/perf-safety-2026-10-21/selected-final-attempt-6/receipt.json`.

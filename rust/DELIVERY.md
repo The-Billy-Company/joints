@@ -379,14 +379,19 @@ status, source commit, metadata and actual downloaded bytes before installed
 verification. Signed storage requests receive no GitHub bearer token.
 
 The optional `transport_only` mode downloads just the selected Linux asset on
-Ubuntu with `contents: read`. It proves only transport access and SHA-256, and
-skips the installed matrix. Draft visibility with that token must be proved;
-an access refusal neither publishes the draft nor grants a broader token.
+Ubuntu and skips the installed matrix. The actual read-token probe in
+[run 39881082673](https://github.com/The-Billy-Company/joints/actions/runs/39881082673)
+was refused with HTTP 403. Draft transfers therefore use an isolated GET-only
+job with `contents: write`; that job never extracts or executes candidate
+bytes. It uploads immutable same-run artifacts for separate installed jobs
+with `contents: read` and `actions: read`, which independently check the archive
+SHA-256 and transport receipt. A transport-only pass supplies no installed
+qualification. No workflow step publishes or edits a release.
 
 Keep the workflow's three verifier SHA-256 pins synchronized when changing
 `tool/rust_delivery.py`, `tool/rust_archive.py`, or
 `tool/rust_static_boundary.py`. Its separate Python bootstrap pin must match
-`tool/rust_python_bootstrap.py`; both draft-download pins must match
+`tool/rust_python_bootstrap.py`; draft transport and receipt identities must match
 `tool/rust_candidate_download.py`. Before preparing a helper commit, run the
 offline delivery and bootstrap controls with Python 3.12 or newer:
 

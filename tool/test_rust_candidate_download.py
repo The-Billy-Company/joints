@@ -7,7 +7,10 @@ import io
 import json
 import os
 import re
+import subprocess
+import sys
 import tempfile
+import textwrap
 import unittest
 from unittest.mock import patch
 import urllib.error
@@ -226,32 +229,62 @@ class CandidateWorkflow(unittest.TestCase):
                          {"helper_ref", "linux_url", "linux_sha256", "macos_url", "macos_sha256",
                           "candidate_commit", "release_id", "linux_asset_id", "macos_asset_id", "transport_only"})
         self.assertEqual(re.findall(r"^permissions:\n((?:  [^\n]+\n)+)", workflow, re.M), ["  contents: read\n"])
-        self.assertNotRegex(workflow, r"(?m)^\s+permissions:")
+        installed, transport = workflow.split("  transport:\n", 1)
+        self.assertIn("    permissions:\n      contents: read\n      actions: read\n", installed)
+        self.assertIn("    permissions:\n      contents: write\n", transport)
+        self.assertEqual(workflow.count("contents: write"), 1)
+        self.assertNotIn("GH_TOKEN", installed)
+        self.assertNotIn("rust_candidate_download.py", installed)
         self.assertIn("ref: ${{ inputs.helper_ref }}", workflow)
         self.assertIn("CANDIDATE_COMMIT: ${{ inputs.candidate_commit }}", workflow)
         self.assertIn("--target-commit \"$CANDIDATE_COMMIT\"", workflow)
 
-    def test_both_actual_download_steps_use_the_pinned_helper(self):
+    def test_opaque_transfer_is_pinned_isolated_and_never_executes_candidate(self):
         workflow = (self.root / ".github/workflows/rust-candidate.yml").read_text()
         helper_hash = candidate.sha(candidate.__file__)
-        installed, probe = workflow.split("  transport_probe:\n", 1)
-        for body, pin_name, download_name in (
-                (installed, "Pin the draft asset download helper", "Download the exact unpublished draft candidate"),
-                (probe, "Pin the transport-only helper", "Prove the actual read-token asset transfer")):
-            with self.subTest(download=download_name):
-                pin, download = self.step(body, pin_name), self.step(body, download_name)
-                self.assertIn("expected = '" + helper_hash + "'", pin)
-                self.assertLess(body.index(pin), body.index(download))
-                self.assertIn("python -B tool/rust_candidate_download.py", download)
-                self.assertNotIn("--metadata-only", download)
-                self.assertIn("GH_TOKEN: ${{ github.token }}", download)
-                for flag in ("--release-id", "--asset-id", "--target-commit", "--asset-name", "--sha256", "--out", "--receipt"):
-                    self.assertIn(flag, download)
-        self.assertIn("if: ${{ !inputs.transport_only }}", installed)
-        self.assertIn("if: inputs.transport_only", probe)
-        for forbidden in ("rustup ", "cargo ", "rustc ", "rust_delivery.py", "installed-check"):
-            self.assertNotIn(forbidden, probe)
-        self.assertIn("path: transport-probe.json", probe)
+        installed, transport = workflow.split("  transport:\n", 1)
+        pin = self.step(transport, "Pin the opaque transport helper")
+        transfer = self.step(transport, "Transfer only the exact opaque unpublished draft asset")
+        self.assertIn("expected = '" + helper_hash + "'", pin)
+        self.assertLess(transport.index(pin), transport.index(transfer))
+        self.assertIn("python3 -I - <<'PY'", pin)
+        self.assertIn("python -I -B tool/rust_candidate_download.py", transfer)
+        self.assertNotIn("--metadata-only", transfer)
+        self.assertIn("GH_TOKEN: ${{ github.token }}", transfer)
+        self.assertEqual(transport.count("GH_TOKEN:"), 1)
+        for flag in ("--release-id", "--asset-id", "--target-commit", "--asset-name", "--sha256", "--out", "--receipt"):
+            self.assertIn(flag, transfer)
+        for forbidden in ("rustup ", "cargo ", "rustc ", "rust_delivery.py", "installed-check", "tar -", "unzip "):
+            self.assertNotIn(forbidden, transport)
+        self.assertIn("name: candidate-transport-${{ matrix.target }}", transport)
+        self.assertIn("path: |\n            candidate.tar.gz\n            candidate-transport.json\n", transport)
+        self.assertIn("overwrite: false", transport)
+        fetch = self.step(installed, "Fetch the same-run immutable candidate transport artifact")
+        self.assertIn("actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093", fetch)
+        self.assertIn("name: candidate-transport-${{ matrix.target }}", fetch)
+        for forbidden in ("run-id:", "repository:", "github-token:"):
+            self.assertNotIn(forbidden, fetch)
+        check = self.step(installed, "Independently check the transported candidate identity and bytes")
+        self.assertLess(installed.index(fetch), installed.index(check))
+        self.assertLess(installed.index(check), installed.index("name: Make both required Rust toolchains available"))
+
+    def test_job_conditions_preserve_public_draft_failure_and_probe_routes(self):
+        workflow = (self.root / ".github/workflows/rust-candidate.yml").read_text()
+        installed, transport = workflow.split("  transport:\n", 1)
+        condition = re.search(r"^    if: \$\{\{ (.+) \}\}$", installed, re.M)[1]
+        for release, probe, result, cancelled, expected in (
+                ("", False, "skipped", False, True), ("123", False, "success", False, True),
+                ("123", False, "failure", False, False), ("123", False, "skipped", False, False),
+                ("123", True, "success", False, False), ("", True, "failure", False, False),
+                ("123", False, "success", True, False)):
+            expression = condition.replace("always()", "True").replace("cancelled()", repr(cancelled))
+            expression = expression.replace("inputs.transport_only", repr(probe)).replace("inputs.release_id", repr(release))
+            expression = expression.replace("needs.transport.result", repr(result)).replace("&&", " and ").replace("||", " or ").replace("!", "not ")
+            with self.subTest(release=release, probe=probe, result=result, cancelled=cancelled):
+                self.assertEqual(eval(expression, {"__builtins__": {}}), expected)
+        self.assertIn("if: inputs.release_id != '' || inputs.transport_only", transport)
+        self.assertIn("fromJSON(inputs.transport_only &&", transport)
+        self.assertIn("'positive draft ID required'", transport)
 
     def test_anonymous_https_mode_and_source_ci_controls_remain(self):
         workflow = (self.root / ".github/workflows/rust-candidate.yml").read_text()
@@ -262,6 +295,61 @@ class CandidateWorkflow(unittest.TestCase):
         self.assertNotIn("GH_TOKEN", fallback)
         source_ci = (self.root / ".github/workflows/rust-engine.yml").read_text()
         self.assertIn("python -B -m unittest discover -s tool -p test_rust_candidate_download.py", source_ci)
+
+    def test_installed_receipt_verifier_accepts_exact_files_and_refuses_changes(self):
+        workflow = (self.root / ".github/workflows/rust-candidate.yml").read_text()
+        step = self.step(workflow, "Independently check the transported candidate identity and bytes")
+        script = textwrap.dedent(step.split("<<'PY'\n", 1)[1].rsplit("\n          PY", 1)[0])
+        env = {"CANDIDATE_COMMIT": SELECTION["target_commit"], "CANDIDATE_RELEASE_ID": "123",
+               "CANDIDATE_ASSET_ID": "456", "CANDIDATE_ASSET_NAME": SELECTION["asset_name"],
+               "CANDIDATE_SHA256": SELECTION["sha256"]}
+        receipt = {"schema": 1, "status": "complete", "pass": True, "repository": candidate.REPOSITORY,
+                   "method": "GET", "producer_sha256": candidate.sha(candidate.__file__), "mode": "download-only",
+                   "transport_only": True, "installed_qualified": False, "cutover_authorized": False,
+                   "selection": SELECTION, "before": {"draft": True}, "after": {"draft": True},
+                   "output": {"sha256": SELECTION["sha256"], "bytes": len(PAYLOAD)},
+                   "download": {"sha256": SELECTION["sha256"], "bytes": len(PAYLOAD)}}
+        for change in ("none", "payload", "selection", "receipt", "symlink", "extra", "metadata"):
+            with self.subTest(change=change), tempfile.TemporaryDirectory() as directory:
+                home = Path(directory); transfer = home / "candidate-transfer"; transfer.mkdir()
+                archive = transfer / "candidate.tar.gz"; archive.write_bytes(PAYLOAD)
+                value = copy.deepcopy(receipt)
+                if change == "payload": archive.write_bytes(b"changed")
+                elif change == "selection": value["selection"]["asset_id"] = 457
+                elif change == "receipt": value["pass"] = False
+                elif change == "metadata": value["after"] = {"draft": False}
+                elif change == "extra": (transfer / "extra").write_bytes(b"unexpected")
+                elif change == "symlink":
+                    archive.rename(home / "elsewhere"); archive.symlink_to(home / "elsewhere")
+                (transfer / "candidate-transport.json").write_text(json.dumps(value))
+                previous = Path.cwd()
+                try:
+                    os.chdir(home)
+                    with patch.dict(os.environ, env), contextlib.redirect_stdout(io.StringIO()):
+                        if change == "none": exec(compile(script, "installed-receipt-verifier", "exec"), {})
+                        else:
+                            with self.assertRaises(AssertionError):
+                                exec(compile(script, "installed-receipt-verifier", "exec"), {})
+                finally:
+                    os.chdir(previous)
+                self.assertEqual((home / "candidate.tar.gz").exists(), change == "none")
+
+    def test_real_isolated_cli_refuses_missing_token_without_shadow_import_or_network(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory); receipt = home / "receipt.json"
+            (home / "json.py").write_text("raise RuntimeError('hostile shadow import')\n")
+            argv = [sys.executable, "-I", "-B", str(Path(candidate.__file__).resolve()),
+                    "--release-id", "123", "--asset-id", "456", "--target-commit", SELECTION["target_commit"],
+                    "--asset-name", SELECTION["asset_name"], "--sha256", SELECTION["sha256"],
+                    "--out", str(home / "candidate.tar.gz"), "--receipt", str(receipt)]
+            result = subprocess.run(argv, cwd=home, env=os.environ | {"GH_TOKEN": "", "PYTHONPATH": str(home)},
+                                    capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 1, result.stderr)
+            self.assertNotIn("hostile shadow import", result.stderr)
+            value = json.loads(receipt.read_bytes())
+            self.assertEqual(value["status"], "failed")
+            self.assertEqual(value["error"], "GH_TOKEN is required")
+            self.assertFalse((home / "candidate.tar.gz").exists())
 
 
 if __name__ == "__main__":

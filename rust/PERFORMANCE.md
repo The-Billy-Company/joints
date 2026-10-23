@@ -14,8 +14,21 @@ the optional permission-cache trial. Fresh local qualification passes all
 457 default tests, with 16 declared ignores, on Rust 1.85 and 1.96, plus
 formatting, both strict all-target/all-feature checks and Clippy, and a fresh
 release build. The complete compiled-source/runtime-fixture closure contains
-568 files. Sanitizer, full working-consumer and installed-package runs for
-this candidate are separate from that workspace result.
+568 files. The same candidate passes all 457 default tests under Rust ASan,
+with instrumentation verified in 33 test binaries; the native archive and
+prebuilt standard library remain outside it and leak detection is disabled.
+Full working-consumer and installed-package results are separate gates.
+
+The next fixed Rust/Zig comparison uses a fresh source-attested incumbent
+CLI/library pair, recovered from exact Joints `9f5caf7` and IRGX `fc7a852`
+sources and the retained reference overlay. Complete source, dependency,
+compiler, build-log and output custody passes, with an independent recheck
+of 21,816 proof files. Its receipt is
+`.local/zig-source-attested-baseline-20261022/attempt-3/report.json`.
+This closes the old library-provenance gap for the new comparison; it neither
+attests the old library retroactively nor reuses its measured ratios. The
+unchanged 1,486 scheduled commands plus 60 admissions and 1.10 ceiling remain
+bound to a fresh installed candidate before execution.
 
 [Source CI run 39873594325](https://github.com/The-Billy-Company/joints/actions/runs/39873594325)
 also passes the complete 457/16 roster on both compilers on actual macOS
