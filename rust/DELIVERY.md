@@ -7,12 +7,17 @@ activation, artifact re-minting, and rollback.
 
 The fixed cutover runtime is `c54221b`, with native source `bf19d6b`. Its
 workspace, actual-host source checks and full working consumers pass. Its
-fresh Mac archive passes all 40 extracted installed checks, including the
-457-test default suite and native/static coexistence. The private aggregate is
+fresh Mac and emulated Linux archives pass all 40 extracted installed checks,
+including the 457-test default suite and native/static coexistence. Both Linux
+Rust compilers pass 457/16. The private Mac aggregate is
 `final-candidate-evidence-1.json` under the isolated qualification worktree's
 `.local/rust-migration/performance-2026-10-21/` (SHA-256
 `e182268cea6119cbfb5478e20c10d270278b52b923bf99a8ca97099de962a3d6`).
-Linux packaging and actual installed platform-floor execution remain open. See
+The exact packages also pass all 40 checks and 457/16 on actual macOS 14 ARM64
+and Ubuntu 24.04 x86-64 hosts, with independent retained-proof custody. The
+single sealed attempt is stable but incomplete (Rust 16/20 entries, Zig 19/20),
+and accepts no complete aggregate. The sealed gate remains open; installed
+delivery does not waive it or the failed performance ceiling. See
 [the fixed candidate](PERFORMANCE.md#fixed-cutover-candidate-2026-10-22).
 The Q7 receipts below remain attached to their earlier source.
 
@@ -356,7 +361,18 @@ Every attempted command and output hash is recorded. A failed check writes
 `pass: false` and retains its scratch evidence; it cannot leave a successful
 acceptance receipt. This check is not a benchmark.
 
-## Execution scope still to qualify
+## Execution scope and actual-host checks
+
+The fixed `c54221b`/native `bf19d6b` packages pass all 40 extracted installed
+commands on the current Mac and all 40 under Linux amd64 emulation. Both Linux
+Rust compilers pass the complete 457/16 roster. The exact archive SHA-256s are
+`5c0bc72b6bc905595528d483891c64ff514701cde3fe5767349ee9f3e18bc4a1`
+(Mac) and `a59b0e62fe348bc51bcbaa23bb7e5fe2eff4a63b5dde410a0a4d2d7e70fd9b81`
+(Linux). The private Mac aggregate is
+`e182268cea6119cbfb5478e20c10d270278b52b923bf99a8ca97099de962a3d6`;
+the positive stable Linux outer receipt is
+`2c2a452132bca384f01b4757c95ecbc1631799869861bf58b82acf4ec44617db`.
+These results preserve the Linux package's emulated build/execution scope.
 
 On an ARM Mac, Docker Desktop can execute an amd64 Ubuntu 24.04 userland
 through emulation. Such a run must use `--execution-scope emulated` and record
@@ -364,9 +380,9 @@ the pinned image, ARM Docker daemon, x86-64 ELF identity, LinuxKit kernel,
 Ubuntu/glibc versions, and executed commands. It is actual target-code execution,
 but is not a physical Ubuntu 24.04 runner or a useful native speed measurement.
 
-Native Ubuntu 24.04 x86-64 and the published macOS host-floor CI gates remain
-separate until actually executed. No workflow dispatch, source push, package
-upload, or default-engine switch is performed by this tool.
+Native Ubuntu 24.04 x86-64 and macOS 14 ARM64 execution is checked separately
+in the exact installed-host run below. No workflow dispatch, source push,
+package upload, or default-engine switch is performed by this tool.
 
 The opt-in [candidate workflow](../.github/workflows/rust-candidate.yml) checks
 installed archives on Ubuntu 24.04 x86-64 and macOS 14 ARM64. It requires an exact
@@ -396,6 +412,36 @@ qualification. The isolated transfer passes in
 for a 213-byte transport-only probe; all installed jobs are skipped. This
 checks transport only and supplies no installed package or platform-floor
 proof. No workflow step publishes or edits a release.
+
+The actual two-archive installed
+[run 39890987250](https://github.com/The-Billy-Company/joints/actions/runs/39890987250)
+uses helper `9327b86` and passes both transport and installed jobs. Each native
+host passes all 40 installed commands and the 457/16 default roster: macOS
+14.8.9 ARM64 and Ubuntu 24.04 x86-64. Independent collection verifies the exact
+staged archives, source manifest/native108 joins, actual host assertions and
+labels, bootstrap, logs and generated proof leaves. The Mac installed report
+SHA-256 is `5d97cdf9b5ee969f236efc5b9d465992e58fafa9405993c27a5902bd360a647d`;
+Linux is `9074b6bcfd31c74a0e664e91adc3e2e010ea965f446e76319ef1c50970fc1af3`.
+All 138 Mac and 119 Linux evidence files are retained, with 138/112 resolved
+proof references and zero unresolved leaves. The collector receipt is
+`.local/rust-cutover-2026-10-22/candidate-platform-1/collection-3/report.json`
+(SHA-256 `c59bdfff18531fe0fcbd51566e33adb8e2b9d3abc440e05a152108beb1debd94`).
+Remote execution, retained-file custody and installed-platform qualification
+are independently positive; cutover authorization remains false. Remote host
+tool executables are recorded observations, not locally rehashed bytes. Earlier
+collector refusals remain retained. Source-CI jobs on both host targets and
+standard CI are green for that helper by API status only; their artifact
+custody is separate from this installed result.
+
+The private candidate draft release `421396620` remains staged and unpublished,
+and PR #2 remains a draft. Public release engineering is separate: the current
+`tool/release/artifacts.py` builds and accepts Zig packages and still pins IRGX
+`508ad315`. Rust release integration, an approved matching native pin, version
+and changelog updates, exact-release checks, installed-consumer adoption and
+rollback qualification remain required before publication or default cutover.
+The final sealed receipt `1fcf93ec…820aa37` records exit code 1, stable control
+files/pins and `no_unsealing: true`; both backends have incomplete measurement
+coverage. Their differing measured subsets support no correctness comparison.
 
 Installed evidence retains generated Rust client sources and lockfiles, C
 consumer source, Cargo configuration and old-format refusal inputs alongside

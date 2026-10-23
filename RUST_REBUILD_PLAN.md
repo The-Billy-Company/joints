@@ -624,12 +624,47 @@ Exact Q2 and ASan receipts are joined in the
 Completed actual-host source CI for tooling commit `4cecfd8` retains the exact
 compiled `c54221b`/`bf19d6b` maps and passes 457/16 on both compilers and hosts.
 Its separate diagnostic reaches 5× in 6/120 groups; the earlier `c54221b`
-source-CI run reached 7/120. These are distinct hosted replicates. The latest
+source-CI run reached 7/120. These are distinct hosted replicates. The `4cecfd8`
 summary is `.local/rust-cutover-2026-10-22/source-ci-4cecfd8-summary.json`
 (SHA-256 `90b39cd692c5741d7055c4f57489687677c5868d973ad3ac7d5fcd2050655340`).
-The general 5–10× target remains unmet. The fresh Mac package passes all 40
-installed checks; Linux package, profile, fixed-cost, installed-floor and sealed
-results remain open, as do adoption and rollback.
+Later tooling `9327b86` has green source-CI jobs on both host targets and
+standard CI by API status; its artifact custody and new diagnostic counts have
+not been joined. The general 5–10× target remains unmet.
+
+Fresh Mac and emulated Linux packages pass all 40 installed checks, with both
+Linux Rust compilers passing the complete 457/16 roster. Mac archive SHA-256 is
+`5c0bc72b6bc905595528d483891c64ff514701cde3fe5767349ee9f3e18bc4a1`;
+Linux is `a59b0e62fe348bc51bcbaa23bb7e5fe2eff4a63b5dde410a0a4d2d7e70fd9b81`.
+The private Mac aggregate is `e182268cea6119cbfb5478e20c10d270278b52b923bf99a8ca97099de962a3d6`;
+the positive stable Linux outer receipt is
+`2c2a452132bca384f01b4757c95ecbc1631799869861bf58b82acf4ec44617db`.
+Fresh current-Q2 qualitative ready-load profiles also pass with stable custody;
+automaton decode/validation, envelope integrity and native image loading are
+principal sampled stack locations. The raw Q2 library is distinguished from
+the installed Mach-O metadata derivative; sample weights establish no CPU
+percentage, timing or engine RSS result.
+
+The fresh source-attested Rust/Zig matrix completes all 1,546 commands with
+all exit codes zero and stable custody of 146,994 input hashes, retaining 180
+metric rows and 249 review triggers. The unchanged 1.10 ceiling still fails. Cold
+median latency ratios are 1.106/2.364/2.043/2.215 for
+JSON/large JSON/Go/Python; median RSS ratios are
+1.068/1.463/1.638/1.565. These current-host diagnostics are
+separate from the starting-Rust 5–10× comparison. Exact cost/profile receipts
+and limits are recorded in the [fixed-candidate review](rust/PERFORMANCE.md#fixed-cutover-candidate-2026-10-22).
+Actual installed-platform run `39890987250`, helper `9327b86`, passes all 40
+installed checks and 457/16 on actual macOS 14 ARM64 and Ubuntu 24.04 x86-64
+hosts. Independent collector receipt `c59bdfff…debd94` verifies the exact
+packages, host floors, logs and complete retained proof custody. The single
+authorized sealed attempt ends with exit code 1 and stable controls/pins:
+Rust measures 16/20 entries and Zig 19/20, both with
+`measurement_complete: false`. No complete aggregate is accepted; differing
+measured subsets support no comparative correctness gain. The authoritative
+report is `.local/rust-cutover-2026-10-22/sealed-aggregate-3/attempt-3/report.json`
+(SHA-256 `1fcf93ec3757433424fad356b879ed46369c5311161f365e3cf44cc1a820aa37`),
+with `no_unsealing: true`. Sealed qualification, adoption and release/rollback
+remain open. The failed, unwaived cost ceiling and 249 review triggers keep
+Zig as the default.
 
 The retained Q7 source reclaims unpublished effects after rejected document edits
 while preserving old versions and handles. It passes 443 default tests with
@@ -694,15 +729,17 @@ is 15,684 above the independent 10,000-line goal. The count receipt is
 ### Remaining work after the follow-on checkpoint
 
 The core feature and local compatibility implementation is present. The main
-remaining engineering risk is total cost, followed by target execution and
+remaining engineering risk is total cost, followed by sealed qualification and
 release adoption. A percentage based on ported files would hide that risk.
 
 1. Reduce cold latency and peak memory. Stable parser-head ownership transfers,
    worker-owned lexical buffers, bounded permission reuse, compact tree/table
-   metadata, and checked native image loading are selected in Q4. Fresh CPU
-   samples still identify lexing, permission proofs, table decode/validation,
-   and native loading as material costs. Further changes need separate
-   measurements that preserve validation, work/head limits, and exact branches.
+   metadata, and checked native image loading are selected in Q4. Fresh
+   ready-load profiles identify automaton decode/validation, envelope integrity
+   and native image loading as principal sampled stack locations. These are
+   qualitative weights, without per-function timing or CPU-percentage claims.
+   Further changes need separate measurements that preserve validation,
+   work/head limits, and exact branches.
 2. Preserve the unaffected prefix during edits. Both adapters use `prove=0`
    and `whole=2`; the public Whole contract re-derives past the edit. Rust now
    proves and reuses a bounded prefix, including approximately 93 percent of
@@ -715,34 +752,47 @@ release adoption. A percentage based on ported files would hide that risk.
    qualification passes Q6. Further reuse must preserve
    source/read proofs, effect ownership, refusal atomicity, and bounded storage.
 3. Reduce worker overhead. Separate parser sessions exist, but the Rust ABI
-   has a process-wide handle-registry mutex, including possible final tree
-   destruction while guarded. Parsing runs outside that registry lock and
-   uses its own session lock. The retained Q7 four-worker median per-document
-   Rust/Zig ratios are 2.290/5.894/3.167/3.845 for JSON/large JSON/Go/Python.
+   has a process-wide handle-registry mutex. Handle removal can perform final
+   tree or session destruction while guarded. A candidate change is to retire
+   both tokens atomically, unlock, then finish owned teardown synchronously;
+   it needs deterministic lifetime/concurrency checks and a separate measured
+   comparison before selection. Parsing runs outside that registry lock and
+   uses its own session lock. The fresh source-attested four-worker median
+   per-document Rust/Zig ratios are 1.995/4.871/3.618/4.253 for
+   JSON/large JSON/Go/Python, with p95 ratios 2.908/4.636/4.779/5.844.
    Q4 clones safe native workers for concurrent
    sessions and keeps their mutable buffers separate. Further lock changes
    require measured contribution and explicit owner/lifetime checks. The worker
    throughput timer includes Python/ctypes, strict validation and tree teardown.
-   That historical frozen Zig library remains unattested. A fresh CLI/ABI pair
-   from exact Joints `9f5caf7` and IRGX `fc7a852` now passes source attestation
-   and final custody, independently rechecked across 21,816 proof files. The
+   The earlier Q7 comparison's frozen Zig library remains unattested. The fresh
+   CLI/ABI pair from exact Joints `9f5caf7` and IRGX `fc7a852` now passes source
+   attestation and final custody, independently rechecked across 21,816 proof files. The
    receipt is `.local/zig-source-attested-baseline-20261022/attempt-3/report.json`
    (SHA-256 `e51c400487c3359ce4937dd78611f4820dd36d5e46412e26dd2a4116ae316ba4`).
    This closes the baseline-preparation gap for a fresh comparison only; it
    neither attests the historical library nor qualifies its measured ratios.
-   The unchanged 1,486 scheduled commands, 60 admissions and 1.10 ceiling still
-   require a fresh installed candidate and complete cost run.
-4. Execute installed candidates on actual Ubuntu 24.04 x86-64 and macOS 14
-   ARM64 hosts. The opt-in workflow requires a committed helper closure and
-   accessible immutable archives/hashes before dispatch. Current-Mac execution,
-   emulation and deployment metadata do not replace those runs. Recheck runner
-   availability when arranging execution. The successful 213-byte transport
-   probe in run `39882119855` skips installed jobs and supplies no floor proof.
-5. Complete the late sealed aggregate, then qualify real installed-consumer
-   adoption and release/rollback. Keep diagnosis sealed, transition V3/S4
-   artifacts with the executable, carry or publish the exact IRGX dependency,
-   select release versions explicitly and retain the executable Zig cohort.
-   Local compatibility alone authorizes no default switch.
+   The unchanged 1,486 scheduled commands and 60 admissions now complete
+   against the fresh installed candidate with stable custody. The 1.10 ceiling
+   remains failed; neither protocol nor budget is waived.
+4. Requalify target floors after any candidate change. The exact current
+   archives pass all 40 installed checks and 457/16 on actual Ubuntu 24.04
+   x86-64 and macOS 14 ARM64 hosts in run `39890987250`, with independently
+   retained package/log/proof custody. New sources or packages need their own
+   immutable archives, committed helper and actual host execution. Current-Mac
+   execution, emulation and deployment metadata alone do not replace that
+   check. The earlier successful 213-byte transport probe `39882119855` skipped
+   installed jobs and supplies no floor proof.
+5. Complete the late sealed aggregate and qualify real installed-consumer
+   adoption. The single authorized sealed attempt accepts no complete aggregate;
+   its gate remains open. Keep diagnosis sealed and transition V3/S4 artifacts
+   with the executable. The private candidate draft `421396620` remains unpublished;
+   PR #2 remains a draft.
+6. Complete Rust public release engineering. `tool/release/artifacts.py` still
+   builds and accepts Zig packages and pins IRGX `508ad315`. Add a reviewed Rust
+   release path, carry the exact approved native dependency, select and align
+   release versions and changelog entries, and run exact-release checks before
+   publication. Qualify rollback with the retained executable Zig cohort.
+   The failed cost ceiling and remaining gates authorize no default switch.
 
 The 10,000-line target remains separate design debt. Preserve behavior and
 readability while evaluating it; reducing formatting or excluding required

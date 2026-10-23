@@ -15,12 +15,20 @@ The retained package results below identify their earlier immutable sources.
 The fixed runtime `c54221b`, with native source `bf19d6b`, now passes fresh Q2
 workspace qualification on Rust 1.85 and 1.96, the same 457-test roster under
 Rust ASan, and the complete working replay, including all 6,216 Go and 102,906
-Python consumer inputs. Actual-host source CI also passes for tooling commit
-`4cecfd8`, whose compiled runtime maps remain `c54221b`/`bf19d6b`. Its separate
-diagnostic reaches 5× in only 6/120 groups; the earlier `c54221b` source-CI run
-reached 7/120. The fresh Mac package passes all 40 installed checks. Linux
-packaging, profiles, Rust/Zig costs, installed platform floors and sealed
-qualification remain open. See the [fixed candidate
+Python consumer inputs. Fresh Mac and emulated Linux packages pass all 40
+installed checks, and both Linux Rust compilers pass 457/16. Current qualitative
+ready-load profiles complete with stable custody. The full source-attested
+1,546-command Rust/Zig cost run also completes, but the unchanged 1.10
+latency/RSS ceiling fails. The earlier `4cecfd8` source-CI diagnostic reaches
+5× in only 6/120 groups, distinct from the prior 7/120 result. Later tooling
+`9327b86` has green source-CI jobs and standard CI by API status; artifact
+custody for that run is pending. The exact packages also pass all 40 installed
+checks and 457/16 on actual macOS 14 ARM64 and Ubuntu 24.04 x86-64 hosts,
+with independently verified logs and retained proof custody. The single sealed
+attempt ends stable but incomplete: Rust measures 16/20 entries and Zig 19/20,
+with no complete aggregate accepted or comparative correctness result. Sealed
+qualification and adoption/release/rollback remain open; Zig remains the
+default. See the [fixed candidate
 checkpoint](PERFORMANCE.md#fixed-cutover-candidate-2026-10-22) for exact receipts.
 
 The workspace now includes the Image1 implementation: cold and incremental

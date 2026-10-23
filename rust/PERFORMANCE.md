@@ -27,22 +27,116 @@ under `.local/rust-cutover-2026-10-22/`: `qualification-2/report.json`
 (`9745d081c83d362f113a258465c7d1e30d264293b1b606d31f0bda9b740b029b`),
 and `working-2/report.json`
 (`43ba2f979eb635343f592ab56f9e9c9a366738ba97d24872ceee43238b504036`).
-The fresh Mac package passes all 40 extracted installed checks and the 457/16
-default roster. Its private final-candidate aggregate is SHA-256
+Fresh packages pass all 40 extracted installed checks on the current Mac and
+all 40 under Linux amd64 emulation. Both Linux Rust compilers pass the complete
+457/16 roster. The Mac archive SHA-256 is
+`5c0bc72b6bc905595528d483891c64ff514701cde3fe5767349ee9f3e18bc4a1`;
+the Linux archive is
+`a59b0e62fe348bc51bcbaa23bb7e5fe2eff4a63b5dde410a0a4d2d7e70fd9b81`.
+The private Mac aggregate is
 `e182268cea6119cbfb5478e20c10d270278b52b923bf99a8ca97099de962a3d6`;
-Linux package, installed platform floors, profile, cost and sealed gates remain open.
+the positive stable Linux outer receipt, `linux-preflight/run-1/execution.json`
+under the isolated checkout's performance directory, is
+`2c2a452132bca384f01b4757c95ecbc1631799869861bf58b82acf4ec44617db`.
+The same exact archives also pass all 40 installed checks and the 457/16 default
+roster on actual macOS 14.8.9 ARM64 and Ubuntu 24.04 x86-64 hosts in
+[run 39890987250](https://github.com/The-Billy-Company/joints/actions/runs/39890987250),
+helper `9327b86`. Independent GET-only collection verifies both host floors,
+package/source/native identities, logs and complete retained proof custody:
+138 Mac and 119 Linux evidence files, with 138/112 resolved references and no
+unresolved proofs. A separate audit rehashes all six inputs and 287 retained
+outputs. The receipt is
+`.local/rust-cutover-2026-10-22/candidate-platform-1/collection-3/report.json`
+(SHA-256 `c59bdfff18531fe0fcbd51566e33adb8e2b9d3abc440e05a152108beb1debd94`).
+Linux's original emulated package scope remains recorded separately from this
+native-host verification. The final sealed attempt below accepts no complete
+aggregate; sealed, adoption and release/rollback gates remain open.
 
-The next fixed Rust/Zig comparison uses a fresh source-attested incumbent
+### Fresh Rust/Zig cost result
+
+The fresh fixed Rust/Zig comparison uses a source-attested incumbent
 CLI/library pair, recovered from exact Joints `9f5caf7` and IRGX `fc7a852`
 sources and the retained reference overlay. Complete source, dependency,
 compiler, build-log and output custody passes, with an independent recheck
 of 21,816 proof files. Its receipt is
 `.local/zig-source-attested-baseline-20261022/attempt-3/report.json`
 (SHA-256 `e51c400487c3359ce4937dd78611f4820dd36d5e46412e26dd2a4116ae316ba4`).
-This closes the old library-provenance gap for the new comparison; it neither
+This closes the old library-provenance gap for this comparison; it neither
 attests the old library retroactively nor reuses its measured ratios. The
-unchanged 1,486 scheduled commands plus 60 admissions and 1.10 ceiling remain
-bound to a fresh installed candidate before execution.
+unchanged 1,486 scheduled commands plus 60 admissions complete, with all exit
+codes zero and stable custody of 146,994 input hashes. Completion does not
+establish cost acceptance: the unwaived 1.10 latency/RSS ceiling still fails.
+The 180 metric rows retain 249 review triggers. Cold CLI median Rust/Zig ratios are:
+
+| Case | Latency | Peak process RSS |
+|---|---:|---:|
+| JSON | 1.106 | 1.068 |
+| Large JSON | 2.364 | 1.463 |
+| Go | 2.043 | 1.638 |
+| Python | 2.215 | 1.565 |
+
+All four cold-latency medians exceed the ceiling; large JSON, Go and Python
+also exceed the median RSS ceiling. Four-worker median per-document latency
+ratios are 1.995/4.871/3.618/4.253 for JSON/large JSON/Go/Python, with p95 ratios
+2.908/4.636/4.779/5.844. Edit, load and compile rows retain further adverse
+results. These current-host diagnostics keep every sample and tail; they
+establish no platform floor or cutover pass. No protocol or ceiling changed.
+The exact files are `.local/rust-cutover-2026-10-22/cost-matrix-3/run-1/raw.json`
+(SHA-256 `8036278075fafb9148feb1b62995ba81499fb7257e8aadd534789f0ccfe68ee2`)
+and `summary.json`
+(`935b53ac3ebc98323b9f27daa958dc2bdc6abc0dd58b8541ca1fb0f3e7bb9310`).
+This Rust/Zig acceptance comparison is separate from the starting-Rust 5–10×
+diagnostics below.
+
+### Current ready-load profile
+
+Two owned three-second Go/Python samples complete with stable custody and a
+positive current-Q2 profile receipt. They use the raw qualified Q2 shared
+library, distinct from the installed Mach-O metadata derivative, joined to the
+fresh working and package evidence. The principal sampled stack locations are
+automaton decoding/validation, native lexer image loading and envelope
+integrity. Their disjoint qualitative sample weights are:
+
+| Stack location | Go | Python |
+|---|---:|---:|
+| Automaton decode and validation | 1,165 | 1,192 |
+| Native lexer image load | 687 | 505 |
+| Envelope integrity | 556 | 473 |
+
+These integer weights describe stack locations, not CPU percentages, wall
+latency, throughput or engine RSS. Stripped native frames limit finer native
+attribution. The receipt is
+`.local/rust-cutover-2026-10-22/current-ready-load-profile-1/run-1/receipt.json`
+(SHA-256 `eb6ac85273b3f1006268bea2bd76c8961bc22e9682aacf293818873242458b10`);
+`sample-summary.json` is
+`f8a13b65fa9d73d6c37b8001a723a68b56e281cacb00d13ad7eaf6bdb23b5512`.
+
+### Final sealed aggregate attempt
+
+The single authorized attempt ends with exit code 1 and stable inputs. No
+complete aggregate is accepted. Its strict global projections are:
+
+| Backend | Measured entries | Reported `trued` | `measurement_complete` |
+|---|---:|---:|---|
+| Rust | 16/20 | 0.4024 | false |
+| Zig | 19/20 | 0.2855 | false |
+
+The measured subsets differ and both have incomplete coverage, so these
+`trued` values establish no comparative correctness gain. Original control
+files and pins remain stable, with `no_unsealing: true`. The sealed gate stays
+open. The authoritative receipt is
+`.local/rust-cutover-2026-10-22/sealed-aggregate-3/attempt-3/report.json`
+(SHA-256 `1fcf93ec3757433424fad356b879ed46369c5311161f365e3cf44cc1a820aa37`).
+
+A separate authored C++ external-scanner control generates successfully but
+fails linking through the pinned automatic oracle loader. Its inputs remain
+stable and owned processes are reaped. The retained refusal is
+`sealed-cxx-authored-control-2/report.json` under the same evidence directory
+(SHA-256 `e54dd6692e43bcaae8e153ccb84b1ab751cc1cea81b8a020f4527bbae06e19a0`).
+This control supplies no cause for the sealed incompleteness, and no retry or
+diagnosis is performed.
+
+### Starting-Rust source-CI diagnostics
 
 [Source CI run 39873594325](https://github.com/The-Billy-Company/joints/actions/runs/39873594325)
 also passes the complete 457/16 roster on both compilers on actual macOS
@@ -95,6 +189,13 @@ above. The observations are separate replicates and establish no isolated
 cause for their differences. The general 5–10× target remains unmet. Its join
 is `.local/rust-cutover-2026-10-22/source-ci-4cecfd8-summary.json`
 (SHA-256 `90b39cd692c5741d7055c4f57489687677c5868d973ad3ac7d5fcd2050655340`).
+
+Source-CI jobs on both host targets and standard CI are also green for later
+tooling `9327b86`. This is an API-status observation pending artifact custody;
+no newly checked compiled-map join or replicate counts are claimed. The 6/120
+diagnostic above belongs to the earlier `4cecfd8` run. The separately collected
+actual installed-platform result is recorded above; it establishes no new
+performance ratio or default-cutover pass.
 
 One same-source tree-validation ablation compares this candidate with its
 unchanged full-walk fallback forced on. The normal/full median-time ratios
