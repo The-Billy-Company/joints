@@ -538,6 +538,16 @@ def furthest(tree: str) -> int:
     return max((int(m) for m in SPAN.findall(tree)), default=0)
 
 
+def strict(answer: dict) -> bool:
+    """A complete, sound structured parse with no recovery or supplied input."""
+    return (
+        answer["stop"]["kind"] == "accepted"
+        and answer["roots"] == 1
+        and not any(answer[name] for name in ("mends", "skipped", "supplied"))
+        and answer["survey"]["sound"]
+    )
+
+
 def outcome(stderr: str, source: Path | str, size: int, tree: str = "",
             reader=None) -> Outcome:
     """What the parse did and how far it got, in one rule.

@@ -17,6 +17,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import stamp
+
 ROOT = Path(__file__).resolve().parent.parent
 EVIDENCE = ROOT / "test/migration/regulator/evidence/swift-directive-protocol.json"
 
@@ -82,19 +84,10 @@ def profile(evidence: dict, base: bytes) -> bytes:
     return prepared
 
 
-def strict(answer: dict) -> bool:
-    return (
-        answer["stop"]["kind"] == "accepted"
-        and answer["roots"] == 1
-        and not any(answer[name] for name in ("mends", "skipped", "supplied"))
-        and answer["survey"]["sound"]
-    )
-
-
 def check(row: dict, answer: dict) -> None:
     name = row["case"]
     require(
-        strict(answer) == (row["oracle"]["strict"] or name == "comments"),
+        stamp.strict(answer) == (row["oracle"]["strict"] or name == "comments"),
         f"{name}: strict confidence differs",
     )
     if row["oracle"]["strict"]:
@@ -270,7 +263,7 @@ def main() -> int:
                     "tree": [native_image(root) for root in tree.roots],
                 }
                 check(row, answer)
-                report["abi"].append({"case": row["case"], "strict": strict(answer)})
+                report["abi"].append({"case": row["case"], "strict": stamp.strict(answer)})
     report["native_after"] = {
         str(path): digest(path.read_bytes()) for path in (executable, library)
     }
