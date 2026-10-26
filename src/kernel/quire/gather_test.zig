@@ -525,6 +525,79 @@ test "quire: a field on a spliced step reaches every child spliced in from it" {
     try expectTree(f, "1 2 .", .named, "(doc part: (item) part: (item))");
 }
 
+test "quire: hidden splices keep the nearest field and visible wrappers take the outer field" {
+    const src =
+        \\{"name":"nearest_field","rules":{
+        \\ "doc":{"type":"SEQ","members":[
+        \\  {"type":"FIELD","name":"outer","content":{"type":"SYMBOL","name":"_hidden"}},
+        \\  {"type":"STRING","value":"!"},
+        \\  {"type":"FIELD","name":"outside","content":{"type":"SYMBOL","name":"visible"}}]},
+        \\ "_hidden":{"type":"FIELD","name":"inner","content":{"type":"SYMBOL","name":"first"}},
+        \\ "visible":{"type":"FIELD","name":"inside","content":{"type":"SYMBOL","name":"second"}},
+        \\ "first":{"type":"PATTERN","value":"x"},"second":{"type":"PATTERN","value":"y"}}}
+    ;
+    var f = try Fixture.init(t.allocator, src);
+    defer f.deinit();
+    try t.expect(!f.gather.forking);
+    try expectTree(f, "x!y", .named, "(doc inner: (first) outside: (visible inside: (second)))");
+}
+
+test "quire: an alias wraps hidden fields before taking its outer field" {
+    const src =
+        \\{"name":"aliased_field","rules":{
+        \\ "doc":{"type":"FIELD","name":"outside","content":{
+        \\  "type":"ALIAS","named":true,"value":"group","content":{"type":"SYMBOL","name":"_hidden"}}},
+        \\ "_hidden":{"type":"FIELD","name":"inner","content":{"type":"SYMBOL","name":"item"}},
+        \\ "item":{"type":"PATTERN","value":"[0-9]+"}}}
+    ;
+    var f = try Fixture.init(t.allocator, src);
+    defer f.deinit();
+    try expectTree(f, "12", .named, "(doc outside: (group inner: (item)))");
+}
+
+test "quire: nearest fields survive repeated hidden splices and forked reductions without filing extras" {
+    // The same shape runs with immediate node fields and deferred branch marks.
+    // Its duplicate hidden rule creates a real declared reduction conflict;
+    // either reading has the same independently authored fields.
+    for ([_]bool{ false, true }) |forked| {
+        const selection = if (forked)
+            \\{"type":"CHOICE","members":[{"type":"SYMBOL","name":"_pair"},{"type":"SYMBOL","name":"_other"}]}
+        else
+            \\{"type":"SYMBOL","name":"_pair"}
+        ;
+        const conflicts = if (forked) ",\"conflicts\":[[\"_pair\",\"_other\"]]" else "";
+        const src = try std.fmt.allocPrint(t.allocator,
+            \\{{"name":"repeated_fields","rules":{{
+            \\ "doc":{{"type":"SEQ","members":[
+            \\  {{"type":"FIELD","name":"outer","content":{{"type":"REPEAT1","content":{s}}}}},
+            \\  {{"type":"STRING","value":"."}}]}},
+            \\ "_pair":{{"type":"FIELD","name":"middle","content":{{"type":"SYMBOL","name":"_inside"}}}},
+            \\ "_other":{{"type":"FIELD","name":"middle","content":{{"type":"SYMBOL","name":"_inside"}}}},
+            \\ "_inside":{{"type":"SEQ","members":[
+            \\  {{"type":"FIELD","name":"inner","content":{{"type":"SYMBOL","name":"item"}}}},
+            \\  {{"type":"SYMBOL","name":"tail"}}]}},
+            \\ "item":{{"type":"PATTERN","value":"[0-9]+"}},"tail":{{"type":"PATTERN","value":"[a-z]+"}},
+            \\ "comment":{{"type":"TOKEN","content":{{"type":"SEQ","members":[
+            \\  {{"type":"STRING","value":"#"}},{{"type":"PATTERN","value":"[^\\n]*"}}]}}}}}},
+            \\ "extras":[{{"type":"PATTERN","value":"\\s"}},{{"type":"SYMBOL","name":"comment"}}]{s}}}
+        , .{ selection, conflicts });
+        defer t.allocator.free(src);
+        var f = try Fixture.init(t.allocator, src);
+        defer f.deinit();
+        try t.expectEqual(forked, f.gather.forking);
+        // The middle field reaches only the unfiled tail. The outer field must
+        // preserve both nearer fields, and the comment stays unfiled.
+        try expectTree(f, "1a # aside\n2b.", .named, "(doc inner: (item) middle: (tail) (comment) inner: (item) middle: (tail))");
+        if (forked) try t.expect(f.gather.rifts > 0);
+        var q = try f.parse("1a # aside\n2b.");
+        defer q.deinit();
+        try t.expectEqual(quire.Stop.accepted, q.stop);
+        try t.expectEqual(@as(u32, 0), q.mends);
+        try t.expectEqual(@as(u32, 0), q.supplied);
+        try t.expect((try q.survey(t.allocator)).sound());
+    }
+}
+
 test "quire: a field written inside a repeat reaches the elements, not the list" {
     // `repeat(seq(',', field('init', $.expression)))` is why the rule above
     // exists. The list helper is invisible; if the field stayed on the step

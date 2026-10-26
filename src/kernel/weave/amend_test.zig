@@ -106,6 +106,53 @@ const Bolt = struct {
     }
 };
 
+test "amend: nearest hidden fields survive a retained prefix after an edit" {
+    const grammar =
+        \\{"name":"retained_fields","rules":{
+        \\ "doc":{"type":"REPEAT1","content":{"type":"SYMBOL","name":"pair"}},
+        \\ "pair":{"type":"SEQ","members":[
+        \\  {"type":"FIELD","name":"outer","content":{"type":"SYMBOL","name":"_hidden"}},
+        \\  {"type":"STRING","value":";"}]},
+        \\ "_hidden":{"type":"FIELD","name":"inner","content":{"type":"SYMBOL","name":"item"}},
+        \\ "item":{"type":"PATTERN","value":"[a-z]+"}},
+        \\ "extras":[{"type":"PATTERN","value":"\\s"}]}
+    ;
+    const bolt = try Bolt.of(t.allocator, grammar);
+    defer bolt.deinit();
+    var warm = try bolt.open();
+    defer warm.deinit();
+    var cold = try bolt.open();
+    defer cold.deinit();
+    cold.policy = .whole;
+    cold.reusing = false;
+    const text = "x;" ** 128;
+    try warm.warp(text);
+    const offset = text.len - 4;
+    try warm.amend(.{ .from = offset, .to = offset + 1, .insert = 2 }, "yy");
+    try t.expect(warm.cost.stood > 0 or warm.cost.lifts > 0);
+    try cold.warp(warm.text.items);
+    const actual = &warm.tree.?;
+    const expected = &cold.tree.?;
+    const warm_tree = try actual.sexp(t.allocator, actual.root().?, .all);
+    defer t.allocator.free(warm_tree);
+    const cold_tree = try expected.sexp(t.allocator, expected.root().?, .all);
+    defer t.allocator.free(cold_tree);
+    try t.expectEqualStrings(cold_tree, warm_tree);
+    try t.expectEqual(quire.Stop.accepted, actual.stop);
+    try t.expect((try actual.survey(t.allocator)).sound());
+    const root = actual.root().?;
+    try t.expectEqual(@as(usize, 128), actual.children(root).len);
+    for (actual.children(root), 0..) |pair, index| {
+        try t.expectEqual(root, actual.nodes[pair].parent);
+        const item = actual.childByFieldName(pair, "inner").?;
+        try t.expect(actual.childByFieldName(pair, "outer") == null);
+        try t.expectEqualStrings("item", actual.name(item));
+        try t.expectEqual(pair, actual.nodes[item].parent);
+        const node = actual.nodes[item];
+        try t.expectEqualStrings(if (index == 126) "yy" else "x", warm.text.items[node.start..node.end()]);
+    }
+}
+
 /// What the fuzz found, so a run can say something rather than only not fail.
 const Tally = struct {
     edits: u32 = 0,

@@ -270,9 +270,7 @@ def answer(got: dict) -> tuple[dict, bool]:
         node(limb)
     if value["roots"] != len(value["tree"]):
         raise ValueError("root count and tree disagree")
-    strict = (value["stop"]["kind"] == "accepted" and value["survey"]["sound"]
-              and value["roots"] == 1 and not value["scars"]
-              and value["mends"] == value["skipped"] == value["supplied"] == 0)
+    strict = stamp.strict(value) and not value["scars"]
     return value, strict
 
 

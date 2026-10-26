@@ -19,7 +19,7 @@ from ._api import (
     Tree,
 )
 
-__version__ = "0.1.0"  # x-release-please-version
+__version__ = "0.1.1"  # x-release-please-version
 __all__ = [
     "Bank",
     "Parser",

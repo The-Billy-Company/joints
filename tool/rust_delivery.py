@@ -25,6 +25,8 @@ import tempfile
 import tomllib
 from pathlib import Path, PurePosixPath
 
+import stamp
+
 ROOT = Path(__file__).resolve().parents[1]
 MAX_FILES = 100_000
 MAX_BYTES = 2 << 30
@@ -923,9 +925,7 @@ def verify_candidate(archive: Path, output: Path, execution_scope: str, *, pytho
         data = scratch / "source.json";data.write_bytes('{"café":[1,2]}'.encode())
         parsed = run([cli, "parse", grammar, data, "--all", "--json", "--mend=none", "--no-supply"])
         answer = json.loads(parsed.stdout)
-        require(answer["stop"]["kind"] == "accepted" and answer["roots"] == 1
-                and answer["mends"] == answer["supplied"] == answer["skipped"] == 0,
-                "installed CLI did not strictly parse")
+        require(stamp.strict(answer), "installed CLI did not strictly parse")
         require(answer["survey"]["sound"] is True, "installed CLI returned an unsound tree")
         query = scratch / "captures.scm";query.write_text("(number) @n\n")
         found = json.loads(run([cli, "query", grammar, query, data, "--json"]).stdout)

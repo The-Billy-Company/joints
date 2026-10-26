@@ -11,7 +11,7 @@
 # `joints` was, which is the better outcome anyway: the registry entry is the one
 # surface a stranger reads first, and it should be a word.
 name = "joints"
-version = "0.1.0" # x-release-please-version
+version = "0.1.1" # x-release-please-version
 edition = "2024"
 rust-version = "1.85"
 license = "Apache-2.0"
