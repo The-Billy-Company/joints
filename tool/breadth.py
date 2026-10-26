@@ -40,7 +40,9 @@ import os
 import re
 import subprocess
 import sys
+import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -57,6 +59,7 @@ GRAMMARS = ROOT / "upstream" / "grammars"
 DEST = ROOT / "upstream" / "sources"
 BIN = Path(os.environ.get("JOINTS_BIN", ROOT / "zig-out" / "bin" / "joints"))
 RAW = "https://raw.githubusercontent.com/"
+_FETCH_TIMEOUT = 120
 LIB = Path.home() / ".cache" / "tree-sitter" / "lib"
 OUT = ROOT / ".local" / "breadth"
 
@@ -188,9 +191,38 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+class _PinnedRead(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        """A fallback must read the same pinned coordinate, without a redirect."""
+        return
+
+
 def pull(url: str) -> bytes:
-    with urllib.request.urlopen(RAW + url, timeout=120) as r:  # noqa: S310 - https literal
-        return r.read()
+    deadline = time.monotonic() + _FETCH_TIMEOUT
+    try:
+        response = urllib.request.urlopen(
+            RAW + urllib.parse.quote(url, safe="/"), timeout=_FETCH_TIMEOUT
+        )  # noqa: S310 - https literal
+    except urllib.error.HTTPError as error:
+        if error.code != 429:
+            raise
+        error.close()
+        owner, repo, ref, path = url.split("/", 3)
+        coordinate = "/".join(urllib.parse.quote(part, safe="") for part in (owner, repo))
+        api = f"https://api.github.com/repos/{coordinate}/contents/{urllib.parse.quote(path, safe='/')}"
+        request = urllib.request.Request(
+            f"{api}?{urllib.parse.urlencode({'ref': ref})}",
+            headers={"Accept": "application/vnd.github.raw+json"},
+        )
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("pinned source fetch deadline expired") from None
+        response = urllib.request.build_opener(_PinnedRead()).open(request, timeout=remaining)
+    with response:
+        body = response.read()
+    if time.monotonic() >= deadline:
+        raise TimeoutError("pinned source fetch deadline expired")
+    return body
 
 
 def source_of(name: str) -> Path:

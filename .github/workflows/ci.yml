@@ -99,6 +99,8 @@ jobs:
       # shapes it claims to catch, in a scratch tree, and fails if one walks.
       - name: and the gate still bites
         run: python3 tool/sole.py --probe
+      - name: pinned source transport still fails closed
+        run: python3 -m unittest discover -s tool -p test_breadth.py
       # Bytes only, so it sits with the other manifest checks rather than behind
       # a build. The pair under research/joinery/order is the load-bearing
       # evidence for the largest defect on the board, and it is only evidence
