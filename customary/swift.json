@@ -52,7 +52,13 @@
     "to refuse all four lexically - a `no_probe roll_owns` guard on both custom",
     "rules - and `a &&& b` was a stray. With the fixed rules present and gated on",
     "`wanted`, a run the state refuses falls through to the custom rules the way it",
-    "falls through in the C, and the guard is deleted."
+    "falls through in the C, and the guard is deleted.",
+    "",
+    "The hash family at scanner.c:856-945 enters only while raw_str_part is wanted",
+    "and no raw-string mark is open. It chooses the longest completed directive",
+    "prefix without a word boundary; otherwise a single non-quote hash is the",
+    "_hash_symbol_custom token. An unwanted longer match cannot fall back to a",
+    "shorter directive or hash. The existing guards state that permission order."
   ],
   "asks": "token",
   "cohort": [
@@ -64,10 +70,15 @@
     "_bang_custom",
     "_conjunction_operator_custom",
     "_custom_operator",
+    "_directive_else",
+    "_directive_elseif",
+    "_directive_endif",
+    "_directive_if",
     "_disjunction_operator_custom",
     "_dot_custom",
     "_eq_custom",
     "_eq_eq_custom",
+    "_hash_symbol_custom",
     "_minus_then_ws",
     "_nil_coalescing_operator_custom",
     "_plus_then_ws",
@@ -115,7 +126,12 @@
     "roll:_dot_custom": "\\.(?![/=\\-+!*%<>&|^?~.])",
     "roll:_eq_custom": "=(?![/=\\-+!*%<>&|^?~])",
     "roll:_minus_then_ws": "-(?=[ \\t\\n\\r\\x0b\\x0c])",
-    "roll:_plus_then_ws": "\\+(?=[ \\t\\n\\r\\x0b\\x0c])"
+    "roll:_plus_then_ws": "\\+(?=[ \\t\\n\\r\\x0b\\x0c])",
+    "hash:_directive_elseif": "#elseif",
+    "hash:_directive_endif": "#endif",
+    "hash:_directive_else": "#else(?!if)",
+    "hash:_directive_if": "#if",
+    "hash:_hash_symbol_custom": "#(?!(?:elseif|endif|else|if)|[#\"])"
   },
   "rules": [
     {
@@ -739,6 +755,156 @@
             "span",
             1
           ]
+        ]
+      ]
+    },
+    {
+      "name": "hash:_directive_elseif",
+      "note": "scanner.c:856-945. RAW_STR_PART is the entry permission, an open raw-string mark suppresses the entry, and the longest completed directive prefix wins without a word boundary. A refused longer prefix never falls back to a shorter token.",
+      "phase": "ordered",
+      "when": [
+        [
+          "marks.depth",
+          "=",
+          0
+        ],
+        [
+          "wanted",
+          "raw_str_part"
+        ],
+        [
+          "wanted",
+          "_directive_elseif"
+        ],
+        [
+          "probe",
+          "hash:_directive_elseif"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_directive_elseif"
+        ]
+      ]
+    },
+    {
+      "name": "hash:_directive_endif",
+      "note": "scanner.c:856-945. RAW_STR_PART is the entry permission, an open raw-string mark suppresses the entry, and the longest completed directive prefix wins without a word boundary. A refused longer prefix never falls back to a shorter token.",
+      "phase": "ordered",
+      "when": [
+        [
+          "marks.depth",
+          "=",
+          0
+        ],
+        [
+          "wanted",
+          "raw_str_part"
+        ],
+        [
+          "wanted",
+          "_directive_endif"
+        ],
+        [
+          "probe",
+          "hash:_directive_endif"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_directive_endif"
+        ]
+      ]
+    },
+    {
+      "name": "hash:_directive_else",
+      "note": "scanner.c:856-945. RAW_STR_PART is the entry permission, an open raw-string mark suppresses the entry, and the longest completed directive prefix wins without a word boundary. A refused longer prefix never falls back to a shorter token.",
+      "phase": "ordered",
+      "when": [
+        [
+          "marks.depth",
+          "=",
+          0
+        ],
+        [
+          "wanted",
+          "raw_str_part"
+        ],
+        [
+          "wanted",
+          "_directive_else"
+        ],
+        [
+          "probe",
+          "hash:_directive_else"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_directive_else"
+        ]
+      ]
+    },
+    {
+      "name": "hash:_directive_if",
+      "note": "scanner.c:856-945. RAW_STR_PART is the entry permission, an open raw-string mark suppresses the entry, and the longest completed directive prefix wins without a word boundary. A refused longer prefix never falls back to a shorter token.",
+      "phase": "ordered",
+      "when": [
+        [
+          "marks.depth",
+          "=",
+          0
+        ],
+        [
+          "wanted",
+          "raw_str_part"
+        ],
+        [
+          "wanted",
+          "_directive_if"
+        ],
+        [
+          "probe",
+          "hash:_directive_if"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_directive_if"
+        ]
+      ]
+    },
+    {
+      "name": "hash:_hash_symbol_custom",
+      "note": "scanner.c:856-945. RAW_STR_PART is the entry permission, an open raw-string mark suppresses the entry, and the longest completed directive prefix wins without a word boundary. A refused longer prefix never falls back to a shorter token.",
+      "phase": "ordered",
+      "when": [
+        [
+          "marks.depth",
+          "=",
+          0
+        ],
+        [
+          "wanted",
+          "raw_str_part"
+        ],
+        [
+          "wanted",
+          "_hash_symbol_custom"
+        ],
+        [
+          "probe",
+          "hash:_hash_symbol_custom"
+        ]
+      ],
+      "then": [
+        [
+          "emit",
+          "_hash_symbol_custom"
         ]
       ]
     }

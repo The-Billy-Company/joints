@@ -217,6 +217,8 @@ jobs:
         run: python3 tool/grammars.py fetch
       - name: verify the bytes on disk against the manifest
         run: python3 tool/grammars.py verify
+      - name: Swift directives preserve the independent trees through the CLI and C ABI
+        run: python3 tool/swift.py --output "$RUNNER_TEMP/swift-contract"
       # The structural and wall gates also read the nineteen held-out sources.
       # A contributor's warm checkout already had them; a CI checkout does not.
       - name: fetch the held-out sources from their pinned commits

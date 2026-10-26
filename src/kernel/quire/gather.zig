@@ -4172,7 +4172,13 @@ pub const Gather = struct {
                 const spliced = !x.gr.shapeOf(sym).visible();
                 for (x.borne.ref.items[f.own..][0..f.owns], f.own..) |c, j| {
                     if (spliced and x.nodes.items[c].kind.extra) continue;
-                    if (x.forking) x.borne.mark.items[j].field = @intCast(fld) else x.nodes.items[c].field = @intCast(fld);
+                    if (x.forking) {
+                        const field = &x.borne.mark.items[j].field;
+                        if (!spliced or field.* == Mark.none) field.* = @intCast(fld);
+                    } else {
+                        const field = &x.nodes.items[c].field;
+                        if (!spliced or field.* == quire.none) field.* = fld;
+                    }
                 }
             }
 
@@ -4241,15 +4247,19 @@ pub const Gather = struct {
 
             // The field, orthogonal to all three, and written into this
             // reduction's own copy of the child list rather than into the
-            // children. A step that spliced files every child it spliced in,
-            // which is how a field written inside a repeat reaches the elements
-            // rather than the list. Rule 4 is the one exception: an extra
-            // riding along in that splice is not a structural child, so no
-            // field reaches it.
+            // children. A spliced child keeps its nearest field; otherwise this
+            // step files it, so fields inside repeats reach their elements.
+            // Rule 4 still excludes extras riding along in the splice.
             if (step.field) |f| {
                 for (x.born.ref.items[from..], from..) |c, j| {
                     if (spliced and x.nodes.items[c].kind.extra) continue;
-                    if (x.forking) x.born.mark.items[j].field = @intCast(f) else x.nodes.items[c].field = @intCast(f);
+                    if (x.forking) {
+                        const field = &x.born.mark.items[j].field;
+                        if (!spliced or field.* == Mark.none) field.* = @intCast(f);
+                    } else {
+                        const field = &x.nodes.items[c].field;
+                        if (!spliced or field.* == quire.none) field.* = f;
+                    }
                 }
             }
 
