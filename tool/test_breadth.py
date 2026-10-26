@@ -99,6 +99,7 @@ class PinnedSourceTests(unittest.TestCase):
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), _Sources)
         self.server.case = self
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
         context.load_cert_chain(self.cert, self.key)
         self.server.socket = context.wrap_socket(self.server.socket, server_side=True)
         self.worker = threading.Thread(
