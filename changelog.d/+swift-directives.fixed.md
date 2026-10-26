@@ -1,1 +1,0 @@
-We parse Swift's conditional directives and hash literals through the embedded scanner. Hidden children keep their nearest field through ordinary and forked reductions, so strict trees and public field navigation agree with the independent Swift oracle.

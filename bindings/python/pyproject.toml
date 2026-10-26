@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "joints"
-version = "0.1.0" # x-release-please-version
+version = "0.1.1" # x-release-please-version
 # Says what the project is, then what this version is not, in that order. PyPI
 # renders this line in search results where a caveat further down never reaches
 # the reader deciding whether to install.
