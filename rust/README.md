@@ -12,6 +12,25 @@ achieve the requested 5–10× gain across every function or qualify a default
 switch. See the [profiling follow-on](PERFORMANCE.md#safe-public-api-profiling-follow-on-2026-10-22).
 The retained package results below identify their earlier immutable sources.
 
+The fixed runtime `c54221b`, with native source `bf19d6b`, now passes fresh Q2
+workspace qualification on Rust 1.85 and 1.96, the same 457-test roster under
+Rust ASan, and the complete working replay, including all 6,216 Go and 102,906
+Python consumer inputs. Fresh Mac and emulated Linux packages pass all 40
+installed checks, and both Linux Rust compilers pass 457/16. Current qualitative
+ready-load profiles complete with stable custody. The full source-attested
+1,546-command Rust/Zig cost run also completes, but the unchanged 1.10
+latency/RSS ceiling fails. The earlier `4cecfd8` source-CI diagnostic reaches
+5× in only 6/120 groups, distinct from the prior 7/120 result. Later tooling
+`9327b86` has green source-CI jobs and standard CI by API status; artifact
+custody for that run is pending. The exact packages also pass all 40 installed
+checks and 457/16 on actual macOS 14 ARM64 and Ubuntu 24.04 x86-64 hosts,
+with independently verified logs and retained proof custody. The single sealed
+attempt ends stable but incomplete: Rust measures 16/20 entries and Zig 19/20,
+with no complete aggregate accepted or comparative correctness result. Sealed
+qualification and adoption/release/rollback remain open; Zig remains the
+default. See the [fixed candidate
+checkpoint](PERFORMANCE.md#fixed-cutover-candidate-2026-10-22) for exact receipts.
+
 The workspace now includes the Image1 implementation: cold and incremental
 parsing, scanner programs, guarded effects, queries, all eight CLI verbs, the
 ABI 2 adapter, and checked native lexer images in V3/S4 artifacts. Regex image
@@ -35,7 +54,7 @@ witnesses, 55 classified CLI cases, 24 ABI commands, 64 default consumer tests,
 It identifies the immutable source export and installed candidate; historical
 candidate passes do not qualify edited sources.
 
-The current performance follow-on changes parser ownership, permission reuse,
+The retained Q7 performance follow-on changes parser ownership, permission reuse,
 prefix validation, native image decoding, and bounded table storage. Its
 combined Q7 snapshot passes 443 default tests on both Rust versions, formatting,
 all-target checks, strict Clippy and a release build with a complete 564-file
@@ -64,7 +83,7 @@ latency/RSS ceiling still fails. Cold CLI median Rust/Zig ratios are 1.208 for
 JSON, 2.436 for large JSON, 2.134 for Go and 2.312 for Python; median RSS ratios
 are 1.080, 1.522, 1.642 and 1.531 respectively. Incremental and worker costs
 also remain open. This is a contended current-host comparison, with a separate
-source-attestation limit for the diagnostic Zig ABI library. The exact current
+source-attestation limit for that historical diagnostic Zig ABI library. The Q7
 Mac compatibility join is
 `.local/rust-migration/performance-2026-10-21/final-candidate-evidence-6.json`;
 Linux evidence is separately recorded under `linux-preflight/run-6/`.

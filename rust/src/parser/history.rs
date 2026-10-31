@@ -174,7 +174,14 @@ impl<T: Copy> History<T> {
             return Vec::new();
         }
         let mut values = Vec::with_capacity(self.len);
-        values.extend(self.iter().copied());
+        // Materialization knows the complete block boundaries. Copy each slice
+        // together instead of asking the generic iterator to select its current
+        // block again for every element. The same paid directory is retained.
+        let blocks = self.iter();
+        for block in blocks.chunks {
+            values.extend_from_slice(block);
+        }
+        values.extend_from_slice(&self.tail);
         values
     }
 }

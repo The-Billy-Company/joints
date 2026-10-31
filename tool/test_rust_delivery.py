@@ -4,6 +4,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import tarfile
 import tempfile
@@ -101,6 +102,18 @@ class DeliveryTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
+
+    def test_candidate_workflow_pins_match_shipped_verifier_bootstrap(self):
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root / ".github/workflows/rust-candidate.yml").read_text()
+        bootstrap = workflow.split("name: Pin the shipped verifier bootstrap", 1)[1]
+        bootstrap = bootstrap.split("name: Verify actual host floor", 1)[0]
+        pairs = re.findall(r"'(tool/rust_[^']+\.py)': '([0-9a-f]{64})'", bootstrap)
+        expected = {"tool/rust_delivery.py", "tool/rust_archive.py", "tool/rust_static_boundary.py"}
+        self.assertEqual(len(pairs), len(expected), "duplicate or missing verifier pins")
+        self.assertEqual({name for name, _ in pairs}, expected)
+        for name, pinned in pairs:
+            self.assertEqual(delivery.digest(root / name), pinned, f"stale candidate bootstrap: {name}")
 
     def checked108_fixture(self, root):
         home = root / "source";manifest = source(home)
@@ -658,6 +671,23 @@ class DeliveryTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "invalid execution scope"):
                     delivery.verify_candidate(packed, self.root / ("check-" + str(i)), actual)
                 command.assert_not_called()
+
+    def test_cli_identity_requires_exact_declared_version_backend_and_complete_output(self):
+        expected = f"joints-rs {delivery.VERSIONS['cli']} (native Rust)\n".encode()
+        delivery.check_cli_identity(expected)
+        for output in (
+            b"joints-rs 10.0.0 (native Rust)\n",
+            b"joints-rs 0.0.01 (native Rust)\n",
+            b"joints-rs 0.1.0 (native Rust)\n",
+            b"joints 0.0.0 (native Rust)\n",
+            b"joints-rs 0.0.0 (native Zig)\n",
+            expected.rstrip(b"\n"),
+            b"error: selected another runtime\n" + expected,
+            expected + b"another runtime followed\n",
+            b"\xff" + expected,
+        ):
+            with self.subTest(output=output), self.assertRaisesRegex(ValueError, "version/backend identity"):
+                delivery.check_cli_identity(output)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,41 @@
 # Rust candidate activation and rollback
 
-The workspace is receiving further performance and memory-safety changes.
-The current Q7 source reclaims unpublished effects after rejected document
+The optimization follow-on must qualify its own frozen source and packages
+before adoption. Earlier Q7 and predecessor receipts below remain evidence for
+their recorded snapshots; later runtime changes do not inherit those passes.
+The existing local sequence is `tool/rust_qualify.py`, then
+`tool/rust_bundle.py`, followed by `tool/rust_delivery.py export`, `pack`, and
+`verify`. These steps create new outputs and check the preceding source and artifact
+identities. See [delivery](DELIVERY.md) for the exact
+arguments and the native108 selection required by the current source.
+
+The fixed cutover candidate is `c54221b` with native source `bf19d6b`. Its
+fresh local workspace qualification and actual-host source CI pass 457 default
+tests with 16 ignores on both Rust versions. The same 457/16 roster passes Rust
+ASan with instrumentation verified in 33 binaries, and the complete working
+replay passes with stable final custody, including all 6,216 Go and 102,906
+Python inputs. Completed source CI for tooling `4cecfd8` retains the same
+compiled `c54221b`/`bf19d6b` maps; its separate hosted diagnostic reaches 5× in
+6/120 groups, compared with 7/120 in the earlier source-CI run. The general
+5–10× performance target remains unmet. Fresh Mac and emulated Linux packages
+pass all 40 installed checks, with both Linux Rust compilers passing 457/16.
+Current qualitative profiles and the full source-attested 1,546-command cost
+run complete with stable custody, but the unchanged 1.10 Rust/Zig latency/RSS
+ceiling fails. Later tooling `9327b86` has green source-CI jobs and standard CI
+by API status, with artifact custody still pending. Actual installed-platform
+run `39890987250` passes all 40 checks and 457/16 on both native hosts, with
+exact package identities, logs and retained proof custody independently
+verified by collector receipt `c59bdfff…debd94`. The single sealed attempt exits
+1 with stable pins but incomplete coverage: Rust 16/20 and Zig 19/20 entries,
+both `measurement_complete: false`. No complete comparative aggregate is
+accepted. Sealed qualification and adoption/release/rollback remain open. The
+unwaived failed performance ceiling still blocks cutover; Zig remains the
+default. See
+[the fixed candidate](PERFORMANCE.md#fixed-cutover-candidate-2026-10-22) for
+exact source identities, receipts and the earlier 15 workload ranges. The
+older results below qualify their own snapshots only.
+
+The retained Q7 source reclaims unpublished effects after rejected document
 edits. It passes 443 default tests on each Rust version, strict checks and the
 release build with a stable 564-file source/runtime-fixture closure. The same
 source passes 443 ASan tests with instrumentation verified in 33 binaries.

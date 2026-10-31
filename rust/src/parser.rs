@@ -16,6 +16,7 @@ mod admissions;
 mod cache;
 mod choice;
 mod history;
+mod product;
 
 use admissions::AdmissionSlate;
 use history::History;
@@ -756,6 +757,9 @@ impl ParseSession {
         }
         if !Arc::ptr_eq(&self.grammar.automaton, store.automaton()) {
             return Err(EffectError::ForeignAutomaton);
+        }
+        if let Some(effect) = product::actual(&self.trace, &self.grammar.automaton, store)? {
+            return Ok(effect);
         }
         let mut product = Effect::IDENTITY;
         for movement in &self.trace {
