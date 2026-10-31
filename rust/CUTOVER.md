@@ -68,10 +68,12 @@ the performance ceiling: cold median Rust/Zig ratios are
 checkpoint; the current Q7 result is recorded above.
 Its exact workspace report is
 `.local/rust-migration/performance-2026-10-21/qualification-6/report.json`.
-Performance acceptance, target-floor, sealed, and release gates remain open for this follow-on. Zig
+Performance acceptance, target-floor, sealed, and release gates remain open for
+this follow-on. Zig
 remains the default. See [the intermediate checkpoint](PERFORMANCE.md#intermediate-performance-checkpoint-2026-10-22).
 
-The retained 2026-10-21 candidate below contains Image1 V3/S4 and native108 support, plus
+The retained 2026-10-21 candidate below contains Image1 V3/S4 and native108
+support, plus
 parser/table allocation changes. Its `qualification-3` passes 381 default
 tests with 16 declared ignores on each of Rust 1.85 and 1.96, both all-target
 checks, formatting, Clippy and a release build. The fresh 31-grammar gate also
@@ -134,7 +136,8 @@ macOS 26.6 ARM64 host and emulated Ubuntu 24.04 amd64. The complete 1,546-comman
 F cost run records user-authorized background work and battery power and still
 shows substantial regressions. The late sealed worker refused before an accepted
 aggregate; no failure diagnosis was read. These results leave phase 6 open:
-the selected 10-percent latency/memory ceiling, the sealed gate, and physical target-floor execution must pass
+the selected 10-percent latency/memory ceiling, the sealed gate, and physical
+target-floor execution must pass
 before activation becomes a default cutover.
 Two newly authored baseline controls also require a correctness decision:
 F refuses a valid long-reduction case accepted by Zig, and both engines refuse
@@ -154,7 +157,8 @@ The later private Image1 successor also passes its full local workspace,
 artifact, ABI and governed consumer gates. Its new 1,546-command cost run
 completed under user-authorized concurrent host work, but all four cold-parse
 cases still exceed the 1.10 ceiling in median, p95 and median RSS. Its private
-lexer-image format is envelope version 3/table schema 4; the historical F activation used V2/S3. The artifact instructions below now
+lexer-image format is envelope version 3/table schema 4; the historical F
+activation used V2/S3. The artifact instructions below now
 describe the current workspace format. Image1 native108 packaging,
 physical platform floors, the late sealed aggregate and release/rollback
 qualification remain open. See [the current cost review](PERFORMANCE.md#private-image1-full-cost-matrix).

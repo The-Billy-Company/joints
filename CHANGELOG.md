@@ -7,15 +7,22 @@ remain attached to their original sources and binaries in the dossiers.
 
 ## [0.1.1] - 2026-10-26
 
-We fix Swift conditional directives and hash literals in the embedded scanner. Hidden child reductions now keep their nearest field name through ordinary and forked parsing.
+We fix Swift conditional directives and hash literals in the embedded scanner.
+Hidden child reductions now keep their nearest field name through ordinary and
+forked parsing.
 
-The CLI and public C ABI match the same independent Swift trees; malformed sources still refuse strict confidence.
+The CLI and public C ABI match the same independent Swift trees; malformed
+sources still refuse strict confidence.
 
 ### Fixed
 
-- We parse Swift's conditional directives and hash literals through the embedded scanner. Hidden children keep their nearest field through ordinary and forked reductions, so strict trees and public field navigation agree with the independent Swift oracle.
-- Pinned source reads recover from raw GitHub rate limits through its contents API. Fallback redirects refuse; the original hashes still guard atomic file replacement.
-
+- We parse Swift's conditional directives and hash literals through the embedded
+  scanner. Hidden children keep their nearest field through ordinary and forked
+  reductions, so strict trees and public field navigation agree with the
+  independent Swift oracle.
+- Pinned source reads recover from raw GitHub rate limits through its contents
+  API. Fallback redirects refuse; the original hashes still guard atomic file
+  replacement.
 
 ## [0.1.0] - 2026-10-03
 

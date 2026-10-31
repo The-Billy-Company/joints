@@ -2,7 +2,8 @@
 
 Further performance and memory-safety work is in progress on 2026-10-22.
 The completed qualification and full-matrix results identify retained
-source snapshots. Later runtime or qualification-input changes require fresh combined correctness,
+source snapshots. Later runtime or qualification-input changes require fresh
+combined correctness,
 installed-package, and cost runs;
 their individual ratios must not be multiplied into a predicted result.
 The 1.10 latency/RSS ceiling and default cutover remain open.
@@ -66,7 +67,8 @@ attests the old library retroactively nor reuses its measured ratios. The
 unchanged 1,486 scheduled commands plus 60 admissions complete, with all exit
 codes zero and stable custody of 146,994 input hashes. Completion does not
 establish cost acceptance: the unwaived 1.10 latency/RSS ceiling still fails.
-The 180 metric rows retain 249 review triggers. Cold CLI median Rust/Zig ratios are:
+The 180 metric rows retain 249 review triggers. Cold CLI median Rust/Zig ratios
+are:
 
 | Case | Latency | Peak process RSS |
 |---|---:|---:|
@@ -312,7 +314,6 @@ per-function CPU gains. Exact binaries, patch, rounds, tails and CPU observation
 are retained under `.local/permission-cache-ablation-20261022/`. The final source
 also removes redundant tree-proof checks and specializes sibling direction/name
 flags at compile time; it requires fresh qualification and measurement.
-
 
 ## Earlier safe public-API profiling trial, 2026-10-22
 
@@ -933,12 +934,15 @@ that call can hide observable resource failures. Sheng is not enabled in the
 product on this evidence. The base Rust 1.85 floor remains intact.
 
 The predeclared Rust/Zig ratio above 1.10 requests review; it does not itself
-approve a tradeoff. The original E baseline has 265 statistic-level review flags across
+approve a tradeoff. The original E baseline has 265 statistic-level review flags
+across
 154 metric groups, not 265 independent regressions. No blanket acceptance of
 the measured regressions has been recorded. F costs have been measured and the
 fresh installed packages pass on the current Mac and emulated Ubuntu. Native
-target-platform execution, meeting the selected budgets, and the late sealed aggregate gate
-remain required before the [cutover](CUTOVER.md). Any further runtime candidate requires its own
+target-platform execution, meeting the selected budgets, and the late sealed
+aggregate gate
+remain required before the [cutover](CUTOVER.md). Any further runtime candidate
+requires its own
 fresh consumer qualification.
 
 The original E baseline's machine-readable findings are
@@ -961,7 +965,9 @@ repeatedly enter Munch compilation; Python construction repeatedly enters
 canonical LR construction and closure. JSON scanning includes lexer, admission,
 and parser advancement work. The counts are inclusive and nonadditive; they
 are attribution evidence, not latency percentages or projected savings. The
-retained report is `.local/rust-migration/native-phase6/performance-F-profile/samples-1/report.json` (SHA-256
+retained report is
+`.local/rust-migration/native-phase6/performance-F-profile/samples-1/report.json`
+(SHA-256
 `6bc9d307ebd378220497778eb5b7b57d98a5dfcea08e98b3f44e5d9092ce1726`).
 The private context-refinement trial was declined after two of its four focused
 controls failed: a disjoint required empty token at EOF and a disjoint long

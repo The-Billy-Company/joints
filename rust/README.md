@@ -64,7 +64,8 @@ versions. The selected source also passes 443 AddressSanitizer
 tests, with instrumentation checked in 33 binaries, and focused native
 ReleaseSafe controls. The prebuilt standard library and native Zig/C remain
 outside Rust ASan, and leak detection is disabled. In the complete packaged
-measurement, all four cold-latency medians still exceed the ceiling; large JSON, Go and
+measurement, all four cold-latency medians still exceed the ceiling; large JSON,
+Go and
 Python also exceed the median RSS ceiling. Later source edits require fresh
 combined correctness, cost and safety checks.
 A reconstruction found missing runtime fixture
@@ -92,7 +93,8 @@ The retained late sealed attempt produced stable but incomplete aggregates:
 0 of 20 entries measured on each backend. This establishes no comparative
 correctness result. Raw diagnosis remains sealed; the gate remains open.
 
-The retained 2026-10-21 source export also passes both full release-profile suites and all
+The retained 2026-10-21 source export also passes both full release-profile
+suites and all
 40 extracted installed checks under Linux amd64 emulation. A distinct read-only
 audit completes custody verification after a private producer path-type error;
 the original failed run is retained. This establishes emulated release delivery,
@@ -163,7 +165,8 @@ and installed verification.
 
 The CLI defaults to felling recovery with unique literal supply, matching the
 reference. `--mend=none --no-supply` selects the original comparison mode;
-native sessions default to no recovery. It returns 0 for acceptance, 1 for a parse stop,
+native sessions default to no recovery. It returns 0 for acceptance, 1 for a
+parse stop,
 and 2 for operational failures. The JSON response retains the established tree,
 confidence, and structural-survey fields. `--help` describes grammar inspection,
 lexing, states, exploratory surveys, parsing, edits, queries, and artifact minting.
@@ -215,7 +218,8 @@ Cargo calls must select the checked archive recorded by `native_link`, or the
 verified archive from a [candidate package](DELIVERY.md). A raw source-built
 archive can collide with another PCRE2 library; the dependency's older bundled
 archive also lacks the additive APIs.
-The dependency enables its explicit `source-engine` and `munch-image` features; ordinary irgx
+The dependency enables its explicit `source-engine` and `munch-image` features;
+ordinary irgx
 consumers keep the original bundled-library API and install path.
 The helper builds for the host; cross compilation needs an explicit target
 archive. The Rust engine itself forbids unsafe code; `rust/ffi` isolates the C
@@ -266,7 +270,8 @@ materialized nodes, and measured-sequence work; `document.product()` returns
 values comparable with a separate cold effect store. A partial or ambiguous
 run conservatively falls back to cold parsing. Proof-cache metadata is capped
 at 32 MiB; the additional permission pool retains at most 1,024 slates within
-a 1 MiB payload-and-directory bound across this grammar-bound session. Each proof records
+a 1 MiB payload-and-directory bound across this grammar-bound session. Each
+proof records
 all state-stack dependencies across its explored branches. Reuse checks the
 complete recorded suffix, or the full stack when the proof reached its floor.
 Lexical ordinal scratch is worker-owned and bounded by the grammar. Permission
@@ -284,7 +289,8 @@ Operation limits do not bound that cumulative storage over a document's lifetime
 
 `DocumentOptions.policy` selects the exact proof used by `Prove` and `Snap`.
 `Whole` retains a proved prefix and re-derives the suffix, matching the C policy;
-`Cold` and the CLI's `--cold` reparse from the beginning. Costs report source copies, actual
+`Cold` and the CLI's `--cold` reparse from the beginning. Costs report source
+copies, actual
 token reads, output materialization, and sequence work separately. The changed
 sequence window starts at a leaf index, rather than a byte offset.
 
@@ -371,7 +377,8 @@ were still pending.
 The qualified phase 5 implementation has about 22,811 production Rust lines
 across 39 files, including all eight CLI verbs and the C adapter. Candidate
 `e73eb9ee016afd74` passes 336
-default Rust tests, 14 explicit working-corpus witnesses, Clippy, formatting, and 66
+default Rust tests, 14 explicit working-corpus witnesses, Clippy, formatting,
+and 66
 helper tests. Release C export/layout/client checks and both binding suites
 pass. All 64 default Regulator tests and the broader ambiguity replay pass.
 The full consumer comparison passes all 6,216 Go sources and all 102,906 Python

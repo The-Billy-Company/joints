@@ -146,13 +146,15 @@ existing safe Rust `irgx` binding instead of rebuilding regex services. Its
 partitioning, and artifact support. Inventory actual imports individually;
 reusing its regex service retains a native library dependency.
 
-The completed first slice evaluated `regex-automata` for anchored matching and match attribution. Its
+The completed first slice evaluated `regex-automata` for anchored matching and
+match attribution. Its
 [match semantics](https://docs.rs/regex-automata/latest/regex_automata/enum.MatchKind.html)
 are configurable, but that does not establish compatibility with joints's
 state-restricted longest matching. Prototype parser permission subsets,
 precedence tiers, Unicode/JavaScript pattern translation, keyword ties, and
 serialization. The `irgx::Munch` integration must satisfy those same fixtures,
-with safe byte input and metered native transitions. A match selected from all tokens and filtered afterward is
+with safe byte input and metered native transitions. A match selected from all
+tokens and filtered afterward is
 incorrect; JSON's `string_content` is a required counterexample. Scanner probes
 reuse `irgx`'s bounded byte captures. `sheng` remains a phase 6 candidate for
 measured rejection work; its refutation contract cannot supply exact token spans.
@@ -390,7 +392,8 @@ shared native boundary/delivery helpers pass 149 controls. Both fresh schema-2
 packages pass all 40 installed checks, including the full 347-test suite, on the
 current Mac and emulated Ubuntu. These do not establish physical target-floor
 execution. The late sealed worker refused before producing an accepted aggregate;
-raw diagnosis remains unread. Meeting the selected budgets, the sealed gate, and native
+raw diagnosis remains unread. Meeting the selected budgets, the sealed gate, and
+native
 platform execution are still open. No consumer or release default has changed.
 A separate working-only artifact probe closes the base-grammar roundtrip gap:
 all 31 fresh default-policy mints and 31 standalone inspections pass, with exact
@@ -721,7 +724,8 @@ The Q7 count is 25,737 production Rust lines: 22,235 engine, 2,093 CLI and
 receipt is `production-count-current-4/receipt.json` under the performance
 directory.
 
-The retained Q6 count is 25,684 production Rust lines: 22,182 engine, 2,093 CLI and
+The retained Q6 count is 25,684 production Rust lines: 22,182 engine, 2,093 CLI
+and
 1,409 C adapter, using the same exclusions and formatting convention. This
 is 15,684 above the independent 10,000-line goal. The count receipt is
 `.local/rust-migration/performance-2026-10-21/production-count-current-3/receipt.json`.
@@ -766,7 +770,8 @@ release adoption. A percentage based on ported files would hide that risk.
    throughput timer includes Python/ctypes, strict validation and tree teardown.
    The earlier Q7 comparison's frozen Zig library remains unattested. The fresh
    CLI/ABI pair from exact Joints `9f5caf7` and IRGX `fc7a852` now passes source
-   attestation and final custody, independently rechecked across 21,816 proof files. The
+   attestation and final custody, independently rechecked across 21,816 proof
+   files. The
    receipt is `.local/zig-source-attested-baseline-20261022/attempt-3/report.json`
    (SHA-256 `e51c400487c3359ce4937dd78611f4820dd36d5e46412e26dd2a4116ae316ba4`).
    This closes the baseline-preparation gap for a fresh comparison only; it

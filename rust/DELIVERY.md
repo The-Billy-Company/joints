@@ -171,11 +171,13 @@ IRGX_LIB_DIR=OUTPUT/irgx/lib CARGO_TARGET_DIR=OUTPUT/cargo \
   --locked --offline --release --workspace
 ```
 
-Run Zig in the private copy of `SOURCE/irregex`. Linux must not inherit `SDKROOT` or a macOS
+Run Zig in the private copy of `SOURCE/irregex`. Linux must not inherit
+`SDKROOT` or a macOS
 deployment target. The host-only `tool/rust.py` helper does not establish
 cross-archive provenance: select and hash the target archive explicitly.
 Both the CLI/shared library and every static archive object must have the
-named machine architecture. The original build bundle retains the payload-preserving member normalization
+named machine architecture. The original build bundle retains the
+payload-preserving member normalization
 proof from `tool/rust_archive.py`. Packaging then applies the separate opaque
 C static boundary described below; the two transformations have different
 contracts and receipts.
@@ -256,7 +258,8 @@ metadata, and actual transformation commands. This local normalization does
 not change the immutable qualified build. The canonical `lib/` directory
 contains the deployable copy for ordinary consumers.
 The native IRGX archive is a separate checked selection: the current source's
-108 authoritative header functions remain public, and every other owned global or weak
+108 authoritative header functions remain public, and every other owned global
+or weak
 symbol is namespaced. `native-boundary.json` joins the raw original under
 `proof/build/lib/libirgx.a` to the selected `lib/libirgx.a` and the exported
 helper/parser/header. The manifest retains distinct raw and selected hashes;
@@ -349,7 +352,8 @@ The native Rust API client also runs under both toolchains in default and
 release-LTO modes. It checks the additive irgx limited-capture API, independent
 forced-static PCRE2 captures/refusals, actual reference-provider configuration
 and distinct compile/match addresses. Detailed ownership research remains in
-the separate STEP2 evidence. Cargo has a new home, private target, and explicit vendored
+the separate STEP2 evidence. Cargo has a new home, private target, and explicit
+vendored
 sources. Compiler/build overrides and preload hooks are cleared; `IRGX_LIB_DIR`
 selects the extracted matching archive. Python uses isolated installed packages.
 `PCRE2_SYS_STATIC=1` and `LIBPCRE2_8_NO_PKG_CONFIG=1` prevent a system PCRE2
@@ -388,7 +392,8 @@ The opt-in [candidate workflow](../.github/workflows/rust-candidate.yml) checks
 installed archives on Ubuntu 24.04 x86-64 and macOS 14 ARM64. It requires an exact
 helper-present commit and independently supplied archive SHA-256 digests. Select
 either HTTPS archive URLs or exact asset IDs in an unpublished draft release
-of this repository. The verifier bootstrap is pinned separately from the candidate archive.
+of this repository. The verifier bootstrap is pinned separately from the
+candidate archive.
 No workflow is dispatched by editing this file or by an ordinary push.
 
 Draft mode binds `release_id`, `candidate_commit`, `linux_asset_id` and
@@ -510,7 +515,6 @@ their manifests. Current-host and emulated execution establish neither actual
 Ubuntu hardware qualification nor macOS 14 execution, and make no performance,
 publication, default-engine-switch or cutover claim.
 
-
 ## Fresh schema-2 installed validation
 
 The second local delivery keeps the same 6,495-file standalone layout and exact
@@ -592,7 +596,8 @@ The opt-in `.github/workflows/rust-candidate.yml` validates actual Ubuntu 24.04
 x86-64 and macOS 14 ARM64 before installed verification. Its actions and helper
 hashes are pinned, and actionlint passes. It still requires a helper-present
 commit and accessible candidate archives with independent hashes. At this
-historical checkpoint it had not been committed, pushed or dispatched. A newer Mac, Linux emulation,
+historical checkpoint it had not been committed, pushed or dispatched. A newer
+Mac, Linux emulation,
 or binary deployment metadata cannot establish those execution floors.
 
 The same immutable source2 closure also completed fresh native108 compilation,
