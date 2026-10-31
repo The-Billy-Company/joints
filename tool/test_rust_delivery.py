@@ -108,8 +108,9 @@ class DeliveryTests(unittest.TestCase):
         workflow = (root / ".github/workflows/rust-candidate.yml").read_text()
         bootstrap = workflow.split("name: Pin the shipped verifier bootstrap", 1)[1]
         bootstrap = bootstrap.split("name: Verify actual host floor", 1)[0]
-        pairs = re.findall(r"'(tool/rust_[^']+\.py)': '([0-9a-f]{64})'", bootstrap)
-        expected = {"tool/rust_delivery.py", "tool/rust_archive.py", "tool/rust_static_boundary.py"}
+        pairs = re.findall(r"'(tool/[^']+\.py)': '([0-9a-f]{64})'", bootstrap)
+        expected = {"tool/rust_delivery.py", "tool/rust_archive.py", "tool/rust_static_boundary.py",
+                    "tool/stamp.py"}
         self.assertEqual(len(pairs), len(expected), "duplicate or missing verifier pins")
         self.assertEqual({name for name, _ in pairs}, expected)
         for name, pinned in pairs:

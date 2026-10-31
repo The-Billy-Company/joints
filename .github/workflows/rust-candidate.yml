@@ -126,9 +126,10 @@ jobs:
           import hashlib, os, pathlib, subprocess
           assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == os.environ['HELPER_REF']
           expected = {
-              'tool/rust_delivery.py': '2442ded521baed3e55cafdb173144c3cfe9820c15c1b70c43e05cd80a6b938b9',
+              'tool/rust_delivery.py': '450c17def668fe1b86780fec5e58be3f625301462c64daeb6c877519f13442cf',
               'tool/rust_archive.py': '4208ca8629eaabe02d7ddce34fd94c296bfa5196613193c67df01238f5d7c5ff',
               'tool/rust_static_boundary.py': '6741fad343a6d1289942c32f8eb65c27b0596ad2febca68dcebb459332da8bc2',
+              'tool/stamp.py': '5b40d63f79b94926c8031b3e7bbd44eb3c6f43f7ea81108b577fdf5b3b3509f6',
           }
           for name, sha in expected.items():
               path = pathlib.Path(name)
