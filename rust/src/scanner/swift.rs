@@ -288,7 +288,7 @@ mod tests {
             "_directive_else",
             "_directive_endif",
         ] {
-            assert_eq!(default[name], ScannerBinding::Hand);
+            assert_eq!(default[name], ScannerBinding::Customary);
         }
         for name in ["raw_str_continuing_indicator", "_fake_try_bang"] {
             assert_eq!(default[name], ScannerBinding::Control);

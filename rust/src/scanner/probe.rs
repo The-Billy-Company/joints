@@ -249,7 +249,7 @@ mod tests {
     #[test]
     fn every_shipped_probe_compiles_without_rewriting() {
         let patterns = patterns();
-        assert_eq!(patterns.len(), 218);
+        assert_eq!(patterns.len(), 223);
         for (name, pattern, whole) in patterns {
             Probe::compile(&pattern, whole).unwrap_or_else(|e| panic!("{name}: {e}"));
         }

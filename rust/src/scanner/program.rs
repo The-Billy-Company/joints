@@ -909,7 +909,7 @@ mod tests {
             assert!(!book.rules.is_empty());
             count += book.rules.len();
         }
-        assert_eq!(count, 270);
+        assert_eq!(count, 275);
     }
     #[test]
     fn unknown_opcodes_names_and_excessive_expression_depth_refuse_at_bind() {
