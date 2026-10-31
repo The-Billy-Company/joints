@@ -243,8 +243,26 @@ fn baseline(root: &Path, roster: &BTreeSet<String>) -> BTreeMap<String, (Value, 
             );
         }
         for (path, expected) in inputs {
+            // Books attest the recorded reference output, not today's scanner.
+            // Current replay below still compiles with the current embedded books.
+            let input = if path.starts_with("customary/") {
+                assert_eq!(path, &format!("customary/{language}.json"));
+                let stored = format!("provenance/{path}");
+                assert_eq!(
+                    portable["files"][&stored], *expected,
+                    "{name}: retained book attestation drift {path}"
+                );
+                assert_eq!(
+                    portable["repositories"]["joints"]["files"][path], *expected,
+                    "{name}: reference source book lineage drift {path}"
+                );
+                root.join("test/migration/reference")
+                    .join(relative(&stored))
+            } else {
+                root.join(relative(path))
+            };
             assert_eq!(
-                sha256(&fs::read(root.join(relative(path))).unwrap()),
+                sha256(&fs::read(input).unwrap()),
                 expected.as_str().unwrap(),
                 "{name}: input drift {path}"
             );
